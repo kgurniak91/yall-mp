@@ -1,0 +1,25 @@
+<app-video-player #videoPlayer [options]="options"/>
+
+@let currentTime = videoPlayer.getCurrentTime();
+
+<p style="text-align: center;">
+  {{ currentTime }}
+</p>
+
+<p style="text-align: center; height: 20px;">
+  @for (cue of cues(); track cue.id) {
+    @if (currentTime >= cue.startTime && currentTime <= cue.endTime) {
+      {{ cue.text }}
+    }
+  }
+</p>
+
+<ul>
+  @for (cue of cues(); track cue.id) {
+    <li>
+      <button type="button" (click)="videoPlayer.jumpToTime(cue.startTime)">
+        [{{ cue.startTime }}] {{ cue.text }}
+      </button>
+    </li>
+  }
+</ul>

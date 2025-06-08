@@ -32,7 +32,10 @@
               }
             ],
             "styles": [
-              "src/styles.scss"
+              "src/styles.scss",
+              "node_modules/video.js/dist/video-js.css",
+              "node_modules/media-captions/styles/captions.css",
+              "node_modules/media-captions/styles/regions.css"
             ],
             "scripts": []
           },
@@ -98,5 +101,8 @@
         }
       }
     }
+  },
+  "cli": {
+    "analytics": false
   }
 }
