@@ -1,16 +1,14 @@
 <app-video-player #videoPlayer [options]="options"/>
 
-@let currentTime = videoPlayer.getCurrentTime();
-
 <p style="text-align: center;">
-  {{ currentTime }}
+  {{ videoStateService.currentTime() }}
 </p>
 
-<p style="text-align: center; height: 20px;">
-  @for (cue of cues(); track cue.id) {
-    @if (currentTime >= cue.startTime && currentTime <= cue.endTime) {
-      {{ cue.text }}
-    }
+<p style="text-align: center;">
+  @if (currentCue(); as currentCue) {
+    {{currentCue.text}}
+  } @else {
+    &nbsp;
   }
 </p>
 
