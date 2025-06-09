@@ -5,18 +5,26 @@
 </p>
 
 <p style="text-align: center;">
-  @if (currentCue(); as currentCue) {
-    {{currentCue.text}}
+  @if (videoStateService.currentClip(); as currentClip) {
+    @if (currentClip.hasSubtitle) {
+      {{ currentClip.text }}
+    } @else {
+      &nbsp;
+    }
   } @else {
     &nbsp;
   }
 </p>
 
 <ul>
-  @for (cue of cues(); track cue.id) {
-    <li>
-      <button type="button" (click)="videoPlayer.jumpToTime(cue.startTime)">
-        [{{ cue.startTime }}] {{ cue.text }}
+  @for (clip of videoStateService.clips(); track clip.id) {
+    <li style="margin-bottom: 5px;">
+      <button type="button"
+              (click)="videoPlayer.jumpToTime(clip.startTime)"
+              [class.subtitle-clip]="clip.hasSubtitle"
+              [class.current-clip]="clip.id === videoStateService.currentClip()?.id">
+        [{{ clip.startTime | number:'1.2-2' }}]
+        {{ clip.hasSubtitle ? clip.text : '--- (Gap) ---' }}
       </button>
     </li>
   }

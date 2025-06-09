@@ -1,19 +1,21 @@
-import {Component, computed, inject, OnInit, signal} from '@angular/core';
+import {Component, inject, OnInit} from '@angular/core';
 import {VideoPlayerComponent} from './video-player/video-player.component';
 import {VideoJsOptions} from './video-player/video-player.type';
-import {ParsedCaptionsResult, parseResponse, VTTCue} from 'media-captions';
+import {ParsedCaptionsResult, parseResponse} from 'media-captions';
 import {VideoStateService} from '../../state/video-state.service';
-import {toSignal} from '@angular/core/rxjs-interop';
+import {DecimalPipe} from '@angular/common';
 
 @Component({
   selector: 'app-project-details',
   imports: [
-    VideoPlayerComponent
+    VideoPlayerComponent,
+    DecimalPipe
   ],
   templateUrl: './project-details.component.html',
   styleUrl: './project-details.component.scss'
 })
 export class ProjectDetailsComponent implements OnInit {
+  protected readonly videoStateService = inject(VideoStateService);
   readonly options: VideoJsOptions = {
     sources: [
       {
@@ -27,20 +29,11 @@ export class ProjectDetailsComponent implements OnInit {
     muted: false,
     inactivityTimeout: 0
   };
-  cues = signal<VTTCue[]>([]);
-  protected videoStateService = inject(VideoStateService);
-  currentCue = computed(() => {
-    const cues = this.cues();
-    const currentTime = this.videoStateService.currentTime();
-    if (!cues?.length) {
-      return null;
-    }
-    return cues.find(cue => currentTime >= cue.startTime && currentTime <= cue.endTime);
-  });
+
 
   async ngOnInit() {
-    const result: ParsedCaptionsResult = await parseResponse(fetch('/temp/marvel.srt'), { type: 'srt' });
-    this.cues.set(result.cues);
-    
+    const response = fetch('/temp/marvel.srt');
+    const result: ParsedCaptionsResult = await parseResponse(response, {type: 'srt'});
+    this.videoStateService.setCues(result.cues);
   }
 }

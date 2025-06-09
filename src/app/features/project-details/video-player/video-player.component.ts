@@ -23,8 +23,13 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
 
       this.player?.on('timeupdate', () => {
         const currentTime = this.player?.currentTime() || 0;
-        this.videoStateService.updateCurrentTime(currentTime);
-      })
+        this.videoStateService.setCurrentTime(currentTime);
+      });
+
+      this.player?.on('loadedmetadata', () => {
+        const duration = this.player?.duration() || 0;
+        this.videoStateService.setDuration(duration);
+      });
     });
   }
 
