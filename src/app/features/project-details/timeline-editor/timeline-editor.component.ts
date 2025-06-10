@@ -1,7 +1,12 @@
-import {Component, effect, ElementRef, inject, OnDestroy, viewChild} from '@angular/core';
+import {Component, effect, ElementRef, HostListener, inject, OnDestroy, signal, viewChild} from '@angular/core';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin, {Region} from 'wavesurfer.js/dist/plugins/regions.js';
 import {VideoStateService} from '../../../state/video-state.service';
+
+const INITIAL_ZOOM = 150; // Initial pixels per second (higher is more zoomed in)
+const MIN_ZOOM = 20;      // Minimum pixels per second
+const MAX_ZOOM = 1000;    // Maximum pixels per second
+const ZOOM_FACTOR = 1.2;  // How much to zoom in/out on each wheel tick
 
 @Component({
   selector: 'app-timeline-editor',
@@ -14,9 +19,68 @@ export class TimelineEditorComponent implements OnDestroy {
   protected videoStateService = inject(VideoStateService);
   private wavesurfer: WaveSurfer | undefined;
   private wsRegions: RegionsPlugin | undefined;
+  private currentZoom = signal<number>(INITIAL_ZOOM);
+  private regionDrawDebounceTimer: any;
 
   ngOnDestroy() {
+    clearTimeout(this.regionDrawDebounceTimer);
     this.wavesurfer?.destroy();
+  }
+
+  @HostListener('window:keydown', ['$event'])
+  onKeydown(event: KeyboardEvent) {
+    // Prevent zoom if typing in input
+    if ((event.target as HTMLElement).tagName === 'INPUT' || (event.target as HTMLElement).tagName === 'TEXTAREA') {
+      return;
+    }
+
+    if (event.key === '=') {
+      event.preventDefault();
+      this.zoomIn();
+    }
+
+    if (event.key === '-') {
+      event.preventDefault();
+      this.zoomOut();
+    }
+  }
+
+  public onWheel(event: WheelEvent): void {
+    if (!this.wavesurfer || event.shiftKey) return;
+    event.preventDefault();
+
+    
+    if (event.deltaY < 0) {
+      this.zoomIn();
+    } else {
+      this.zoomOut();
+    }
+  }
+
+  private zoomIn(): void {
+    if (!this.wavesurfer) return;
+    const newZoom = Math.min(this.currentZoom() * ZOOM_FACTOR, MAX_ZOOM);
+    this.updateZoom(newZoom);
+  }
+
+  private zoomOut(): void {
+    if (!this.wavesurfer) return;
+    const newZoom = Math.max(this.currentZoom() / ZOOM_FACTOR, MIN_ZOOM);
+    this.updateZoom(newZoom);
+  }
+
+  private updateZoom(newZoom: number): void {
+    if (!this.wavesurfer || newZoom === this.currentZoom()) {
+      return;
+    }
+    this.currentZoom.set(newZoom);
+    this.wavesurfer.zoom(newZoom);
+
+    clearTimeout(this.regionDrawDebounceTimer);
+
+    this.regionDrawDebounceTimer = setTimeout(() => {
+      this.drawRegions();
+    }, 50);
   }
 
   private clipsDrawer = effect(() => {
@@ -45,8 +109,7 @@ export class TimelineEditorComponent implements OnDestroy {
       progressColor: '#f55', 
       barWidth: 2,
       barGap: 1,
-      
-      
+      minPxPerSec: this.currentZoom()
     });
 
     // Initialize and register the Regions plugin
