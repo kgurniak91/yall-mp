@@ -1,4 +1,17 @@
 <div class="project-wrapper">
   <app-video-player #videoPlayer [options]="options"/>
+
+  <p style="text-align: center; font-size: 1.5rem;" contenteditable>
+    @if (videoStateService.currentClip(); as currentClip) {
+      @if (currentClip.hasSubtitle) {
+        {{ currentClip.text }}
+      } @else {
+        &nbsp;
+      }
+    } @else {
+      &nbsp;
+    }
+  </p>
+
   <app-timeline-editor/>
 </div>
