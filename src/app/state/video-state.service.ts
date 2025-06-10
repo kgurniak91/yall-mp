@@ -9,7 +9,9 @@ export class VideoStateService {
   private readonly _currentTime = signal(0);
   private readonly _duration = signal(0);
   private readonly _cues = signal<VTTCue[]>([]);
+  private readonly _videoElement = signal<HTMLVideoElement | null>(null);
 
+  public readonly videoElement: Signal<HTMLVideoElement | null> = this._videoElement.asReadonly();
   public readonly currentTime: Signal<number> = this._currentTime.asReadonly();
   public readonly duration: Signal<number> = this._duration.asReadonly();
   public readonly clips: Signal<VideoClip[]> = computed(() => this.generateClips());
@@ -28,6 +30,99 @@ export class VideoStateService {
 
   public setCues(cues: VTTCue[]): void {
     this._cues.set(cues);
+  }
+
+  public setVideoElement(element: HTMLVideoElement | null): void {
+    this._videoElement.set(element);
+  }
+
+  public updateClipTimes(clipId: string, newStartTime: number, newEndTime: number): void {
+    const clips = this._cues(); 
+    const allClips = this.clips(); 
+    const clipIndex = allClips.findIndex(c => c.id === clipId);
+
+    if (clipIndex === -1) {
+      console.error('Could not find clip to update:', clipId);
+      return;
+    }
+
+    const originalClip = allClips[clipIndex];
+    const updatedClips = [...allClips]; // Create a mutable copy
+
+    let finalStartTime = newStartTime;
+    let finalEndTime = newEndTime;
+
+    // --- Collision and Boundary Logic ---
+
+    // Update previous clip's end time if start changed
+    if (originalClip.startTime !== finalStartTime) {
+      const prevClip = updatedClips[clipIndex - 1];
+      if (prevClip) {
+        // Prevent dragging start time before the previous clip's start time
+        if (finalStartTime < prevClip.startTime) {
+          finalStartTime = prevClip.startTime;
+        }
+        prevClip.endTime = finalStartTime;
+        prevClip.duration = prevClip.endTime - prevClip.startTime;
+      } else {
+        // This is the first clip, it can't start before 0
+        if (finalStartTime < 0) finalStartTime = 0;
+      }
+    }
+
+    // Update next clip's start time if end changed
+    if (originalClip.endTime !== finalEndTime) {
+      const nextClip = updatedClips[clipIndex + 1];
+      if (nextClip) {
+        // Prevent dragging end time after the next clip's end time
+        if (finalEndTime > nextClip.endTime) {
+          finalEndTime = nextClip.endTime;
+        }
+        nextClip.startTime = finalEndTime;
+        nextClip.duration = nextClip.endTime - nextClip.startTime;
+      } else {
+        // This is the last clip, it can't end after the total duration
+        const duration = this.duration();
+        if (finalEndTime > duration) finalEndTime = duration;
+      }
+    }
+
+    // Ensure the clip itself doesn't have a negative duration
+    if (finalEndTime < finalStartTime) {
+      // Handle inverted edges (negative duration)
+      
+      [finalStartTime, finalEndTime] = [finalEndTime, finalStartTime];
+    }
+
+    // Update the target clip
+    const targetClip = updatedClips[clipIndex];
+    targetClip.startTime = finalStartTime;
+    targetClip.endTime = finalEndTime;
+    targetClip.duration = targetClip.endTime - targetClip.startTime;
+
+    // Sync changes back to source cues
+    
+    this.updateCuesFromClips(updatedClips);
+  }
+
+  /**
+   * Helper to reverse-engineer the VideoClip[] array back into a VTTCue[] array.
+   * This will trigger the `clips` computed signal to update automatically.
+   */
+  private updateCuesFromClips(updatedClips: VideoClip[]): void {
+    const newCues: VTTCue[] = updatedClips
+      .filter(clip => clip.hasSubtitle)
+      .map(clip => {
+        
+        const newCue = new VTTCue(clip.startTime, clip.endTime, clip.text || '');
+
+        // Manually assign the old, stable ID to the new cue object.
+        newCue.id = clip.id;
+
+        return newCue;
+      });
+
+    this._cues.set(newCues);
   }
 
   private generateClips(): VideoClip[] {

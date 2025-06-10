@@ -1,31 +1,4 @@
-<app-video-player #videoPlayer [options]="options"/>
-
-<p style="text-align: center;">
-  {{ videoStateService.currentTime() }}
-</p>
-
-<p style="text-align: center;">
-  @if (videoStateService.currentClip(); as currentClip) {
-    @if (currentClip.hasSubtitle) {
-      {{ currentClip.text }}
-    } @else {
-      &nbsp;
-    }
-  } @else {
-    &nbsp;
-  }
-</p>
-
-<ul>
-  @for (clip of videoStateService.clips(); track clip.id) {
-    <li style="margin-bottom: 5px;">
-      <button type="button"
-              (click)="videoPlayer.jumpToTime(clip.startTime)"
-              [class.subtitle-clip]="clip.hasSubtitle"
-              [class.current-clip]="clip.id === videoStateService.currentClip()?.id">
-        [{{ clip.startTime | number:'1.2-2' }}]
-        {{ clip.hasSubtitle ? clip.text : '--- (Gap) ---' }}
-      </button>
-    </li>
-  }
-</ul>
+<div class="project-wrapper">
+  <app-video-player #videoPlayer [options]="options"/>
+  <app-timeline-editor/>
+</div>

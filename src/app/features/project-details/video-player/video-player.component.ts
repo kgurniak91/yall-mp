@@ -12,13 +12,17 @@ import {VideoStateService} from '../../../state/video-state.service';
   encapsulation: ViewEncapsulation.None
 })
 export class VideoPlayerComponent implements OnInit, OnDestroy {
-  videoPlayerElementRef = viewChild.required<ElementRef<HTMLVideoElement>>('videoPlayer');
+  videoElementRef = viewChild.required<ElementRef<HTMLVideoElement>>('video');
   options = input.required<VideoJsOptions>();
   private player: Player | undefined;
   private videoStateService = inject(VideoStateService);
 
   ngOnInit() {
-    this.player = videojs(this.videoPlayerElementRef().nativeElement, this.options(), () => {
+    const videoElement = this.videoElementRef().nativeElement;
+
+    this.videoStateService.setVideoElement(videoElement);
+
+    this.player = videojs(videoElement, this.options(), () => {
       this.player?.pause();
 
       this.player?.on('timeupdate', () => {
@@ -37,18 +41,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     if (this.player) {
       this.player.dispose();
     }
-  }
-
-  jumpToPercentage(percentage: number): void {
-    if (!this.player) {
-      return;
-    }
-
-    const duration = this.player.duration() || 0;
-    const newTime = (percentage / 100) * duration;
-
-    this.player.currentTime(newTime);
-    this.player.play();
+    this.videoStateService.setVideoElement(null);
   }
 
   jumpToTime(time: number): void {

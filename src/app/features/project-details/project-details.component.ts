@@ -3,13 +3,13 @@ import {VideoPlayerComponent} from './video-player/video-player.component';
 import {VideoJsOptions} from './video-player/video-player.type';
 import {ParsedCaptionsResult, parseResponse} from 'media-captions';
 import {VideoStateService} from '../../state/video-state.service';
-import {DecimalPipe} from '@angular/common';
+import {TimelineEditorComponent} from './timeline-editor/timeline-editor.component';
 
 @Component({
   selector: 'app-project-details',
   imports: [
     VideoPlayerComponent,
-    DecimalPipe
+    TimelineEditorComponent
   ],
   templateUrl: './project-details.component.html',
   styleUrl: './project-details.component.scss'
