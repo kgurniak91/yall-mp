@@ -52,4 +52,14 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     this.player.currentTime(time);
     this.player.play();
   }
+
+  public togglePlay(): void {
+    if (!this.player) return;
+
+    if (this.player.paused()) {
+      this.player.play();
+    } else {
+      this.player.pause();
+    }
+  }
 }

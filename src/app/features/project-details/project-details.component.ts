@@ -1,4 +1,4 @@
-import {Component, inject, OnInit} from '@angular/core';
+import {Component, HostListener, inject, OnInit, viewChild} from '@angular/core';
 import {VideoPlayerComponent} from './video-player/video-player.component';
 import {VideoJsOptions} from './video-player/video-player.type';
 import {ParsedCaptionsResult, parseResponse} from 'media-captions';
@@ -15,6 +15,7 @@ import {TimelineEditorComponent} from './timeline-editor/timeline-editor.compone
   styleUrl: './project-details.component.scss'
 })
 export class ProjectDetailsComponent implements OnInit {
+  protected readonly videoPlayer = viewChild.required(VideoPlayerComponent);
   protected readonly videoStateService = inject(VideoStateService);
   readonly options: VideoJsOptions = {
     sources: [
@@ -30,10 +31,20 @@ export class ProjectDetailsComponent implements OnInit {
     inactivityTimeout: 0
   };
 
-
   async ngOnInit() {
     const response = fetch('/temp/marvel.srt');
     const result: ParsedCaptionsResult = await parseResponse(response, {type: 'srt'});
     this.videoStateService.setCues(result.cues);
+  }
+
+  @HostListener('window:keydown.space', ['$event'])
+  onSpacebar(event: KeyboardEvent) {
+    if ((event.target as HTMLElement).tagName === 'INPUT' || (event.target as HTMLElement).tagName === 'TEXTAREA') {
+      return;
+    }
+
+    event.preventDefault();
+
+    this.videoPlayer().togglePlay();
   }
 }
