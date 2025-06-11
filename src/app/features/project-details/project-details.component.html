@@ -1,17 +1,28 @@
-<div class="project-wrapper">
-  <app-video-player #videoPlayer [options]="options"/>
+<div class="video-area">
+  <div class="video-wrapper">
+    <app-video-player #videoPlayer [options]="options"/>
+  </div>
+</div>
 
-  <p style="text-align: center; font-size: 1.5rem;" contenteditable>
-    @if (videoStateService.currentClip(); as currentClip) {
-      @if (currentClip.hasSubtitle) {
-        {{ currentClip.text }}
-      } @else {
-        &nbsp;
-      }
+<div class="subtitle-display">
+  @if (videoStateService.currentClip(); as currentClip) {
+    @if (currentClip.hasSubtitle) {
+      {{ currentClip.text }}
     } @else {
       &nbsp;
     }
-  </p>
-
-  <app-timeline-editor/>
+  } @else {
+    &nbsp;
+  }
 </div>
+
+<div class="toolbar">
+  
+  <button type="button">Prev</button>
+  <button type="button">Play</button>
+  <button type="button">Next</button>
+  <button type="button">Repeat</button>
+  <button type="button">Settings</button>
+</div>
+
+<app-timeline-editor/>
