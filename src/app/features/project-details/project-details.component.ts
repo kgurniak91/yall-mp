@@ -28,7 +28,15 @@ export class ProjectDetailsComponent implements OnInit {
     controls: true,
     fluid: true,
     muted: false,
-    inactivityTimeout: 0
+    inactivityTimeout: 0,
+    responsive: true,
+    controlBar: {
+      fullscreenToggle: false,
+      pictureInPictureToggle: false
+    },
+    userActions: {
+      doubleClick: false
+    }
   };
 
   async ngOnInit() {
