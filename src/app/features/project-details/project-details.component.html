@@ -17,12 +17,12 @@
 </div>
 
 <div class="toolbar">
-  
-  <button type="button">Prev</button>
-  <button type="button">Play</button>
-  <button type="button">Next</button>
-  <button type="button">Repeat</button>
-  <button type="button">Settings</button>
+  <p-button icon="fa-solid fa-arrow-left" pTooltip="Poprzednie napisy" tooltipPosition="left" severity="secondary"/>
+  <p-button icon="fa-solid fa-repeat" pTooltip="Powtórz" tooltipPosition="top" severity="secondary"/>
+  <p-button icon="fa-solid fa-arrow-right" pTooltip="Następne napisy" tooltipPosition="right" severity="secondary"/>
+  <div class="settings-wrapper">
+    <p-button icon="fa-solid fa-gear" pTooltip="Ustawienia" tooltipPosition="left" severity="secondary"/>
+  </div>
 </div>
 
 <app-timeline-editor/>

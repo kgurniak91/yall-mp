@@ -4,12 +4,16 @@ import {VideoJsOptions} from './video-player/video-player.type';
 import {ParsedCaptionsResult, parseResponse} from 'media-captions';
 import {VideoStateService} from '../../state/video-state.service';
 import {TimelineEditorComponent} from './timeline-editor/timeline-editor.component';
+import {Button} from 'primeng/button';
+import {Tooltip} from 'primeng/tooltip';
 
 @Component({
   selector: 'app-project-details',
   imports: [
     VideoPlayerComponent,
-    TimelineEditorComponent
+    TimelineEditorComponent,
+    Button,
+    Tooltip
   ],
   templateUrl: './project-details.component.html',
   styleUrl: './project-details.component.scss'
