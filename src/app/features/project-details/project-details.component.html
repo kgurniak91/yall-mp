@@ -6,7 +6,7 @@
 
 <div class="subtitle-display">
   @if (videoStateService.currentClip(); as currentClip) {
-    @if (currentClip.hasSubtitle) {
+    @if (videoStateService.subtitlesVisible() && currentClip.hasSubtitle) {
       {{ currentClip.text }}
     } @else {
       &nbsp;
@@ -17,11 +17,31 @@
 </div>
 
 <div class="toolbar">
-  <p-button icon="fa-solid fa-arrow-left" pTooltip="Poprzednie napisy" tooltipPosition="left" severity="secondary"/>
-  <p-button icon="fa-solid fa-repeat" pTooltip="Powtórz" tooltipPosition="top" severity="secondary"/>
-  <p-button icon="fa-solid fa-arrow-right" pTooltip="Następne napisy" tooltipPosition="right" severity="secondary"/>
+  <p-button icon="fa-solid fa-arrow-left"
+            pTooltip="Poprzednie napisy"
+            tooltipPosition="left"
+            severity="secondary"
+            (onClick)="goToPreviousClip()"/>
+
+  <p-button icon="fa-solid fa-repeat"
+            pTooltip="Powtórz"
+            tooltipPosition="top"
+            severity="secondary"/>
+
+  <p-button icon="fa-solid fa-arrow-right"
+            pTooltip="Następne napisy"
+            tooltipPosition="right"
+            severity="secondary"
+            (onClick)="goToNextClip()"/>
 
   <div class="settings-wrapper">
+    @let subtitlesVisible = videoStateService.subtitlesVisible();
+    <p-button icon="{{subtitlesVisible ? 'fa-solid' : 'fa-regular'}} fa-closed-captioning"
+              [pTooltip]="subtitlesVisible ? 'Ukryj napisy' : 'Pokaż napisy'"
+              (onClick)="videoStateService.toggleSubtitlesVisible()"
+              tooltipPosition="left"
+              severity="secondary"/>
+
     <p-button icon="fa-solid fa-gear"
               pTooltip="Ustawienia"
               tooltipPosition="left"

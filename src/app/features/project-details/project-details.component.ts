@@ -64,4 +64,18 @@ export class ProjectDetailsComponent implements OnInit {
 
     this.videoPlayer().togglePlay();
   }
+
+  goToNextClip() {
+    const nextClip = this.videoStateService.findAdjacentClip('next');
+    if (nextClip) {
+      this.videoPlayer().jumpToTime(nextClip.startTime);
+    }
+  }
+
+  goToPreviousClip() {
+    const prevClip = this.videoStateService.findAdjacentClip('previous');
+    if (prevClip) {
+      this.videoPlayer().jumpToTime(prevClip.startTime);
+    }
+  }
 }

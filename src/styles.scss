@@ -6,3 +6,9 @@ html, body {
   color: #f0f0f0;
   overflow: hidden;
 }
+
+video {
+  &:focus-visible {
+    outline: none !important;
+  }
+}

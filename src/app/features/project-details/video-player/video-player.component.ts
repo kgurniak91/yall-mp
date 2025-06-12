@@ -44,7 +44,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     this.videoStateService.setVideoElement(null);
   }
 
-  jumpToTime(time: number): void {
+  public jumpToTime(time: number): void {
     if (!this.player) {
       return;
     }

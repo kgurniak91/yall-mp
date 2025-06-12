@@ -45,6 +45,10 @@
   flex-shrink: 0;
 
   .settings-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
     position: absolute;
     right: 1rem;
   }

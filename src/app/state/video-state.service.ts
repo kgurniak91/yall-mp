@@ -10,10 +10,12 @@ export class VideoStateService {
   private readonly _duration = signal(0);
   private readonly _cues = signal<VTTCue[]>([]);
   private readonly _videoElement = signal<HTMLVideoElement | null>(null);
+  private readonly _subtitlesVisible = signal(true);
 
   public readonly videoElement: Signal<HTMLVideoElement | null> = this._videoElement.asReadonly();
   public readonly currentTime: Signal<number> = this._currentTime.asReadonly();
   public readonly duration: Signal<number> = this._duration.asReadonly();
+  public readonly subtitlesVisible: Signal<boolean> = this._subtitlesVisible.asReadonly();
   public readonly clips: Signal<VideoClip[]> = computed(() => this.generateClips());
   public readonly currentClip: Signal<VideoClip | undefined> = computed(() => {
     const time = this.currentTime();
@@ -36,8 +38,11 @@ export class VideoStateService {
     this._videoElement.set(element);
   }
 
+  public toggleSubtitlesVisible(): void {
+    this._subtitlesVisible.update((subtitlesVisible: boolean) => !subtitlesVisible);
+  }
+
   public updateClipTimes(clipId: string, newStartTime: number, newEndTime: number): void {
-    const clips = this._cues(); 
     const allClips = this.clips(); 
     const clipIndex = allClips.findIndex(c => c.id === clipId);
 
@@ -103,6 +108,29 @@ export class VideoStateService {
     // Sync changes back to source cues
     
     this.updateCuesFromClips(updatedClips);
+  }
+
+  public findAdjacentClip(direction: 'next' | 'previous'): VideoClip | undefined {
+    const clips = this.clips();
+    const currentTime = this.currentTime();
+    if (clips.length === 0) return undefined;
+
+    // Find the index of the current clip
+    const currentIndex = clips.findIndex(c => currentTime >= c.startTime && currentTime < c.endTime);
+    if (currentIndex === -1) return undefined;
+
+    // Search forwards or backwards from the current index
+    if (direction === 'next') {
+      for (let i = currentIndex + 1; i < clips.length; i++) {
+        if (clips[i].hasSubtitle) return clips[i];
+      }
+    } else { // 'previous'
+      for (let i = currentIndex - 1; i >= 0; i--) {
+        if (clips[i].hasSubtitle) return clips[i];
+      }
+    }
+
+    return undefined; // No next/previous subtitle clip found
   }
 
   /**
