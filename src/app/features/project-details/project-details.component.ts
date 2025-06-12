@@ -1,4 +1,4 @@
-import {Component, HostListener, inject, OnInit, viewChild} from '@angular/core';
+import {Component, HostListener, inject, OnInit, signal, viewChild} from '@angular/core';
 import {VideoPlayerComponent} from './video-player/video-player.component';
 import {VideoJsOptions} from './video-player/video-player.type';
 import {ParsedCaptionsResult, parseResponse} from 'media-captions';
@@ -6,6 +6,8 @@ import {VideoStateService} from '../../state/video-state.service';
 import {TimelineEditorComponent} from './timeline-editor/timeline-editor.component';
 import {Button} from 'primeng/button';
 import {Tooltip} from 'primeng/tooltip';
+import {Drawer} from 'primeng/drawer';
+import {ProjectSettingsComponent} from './project-settings/project-settings.component';
 
 @Component({
   selector: 'app-project-details',
@@ -13,13 +15,16 @@ import {Tooltip} from 'primeng/tooltip';
     VideoPlayerComponent,
     TimelineEditorComponent,
     Button,
-    Tooltip
+    Tooltip,
+    Drawer,
+    ProjectSettingsComponent
   ],
   templateUrl: './project-details.component.html',
   styleUrl: './project-details.component.scss'
 })
 export class ProjectDetailsComponent implements OnInit {
   protected readonly videoPlayer = viewChild.required(VideoPlayerComponent);
+  protected readonly isSettingsVisible = signal(false);
   protected readonly videoStateService = inject(VideoStateService);
   readonly options: VideoJsOptions = {
     sources: [

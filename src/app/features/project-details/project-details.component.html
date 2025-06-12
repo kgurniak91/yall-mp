@@ -20,9 +20,18 @@
   <p-button icon="fa-solid fa-arrow-left" pTooltip="Poprzednie napisy" tooltipPosition="left" severity="secondary"/>
   <p-button icon="fa-solid fa-repeat" pTooltip="Powtórz" tooltipPosition="top" severity="secondary"/>
   <p-button icon="fa-solid fa-arrow-right" pTooltip="Następne napisy" tooltipPosition="right" severity="secondary"/>
+
   <div class="settings-wrapper">
-    <p-button icon="fa-solid fa-gear" pTooltip="Ustawienia" tooltipPosition="left" severity="secondary"/>
+    <p-button icon="fa-solid fa-gear"
+              pTooltip="Ustawienia"
+              tooltipPosition="left"
+              severity="secondary"
+              (onClick)="isSettingsVisible.set(true)"/>
   </div>
 </div>
 
 <app-timeline-editor/>
+
+<p-drawer [(visible)]="isSettingsVisible" header="Ustawienia" position="right">
+  <app-project-settings/>
+</p-drawer>
