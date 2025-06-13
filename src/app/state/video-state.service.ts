@@ -1,5 +1,5 @@
 import {computed, Injectable, Signal, signal} from '@angular/core';
-import {VideoClip} from '../model/video.types';
+import {SeekDirection, SeekType, VideoClip} from '../model/video.types';
 import {VTTCue} from 'media-captions';
 
 @Injectable({
@@ -11,11 +11,16 @@ export class VideoStateService {
   private readonly _cues = signal<VTTCue[]>([]);
   private readonly _videoElement = signal<HTMLVideoElement | null>(null);
   private readonly _subtitlesVisible = signal(true);
+  private readonly _seekRequest = signal<{ time: number; type: SeekType } | null>(null);
+  private readonly _playPauseRequest = signal<number | null>(null); // Use timestamp to ensure it's a new request
 
   public readonly videoElement: Signal<HTMLVideoElement | null> = this._videoElement.asReadonly();
   public readonly currentTime: Signal<number> = this._currentTime.asReadonly();
   public readonly duration: Signal<number> = this._duration.asReadonly();
   public readonly subtitlesVisible: Signal<boolean> = this._subtitlesVisible.asReadonly();
+  public readonly seekRequest = this._seekRequest.asReadonly();
+  public readonly playPauseRequest = this._playPauseRequest.asReadonly();
+
   public readonly clips: Signal<VideoClip[]> = computed(() => this.generateClips());
   public readonly currentClip: Signal<VideoClip | undefined> = computed(() => {
     const time = this.currentTime();
@@ -40,6 +45,25 @@ export class VideoStateService {
 
   public toggleSubtitlesVisible(): void {
     this._subtitlesVisible.update((subtitlesVisible: boolean) => !subtitlesVisible);
+  }
+
+  public togglePlayPause(): void {
+    this._playPauseRequest.set(Date.now());
+  }
+
+  public seekRelative(time: number): void {
+    this._seekRequest.set({time, type: SeekType.Relative});
+  }
+
+  public seekAbsolute(time: number): void {
+    this._seekRequest.set({time, type: SeekType.Absolute});
+  }
+
+  public goToAdjacentSubtitleClip(direction: SeekDirection): void {
+    const adjacentClip = this.findAdjacentClip(direction);
+    if (adjacentClip) {
+      this.seekAbsolute(adjacentClip.startTime);
+    }
   }
 
   public updateClipTimes(clipId: string, newStartTime: number, newEndTime: number): void {
@@ -110,7 +134,7 @@ export class VideoStateService {
     this.updateCuesFromClips(updatedClips);
   }
 
-  public findAdjacentClip(direction: 'next' | 'previous'): VideoClip | undefined {
+  public findAdjacentClip(direction: SeekDirection): VideoClip | undefined {
     const clips = this.clips();
     const currentTime = this.currentTime();
     if (clips.length === 0) return undefined;
@@ -120,11 +144,11 @@ export class VideoStateService {
     if (currentIndex === -1) return undefined;
 
     // Search forwards or backwards from the current index
-    if (direction === 'next') {
+    if (direction === SeekDirection.Next) {
       for (let i = currentIndex + 1; i < clips.length; i++) {
         if (clips[i].hasSubtitle) return clips[i];
       }
-    } else { // 'previous'
+    } else {
       for (let i = currentIndex - 1; i >= 0; i--) {
         if (clips[i].hasSubtitle) return clips[i];
       }

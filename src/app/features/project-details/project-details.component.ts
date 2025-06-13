@@ -1,4 +1,4 @@
-import {Component, HostListener, inject, OnInit, signal, viewChild} from '@angular/core';
+import {Component, ENVIRONMENT_INITIALIZER, inject, OnInit, signal} from '@angular/core';
 import {VideoPlayerComponent} from './video-player/video-player.component';
 import {VideoJsOptions} from './video-player/video-player.type';
 import {ParsedCaptionsResult, parseResponse} from 'media-captions';
@@ -8,6 +8,8 @@ import {Button} from 'primeng/button';
 import {Tooltip} from 'primeng/tooltip';
 import {Drawer} from 'primeng/drawer';
 import {ProjectSettingsComponent} from './project-settings/project-settings.component';
+import {KeyboardShortcutsService} from './services/keyboard-shortcuts.service';
+import {SeekDirection} from '../../model/video.types';
 
 @Component({
   selector: 'app-project-details',
@@ -20,10 +22,12 @@ import {ProjectSettingsComponent} from './project-settings/project-settings.comp
     ProjectSettingsComponent
   ],
   templateUrl: './project-details.component.html',
-  styleUrl: './project-details.component.scss'
+  styleUrl: './project-details.component.scss',
+  providers: [
+    KeyboardShortcutsService
+  ]
 })
 export class ProjectDetailsComponent implements OnInit {
-  protected readonly videoPlayer = viewChild.required(VideoPlayerComponent);
   protected readonly isSettingsVisible = signal(false);
   protected readonly videoStateService = inject(VideoStateService);
   readonly options: VideoJsOptions = {
@@ -48,34 +52,21 @@ export class ProjectDetailsComponent implements OnInit {
     }
   };
 
+  constructor() {
+    inject(KeyboardShortcutsService); // start listening
+  }
+
   async ngOnInit() {
     const response = fetch('/temp/marvel.srt');
     const result: ParsedCaptionsResult = await parseResponse(response, {type: 'srt'});
     this.videoStateService.setCues(result.cues);
   }
 
-  @HostListener('window:keydown.space', ['$event'])
-  onSpacebar(event: KeyboardEvent) {
-    if ((event.target as HTMLElement).tagName === 'INPUT' || (event.target as HTMLElement).tagName === 'TEXTAREA') {
-      return;
-    }
-
-    event.preventDefault();
-
-    this.videoPlayer().togglePlay();
-  }
-
   goToNextClip() {
-    const nextClip = this.videoStateService.findAdjacentClip('next');
-    if (nextClip) {
-      this.videoPlayer().jumpToTime(nextClip.startTime);
-    }
+    this.videoStateService.goToAdjacentSubtitleClip(SeekDirection.Next);
   }
 
   goToPreviousClip() {
-    const prevClip = this.videoStateService.findAdjacentClip('previous');
-    if (prevClip) {
-      this.videoPlayer().jumpToTime(prevClip.startTime);
-    }
+    this.videoStateService.goToAdjacentSubtitleClip(SeekDirection.Previous);
   }
 }

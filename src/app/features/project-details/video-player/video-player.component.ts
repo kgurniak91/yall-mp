@@ -1,8 +1,19 @@
-import {Component, ElementRef, inject, input, OnDestroy, OnInit, viewChild, ViewEncapsulation} from '@angular/core';
+import {
+  Component,
+  effect,
+  ElementRef,
+  inject,
+  input,
+  OnDestroy,
+  OnInit,
+  viewChild,
+  ViewEncapsulation
+} from '@angular/core';
 import videojs from 'video.js';
 import Player from 'video.js/dist/types/player';
 import {VideoJsOptions} from './video-player.type';
 import {VideoStateService} from '../../../state/video-state.service';
+import {SeekType} from '../../../model/video.types';
 
 @Component({
   selector: 'app-video-player',
@@ -16,6 +27,24 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   options = input.required<VideoJsOptions>();
   private player: Player | undefined;
   private videoStateService = inject(VideoStateService);
+
+  private seekRequestHandler = effect(() => {
+    const request = this.videoStateService.seekRequest();
+    if (!request || !this.player) return;
+
+    if (request.type === SeekType.Relative) {
+      const newTime = (this.player.currentTime() || 0) + request.time;
+      this.player.currentTime(newTime);
+    } else { // 'absolute'
+      this.player.currentTime(request.time);
+    }
+  });
+
+  private playPauseRequestHandler = effect(() => {
+    const request = this.videoStateService.playPauseRequest();
+    if (!request) return;
+    this.togglePlay();
+  });
 
   ngOnInit() {
     const videoElement = this.videoElementRef().nativeElement;
