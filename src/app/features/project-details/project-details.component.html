@@ -6,8 +6,10 @@
 
 <div class="subtitle-display">
   @if (videoStateService.currentClip(); as currentClip) {
-    @if (videoStateService.subtitlesVisible() && currentClip.hasSubtitle) {
-      {{ currentClip.text }}
+    @if (currentClip.hasSubtitle) {
+      <span [class.blurred-subtitles]="!videoStateService.subtitlesVisible()">
+        {{ currentClip.text }}
+      </span>
     } @else {
       &nbsp;
     }

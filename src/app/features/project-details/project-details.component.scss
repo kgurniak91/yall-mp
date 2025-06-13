@@ -58,3 +58,8 @@
 app-timeline-editor {
   flex-shrink: 0;
 }
+
+.blurred-subtitles {
+  filter: blur(12px);
+  overflow: hidden;
+}
