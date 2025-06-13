@@ -13,7 +13,8 @@ export enum KeyboardAction {
   SeekForward = 'SeekForward',
   PreviousSubtitleClip = 'PreviousSubtitleClip',
   NextSubtitleClip = 'NextSubtitleClip',
-  ToggleRepeatSubtitleClip = 'ToggleRepeatSubtitleClip',
+  RepeatLastClip = 'RepeatLastClip',
+  ForceContinue = 'ForceContinue',
   TogglePlayPause = 'TogglePlayPause',
 }
 

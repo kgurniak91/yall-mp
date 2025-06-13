@@ -69,4 +69,8 @@ export class ProjectDetailsComponent implements OnInit {
   goToPreviousClip() {
     this.videoStateService.goToAdjacentSubtitleClip(SeekDirection.Previous);
   }
+
+  repeatLastClip() {
+    this.videoStateService.repeatLastClip();
+  }
 }

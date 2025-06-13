@@ -27,6 +27,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   options = input.required<VideoJsOptions>();
   private player: Player | undefined;
   private videoStateService = inject(VideoStateService);
+  private hasForceContinued = false;
 
   private seekRequestHandler = effect(() => {
     const request = this.videoStateService.seekRequest();
@@ -46,6 +47,28 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     this.togglePlay();
   });
 
+  private repeatRequestHandler = effect(() => {
+    const request = this.videoStateService.repeatRequest();
+    if (!request) return;
+
+    const clipToRepeat = this.videoStateService.lastActiveSubtitleClip();
+    if (clipToRepeat) {
+      console.log('Repeating clip:', clipToRepeat.text);
+      this.jumpToTime(clipToRepeat.startTime);
+    }
+
+    this.videoStateService.clearRepeatRequest();
+  });
+
+  private forceContinueHandler = effect(() => {
+    const request = this.videoStateService.forceContinueRequest();
+    if (!request || !this.player) return;
+
+    // Flag to bypass autopause logic for one cycle
+    this.hasForceContinued = true;
+    this.player.play();
+  });
+
   ngOnInit() {
     const videoElement = this.videoElementRef().nativeElement;
 
@@ -54,10 +77,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     this.player = videojs(videoElement, this.options(), () => {
       this.player?.pause();
 
-      this.player?.on('timeupdate', () => {
-        const currentTime = this.player?.currentTime() || 0;
-        this.videoStateService.setCurrentTime(currentTime);
-      });
+      this.player?.on('timeupdate', () => this.updateTime());
 
       this.player?.on('loadedmetadata', () => {
         const duration = this.player?.duration() || 0;
@@ -78,6 +98,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
       return;
     }
 
+    this.hasForceContinued = false;
     this.player.currentTime(time);
     this.player.play();
   }
@@ -89,6 +110,51 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
       this.player.play();
     } else {
       this.player.pause();
+    }
+  }
+
+  private updateTime = (): void => {
+    if (!this.player) return;
+
+    const currentTime = this.player.currentTime() || 0;
+    this.videoStateService.setCurrentTime(currentTime);
+
+    const currentClip = this.videoStateService.currentClip();
+
+    // Update the "last active subtitle clip" state
+    if (currentClip?.hasSubtitle) {
+      if (this.videoStateService.lastActiveSubtitleClip()?.id !== currentClip.id) {
+        this.videoStateService.setLastActiveSubtitleClip(currentClip);
+      }
+    }
+
+    const clipToCheck = this.videoStateService.lastActiveSubtitleClip();
+    if (!clipToCheck) {
+      // If no subtitle clip encountered yet, return
+      return;
+    }
+
+    // Handle the "force continue" flag
+    if (this.hasForceContinued) {
+      // Reset the flag once playback is outside the boundaries of the previous clip
+      if (currentTime > clipToCheck.endTime + 0.1 || currentTime < clipToCheck.startTime - 0.1) {
+        this.hasForceContinued = false;
+      }
+      return; // Skip pause logic on this frame
+    }
+
+    // Check the autopause condition
+    const autoPauseAtEnd = this.videoStateService.autoPauseAtEnd();
+    if (autoPauseAtEnd && currentTime >= clipToCheck.endTime && !this.player.paused()) {
+      // Ensure not pausing again immediately after forcing a continue
+      // The check for !this.hasForceContinued is implicitly handled above
+
+      // Prevent re-pausing if playback has moved on
+      // This is important for when the next clip is very short.
+      if (currentTime < clipToCheck.endTime + 0.5) { // 0.5s grace window
+        console.log('Autopausing at end of clip:', clipToCheck.text);
+        this.player.pause();
+      }
     }
   }
 }

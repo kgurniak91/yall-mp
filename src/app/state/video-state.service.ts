@@ -13,6 +13,11 @@ export class VideoStateService {
   private readonly _subtitlesVisible = signal(true);
   private readonly _seekRequest = signal<{ time: number; type: SeekType } | null>(null);
   private readonly _playPauseRequest = signal<number | null>(null); // Use timestamp to ensure it's a new request
+  private readonly _repeatRequest = signal<number | null>(null);
+  private readonly _forceContinueRequest = signal<number | null>(null);
+  private readonly _lastActiveSubtitleClip = signal<VideoClip | null>(null);
+  private readonly _autoPauseAtStart = signal(false);
+  private readonly _autoPauseAtEnd = signal(true);
 
   public readonly videoElement: Signal<HTMLVideoElement | null> = this._videoElement.asReadonly();
   public readonly currentTime: Signal<number> = this._currentTime.asReadonly();
@@ -20,6 +25,11 @@ export class VideoStateService {
   public readonly subtitlesVisible: Signal<boolean> = this._subtitlesVisible.asReadonly();
   public readonly seekRequest = this._seekRequest.asReadonly();
   public readonly playPauseRequest = this._playPauseRequest.asReadonly();
+  public readonly lastActiveSubtitleClip = this._lastActiveSubtitleClip.asReadonly();
+  public readonly autoPauseAtStart = this._autoPauseAtStart.asReadonly();
+  public readonly autoPauseAtEnd = this._autoPauseAtEnd.asReadonly();
+  public readonly repeatRequest = this._repeatRequest.asReadonly();
+  public readonly forceContinueRequest = this._forceContinueRequest.asReadonly();
 
   public readonly clips: Signal<VideoClip[]> = computed(() => this.generateClips());
   public readonly currentClip: Signal<VideoClip | undefined> = computed(() => {
@@ -47,8 +57,35 @@ export class VideoStateService {
     this._subtitlesVisible.update((subtitlesVisible: boolean) => !subtitlesVisible);
   }
 
+  public toggleAutoPauseAtStart(): void {
+    this._autoPauseAtStart.update((autoPauseAtStart: boolean) => !autoPauseAtStart);
+  }
+
+  public toggleAutoPauseAtEnd(): void {
+    this._autoPauseAtEnd.update((autoPauseAtEnd: boolean) => !autoPauseAtEnd);
+  }
+
   public togglePlayPause(): void {
     this._playPauseRequest.set(Date.now());
+  }
+
+  public repeatLastClip(): void {
+    // Only issue a repeat request if there's a clip to repeat.
+    if (this._lastActiveSubtitleClip()) {
+      this._repeatRequest.set(Date.now());
+    }
+  }
+
+  public clearRepeatRequest(): void {
+    this._repeatRequest.set(null);
+  }
+
+  public forceContinue(): void {
+    this._forceContinueRequest.set(Date.now());
+  }
+
+  public setLastActiveSubtitleClip(clip: VideoClip | null): void {
+    this._lastActiveSubtitleClip.set(clip);
   }
 
   public seekRelative(time: number): void {

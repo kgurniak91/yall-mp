@@ -24,7 +24,8 @@ export class KeyboardShortcutsService implements OnDestroy {
     keyMap.set('c', KeyboardAction.ToggleSubtitles);
     keyMap.set('C', KeyboardAction.ToggleSubtitles);
     keyMap.set(' ', KeyboardAction.TogglePlayPause);
-    keyMap.set('ArrowUp', KeyboardAction.ToggleRepeatSubtitleClip);
+    keyMap.set('ArrowUp', KeyboardAction.RepeatLastClip);
+    keyMap.set('ArrowDown', KeyboardAction.ForceContinue);
 
     let action: KeyboardAction | undefined;
 
@@ -67,8 +68,11 @@ export class KeyboardShortcutsService implements OnDestroy {
       case KeyboardAction.NextSubtitleClip:
         this.videoStateService.goToAdjacentSubtitleClip(SeekDirection.Next);
         break;
-      case KeyboardAction.ToggleRepeatSubtitleClip:
-        //this.videoStateService.toggleRepeatSubtitleClip();
+      case KeyboardAction.RepeatLastClip:
+        this.videoStateService.repeatLastClip();
+        break;
+      case KeyboardAction.ForceContinue:
+        this.videoStateService.forceContinue();
         break;
       case KeyboardAction.TogglePlayPause:
         this.videoStateService.togglePlayPause();
