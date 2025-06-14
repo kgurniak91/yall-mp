@@ -28,6 +28,8 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   private player: Player | undefined;
   private videoStateService = inject(VideoStateService);
   private hasForceContinued = false;
+  private scheduledPauseTimeout: any;
+  private scheduledPauseForClipId: string | null = null;
 
   private seekRequestHandler = effect(() => {
     const request = this.videoStateService.seekRequest();
@@ -64,6 +66,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     const request = this.videoStateService.forceContinueRequest();
     if (!request || !this.player) return;
 
+    this.cancelScheduledPause();
     // Flag to bypass autopause logic for one cycle
     this.hasForceContinued = true;
     this.player.play();
@@ -87,6 +90,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.cancelScheduledPause();
     if (this.player) {
       this.player.dispose();
     }
@@ -98,6 +102,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
       return;
     }
 
+    this.cancelScheduledPause();
     this.hasForceContinued = false;
     this.player.currentTime(time);
     this.player.play();
@@ -105,56 +110,94 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
 
   public togglePlay(): void {
     if (!this.player) return;
+    this.cancelScheduledPause();
 
     if (this.player.paused()) {
+      this.hasForceContinued = true;
       this.player.play();
     } else {
+      this.hasForceContinued = false;
       this.player.pause();
     }
   }
 
+  private cancelScheduledPause(): void {
+    if (this.scheduledPauseTimeout) {
+      clearTimeout(this.scheduledPauseTimeout);
+      this.scheduledPauseTimeout = null;
+      this.scheduledPauseForClipId = null;
+    }
+  }
+
   private updateTime = (): void => {
-    if (!this.player) return;
+    if (!this.player || this.player.paused()) {
+      this.cancelScheduledPause();
+      return;
+    }
 
     const currentTime = this.player.currentTime() || 0;
     this.videoStateService.setCurrentTime(currentTime);
 
     const currentClip = this.videoStateService.currentClip();
+    if (!currentClip) return;
 
-    // Update the "last active subtitle clip" state
-    if (currentClip?.hasSubtitle) {
-      if (this.videoStateService.lastActiveSubtitleClip()?.id !== currentClip.id) {
-        this.videoStateService.setLastActiveSubtitleClip(currentClip);
-      }
+    // Update lastActiveSubtitleClip state
+    if (currentClip.hasSubtitle && this.videoStateService.lastActiveSubtitleClip()?.id !== currentClip.id) {
+      this.videoStateService.setLastActiveSubtitleClip(currentClip);
     }
 
-    const clipToCheck = this.videoStateService.lastActiveSubtitleClip();
-    if (!clipToCheck) {
-      // If no subtitle clip encountered yet, return
+    const autoPauseAtStart = this.videoStateService.autoPauseAtStart();
+    const autoPauseAtEnd = this.videoStateService.autoPauseAtEnd();
+
+    // Return if no autopause settings are enabled
+    if (!autoPauseAtStart && !autoPauseAtEnd) {
       return;
     }
 
-    // Handle the "force continue" flag
-    if (this.hasForceContinued) {
-      // Reset the flag once playback is outside the boundaries of the previous clip
-      if (currentTime > clipToCheck.endTime + 0.1 || currentTime < clipToCheck.startTime - 0.1) {
-        this.hasForceContinued = false;
-      }
-      return; // Skip pause logic on this frame
+    
+
+    // Determine if current clip is a pause target
+    const isEndTarget = autoPauseAtEnd && currentClip.hasSubtitle;
+    const isStartTarget = autoPauseAtStart && !currentClip.hasSubtitle;
+    const isPauseCandidate = isEndTarget || isStartTarget;
+
+    // Reset force continue flag for pause candidates
+    
+    if (isPauseCandidate) {
+      this.hasForceContinued = false;
     }
 
-    // Check the autopause condition
-    const autoPauseAtEnd = this.videoStateService.autoPauseAtEnd();
-    if (autoPauseAtEnd && currentTime >= clipToCheck.endTime && !this.player.paused()) {
-      // Ensure not pausing again immediately after forcing a continue
-      // The check for !this.hasForceContinued is implicitly handled above
+    // Return if in force continue state
+    if (this.hasForceContinued) {
+      return;
+    }
 
-      // Prevent re-pausing if playback has moved on
-      // This is important for when the next clip is very short.
-      if (currentTime < clipToCheck.endTime + 0.5) { // 0.5s grace window
-        console.log('Autopausing at end of clip:', clipToCheck.text);
-        this.player.pause();
+    // If a pause is already scheduled for this clip, do nothing.
+    if (this.scheduledPauseForClipId === currentClip.id) {
+      return;
+    }
+
+    // If the current clip is a candidate, schedule the pause.
+    if (isPauseCandidate) {
+      const pauseTargetTime = currentClip.endTime;
+      const timeRemainingMs = (pauseTargetTime - currentTime) * 1000;
+
+      if (timeRemainingMs > 5) { // Use a small threshold to avoid scheduling tiny timeouts
+        this.cancelScheduledPause(); // Clear any old timers
+        this.scheduledPauseForClipId = currentClip.id;
+
+        this.scheduledPauseTimeout = setTimeout(() => {
+          if (!this.player || this.player.paused() || this.hasForceContinued) return;
+
+          console.log(`Executing scheduled pause for clip ${currentClip.id}`);
+          this.player.pause();
+          this.player.currentTime(pauseTargetTime);
+        }, timeRemainingMs);
       }
+    } else {
+      // This clip is not a pause candidate
+      // so ensure no old pause is pending.
+      this.cancelScheduledPause();
     }
   }
 }
