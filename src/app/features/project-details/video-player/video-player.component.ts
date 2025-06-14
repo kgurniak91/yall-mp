@@ -114,6 +114,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     this.hasForceContinued = false;
     this.player.currentTime(time);
     this.player.play();
+    this.updateTime();
   }
 
   public togglePlay(): void {
