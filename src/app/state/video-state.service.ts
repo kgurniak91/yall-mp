@@ -96,6 +96,10 @@ export class VideoStateService {
     this._seekRequest.set({time, type: SeekType.Absolute});
   }
 
+  public clearSeekRequest(): void {
+    this._seekRequest.set(null);
+  }
+
   public goToAdjacentSubtitleClip(direction: SeekDirection): void {
     const adjacentClip = this.findAdjacentClip(direction);
     if (adjacentClip) {

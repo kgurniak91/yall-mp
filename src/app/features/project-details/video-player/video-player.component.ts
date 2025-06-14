@@ -35,12 +35,20 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     const request = this.videoStateService.seekRequest();
     if (!request || !this.player) return;
 
+    
+    let targetTime: number;
     if (request.type === SeekType.Relative) {
-      const newTime = (this.player.currentTime() || 0) + request.time;
-      this.player.currentTime(newTime);
+      targetTime = (this.player.currentTime() || 0) + request.time;
     } else { // 'absolute'
-      this.player.currentTime(request.time);
+      targetTime = request.time;
     }
+
+
+
+    this.jumpToTime(targetTime);
+
+
+    this.videoStateService.clearSeekRequest();
   });
 
   private playPauseRequestHandler = effect(() => {
