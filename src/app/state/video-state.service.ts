@@ -15,7 +15,7 @@ export class VideoStateService {
   private readonly _playPauseRequest = signal<number | null>(null); // Use timestamp to ensure it's a new request
   private readonly _repeatRequest = signal<number | null>(null);
   private readonly _forceContinueRequest = signal<number | null>(null);
-  private readonly _lastActiveSubtitleClip = signal<VideoClip | null>(null);
+  private readonly _lastActiveSubtitleClipId = signal<string | null>(null);
   private readonly _autoPauseAtStart = signal(false);
   private readonly _autoPauseAtEnd = signal(true);
 
@@ -25,7 +25,14 @@ export class VideoStateService {
   public readonly subtitlesVisible: Signal<boolean> = this._subtitlesVisible.asReadonly();
   public readonly seekRequest = this._seekRequest.asReadonly();
   public readonly playPauseRequest = this._playPauseRequest.asReadonly();
-  public readonly lastActiveSubtitleClip = this._lastActiveSubtitleClip.asReadonly();
+  public readonly lastActiveSubtitleClip = computed(() => {
+    const id = this._lastActiveSubtitleClipId();
+    if (id) {
+      return this.clips().find(clip => clip.id === id);
+    } else {
+      return null;
+    }
+  });
   public readonly autoPauseAtStart = this._autoPauseAtStart.asReadonly();
   public readonly autoPauseAtEnd = this._autoPauseAtEnd.asReadonly();
   public readonly repeatRequest = this._repeatRequest.asReadonly();
@@ -71,7 +78,7 @@ export class VideoStateService {
 
   public repeatLastClip(): void {
     // Only issue a repeat request if there's a clip to repeat.
-    if (this._lastActiveSubtitleClip()) {
+    if (this._lastActiveSubtitleClipId()) {
       this._repeatRequest.set(Date.now());
     }
   }
@@ -84,8 +91,8 @@ export class VideoStateService {
     this._forceContinueRequest.set(Date.now());
   }
 
-  public setLastActiveSubtitleClip(clip: VideoClip | null): void {
-    this._lastActiveSubtitleClip.set(clip);
+  public setLastActiveSubtitleClipId(clipId: string | null): void {
+    this._lastActiveSubtitleClipId.set(clipId);
   }
 
   public seekRelative(time: number): void {

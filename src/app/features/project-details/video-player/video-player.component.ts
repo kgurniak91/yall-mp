@@ -152,7 +152,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
 
     // Update lastActiveSubtitleClip state
     if (currentClip.hasSubtitle && this.videoStateService.lastActiveSubtitleClip()?.id !== currentClip.id) {
-      this.videoStateService.setLastActiveSubtitleClip(currentClip);
+      this.videoStateService.setLastActiveSubtitleClipId(currentClip.id);
     }
 
     const autoPauseAtStart = this.videoStateService.autoPauseAtStart();
