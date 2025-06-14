@@ -24,8 +24,6 @@ export class KeyboardShortcutsService implements OnDestroy {
     keyMap.set('c', KeyboardAction.ToggleSubtitles);
     keyMap.set('C', KeyboardAction.ToggleSubtitles);
     keyMap.set(' ', KeyboardAction.TogglePlayPause);
-    keyMap.set('ArrowUp', KeyboardAction.RepeatLastClip);
-    keyMap.set('ArrowDown', KeyboardAction.ForceContinue);
 
     let action: KeyboardAction | undefined;
 
@@ -34,12 +32,20 @@ export class KeyboardShortcutsService implements OnDestroy {
         action = KeyboardAction.PreviousSubtitleClip;
       } else if (event.key === 'ArrowRight') {
         action = KeyboardAction.NextSubtitleClip;
+      } else if (event.key === 'ArrowUp') {
+        action = KeyboardAction.RepeatLastClip;
+      } else if (event.key === 'ArrowDown') {
+        action = KeyboardAction.ForceContinue;
       }
     } else {
       if (event.key === 'ArrowLeft') {
         action = KeyboardAction.SeekBackward;
       } else if (event.key === 'ArrowRight') {
         action = KeyboardAction.SeekForward;
+      } else if (event.key === 'ArrowUp') {
+        action = KeyboardAction.RepeatLastClip;
+      } else if (event.key === 'ArrowDown') {
+        action = KeyboardAction.ForceContinue;
       } else {
         action = keyMap.get(event.key);
       }
