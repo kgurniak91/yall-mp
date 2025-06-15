@@ -62,11 +62,11 @@ export class ProjectDetailsComponent implements OnInit {
     this.videoStateService.setCues(result.cues);
   }
 
-  goToNextClip() {
+  goToNextSubtitleClip() {
     this.videoStateService.goToAdjacentSubtitleClip(SeekDirection.Next);
   }
 
-  goToPreviousClip() {
+  goToPreviousSubtitleClip() {
     this.videoStateService.goToAdjacentSubtitleClip(SeekDirection.Previous);
   }
 

@@ -3,14 +3,4 @@
   width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
-
-  ::ng-deep [part~="region"] {
-    border-left: 1px solid rgba(0, 0, 0, 0.5);
-    border-right: 1px solid rgba(0, 0, 0, 0.5);
-    box-sizing: border-box;
-  }
-
-  ::ng-deep .wavesurfer-handle {
-    background-color: #ff4500;
-  }
 }

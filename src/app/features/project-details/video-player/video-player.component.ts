@@ -13,7 +13,7 @@ import videojs from 'video.js';
 import Player from 'video.js/dist/types/player';
 import {VideoJsOptions} from './video-player.type';
 import {VideoStateService} from '../../../state/video-state.service';
-import {SeekType} from '../../../model/video.types';
+import {SeekType, VideoClip} from '../../../model/video.types';
 
 @Component({
   selector: 'app-video-player',
@@ -27,120 +27,57 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   options = input.required<VideoJsOptions>();
   private player: Player | undefined;
   private videoStateService = inject(VideoStateService);
-  private hasForceContinued = false;
+
   private scheduledPauseTimeout: any;
-  private scheduledPauseForClipId: string | null = null;
+  private lastScheduledPauseClipId: string | null = null;
+  private isSeeking = false;
+  private justPlayedFromAutoPause = false;
 
-  private seekRequestHandler = effect(() => {
-    const request = this.videoStateService.seekRequest();
-    if (!request || !this.player) return;
+  private requestHandler = effect(() => {
+    const playPauseRequest = this.videoStateService.playPauseRequest();
+    if (playPauseRequest) this.handleTogglePlayPause();
 
-    
-    let targetTime: number;
-    if (request.type === SeekType.Relative) {
-      targetTime = (this.player.currentTime() || 0) + request.time;
-    } else { // 'absolute'
-      targetTime = request.time;
-    }
+    const repeatRequest = this.videoStateService.repeatRequest();
+    if (repeatRequest) this.handleRepeat();
 
+    const seekRequest = this.videoStateService.seekRequest();
+    if (seekRequest) this.handleSeek(seekRequest);
 
-
-    this.jumpToTime(targetTime);
-
-
-    this.videoStateService.clearSeekRequest();
-  });
-
-  private playPauseRequestHandler = effect(() => {
-    const request = this.videoStateService.playPauseRequest();
-    if (!request) return;
-    this.togglePlay();
-  });
-
-  private repeatRequestHandler = effect(() => {
-    const request = this.videoStateService.repeatRequest();
-    if (!request) return;
-
-    const clipToRepeat = this.videoStateService.lastActiveSubtitleClip();
-    if (clipToRepeat) {
-      console.log('Repeating clip:', clipToRepeat.text);
-      this.jumpToTime(clipToRepeat.startTime);
-    }
-
-    this.videoStateService.clearRepeatRequest();
-  });
-
-  private forceContinueHandler = effect(() => {
-    const request = this.videoStateService.forceContinueRequest();
-    if (!request || !this.player) return;
-
-    this.cancelScheduledPause();
-    // Flag to bypass autopause logic for one cycle
-    this.hasForceContinued = true;
-    this.player.play();
+    const forceContinueRequest = this.videoStateService.forceContinueRequest();
+    if (forceContinueRequest) this.handleForceContinue();
   });
 
   ngOnInit() {
     const videoElement = this.videoElementRef().nativeElement;
-
     this.videoStateService.setVideoElement(videoElement);
 
     this.player = videojs(videoElement, this.options(), () => {
-      this.player?.pause();
-
-      this.player?.on('timeupdate', () => this.updateTime());
-
-      this.player?.on('loadedmetadata', () => {
-        const duration = this.player?.duration() || 0;
-        this.videoStateService.setDuration(duration);
+      this.player?.on('timeupdate', () => this.onTimeUpdate());
+      this.player?.on('play', () => this.videoStateService.setPlayerPausedState(false));
+      this.player?.on('pause', () => this.videoStateService.setPlayerPausedState(true));
+      this.player?.on('seeking', () => {
+        this.isSeeking = true;
+        clearTimeout(this.scheduledPauseTimeout);
+        this.lastScheduledPauseClipId = null;
       });
+      this.player?.on('seeked', () => {
+        this.isSeeking = false;
+        this.onTimeUpdate();
+      });
+      this.player?.on('loadedmetadata', () => this.videoStateService.setDuration(this.player?.duration() || 0));
     });
   }
 
   ngOnDestroy() {
-    this.cancelScheduledPause();
-    if (this.player) {
-      this.player.dispose();
-    }
-    this.videoStateService.setVideoElement(null);
+    clearTimeout(this.scheduledPauseTimeout);
+    if (this.player) this.player.dispose();
   }
 
-  public jumpToTime(time: number): void {
-    if (!this.player) {
-      return;
-    }
-
-    this.cancelScheduledPause();
-    this.hasForceContinued = false;
-    this.player.currentTime(time);
-    this.player.play();
-    this.updateTime();
-  }
-
-  public togglePlay(): void {
+  private onTimeUpdate(): void {
     if (!this.player) return;
-    this.cancelScheduledPause();
 
-    if (this.player.paused()) {
-      this.hasForceContinued = true;
-      this.player.play();
-    } else {
-      this.hasForceContinued = false;
-      this.player.pause();
-    }
-  }
-
-  private cancelScheduledPause(): void {
-    if (this.scheduledPauseTimeout) {
-      clearTimeout(this.scheduledPauseTimeout);
-      this.scheduledPauseTimeout = null;
-      this.scheduledPauseForClipId = null;
-    }
-  }
-
-  private updateTime = (): void => {
-    if (!this.player || this.player.paused()) {
-      this.cancelScheduledPause();
+    if (this.justPlayedFromAutoPause) {
+      this.justPlayedFromAutoPause = false;
       return;
     }
 
@@ -148,65 +85,137 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     this.videoStateService.setCurrentTime(currentTime);
 
     const currentClip = this.videoStateService.currentClip();
-    if (!currentClip) return;
-
-    // Update lastActiveSubtitleClip state
-    if (currentClip.hasSubtitle && this.videoStateService.lastActiveSubtitleClip()?.id !== currentClip.id) {
+    if (currentClip?.hasSubtitle) {
       this.videoStateService.setLastActiveSubtitleClipId(currentClip.id);
     }
 
-    const autoPauseAtStart = this.videoStateService.autoPauseAtStart();
-    const autoPauseAtEnd = this.videoStateService.autoPauseAtEnd();
-
-    // Return if no autopause settings are enabled
-    if (!autoPauseAtStart && !autoPauseAtEnd) {
+    if (this.player.paused() || this.isSeeking || !currentClip) {
       return;
     }
 
-    
+    this.schedulePauseIfNeeded(currentClip, currentTime);
+  }
 
-    // Determine if current clip is a pause target
-    const isEndTarget = autoPauseAtEnd && currentClip.hasSubtitle;
-    const isStartTarget = autoPauseAtStart && !currentClip.hasSubtitle;
-    const isPauseCandidate = isEndTarget || isStartTarget;
+  private handleTogglePlayPause(): void {
+    if (!this.player) return;
+    const isPaused = this.videoStateService.isPlayerPaused();
+    const isAutoPaused = this.videoStateService.isAutoPaused();
 
-    // Reset force continue flag for pause candidates
-    
-    if (isPauseCandidate) {
-      this.hasForceContinued = false;
-    }
+    // User action invalidates auto-pause state
+    this.videoStateService.setAutoPaused(false);
 
-    // Return if in force continue state
-    if (this.hasForceContinued) {
-      return;
-    }
-
-    // If a pause is already scheduled for this clip, do nothing.
-    if (this.scheduledPauseForClipId === currentClip.id) {
-      return;
-    }
-
-    // If the current clip is a candidate, schedule the pause.
-    if (isPauseCandidate) {
-      const pauseTargetTime = currentClip.endTime;
-      const timeRemainingMs = (pauseTargetTime - currentTime) * 1000;
-
-      if (timeRemainingMs > 5) { // Use a small threshold to avoid scheduling tiny timeouts
-        this.cancelScheduledPause(); // Clear any old timers
-        this.scheduledPauseForClipId = currentClip.id;
-
-        this.scheduledPauseTimeout = setTimeout(() => {
-          if (!this.player || this.player.paused() || this.hasForceContinued) return;
-
-          console.log(`Executing scheduled pause for clip ${currentClip.id}`);
-          this.player.pause();
-          this.player.currentTime(pauseTargetTime);
-        }, timeRemainingMs);
+    if (isPaused) {
+      // Bypass next timeupdate check if auto-paused
+      if (isAutoPaused) {
+        this.justPlayedFromAutoPause = true;
       }
+      this.clearScheduledPause(); // Prevent lingering pauses
+      this.player.play();
     } else {
-      // This clip is not a pause candidate
-      // so ensure no old pause is pending.
-      this.cancelScheduledPause();
+      this.player.pause();
     }
+    this.videoStateService.clearPlayPauseRequest();
+  }
+
+  private handleRepeat(): void {
+    const clipToRepeat = this.videoStateService.lastActiveSubtitleClip();
+    if (clipToRepeat) {
+      this.jumpToTime(clipToRepeat.startTime, true);
+    }
+    this.videoStateService.clearRepeatRequest();
+  }
+
+  private handleSeek(request: { time: number; type: SeekType }): void {
+    if (!this.player) return;
+    let targetTime: number;
+    if (request.type === SeekType.Relative) {
+      targetTime = (this.player.currentTime() || 0) + request.time;
+    } else {
+      targetTime = request.time;
+    }
+
+    const shouldPlay = !this.videoStateService.autoPauseAtStart();
+    this.jumpToTime(targetTime, shouldPlay);
+    this.videoStateService.clearSeekRequest();
+  }
+
+  private handleForceContinue(): void {
+    if (!this.player) return;
+
+    this.videoStateService.setAutoPaused(false);
+    this.justPlayedFromAutoPause = true;
+    this.clearScheduledPause();
+    this.player.play();
+
+    this.videoStateService.clearForceContinueRequest();
+  }
+
+  private jumpToTime(time: number, shouldPlay: boolean): void {
+    if (!this.player) return;
+    this.clearScheduledPause();
+
+    // Clear auto-pause state on user action
+    this.videoStateService.setAutoPaused(false);
+
+    this.player.currentTime(time);
+    this.videoStateService.setCurrentTime(time);
+    this.videoStateService.recalculateActiveClip();
+
+    if (shouldPlay) {
+      // Handle auto-pause at start of clip
+      // Bypass first timeupdate check
+      this.justPlayedFromAutoPause = true;
+      this.player.play();
+    }
+  }
+
+  private clearScheduledPause(): void {
+    clearTimeout(this.scheduledPauseTimeout);
+    this.lastScheduledPauseClipId = null;
+  }
+
+  private schedulePauseIfNeeded(clip: VideoClip, currentTime: number): void {
+    const autoPauseStart = this.videoStateService.autoPauseAtStart();
+    const autoPauseEnd = this.videoStateService.autoPauseAtEnd();
+
+    const isEndTarget = autoPauseEnd && clip.hasSubtitle;
+    const isStartTarget = autoPauseStart && !clip.hasSubtitle;
+    const shouldPause = isEndTarget || isStartTarget;
+
+    if (!shouldPause) {
+      this.clearScheduledPause();
+      return;
+    }
+
+    if (this.lastScheduledPauseClipId === clip.id) return;
+
+    const timeRemainingMs = (clip.endTime - currentTime) * 1000;
+
+    if (timeRemainingMs > 5) {
+      this.lastScheduledPauseClipId = clip.id;
+      this.scheduledPauseTimeout = setTimeout(() => {
+        if (!this.player || this.player.paused() || this.isSeeking) return;
+
+        this.player.pause();
+        this.player.currentTime(clip.endTime);
+        this.videoStateService.setAutoPaused(true);
+
+        if (isStartTarget) {
+          const nextClip = this.findNextClip(clip.id);
+          if (nextClip?.hasSubtitle) {
+            this.videoStateService.setLastActiveSubtitleClipId(nextClip.id);
+          }
+        }
+      }, timeRemainingMs);
+    }
+  }
+
+  private findNextClip(clipId: string): VideoClip | undefined {
+    const clips = this.videoStateService.clips();
+    const index = clips.findIndex(c => c.id === clipId);
+    if (index > -1 && index < clips.length - 1) {
+      return clips[index + 1];
+    }
+    return undefined;
   }
 }

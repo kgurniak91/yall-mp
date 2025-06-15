@@ -23,7 +23,7 @@
             pTooltip="Poprzednie napisy"
             tooltipPosition="left"
             severity="secondary"
-            (onClick)="goToPreviousClip()"/>
+            (onClick)="goToPreviousSubtitleClip()"/>
 
   <p-button icon="fa-solid fa-repeat"
             pTooltip="Powtórz"
@@ -35,7 +35,7 @@
             pTooltip="Następne napisy"
             tooltipPosition="right"
             severity="secondary"
-            (onClick)="goToNextClip()"/>
+            (onClick)="goToNextSubtitleClip()"/>
 
   <div class="settings-wrapper">
     @let subtitlesVisible = videoStateService.subtitlesVisible();
