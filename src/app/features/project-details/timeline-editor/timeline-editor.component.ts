@@ -3,10 +3,14 @@ import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin, {Region} from 'wavesurfer.js/dist/plugins/regions.js';
 import {VideoStateService} from '../../../state/video-state.service';
 
-const INITIAL_ZOOM = 150; // Initial pixels per second (higher is more zoomed in)
+const INITIAL_ZOOM = 100; // Initial pixels per second (higher is more zoomed in)
 const MIN_ZOOM = 20;      // Minimum pixels per second
 const MAX_ZOOM = 1000;    // Maximum pixels per second
-const ZOOM_FACTOR = 1.2;  // How much to zoom in/out on each wheel tick
+const ZOOM_FACTOR = 1.2;  // How much to zoom in/out on each zoom
+
+const ACTIVE_BACKGROUND = 'rgba(0, 150, 255, 0.3)';
+const INACTIVE_SUBTITLE_BACKGROUND = 'rgba(255, 165, 0, 0.2)';
+const GAP_BACKGROUND = 'rgba(100, 100, 100, 0.1)';
 
 @Component({
   selector: 'app-timeline-editor',
@@ -20,7 +24,51 @@ export class TimelineEditorComponent implements OnDestroy {
   private wavesurfer: WaveSurfer | undefined;
   private wsRegions: RegionsPlugin | undefined;
   private currentZoom = signal<number>(INITIAL_ZOOM);
+  private lastDrawnClipsSignature: string | null = null;
+  private lastActiveRegionId: string | null = null;
   private regionDrawDebounceTimer: any;
+
+  private timelineRenderer = effect(() => {
+    const clips = this.videoStateService.clips();
+    const activeClipId = this.videoStateService.lastActiveSubtitleClipId();
+    const duration = this.videoStateService.duration();
+    const videoElement = this.videoStateService.videoElement();
+    const container = this.timelineContainer()?.nativeElement;
+
+    const clipsSignature = clips.map(c => `${c.id}@${c.startTime}:${c.endTime}`).join(',');
+
+    if (!this.wavesurfer && videoElement && container && duration > 0) {
+      this.initializeWaveSurfer(videoElement, container);
+    }
+
+    const shadowRoot = container?.querySelector('div')?.shadowRoot;
+    if (!this.wsRegions || !shadowRoot) return;
+
+    if (clipsSignature !== this.lastDrawnClipsSignature) {
+      this.drawRegions(clips);
+      this.lastDrawnClipsSignature = clipsSignature;
+    }
+
+    if (this.lastActiveRegionId !== activeClipId) {
+      const clipsMap = this.videoStateService.clipsMap();
+
+      if (this.lastActiveRegionId) {
+        const oldRegionElement = shadowRoot.querySelector(`[part~="${this.lastActiveRegionId}"]`) as HTMLElement;
+        const oldClip = clipsMap.get(this.lastActiveRegionId);
+        if (oldRegionElement && oldClip) {
+          oldRegionElement.style.backgroundColor = oldClip.hasSubtitle ? INACTIVE_SUBTITLE_BACKGROUND : GAP_BACKGROUND;
+        }
+      }
+
+      if (activeClipId) {
+        const newRegionElement = shadowRoot.querySelector(`[part~="${activeClipId}"]`) as HTMLElement;
+        if (newRegionElement) {
+          newRegionElement.style.backgroundColor = ACTIVE_BACKGROUND;
+        }
+      }
+      this.lastActiveRegionId = activeClipId;
+    }
+  });
 
   ngOnDestroy() {
     clearTimeout(this.regionDrawDebounceTimer);
@@ -29,16 +77,13 @@ export class TimelineEditorComponent implements OnDestroy {
 
   @HostListener('window:keydown', ['$event'])
   onKeydown(event: KeyboardEvent) {
-    // Prevent zoom if typing in input
     if ((event.target as HTMLElement).tagName === 'INPUT' || (event.target as HTMLElement).tagName === 'TEXTAREA') {
       return;
     }
-
     if (event.key === '=') {
       event.preventDefault();
       this.zoomIn();
     }
-
     if (event.key === '-') {
       event.preventDefault();
       this.zoomOut();
@@ -48,8 +93,6 @@ export class TimelineEditorComponent implements OnDestroy {
   public onWheel(event: WheelEvent): void {
     if (!this.wavesurfer || event.shiftKey) return;
     event.preventDefault();
-
-    
     if (event.deltaY < 0) {
       this.zoomIn();
     } else {
@@ -77,103 +120,56 @@ export class TimelineEditorComponent implements OnDestroy {
     this.wavesurfer.zoom(newZoom);
 
     clearTimeout(this.regionDrawDebounceTimer);
-
     this.regionDrawDebounceTimer = setTimeout(() => {
-      this.drawRegions();
+      console.log('Zoom finished, triggering redraw check.');
     }, 50);
   }
-
-  private clipsDrawer = effect(() => {
-    if (this.videoStateService.clips().length > 0) {
-      this.drawRegions();
-    }
-  });
-
-  private wavesurferInitializer = effect(() => {
-    const videoElement = this.videoStateService.videoElement();
-    const duration = this.videoStateService.duration();
-    const container = this.timelineContainer()?.nativeElement;
-
-    if (videoElement && container && (duration > 0) && !this.wavesurfer) {
-      // Initialize only if ready and not yet initialized
-      console.log('Video element is ready, initializing WaveSurfer...');
-      this.initializeWaveSurfer(videoElement, container);
-    }
-  });
 
   private initializeWaveSurfer(videoElement: HTMLVideoElement, container: HTMLElement) {
     this.wavesurfer = WaveSurfer.create({
       container,
-      media: videoElement, 
+      media: videoElement,
       waveColor: '#ccc',
-      progressColor: '#f55', 
+      progressColor: '#f55',
       barWidth: 2,
       barGap: 1,
       minPxPerSec: this.currentZoom()
     });
 
-    // Initialize and register the Regions plugin
     this.wsRegions = this.wavesurfer.registerPlugin(RegionsPlugin.create());
     this.setupEventListeners();
-    this.drawRegions();
   }
 
   private setupEventListeners() {
     if (!this.wsRegions) return;
-
-    // region-updated' fires AFTER the user has finished dragging a handle.
     this.wsRegions.on('region-updated', (region: Region) => {
-      // Get the original state of the clip
-      
       const originalClip = this.videoStateService.clips().find(c => c.id === region.id);
-
       if (!originalClip) {
         console.error('Could not find corresponding clip in state for region:', region.id);
         return;
       }
-
-      // Check if times actually changed
       const hasChanged = originalClip.startTime !== region.start || originalClip.endTime !== region.end;
-
-      if (!hasChanged) {
-        // If the start and end times are identical, it was likely just a click
-        // Do nothing to avoid unnecessary state updates
-        return;
-      }
-
-      // Update state if changed
-      
+      if (!hasChanged) return;
       this.videoStateService.updateClipTimes(region.id, region.start, region.end);
     });
-
-    
     this.wsRegions.on('region-clicked', (region: Region, e: MouseEvent) => {
-      e.stopPropagation(); // Prevent the main timeline click from firing
+      e.stopPropagation();
       this.wavesurfer?.seekTo(region.start / this.wavesurfer.getDuration());
     });
   }
 
-  private drawRegions() {
-    // Guard against running before wsRegions is ready.
-    if (!this.wsRegions) {
-      return;
-    }
-
-    const clips = this.videoStateService.clips();
-
-    // Clear existing regions
+  private drawRegions(clips: any[]) {
+    if (!this.wsRegions) return;
     this.wsRegions.clearRegions();
-
     clips.forEach(clip => {
       this.wsRegions?.addRegion({
         id: clip.id,
         start: clip.startTime,
         end: clip.endTime,
-        color: clip.hasSubtitle ? 'rgba(255, 165, 0, 0.2)' : 'rgba(100, 100, 100, 0.1)',
+        color: clip.hasSubtitle ? INACTIVE_SUBTITLE_BACKGROUND : GAP_BACKGROUND,
         drag: false,
         resize: true,
       });
     });
   }
-
 }

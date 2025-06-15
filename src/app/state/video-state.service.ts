@@ -25,23 +25,28 @@ export class VideoStateService {
   public readonly subtitlesVisible: Signal<boolean> = this._subtitlesVisible.asReadonly();
   public readonly seekRequest = this._seekRequest.asReadonly();
   public readonly playPauseRequest = this._playPauseRequest.asReadonly();
-  public readonly lastActiveSubtitleClip = computed(() => {
-    const id = this._lastActiveSubtitleClipId();
-    if (id) {
-      return this.clips().find(clip => clip.id === id);
-    } else {
-      return null;
-    }
-  });
+  public readonly lastActiveSubtitleClipId = this._lastActiveSubtitleClipId.asReadonly();
   public readonly autoPauseAtStart = this._autoPauseAtStart.asReadonly();
   public readonly autoPauseAtEnd = this._autoPauseAtEnd.asReadonly();
   public readonly repeatRequest = this._repeatRequest.asReadonly();
   public readonly forceContinueRequest = this._forceContinueRequest.asReadonly();
 
   public readonly clips: Signal<VideoClip[]> = computed(() => this.generateClips());
+  public readonly clipsMap: Signal<Map<string, VideoClip>> = computed(() => {
+    const clipsArray = this.clips();
+    return new Map(clipsArray.map(clip => [clip.id, clip]));
+  });
   public readonly currentClip: Signal<VideoClip | undefined> = computed(() => {
     const time = this.currentTime();
     return this.clips().find(clip => time >= clip.startTime && time < clip.endTime);
+  });
+  public readonly lastActiveSubtitleClip = computed(() => {
+    const id = this.lastActiveSubtitleClipId();
+    if (id) {
+      return this.clips().find(clip => clip.id === id);
+    } else {
+      return null;
+    }
   });
 
   public setCurrentTime(time: number): void {
@@ -247,7 +252,7 @@ export class VideoStateService {
 
       // Create the clip for the actual subtitle
       generatedClips.push({
-        id: cue.id,
+        id: `subtitle-${cue.id}`,
         startTime: cue.startTime,
         endTime: cue.endTime,
         duration: cue.endTime - cue.startTime,
