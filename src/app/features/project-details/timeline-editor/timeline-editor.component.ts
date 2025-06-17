@@ -28,6 +28,7 @@ export class TimelineEditorComponent implements OnDestroy {
   private lastDrawnClipsSignature: string | null = null;
   private lastActiveRegionId: string | null = null;
   private pendingHighlightClipId: string | null = null;
+  private hasPlayedOnce = false; // track if the user has played the video at least once - avoid browser autoplay security errors
 
   private timelineRenderer = effect(() => {
     const clips = this.videoStateService.clips();
@@ -51,14 +52,10 @@ export class TimelineEditorComponent implements OnDestroy {
 
     if (this.lastActiveRegionId !== activeClipId) {
       setTimeout(() => {
-        // Apply the highlight immediately
         const success = this.applyHighlight(activeClipId);
-
-        // Set as pending if region is off-screen
         if (!success && activeClipId) {
           this.pendingHighlightClipId = activeClipId;
         } else {
-          // Clear pending request
           this.pendingHighlightClipId = null;
         }
       });
@@ -67,6 +64,7 @@ export class TimelineEditorComponent implements OnDestroy {
 
   ngOnDestroy() {
     this.wavesurfer?.un('scroll', this.handleWaveSurferScroll);
+    this.wavesurfer?.un('play', this.handleFirstPlay);
     this.wavesurfer?.destroy();
   }
 
@@ -113,6 +111,12 @@ export class TimelineEditorComponent implements OnDestroy {
     }
     this.currentZoom.set(newZoom);
     this.wavesurfer.zoom(newZoom);
+
+    // hack to refresh the timeline when zooming in/out, so that regions don't disappear
+    if (this.hasPlayedOnce && !this.wavesurfer.isPlaying()) {
+      this.wavesurfer.playPause();
+      this.wavesurfer.playPause();
+    }
   }
 
   private initializeWaveSurfer(videoElement: HTMLVideoElement, container: HTMLElement) {
@@ -130,24 +134,19 @@ export class TimelineEditorComponent implements OnDestroy {
     this.setupEventListeners();
 
     this.wavesurfer.on('scroll', this.handleWaveSurferScroll);
+    this.wavesurfer.on('play', this.handleFirstPlay);
   }
+
+  private handleFirstPlay = () => {
+    this.hasPlayedOnce = true;
+    this.wavesurfer?.un('play', this.handleFirstPlay);
+  };
 
   private setupEventListeners() {
     if (!this.wsRegions) return;
 
     this.wsRegions.on('region-updated', (region: Region) => {
-      const originalClip = this.videoStateService.clips().find(c => c.id === region.id);
-      if (!originalClip) {
-        console.error('Could not find corresponding clip in state for region:', region.id);
-        return;
-      }
-      const hasChanged = originalClip.startTime.toFixed(4) !== region.start.toFixed(4) ||
-        originalClip.endTime.toFixed(4) !== region.end.toFixed(4);
-      if (!hasChanged) return;
-
-      this.lastActiveRegionId = null;
       this.videoStateService.updateClipTimes(region.id, region.start, region.end);
-      this.videoStateService.recalculateActiveClip();
     });
 
     this.wsRegions.on('region-clicked', (region: Region, e: MouseEvent) => {
@@ -157,10 +156,8 @@ export class TimelineEditorComponent implements OnDestroy {
   }
 
   private handleWaveSurferScroll = () => {
-    // Process pending highlight
     if (this.pendingHighlightClipId) {
       const success = this.applyHighlight(this.pendingHighlightClipId);
-      // Clear pending ID on success
       if (success) {
         this.pendingHighlightClipId = null;
       }
@@ -176,7 +173,6 @@ export class TimelineEditorComponent implements OnDestroy {
 
     const clipsMap = this.videoStateService.clipsMap();
 
-    // De-highlight the previously active region
     if (this.lastActiveRegionId && this.lastActiveRegionId !== activeClipId) {
       const oldRegionElement = shadowRoot.querySelector(`[part~="${this.lastActiveRegionId}"]`) as HTMLElement;
       const oldClip = clipsMap.get(this.lastActiveRegionId);
@@ -185,7 +181,6 @@ export class TimelineEditorComponent implements OnDestroy {
       }
     }
 
-    // Highlight the new active region
     if (activeClipId) {
       const newRegionElement = shadowRoot.querySelector(`[part~="${activeClipId}"]`) as HTMLElement;
       if (newRegionElement) {
@@ -196,7 +191,6 @@ export class TimelineEditorComponent implements OnDestroy {
         return false;
       }
     } else {
-      // Clear state if no active clip
       this.lastActiveRegionId = null;
       return true;
     }
