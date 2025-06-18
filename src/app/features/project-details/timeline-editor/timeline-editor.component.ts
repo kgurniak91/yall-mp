@@ -65,6 +65,7 @@ export class TimelineEditorComponent implements OnDestroy {
   ngOnDestroy() {
     this.wavesurfer?.un('scroll', this.handleWaveSurferScroll);
     this.wavesurfer?.un('play', this.handleFirstPlay);
+    this.wsRegions?.un('region-created', this.handleRegionCreated);
     this.wavesurfer?.destroy();
   }
 
@@ -153,7 +154,15 @@ export class TimelineEditorComponent implements OnDestroy {
       e.stopPropagation();
       this.videoStateService.seekAbsolute(region.start);
     });
+
+    this.wsRegions.on('region-created', this.handleRegionCreated);
   }
+
+  private handleRegionCreated = (region: Region) => {
+    if (region.id === this.videoStateService.lastActiveSubtitleClipId()) {
+      (region.element as HTMLElement).style.backgroundColor = ACTIVE_BACKGROUND;
+    }
+  };
 
   private handleWaveSurferScroll = () => {
     if (this.pendingHighlightClipId) {
@@ -198,7 +207,9 @@ export class TimelineEditorComponent implements OnDestroy {
 
   private drawRegions(clips: VideoClip[]) {
     if (!this.wsRegions) return;
+
     this.wsRegions.clearRegions();
+
     clips.forEach(clip => {
       this.wsRegions?.addRegion({
         id: clip.id,
@@ -209,7 +220,5 @@ export class TimelineEditorComponent implements OnDestroy {
         resize: true,
       });
     });
-
-    this.applyHighlight(this.videoStateService.lastActiveSubtitleClipId());
   }
 }
