@@ -106,19 +106,25 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
       if (isAutoPaused) {
         this.justPlayedFromAutoPause = true;
       }
+
       this.clearScheduledPause();
+      const currentClip = this.videoStateService.currentClip();
+      if (currentClip) {
+        this.schedulePauseIfNeeded(currentClip, this.player.currentTime() || 0);
+      }
+
       this.player.play();
     } else {
+      // If the user is manually pausing, any scheduled auto-pause must be cancelled.
+      this.clearScheduledPause();
       this.player.pause();
     }
     this.videoStateService.clearPlayPauseRequest();
   }
 
-  
   private handleRepeat(): void {
     const clipToRepeat = this.videoStateService.lastActiveSubtitleClip();
     if (clipToRepeat) {
-      // The `forcePlay` parameter tells jumpToTime to ignore auto-pause rules.
       this.jumpToTime(clipToRepeat.startTime, true, true);
     }
     this.videoStateService.clearRepeatRequest();
@@ -140,12 +146,10 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
 
   private handleForceContinue(): void {
     if (!this.player) return;
-    // Force continue should always play, ignoring auto-pause rules.
     this.jumpToTime(this.player.currentTime() || 0, true, true);
     this.videoStateService.clearForceContinueRequest();
   }
 
-  
   private jumpToTime(time: number, shouldPlay: boolean, forcePlay = false): void {
     if (!this.player) return;
 
@@ -161,7 +165,6 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
 
     const isAtStartOfSubtitleClip = targetClip?.hasSubtitle && Math.abs(time - targetClip.startTime) < 0.01;
 
-    // Check if auto-pause logic should be bypassed
     if (forcePlay) {
       this.justPlayedFromAutoPause = true;
       if (this.player.paused()) {
@@ -170,7 +173,6 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Check if auto-pause at start should override shouldPlay
     if (autoPauseAtStart && isAtStartOfSubtitleClip) {
       if (!this.player.paused()) {
         this.player.pause();
