@@ -52,27 +52,50 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     this.videoStateService.setVideoElement(videoElement);
 
     this.player = videojs(videoElement, this.options(), () => {
-      this.player?.on('timeupdate', () => this.onTimeUpdate());
-      this.player?.on('play', () => this.videoStateService.setPlayerPausedState(false));
-      this.player?.on('pause', () => this.videoStateService.setPlayerPausedState(true));
-      this.player?.on('seeking', () => {
-        this.isSeeking = true;
-        this.clearScheduledPause();
-      });
-      this.player?.on('seeked', () => {
-        this.isSeeking = false;
-        this.onTimeUpdate();
-      });
-      this.player?.on('loadedmetadata', () => this.videoStateService.setDuration(this.player?.duration() || 0));
+      this.player?.on('play', this.handlePlay);
+      this.player?.on('pause', this.handlePause);
+      this.player?.on('timeupdate', this.handleTimeUpdate);
+      this.player?.on('seeking', this.handleSeeking);
+      this.player?.on('seeked', this.handleSeeked);
+      this.player?.on('loadedmetadata', this.handleLoadedMetadata);
     });
   }
 
   ngOnDestroy() {
     this.clearScheduledPause();
-    if (this.player) this.player.dispose();
+    if (this.player) {
+      this.player.off('play', this.handlePlay);
+      this.player.off('pause', this.handlePause);
+      this.player.off('timeupdate', this.handleTimeUpdate);
+      this.player.off('seeking', this.handleSeeking);
+      this.player.off('seeked', this.handleSeeked);
+      this.player.off('loadedmetadata', this.handleLoadedMetadata);
+      this.player.dispose();
+    }
   }
 
-  private onTimeUpdate(): void {
+  private handlePlay = () => {
+    this.videoStateService.setPlayerPausedState(false);
+
+    if (this.videoStateService.isAutoPaused()) {
+      this.justPlayedFromAutoPause = true;
+    }
+
+    this.clearScheduledPause();
+    const currentClip = this.videoStateService.currentClip();
+    if (currentClip) {
+      this.schedulePauseIfNeeded(currentClip, this.player?.currentTime() || 0);
+    }
+
+    this.videoStateService.setAutoPaused(false);
+  };
+
+  private handlePause = () => {
+    this.videoStateService.setPlayerPausedState(true);
+    this.clearScheduledPause();
+  };
+
+  private handleTimeUpdate = () => {
     if (!this.player || this.isSeeking) return;
 
     if (this.justPlayedFromAutoPause) {
@@ -93,30 +116,27 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     }
 
     this.schedulePauseIfNeeded(currentClip, currentTime);
-  }
+  };
+
+  private handleSeeking = () => {
+    this.isSeeking = true;
+    this.clearScheduledPause();
+  };
+
+  private handleSeeked = () => {
+    this.isSeeking = false;
+    this.handleTimeUpdate();
+  };
+
+  private handleLoadedMetadata = () => {
+    this.videoStateService.setDuration(this.player?.duration() || 0);
+  };
 
   private handleTogglePlayPause(): void {
     if (!this.player) return;
-    const isPaused = this.player.paused();
-    const isAutoPaused = this.videoStateService.isAutoPaused();
-
-    this.videoStateService.setAutoPaused(false);
-
-    if (isPaused) {
-      if (isAutoPaused) {
-        this.justPlayedFromAutoPause = true;
-      }
-
-      this.clearScheduledPause();
-      const currentClip = this.videoStateService.currentClip();
-      if (currentClip) {
-        this.schedulePauseIfNeeded(currentClip, this.player.currentTime() || 0);
-      }
-
+    if (this.player.paused()) {
       this.player.play();
     } else {
-      // If the user is manually pausing, any scheduled auto-pause must be cancelled.
-      this.clearScheduledPause();
       this.player.pause();
     }
     this.videoStateService.clearPlayPauseRequest();
