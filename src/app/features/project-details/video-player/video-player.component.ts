@@ -57,8 +57,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
       this.player?.on('pause', () => this.videoStateService.setPlayerPausedState(true));
       this.player?.on('seeking', () => {
         this.isSeeking = true;
-        clearTimeout(this.scheduledPauseTimeout);
-        this.lastScheduledPauseClipId = null;
+        this.clearScheduledPause();
       });
       this.player?.on('seeked', () => {
         this.isSeeking = false;
@@ -69,12 +68,12 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    clearTimeout(this.scheduledPauseTimeout);
+    this.clearScheduledPause();
     if (this.player) this.player.dispose();
   }
 
   private onTimeUpdate(): void {
-    if (!this.player) return;
+    if (!this.player || this.isSeeking) return;
 
     if (this.justPlayedFromAutoPause) {
       this.justPlayedFromAutoPause = false;
@@ -89,7 +88,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
       this.videoStateService.setLastActiveSubtitleClipId(currentClip.id);
     }
 
-    if (this.player.paused() || this.isSeeking || !currentClip) {
+    if (this.player.paused() || !currentClip) {
       return;
     }
 
@@ -98,18 +97,16 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
 
   private handleTogglePlayPause(): void {
     if (!this.player) return;
-    const isPaused = this.videoStateService.isPlayerPaused();
+    const isPaused = this.player.paused();
     const isAutoPaused = this.videoStateService.isAutoPaused();
 
-    // User action invalidates auto-pause state
     this.videoStateService.setAutoPaused(false);
 
     if (isPaused) {
-      // Bypass next timeupdate check if auto-paused
       if (isAutoPaused) {
         this.justPlayedFromAutoPause = true;
       }
-      this.clearScheduledPause(); // Prevent lingering pauses
+      this.clearScheduledPause();
       this.player.play();
     } else {
       this.player.pause();
@@ -117,10 +114,12 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     this.videoStateService.clearPlayPauseRequest();
   }
 
+  
   private handleRepeat(): void {
     const clipToRepeat = this.videoStateService.lastActiveSubtitleClip();
     if (clipToRepeat) {
-      this.jumpToTime(clipToRepeat.startTime, true);
+      // The `forcePlay` parameter tells jumpToTime to ignore auto-pause rules.
+      this.jumpToTime(clipToRepeat.startTime, true, true);
     }
     this.videoStateService.clearRepeatRequest();
   }
@@ -134,38 +133,54 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
       targetTime = request.time;
     }
 
-    const shouldPlay = !this.videoStateService.autoPauseAtStart();
+    const shouldPlay = !this.player.paused();
     this.jumpToTime(targetTime, shouldPlay);
     this.videoStateService.clearSeekRequest();
   }
 
   private handleForceContinue(): void {
     if (!this.player) return;
-
-    this.videoStateService.setAutoPaused(false);
-    this.justPlayedFromAutoPause = true;
-    this.clearScheduledPause();
-    this.player.play();
-
+    // Force continue should always play, ignoring auto-pause rules.
+    this.jumpToTime(this.player.currentTime() || 0, true, true);
     this.videoStateService.clearForceContinueRequest();
   }
 
-  private jumpToTime(time: number, shouldPlay: boolean): void {
+  
+  private jumpToTime(time: number, shouldPlay: boolean, forcePlay = false): void {
     if (!this.player) return;
-    this.clearScheduledPause();
 
-    // Clear auto-pause state on user action
+    this.clearScheduledPause();
     this.videoStateService.setAutoPaused(false);
 
     this.player.currentTime(time);
     this.videoStateService.setCurrentTime(time);
     this.videoStateService.recalculateActiveClip();
 
-    if (shouldPlay) {
-      // Handle auto-pause at start of clip
-      // Bypass first timeupdate check
+    const targetClip = this.videoStateService.currentClip();
+    const autoPauseAtStart = this.videoStateService.autoPauseAtStart();
+
+    const isAtStartOfSubtitleClip = targetClip?.hasSubtitle && Math.abs(time - targetClip.startTime) < 0.01;
+
+    // Check if auto-pause logic should be bypassed
+    if (forcePlay) {
       this.justPlayedFromAutoPause = true;
-      this.player.play();
+      if (this.player.paused()) {
+        this.player.play();
+      }
+      return;
+    }
+
+    // Check if auto-pause at start should override shouldPlay
+    if (autoPauseAtStart && isAtStartOfSubtitleClip) {
+      if (!this.player.paused()) {
+        this.player.pause();
+      }
+      this.videoStateService.setAutoPaused(true);
+    } else if (shouldPlay) {
+      this.justPlayedFromAutoPause = true;
+      if (this.player.paused()) {
+        this.player.play();
+      }
     }
   }
 
@@ -180,6 +195,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
 
     const isEndTarget = autoPauseEnd && clip.hasSubtitle;
     const isStartTarget = autoPauseStart && !clip.hasSubtitle;
+
     const shouldPause = isEndTarget || isStartTarget;
 
     if (!shouldPause) {
