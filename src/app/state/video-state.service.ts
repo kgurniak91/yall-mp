@@ -150,6 +150,11 @@ export class VideoStateService {
     const adjacentClip = this.findAdjacentSubtitleClip(direction);
     if (adjacentClip) {
       this.seekAbsolute(adjacentClip.startTime);
+    } else if (direction === SeekDirection.Previous) {
+      const currentSubtitleClip = this.lastActiveSubtitleClip();
+      if (currentSubtitleClip) {
+        this.seekAbsolute(currentSubtitleClip.startTime);
+      }
     }
   }
 
