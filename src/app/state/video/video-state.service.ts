@@ -1,6 +1,7 @@
-import {computed, Injectable, Signal, signal} from '@angular/core';
-import {SeekDirection, SeekType, VideoClip} from '../model/video.types';
+import {computed, inject, Injectable, Signal, signal} from '@angular/core';
+import {SeekDirection, SeekType, VideoClip} from '../../model/video.types';
 import {VTTCue} from 'media-captions';
+import {SettingsStateService} from '../settings/settings-state.service';
 
 const MIN_CLIP_DURATION = 0.1;
 
@@ -8,6 +9,7 @@ const MIN_CLIP_DURATION = 0.1;
   providedIn: 'root'
 })
 export class VideoStateService {
+  private readonly settingsService = inject(SettingsStateService);
   private readonly _currentTime = signal(0);
   private readonly _duration = signal(0);
   private readonly _cues = signal<VTTCue[]>([]);
@@ -18,8 +20,6 @@ export class VideoStateService {
   private readonly _repeatRequest = signal<number | null>(null);
   private readonly _forceContinueRequest = signal<number | null>(null);
   private readonly _lastActiveSubtitleClipId = signal<string | null>(null);
-  private readonly _autoPauseAtStart = signal(true);
-  private readonly _autoPauseAtEnd = signal(true);
   private readonly _isPlayerPaused = signal(true);
   private readonly _isAutoPaused = signal(false);
 
@@ -30,8 +30,8 @@ export class VideoStateService {
   public readonly seekRequest = this._seekRequest.asReadonly();
   public readonly playPauseRequest = this._playPauseRequest.asReadonly();
   public readonly lastActiveSubtitleClipId = this._lastActiveSubtitleClipId.asReadonly();
-  public readonly autoPauseAtStart = this._autoPauseAtStart.asReadonly();
-  public readonly autoPauseAtEnd = this._autoPauseAtEnd.asReadonly();
+  public readonly autoPauseAtStart = this.settingsService.autoPauseAtStart.asReadonly();
+  public readonly autoPauseAtEnd = this.settingsService.autoPauseAtEnd.asReadonly();
   public readonly repeatRequest = this._repeatRequest.asReadonly();
   public readonly forceContinueRequest = this._forceContinueRequest.asReadonly();
   public readonly isPlayerPaused = this._isPlayerPaused.asReadonly();
@@ -81,12 +81,8 @@ export class VideoStateService {
     this._subtitlesVisible.update((isVisible) => !isVisible);
   }
 
-  public toggleAutoPauseAtStart(): void {
-    this._autoPauseAtStart.update((isTrue) => !isTrue);
-  }
-
-  public toggleAutoPauseAtEnd(): void {
-    this._autoPauseAtEnd.update((isTrue) => !isTrue);
+  public setSubtitlesVisible(isVisible: boolean): void {
+    this._subtitlesVisible.set(isVisible);
   }
 
   public togglePlayPause(): void {

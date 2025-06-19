@@ -12,8 +12,10 @@ import {
 import videojs from 'video.js';
 import Player from 'video.js/dist/types/player';
 import {VideoJsOptions} from './video-player.type';
-import {VideoStateService} from '../../../state/video-state.service';
+import {VideoStateService} from '../../../state/video/video-state.service';
 import {SeekType, VideoClip} from '../../../model/video.types';
+import {SettingsStateService} from '../../../state/settings/settings-state.service';
+import {SubtitleBehavior} from '../../../model/settings.types';
 
 @Component({
   selector: 'app-video-player',
@@ -27,11 +29,40 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   options = input.required<VideoJsOptions>();
   private player: Player | undefined;
   private videoStateService = inject(VideoStateService);
+  private settingsStateService = inject(SettingsStateService);
 
   private scheduledPauseTimeout: any;
   private lastScheduledPauseClipId: string | null = null;
   private isSeeking = false;
   private justPlayedFromAutoPause = false;
+  private lastActiveSubtitleClipIdForSettings: string | null = null;
+
+  private settingsHandler = effect(() => {
+    if (!this.player) return;
+
+    const currentClip = this.videoStateService.currentClip();
+    if (!currentClip) return;
+
+    // Handle playback speed
+    const subtitledClipSpeed = this.settingsStateService.subtitledClipSpeed();
+    const gapSpeed = this.settingsStateService.gapSpeed();
+    const targetSpeed = currentClip.hasSubtitle ? subtitledClipSpeed : gapSpeed;
+    if (this.player.playbackRate() !== targetSpeed) {
+      this.player.playbackRate(targetSpeed);
+    }
+
+    // Handle subtitle behavior when entering a new subtitle clip
+    const lastActiveClipId = this.videoStateService.lastActiveSubtitleClipId();
+    if (currentClip.hasSubtitle && currentClip.id !== this.lastActiveSubtitleClipIdForSettings) {
+      this.lastActiveSubtitleClipIdForSettings = currentClip.id; // track to prevent re-applying
+      const behavior = this.settingsStateService.subtitleBehavior();
+      if (behavior === SubtitleBehavior.ForceShow) {
+        this.videoStateService.setSubtitlesVisible(true);
+      } else if (behavior === SubtitleBehavior.ForceHide) {
+        this.videoStateService.setSubtitlesVisible(false);
+      }
+    }
+  });
 
   private requestHandler = effect(() => {
     const playPauseRequest = this.videoStateService.playPauseRequest();
@@ -227,7 +258,9 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
 
     if (this.lastScheduledPauseClipId === clip.id) return;
 
-    const timeRemainingMs = (clip.endTime - currentTime) * 1000;
+    const timeRemainingInVideo = clip.endTime - currentTime;
+    const currentPlaybackRate = this.player?.playbackRate() || 1;
+    const timeRemainingMs = (timeRemainingInVideo / currentPlaybackRate) * 1000;
 
     if (timeRemainingMs > 5) {
       this.lastScheduledPauseClipId = clip.id;

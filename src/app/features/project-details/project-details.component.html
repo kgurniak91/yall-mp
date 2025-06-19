@@ -20,19 +20,19 @@
 
 <div class="toolbar">
   <p-button icon="fa-solid fa-arrow-left"
-            pTooltip="Poprzednie napisy"
+            pTooltip="Previous subtitled clip"
             tooltipPosition="left"
             severity="secondary"
             (onClick)="goToPreviousSubtitleClip()"/>
 
   <p-button icon="fa-solid fa-repeat"
-            pTooltip="Powtórz"
+            pTooltip="Repeat last subtitled clip"
             tooltipPosition="top"
             severity="secondary"
             (onClick)="repeatLastClip()"/>
 
   <p-button icon="fa-solid fa-arrow-right"
-            pTooltip="Następne napisy"
+            pTooltip="Next subtitled clip"
             tooltipPosition="right"
             severity="secondary"
             (onClick)="goToNextSubtitleClip()"/>
@@ -40,21 +40,21 @@
   <div class="settings-wrapper">
     @let subtitlesVisible = videoStateService.subtitlesVisible();
     <p-button icon="{{subtitlesVisible ? 'fa-solid' : 'fa-regular'}} fa-closed-captioning"
-              [pTooltip]="subtitlesVisible ? 'Ukryj napisy' : 'Pokaż napisy'"
+              [pTooltip]="subtitlesVisible ? 'Hide subtitles' : 'Show subtitles'"
               (onClick)="videoStateService.toggleSubtitlesVisible()"
               tooltipPosition="left"
               severity="secondary"/>
 
     <p-button icon="fa-solid fa-gear"
-              pTooltip="Ustawienia"
+              pTooltip="Settings"
               tooltipPosition="left"
               severity="secondary"
-              (onClick)="isSettingsVisible.set(true)"/>
+              (onClick)="toggleSettings()"/>
   </div>
 </div>
 
 <app-timeline-editor/>
 
-<p-drawer [(visible)]="isSettingsVisible" header="Ustawienia" position="right">
+<p-drawer [(visible)]="isSettingsVisible" header="Settings" position="right" [style]="{width: '30rem'}">
   <app-project-settings/>
 </p-drawer>

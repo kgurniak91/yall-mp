@@ -2,7 +2,7 @@ import {Component, ENVIRONMENT_INITIALIZER, inject, OnInit, signal} from '@angul
 import {VideoPlayerComponent} from './video-player/video-player.component';
 import {VideoJsOptions} from './video-player/video-player.type';
 import {ParsedCaptionsResult, parseResponse} from 'media-captions';
-import {VideoStateService} from '../../state/video-state.service';
+import {VideoStateService} from '../../state/video/video-state.service';
 import {TimelineEditorComponent} from './timeline-editor/timeline-editor.component';
 import {Button} from 'primeng/button';
 import {Tooltip} from 'primeng/tooltip';
@@ -30,7 +30,7 @@ import {SeekDirection} from '../../model/video.types';
 export class ProjectDetailsComponent implements OnInit {
   protected readonly isSettingsVisible = signal(false);
   protected readonly videoStateService = inject(VideoStateService);
-  readonly options: VideoJsOptions = {
+  protected readonly options: VideoJsOptions = {
     sources: [
       {
         src: '/temp/marvel.mp4',
@@ -51,6 +51,7 @@ export class ProjectDetailsComponent implements OnInit {
       doubleClick: false
     }
   };
+  private wasPlayingBeforeSettingsOpened = false;
 
   constructor() {
     inject(KeyboardShortcutsService); // start listening
@@ -72,5 +73,28 @@ export class ProjectDetailsComponent implements OnInit {
 
   repeatLastClip() {
     this.videoStateService.repeatLastClip();
+  }
+
+  toggleSettings(): void {
+    const videoElement = this.videoStateService.videoElement();
+    if (!videoElement) return;
+
+    if (!this.isSettingsVisible()) {
+      this.wasPlayingBeforeSettingsOpened = !videoElement.paused;
+
+      if (this.wasPlayingBeforeSettingsOpened) {
+        videoElement.pause();
+      }
+
+      this.isSettingsVisible.set(true);
+    } else {
+      this.isSettingsVisible.set(false);
+
+      if (this.wasPlayingBeforeSettingsOpened) {
+        videoElement.play();
+      }
+
+      this.wasPlayingBeforeSettingsOpened = false;
+    }
   }
 }
