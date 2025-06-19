@@ -30,30 +30,25 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   private player: Player | undefined;
   private videoStateService = inject(VideoStateService);
   private settingsStateService = inject(SettingsStateService);
-
-  private scheduledPauseTimeout: any;
-  private lastScheduledPauseClipId: string | null = null;
   private isSeeking = false;
   private justPlayedFromAutoPause = false;
   private lastActiveSubtitleClipIdForSettings: string | null = null;
+  private scheduledPauseTimeout: any;
+  private lastScheduledPauseClipId: string | null = null;
+  private scheduledSpeedChangeTimeout: any;
+  private lastScheduledSpeedChangeClipId: string | null = null;
 
   private settingsHandler = effect(() => {
     if (!this.player) return;
 
+    // When settings change, immediately apply the speed for the current clip.
     const currentClip = this.videoStateService.currentClip();
-    if (!currentClip) return;
-
-    // Handle playback speed
-    const subtitledClipSpeed = this.settingsStateService.subtitledClipSpeed();
-    const gapSpeed = this.settingsStateService.gapSpeed();
-    const targetSpeed = currentClip.hasSubtitle ? subtitledClipSpeed : gapSpeed;
-    if (this.player.playbackRate() !== targetSpeed) {
-      this.player.playbackRate(targetSpeed);
+    if (currentClip) {
+      this.setPlaybackSpeedForClip(currentClip);
     }
 
     // Handle subtitle behavior when entering a new subtitle clip
-    const lastActiveClipId = this.videoStateService.lastActiveSubtitleClipId();
-    if (currentClip.hasSubtitle && currentClip.id !== this.lastActiveSubtitleClipIdForSettings) {
+    if (currentClip?.hasSubtitle && currentClip.id !== this.lastActiveSubtitleClipIdForSettings) {
       this.lastActiveSubtitleClipIdForSettings = currentClip.id; // track to prevent re-applying
       const behavior = this.settingsStateService.subtitleBehavior();
       if (behavior === SubtitleBehavior.ForceShow) {
@@ -94,6 +89,8 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.clearScheduledPause();
+    this.clearScheduledSpeedChange();
+
     if (this.player) {
       this.player.off('play', this.handlePlay);
       this.player.off('pause', this.handlePause);
@@ -124,6 +121,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   private handlePause = () => {
     this.videoStateService.setPlayerPausedState(true);
     this.clearScheduledPause();
+    this.clearScheduledSpeedChange();
   };
 
   private handleTimeUpdate = () => {
@@ -138,20 +136,22 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     this.videoStateService.setCurrentTime(currentTime);
 
     const currentClip = this.videoStateService.currentClip();
-    if (currentClip?.hasSubtitle) {
+    if (!currentClip) return;
+
+    if (currentClip.hasSubtitle) {
       this.videoStateService.setLastActiveSubtitleClipId(currentClip.id);
     }
 
-    if (this.player.paused() || !currentClip) {
-      return;
+    if (!this.player.paused()) {
+      this.schedulePauseIfNeeded(currentClip, currentTime);
+      this.scheduleSpeedChangeIfNeeded(currentClip, currentTime);
     }
-
-    this.schedulePauseIfNeeded(currentClip, currentTime);
   };
 
   private handleSeeking = () => {
     this.isSeeking = true;
     this.clearScheduledPause();
+    this.clearScheduledSpeedChange();
   };
 
   private handleSeeked = () => {
@@ -205,6 +205,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     if (!this.player) return;
 
     this.clearScheduledPause();
+    this.clearScheduledSpeedChange();
     this.videoStateService.setAutoPaused(false);
 
     this.player.currentTime(time);
@@ -212,8 +213,12 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     this.videoStateService.recalculateActiveClip();
 
     const targetClip = this.videoStateService.currentClip();
-    const autoPauseAtStart = this.videoStateService.autoPauseAtStart();
 
+    if (targetClip) {
+      this.setPlaybackSpeedForClip(targetClip);
+    }
+
+    const autoPauseAtStart = this.videoStateService.autoPauseAtStart();
     const isAtStartOfSubtitleClip = targetClip?.hasSubtitle && Math.abs(time - targetClip.startTime) < 0.01;
 
     if (forcePlay) {
@@ -240,6 +245,29 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   private clearScheduledPause(): void {
     clearTimeout(this.scheduledPauseTimeout);
     this.lastScheduledPauseClipId = null;
+  }
+
+  private clearScheduledSpeedChange(): void {
+    clearTimeout(this.scheduledSpeedChangeTimeout);
+    this.lastScheduledSpeedChangeClipId = null;
+  }
+
+  private scheduleSpeedChangeIfNeeded(clip: VideoClip, currentTime: number): void {
+    if (this.lastScheduledSpeedChangeClipId === clip.id) return;
+
+    const nextClip = this.findNextClip(clip.id);
+    if (!nextClip) return;
+
+    const timeRemainingInVideo = clip.endTime - currentTime;
+    const currentPlaybackRate = this.player?.playbackRate() || 1;
+    const timeRemainingMs = (timeRemainingInVideo / currentPlaybackRate) * 1000;
+
+    if (timeRemainingMs > 5) {
+      this.lastScheduledSpeedChangeClipId = clip.id;
+      this.scheduledSpeedChangeTimeout = setTimeout(() => {
+        this.setPlaybackSpeedForClip(nextClip);
+      }, timeRemainingMs);
+    }
   }
 
   private schedulePauseIfNeeded(clip: VideoClip, currentTime: number): void {
@@ -271,11 +299,9 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
         this.player.currentTime(clip.endTime);
         this.videoStateService.setAutoPaused(true);
 
-        if (isStartTarget) {
-          const nextClip = this.findNextClip(clip.id);
-          if (nextClip?.hasSubtitle) {
-            this.videoStateService.setLastActiveSubtitleClipId(nextClip.id);
-          }
+        const nextClip = this.findNextClip(clip.id);
+        if (isStartTarget && nextClip?.hasSubtitle) {
+          this.videoStateService.setLastActiveSubtitleClipId(nextClip.id);
         }
       }, timeRemainingMs);
     }
@@ -288,5 +314,16 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
       return clips[index + 1];
     }
     return undefined;
+  }
+
+  private setPlaybackSpeedForClip(clip: VideoClip): void {
+    if (!this.player) return;
+    const subtitledClipSpeed = this.settingsStateService.subtitledClipSpeed();
+    const gapSpeed = this.settingsStateService.gapSpeed();
+    const targetSpeed = clip.hasSubtitle ? subtitledClipSpeed : gapSpeed;
+    if (this.player.playbackRate() !== targetSpeed) {
+      console.log(`[${this.player.currentTime()}] setting playback speed to ${targetSpeed} of clip ${clip.id} that starts at ${clip.startTime} and ends at ${clip.endTime}`);
+      this.player.playbackRate(targetSpeed);
+    }
   }
 }
