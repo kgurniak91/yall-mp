@@ -35,5 +35,6 @@ export enum VideoPlayerAction {
 
 export interface VideoPlayerCommand {
   clip: VideoClip;
-  action: VideoPlayerAction
+  action: VideoPlayerAction;
+  seekToStart?: boolean;
 }

@@ -53,13 +53,13 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     if (!cmd) return;
 
     if (cmd.action === VideoPlayerAction.Play) {
-      this.playSegment(cmd.clip.startTime, cmd.clip.endTime);
+      this.playSegment(cmd.clip.startTime, cmd.clip.endTime, cmd.seekToStart);
     } else {
       this.pause();
     }
   });
 
-  private playSegment(startTime: number, endTime: number): void {
+  private playSegment(startTime: number, endTime: number, seekToStart = true): void {
     if (!this.player) return;
 
     this.segmentEndTime = endTime;
@@ -68,7 +68,10 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
       cancelAnimationFrame(this.animationFrameId);
     }
 
-    this.player.currentTime(startTime);
+    if (seekToStart) {
+      this.player.currentTime(startTime);
+    }
+
     this.player.play();
     this.checkTime();
   }

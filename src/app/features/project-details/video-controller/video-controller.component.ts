@@ -19,9 +19,7 @@ import {VideoPlayerComponent} from '../video-player/video-player.component';
 export class VideoControllerComponent {
   options = input.required<VideoJsOptions>();
   protected command = signal<VideoPlayerCommand | null>(null);
-  private player: Player | undefined;
   private videoStateService = inject(VideoStateService);
-  private settingsStateService = inject(SettingsStateService);
   private conductor = inject(ClipPlayerService);
 
   protected onClipEnded(): void {
@@ -43,9 +41,10 @@ export class VideoControllerComponent {
   private conductorCommands = effect(() => {
     const clipToPlay = this.conductor.currentClip();
     const isPlaying = this.conductor.isPlaying();
+    const shouldSeek = this.conductor.seekToStart();
 
     if (isPlaying && clipToPlay) {
-      this.command.set({clip: clipToPlay, action: VideoPlayerAction.Play});
+      this.command.set({clip: clipToPlay, action: VideoPlayerAction.Play, seekToStart: shouldSeek});
     } else if (clipToPlay) {
       this.command.set({clip: clipToPlay, action: VideoPlayerAction.Pause});
     }
@@ -63,7 +62,7 @@ export class VideoControllerComponent {
     if (this.conductor.isPlaying()) {
       this.conductor.pause();
     } else {
-      this.conductor.playCurrent();
+      this.conductor.resume();
     }
     this.videoStateService.clearPlayPauseRequest();
   }

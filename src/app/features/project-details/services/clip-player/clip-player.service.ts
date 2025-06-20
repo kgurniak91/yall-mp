@@ -13,6 +13,7 @@ export class ClipPlayerService {
   // Conductor state
   readonly currentClipIndex = signal(0);
   readonly isPlaying = signal(false);
+  readonly seekToStart = signal(false);
 
   
   readonly clips = this.videoStateService.clips;
@@ -26,6 +27,7 @@ export class ClipPlayerService {
       return;
     }
     this.currentClipIndex.set(index);
+    this.seekToStart.set(true);
     this.isPlaying.set(true);
     
   }
@@ -34,8 +36,13 @@ export class ClipPlayerService {
     this.isPlaying.set(false);
   }
 
-  public playCurrent(): void {
+  public resume(): void {
+    this.seekToStart.set(false); // Do not seek, just resume.
     this.isPlaying.set(true);
+  }
+
+  public playCurrent(): void {
+    this.playClip(this.currentClipIndex());
   }
 
   public playNext(): void {
