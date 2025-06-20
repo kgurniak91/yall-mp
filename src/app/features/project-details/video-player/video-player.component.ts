@@ -15,6 +15,8 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   public readonly options = input.required<VideoJsOptions>();
   public readonly command = input<VideoPlayerCommand | null>();
   public readonly clipEnded = output<void>();
+  public readonly nativePlay = output<void>();
+  public readonly nativePause = output<void>();
   protected readonly videoElementRef = viewChild.required<ElementRef<HTMLVideoElement>>('video');
   private player: Player | undefined;
   private animationFrameId: number | undefined;
@@ -28,6 +30,8 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     this.player = videojs(videoElement, this.options(), () => {
       this.player?.on('loadedmetadata', this.handleLoadedMetadata);
       this.player?.on('timeupdate', this.handleTimeUpdate);
+      this.player?.on('play', this.handleNativePlay);
+      this.player?.on('pause', this.handleNativePause);
     });
   }
 
@@ -38,6 +42,8 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     if (this.player) {
       this.player.off('loadedmetadata', this.handleLoadedMetadata);
       this.player.off('timeupdate', this.handleTimeUpdate);
+      this.player.off('play', this.handleNativePlay);
+      this.player.off('pause', this.handleNativePause);
       this.player.dispose();
     }
   }
@@ -100,5 +106,13 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     if (this.player) {
       this.videoStateService.setDuration(this.player.duration() || 0);
     }
+  };
+
+  private handleNativePlay = () => {
+    this.nativePlay.emit();
+  };
+
+  private handleNativePause = () => {
+    this.nativePause.emit();
   };
 }

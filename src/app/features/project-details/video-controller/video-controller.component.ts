@@ -28,6 +28,18 @@ export class VideoControllerComponent {
     this.conductor.onClipFinished();
   }
 
+  public onNativePlay(): void {
+    if (!this.conductor.isPlaying()) {
+      this.conductor.playCurrent();
+    }
+  }
+
+  public onNativePause(): void {
+    if (this.conductor.isPlaying()) {
+      this.conductor.pause();
+    }
+  }
+
   private conductorCommands = effect(() => {
     const clipToPlay = this.conductor.currentClip();
     const isPlaying = this.conductor.isPlaying();
