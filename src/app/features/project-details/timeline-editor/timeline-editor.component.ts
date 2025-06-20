@@ -36,7 +36,6 @@ export class TimelineEditorComponent implements OnDestroy {
     const duration = this.videoStateService.duration();
     const videoElement = this.videoStateService.videoElement();
     const container = this.timelineContainer()?.nativeElement;
-
     const clipsSignature = clips.map(c => `${c.id}@${c.startTime}:${c.endTime}`).join(',');
 
     if (!this.wavesurfer && videoElement && container && duration > 0) {

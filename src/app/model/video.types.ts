@@ -27,3 +27,13 @@ export enum SeekDirection {
   Previous = 'Previous',
   Next = 'Next',
 }
+
+export enum VideoPlayerAction {
+  Play = 'Play',
+  Pause = 'Pause'
+}
+
+export interface VideoPlayerCommand {
+  clip: VideoClip;
+  action: VideoPlayerAction
+}

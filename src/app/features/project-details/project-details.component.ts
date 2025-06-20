@@ -1,6 +1,6 @@
 import {Component, ENVIRONMENT_INITIALIZER, inject, OnInit, signal} from '@angular/core';
-import {VideoPlayerComponent} from './video-player/video-player.component';
-import {VideoJsOptions} from './video-player/video-player.type';
+import {VideoControllerComponent} from './video-controller/video-controller.component';
+import {VideoJsOptions} from './video-controller/video-controller.type';
 import {ParsedCaptionsResult, parseResponse} from 'media-captions';
 import {VideoStateService} from '../../state/video/video-state.service';
 import {TimelineEditorComponent} from './timeline-editor/timeline-editor.component';
@@ -8,13 +8,13 @@ import {Button} from 'primeng/button';
 import {Tooltip} from 'primeng/tooltip';
 import {Drawer} from 'primeng/drawer';
 import {ProjectSettingsComponent} from './project-settings/project-settings.component';
-import {KeyboardShortcutsService} from './services/keyboard-shortcuts.service';
+import {KeyboardShortcutsService} from './services/keyboard-shortcuts/keyboard-shortcuts.service';
 import {SeekDirection} from '../../model/video.types';
 
 @Component({
   selector: 'app-project-details',
   imports: [
-    VideoPlayerComponent,
+    VideoControllerComponent,
     TimelineEditorComponent,
     Button,
     Tooltip,
