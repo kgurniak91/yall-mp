@@ -12,3 +12,19 @@ video {
     outline: none !important;
   }
 }
+
+.video-js {
+  &.vjs-paused {
+    .vjs-big-play-button {
+      display: none;
+    }
+
+    .vjs-control-bar {
+      display: flex;
+    }
+  }
+
+  .vjs-tech {
+    pointer-events: none !important;
+  }
+}

@@ -1,74 +1,116 @@
 import {computed, inject, Injectable, signal} from '@angular/core';
 import {VideoStateService} from '../../../../state/video/video-state.service';
-import {SettingsStateService} from '../../../../state/settings/settings-state.service';
-import {VideoClip} from '../../../../model/video.types';
+import {PlayerState, SeekDirection, VideoClip} from '../../../../model/video.types';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ClipPlayerService {
-  private videoStateService = inject(VideoStateService);
-  private settingsStateService = inject(SettingsStateService);
+  private readonly videoStateService = inject(VideoStateService);
+  private readonly _currentClipIndex = signal(0);
+  private readonly _clipSelectedRequest = signal<{ index: number, timestamp: number } | null>(null);
+  private readonly _playerState = signal<PlayerState>(PlayerState.Idle);
 
-  // Conductor state
-  readonly currentClipIndex = signal(0);
-  readonly isPlaying = signal(false);
-  readonly seekToStart = signal(false);
+  public readonly currentClipIndex = this._currentClipIndex.asReadonly();
+  public readonly clipSelectedRequest = this._clipSelectedRequest.asReadonly();
+  public readonly playerState = this._playerState.asReadonly();
 
-  
-  readonly clips = this.videoStateService.clips;
-  readonly currentClip = computed<VideoClip | undefined>(() => {
-    return this.clips()[this.currentClipIndex()];
+  public readonly isPlaying = computed(() => this.playerState() === PlayerState.Playing);
+  public readonly currentClip = computed<VideoClip | undefined>(() => {
+    return this.videoStateService.clips()[this.currentClipIndex()];
+  });
+  public readonly nextClip = computed<VideoClip | undefined>(() => {
+    return this.videoStateService.clips()[this.currentClipIndex() + 1];
+  });
+  public readonly previousClip = computed<VideoClip | undefined>(() => {
+    return this.videoStateService.clips()[this.currentClipIndex() - 1];
   });
 
-  public playClip(index: number): void {
-    if (index < 0 || index >= this.clips().length) {
-      this.isPlaying.set(false);
-      return;
+  public setPlayerState(playerState: PlayerState): void {
+    this._playerState.set(playerState);
+  }
+
+  public selectClip(index: number): void {
+    if (index >= 0 && index < this.videoStateService.clips().length) {
+      this._currentClipIndex.set(index);
+      this._clipSelectedRequest.set({index, timestamp: Date.now()});
     }
-    this.currentClipIndex.set(index);
-    this.seekToStart.set(true);
-    this.isPlaying.set(true);
-    
   }
 
-  public pause(): void {
-    this.isPlaying.set(false);
+  public clearClipSelectedRequest(): void {
+    this._clipSelectedRequest.set(null);
   }
 
-  public resume(): void {
-    this.seekToStart.set(false); // Do not seek, just resume.
-    this.isPlaying.set(true);
+  public setCurrentClipByIndex(index: number): void {
+    if (index >= 0 && index < this.videoStateService.clips().length) {
+      this._currentClipIndex.set(index);
+    }
   }
 
-  public playCurrent(): void {
-    this.playClip(this.currentClipIndex());
-  }
-
-  public playNext(): void {
-    this.playClip(this.currentClipIndex() + 1);
-  }
-
-  public playPrevious(): void {
-    this.playClip(this.currentClipIndex() - 1);
-  }
-
-  
-  public onClipFinished(): void {
-    const clipJustFinished = this.currentClip();
-    if (!clipJustFinished) return;
-
-    
-    const autoPauseAtEnd = this.settingsStateService.autoPauseAtEnd();
-    const autoPauseAtStart = this.settingsStateService.autoPauseAtStart();
-    const nextClip = this.clips()[this.currentClipIndex() + 1];
-
-    if (clipJustFinished.hasSubtitle && autoPauseAtEnd) {
-      this.pause();
-    } else if (!clipJustFinished.hasSubtitle && nextClip?.hasSubtitle && autoPauseAtStart) {
-      this.pause();
+  public advanceToNextClip(): void {
+    const nextIndex = this.currentClipIndex() + 1;
+    if (nextIndex < this.videoStateService.clips().length) {
+      this._currentClipIndex.set(nextIndex);
     } else {
-      this.playNext();
+      this._playerState.set(PlayerState.Idle); // Reached the end
     }
+  }
+
+  public goToAdjacentSubtitleClip(direction: SeekDirection): void {
+    const adjacentClip = this.findAdjacentSubtitleClip(direction);
+    if (adjacentClip) {
+      this.videoStateService.seekAbsolute(adjacentClip.startTime);
+    } else if (direction === SeekDirection.Previous) {
+      const current = this.currentClip();
+      if (current?.hasSubtitle) {
+        this.videoStateService.seekAbsolute(current.startTime);
+      }
+    }
+  }
+
+  private findAdjacentSubtitleClip(direction: SeekDirection): VideoClip | undefined {
+    const clips = this.videoStateService.clips();
+    if (clips.length === 0) {
+      return undefined;
+    }
+
+    const currentIndex = this.currentClipIndex();
+    const referenceClip = clips[currentIndex];
+    if (!referenceClip) {
+      return undefined;
+    }
+
+    if (direction === SeekDirection.Next) {
+      for (let i = currentIndex + 1; i < clips.length; i++) {
+        if (clips[i].hasSubtitle) {
+          return clips[i];
+        }
+      }
+      return undefined; // No next subtitle clip found
+    }
+
+    if (direction === SeekDirection.Previous) {
+      // find the index of the PREVIOUS subtitle clip by searching backwards.
+      let previousSubtitleIndex = -1;
+      for (let i = currentIndex - 1; i >= 0; i--) {
+        if (clips[i].hasSubtitle) {
+          previousSubtitleIndex = i;
+          break;
+        }
+      }
+
+      // If there is no previous subtitle clip, the player is at the start.
+      // In this case, the target is the current clip.
+      if (previousSubtitleIndex === -1) {
+        const currentClip = clips[currentIndex];
+        // Only return the current clip if it has a subtitle.
+        return currentClip?.hasSubtitle ? currentClip : undefined;
+      }
+
+      // Otherwise, return the found previous subtitle clip.
+      return clips[previousSubtitleIndex];
+    }
+
+    return undefined; // No adjacent subtitle clip was found
   }
 }

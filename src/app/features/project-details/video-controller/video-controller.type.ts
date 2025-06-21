@@ -1,5 +1,6 @@
 export interface VideoJsOptions {
   autoplay?: boolean;
+  loop?: boolean;
   controls?: boolean;
   sources: {
     src: string;
@@ -14,6 +15,7 @@ export interface VideoJsOptions {
   controlBar?: {
     fullscreenToggle?: boolean,
     pictureInPictureToggle?: boolean
+    playToggle?: boolean
   },
   userActions?: {
     doubleClick?: boolean

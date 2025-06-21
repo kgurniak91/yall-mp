@@ -5,7 +5,7 @@
 </div>
 
 <div class="subtitle-display">
-  @if (videoStateService.currentClip(); as currentClip) {
+  @if (clipPlayerService.currentClip(); as currentClip) {
     @if (currentClip.hasSubtitle) {
       <span [class.blurred-subtitles]="!videoStateService.subtitlesVisible()">
         {{ currentClip.text }}
@@ -25,11 +25,17 @@
             severity="secondary"
             (onClick)="goToPreviousSubtitleClip()"/>
 
-  <p-button icon="fa-solid fa-repeat"
-            pTooltip="Repeat last subtitled clip"
+  <p-button icon="fa-solid {{clipPlayerService.isPlaying() ? 'fa-pause' : 'fa-play'}}"
+            [pTooltip]="clipPlayerService.isPlaying() ? 'Pause' : 'Play'"
             tooltipPosition="top"
             severity="secondary"
-            (onClick)="repeatLastClip()"/>
+            (onClick)="togglePlayPause()"/>
+
+  <p-button icon="fa-solid fa-repeat"
+            pTooltip="Repeat current clip"
+            tooltipPosition="top"
+            severity="secondary"
+            (onClick)="repeatCurrentClip()"/>
 
   <p-button icon="fa-solid fa-arrow-right"
             pTooltip="Next subtitled clip"

@@ -13,7 +13,7 @@ export enum KeyboardAction {
   SeekForward = 'SeekForward',
   PreviousSubtitleClip = 'PreviousSubtitleClip',
   NextSubtitleClip = 'NextSubtitleClip',
-  RepeatLastClip = 'RepeatLastClip',
+  RepeatCurrentClip = 'RepeatCurrentClip',
   ForceContinue = 'ForceContinue',
   TogglePlayPause = 'TogglePlayPause',
 }
@@ -33,8 +33,25 @@ export enum VideoPlayerAction {
   Pause = 'Pause'
 }
 
-export interface VideoPlayerCommand {
-  clip: VideoClip;
-  action: VideoPlayerAction;
-  seekToStart?: boolean;
+export enum PlayerState {
+  Idle = 'Idle',
+  Playing = 'Playing',
+  PausedByUser = 'PausedByUser',
+  AutoPausedAtStart = 'AutoPausedAtStart',
+  AutoPausedAtEnd = 'AutoPausedAtEnd'
 }
+
+export interface PlayCommand {
+  action: VideoPlayerAction.Play;
+  clip: VideoClip;
+  seekToTime?: number;
+  playbackRate: number; // If present, seek to this time, otherwise resume from current.
+}
+
+export interface PauseCommand {
+  action: VideoPlayerAction.Pause;
+  clip: VideoClip;
+  seekToTime?: number; // Seek to a time, then pause.
+}
+
+export type VideoPlayerCommand = PlayCommand | PauseCommand;

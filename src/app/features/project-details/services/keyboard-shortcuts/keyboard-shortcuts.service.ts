@@ -1,12 +1,14 @@
 import {inject, Injectable, OnDestroy} from '@angular/core';
 import {VideoStateService} from '../../../../state/video/video-state.service';
 import {KeyboardAction, SeekDirection} from '../../../../model/video.types';
+import {ClipPlayerService} from '../clip-player/clip-player.service';
 
 const SEEK_SECONDS = 2;
 
 @Injectable()
 export class KeyboardShortcutsService implements OnDestroy {
   private videoStateService = inject(VideoStateService);
+  private clipPlayerService = inject(ClipPlayerService);
 
   constructor() {
     document.addEventListener('keydown', this.handleKeyDown);
@@ -33,7 +35,7 @@ export class KeyboardShortcutsService implements OnDestroy {
       } else if (event.key === 'ArrowRight') {
         action = KeyboardAction.NextSubtitleClip;
       } else if (event.key === 'ArrowUp') {
-        action = KeyboardAction.RepeatLastClip;
+        action = KeyboardAction.RepeatCurrentClip;
       } else if (event.key === 'ArrowDown') {
         action = KeyboardAction.ForceContinue;
       }
@@ -43,7 +45,7 @@ export class KeyboardShortcutsService implements OnDestroy {
       } else if (event.key === 'ArrowRight') {
         action = KeyboardAction.SeekForward;
       } else if (event.key === 'ArrowUp') {
-        action = KeyboardAction.RepeatLastClip;
+        action = KeyboardAction.RepeatCurrentClip;
       } else if (event.key === 'ArrowDown') {
         action = KeyboardAction.ForceContinue;
       } else {
@@ -69,13 +71,13 @@ export class KeyboardShortcutsService implements OnDestroy {
         this.videoStateService.seekRelative(SEEK_SECONDS);
         break;
       case KeyboardAction.PreviousSubtitleClip:
-        this.videoStateService.goToAdjacentSubtitleClip(SeekDirection.Previous);
+        this.clipPlayerService.goToAdjacentSubtitleClip(SeekDirection.Previous);
         break;
       case KeyboardAction.NextSubtitleClip:
-        this.videoStateService.goToAdjacentSubtitleClip(SeekDirection.Next);
+        this.clipPlayerService.goToAdjacentSubtitleClip(SeekDirection.Next);
         break;
-      case KeyboardAction.RepeatLastClip:
-        this.videoStateService.repeatLastClip();
+      case KeyboardAction.RepeatCurrentClip:
+        this.videoStateService.repeatCurrentClip();
         break;
       case KeyboardAction.ForceContinue:
         this.videoStateService.forceContinue();

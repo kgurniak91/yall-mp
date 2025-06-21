@@ -1,7 +1,7 @@
 import {Component, effect, ElementRef, inject, input, OnDestroy, OnInit, output, viewChild} from '@angular/core';
 import {VideoStateService} from '../../../state/video/video-state.service';
 import {VideoJsOptions} from '../video-controller/video-controller.type';
-import {VideoPlayerAction, VideoPlayerCommand} from '../../../model/video.types';
+import {PauseCommand, PlayCommand, VideoPlayerAction, VideoPlayerCommand} from '../../../model/video.types';
 import Player from 'video.js/dist/types/player';
 import videojs from 'video.js';
 
@@ -15,13 +15,11 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   public readonly options = input.required<VideoJsOptions>();
   public readonly command = input<VideoPlayerCommand | null>();
   public readonly clipEnded = output<void>();
-  public readonly nativePlay = output<void>();
-  public readonly nativePause = output<void>();
-  protected readonly videoElementRef = viewChild.required<ElementRef<HTMLVideoElement>>('video');
+  private readonly videoElementRef = viewChild.required<ElementRef<HTMLVideoElement>>('video');
+  private readonly videoStateService = inject(VideoStateService);
   private player: Player | undefined;
   private animationFrameId: number | undefined;
   private segmentEndTime = 0;
-  private videoStateService = inject(VideoStateService);
 
   ngOnInit() {
     const videoElement = this.videoElementRef().nativeElement;
@@ -30,69 +28,70 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     this.player = videojs(videoElement, this.options(), () => {
       this.player?.on('loadedmetadata', this.handleLoadedMetadata);
       this.player?.on('timeupdate', this.handleTimeUpdate);
-      this.player?.on('play', this.handleNativePlay);
-      this.player?.on('pause', this.handleNativePause);
     });
   }
 
   ngOnDestroy() {
-    if (this.animationFrameId) {
-      cancelAnimationFrame(this.animationFrameId);
-    }
+    this.cancelAnimationFrame();
     if (this.player) {
       this.player.off('loadedmetadata', this.handleLoadedMetadata);
       this.player.off('timeupdate', this.handleTimeUpdate);
-      this.player.off('play', this.handleNativePlay);
-      this.player.off('pause', this.handleNativePause);
       this.player.dispose();
     }
   }
 
   private videoControllerCommands = effect(() => {
-    const cmd = this.command();
-    if (!cmd) return;
+    const command = this.command();
+    if (!command) return;
 
-    if (cmd.action === VideoPlayerAction.Play) {
-      this.playSegment(cmd.clip.startTime, cmd.clip.endTime, cmd.seekToStart);
-    } else {
-      this.pause();
+    if (command.action === VideoPlayerAction.Play) {
+      this.playSegment(command);
+    } else if (command.action === VideoPlayerAction.Pause) {
+      this.pause(command);
     }
   });
 
-  private playSegment(startTime: number, endTime: number, seekToStart = true): void {
-    if (!this.player) return;
-
-    this.segmentEndTime = endTime;
-
-    if (this.animationFrameId) {
-      cancelAnimationFrame(this.animationFrameId);
+  private playSegment(command: PlayCommand): void {
+    if (!this.player) {
+      return;
     }
 
-    if (seekToStart) {
-      this.player.currentTime(startTime);
+    this.segmentEndTime = command.clip.endTime;
+    this.player.playbackRate(command.playbackRate);
+
+    if (command.seekToTime != null) {
+      this.player.currentTime(command.seekToTime);
     }
+
+    this.cancelAnimationFrame();
 
     this.player.play();
     this.checkTime();
   }
 
-  private pause(): void {
-    if (this.animationFrameId) {
-      cancelAnimationFrame(this.animationFrameId);
+  private pause(command: PauseCommand): void {
+    if (!this.player) {
+      return;
     }
+
+    this.cancelAnimationFrame();
+
+    if (command.seekToTime != null) {
+      this.player.currentTime(command.seekToTime);
+    }
+
     this.player?.pause();
   }
 
   private checkTime = () => {
-    if (!this.player || this.player.paused()) {
-      return; 
+    if (!this.player) {
+      return;
     }
 
-    let currentTime = this.player.currentTime() || 0;
-    if (currentTime >= this.segmentEndTime) {
-      this.player.pause();
+    const currentTime = this.player.currentTime() || 0;
+    if (currentTime >= (this.segmentEndTime - 0.01)) {
+      this.cancelAnimationFrame();
       this.player.currentTime(this.segmentEndTime);
-      cancelAnimationFrame(this.animationFrameId!);
       this.clipEnded.emit();
     } else {
       this.animationFrameId = requestAnimationFrame(this.checkTime);
@@ -111,11 +110,10 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     }
   };
 
-  private handleNativePlay = () => {
-    this.nativePlay.emit();
-  };
-
-  private handleNativePause = () => {
-    this.nativePause.emit();
-  };
+  private cancelAnimationFrame(): void {
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = undefined;
+    }
+  }
 }

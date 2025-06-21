@@ -8,6 +8,6 @@ export class SettingsStateService {
   readonly autoPauseAtStart = signal(false);
   readonly autoPauseAtEnd = signal(false);
   readonly subtitledClipSpeed = signal(1.0);
-  readonly gapSpeed = signal(1.0);
+  readonly gapSpeed = signal(3.0);
   readonly subtitleBehavior = signal<SubtitleBehavior>(SubtitleBehavior.DoNothing);
 }

@@ -139,7 +139,7 @@ export class TimelineEditorComponent implements OnDestroy {
       e.stopPropagation();
       const clickedClipIndex = this.videoStateService.clips().findIndex(c => c.id === region.id);
       if (clickedClipIndex > -1) {
-        this.clipPlayerService.playClip(clickedClipIndex);
+        this.clipPlayerService.selectClip(clickedClipIndex);
       }
     });
 

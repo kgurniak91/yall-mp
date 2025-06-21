@@ -1,4 +1,4 @@
-import {Component, ENVIRONMENT_INITIALIZER, inject, OnInit, signal} from '@angular/core';
+import {Component, inject, OnInit, signal} from '@angular/core';
 import {VideoControllerComponent} from './video-controller/video-controller.component';
 import {VideoJsOptions} from './video-controller/video-controller.type';
 import {ParsedCaptionsResult, parseResponse} from 'media-captions';
@@ -10,6 +10,7 @@ import {Drawer} from 'primeng/drawer';
 import {ProjectSettingsComponent} from './project-settings/project-settings.component';
 import {KeyboardShortcutsService} from './services/keyboard-shortcuts/keyboard-shortcuts.service';
 import {SeekDirection} from '../../model/video.types';
+import {ClipPlayerService} from './services/clip-player/clip-player.service';
 
 @Component({
   selector: 'app-project-details',
@@ -30,6 +31,7 @@ import {SeekDirection} from '../../model/video.types';
 export class ProjectDetailsComponent implements OnInit {
   protected readonly isSettingsVisible = signal(false);
   protected readonly videoStateService = inject(VideoStateService);
+  protected readonly clipPlayerService = inject(ClipPlayerService);
   protected readonly options: VideoJsOptions = {
     sources: [
       {
@@ -37,7 +39,8 @@ export class ProjectDetailsComponent implements OnInit {
         type: 'video/mp4'
       }
     ],
-    autoplay: true,
+    autoplay: false,
+    loop: false,
     controls: true,
     fluid: true,
     muted: false,
@@ -45,7 +48,8 @@ export class ProjectDetailsComponent implements OnInit {
     responsive: true,
     controlBar: {
       fullscreenToggle: false,
-      pictureInPictureToggle: false
+      pictureInPictureToggle: false,
+      playToggle: false
     },
     userActions: {
       doubleClick: false
@@ -64,15 +68,19 @@ export class ProjectDetailsComponent implements OnInit {
   }
 
   goToNextSubtitleClip() {
-    this.videoStateService.goToAdjacentSubtitleClip(SeekDirection.Next);
+    this.clipPlayerService.goToAdjacentSubtitleClip(SeekDirection.Next);
   }
 
   goToPreviousSubtitleClip() {
-    this.videoStateService.goToAdjacentSubtitleClip(SeekDirection.Previous);
+    this.clipPlayerService.goToAdjacentSubtitleClip(SeekDirection.Previous);
   }
 
-  repeatLastClip() {
-    this.videoStateService.repeatLastClip();
+  togglePlayPause() {
+    this.videoStateService.togglePlayPause();
+  }
+
+  repeatCurrentClip() {
+    this.videoStateService.repeatCurrentClip();
   }
 
   toggleSettings(): void {

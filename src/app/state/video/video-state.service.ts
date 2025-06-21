@@ -1,7 +1,6 @@
-import {computed, inject, Injectable, Signal, signal} from '@angular/core';
-import {SeekDirection, SeekType, VideoClip} from '../../model/video.types';
+import {computed, Injectable, Signal, signal} from '@angular/core';
+import {SeekType, VideoClip} from '../../model/video.types';
 import {VTTCue} from 'media-captions';
-import {SettingsStateService} from '../settings/settings-state.service';
 
 const MIN_CLIP_DURATION = 0.1;
 
@@ -9,7 +8,6 @@ const MIN_CLIP_DURATION = 0.1;
   providedIn: 'root'
 })
 export class VideoStateService {
-  private readonly settingsService = inject(SettingsStateService);
   private readonly _currentTime = signal(0);
   private readonly _duration = signal(0);
   private readonly _cues = signal<VTTCue[]>([]);
@@ -19,9 +17,6 @@ export class VideoStateService {
   private readonly _playPauseRequest = signal<number | null>(null);
   private readonly _repeatRequest = signal<number | null>(null);
   private readonly _forceContinueRequest = signal<number | null>(null);
-  private readonly _lastActiveSubtitleClipId = signal<string | null>(null);
-  private readonly _isPlayerPaused = signal(true);
-  private readonly _isAutoPaused = signal(false);
 
   public readonly videoElement: Signal<HTMLVideoElement | null> = this._videoElement.asReadonly();
   public readonly currentTime: Signal<number> = this._currentTime.asReadonly();
@@ -29,37 +24,13 @@ export class VideoStateService {
   public readonly subtitlesVisible: Signal<boolean> = this._subtitlesVisible.asReadonly();
   public readonly seekRequest = this._seekRequest.asReadonly();
   public readonly playPauseRequest = this._playPauseRequest.asReadonly();
-  public readonly lastActiveSubtitleClipId = this._lastActiveSubtitleClipId.asReadonly();
-  public readonly autoPauseAtStart = this.settingsService.autoPauseAtStart.asReadonly();
-  public readonly autoPauseAtEnd = this.settingsService.autoPauseAtEnd.asReadonly();
   public readonly repeatRequest = this._repeatRequest.asReadonly();
   public readonly forceContinueRequest = this._forceContinueRequest.asReadonly();
-  public readonly isPlayerPaused = this._isPlayerPaused.asReadonly();
-  public readonly isAutoPaused = this._isAutoPaused.asReadonly();
 
   public readonly clips: Signal<VideoClip[]> = computed(() => this.generateClips());
   public readonly clipsMap: Signal<Map<string, VideoClip>> = computed(() => {
     return new Map(this.clips().map(clip => [clip.id, clip]));
   });
-  public readonly currentClip: Signal<VideoClip | undefined> = computed(() => {
-    const time = this.currentTime();
-    return this.clips().find(clip => time >= clip.startTime && time < clip.endTime);
-  });
-  public readonly lastActiveSubtitleClip = computed(() => {
-    const id = this.lastActiveSubtitleClipId();
-    return id ? this.clipsMap().get(id) : null;
-  });
-
-  public setPlayerPausedState(isPaused: boolean): void {
-    this._isPlayerPaused.set(isPaused);
-    if (!isPaused) {
-      this._isAutoPaused.set(false);
-    }
-  }
-
-  public setAutoPaused(isAutoPaused: boolean): void {
-    this._isAutoPaused.set(isAutoPaused);
-  }
 
   public setCurrentTime(time: number): void {
     this._currentTime.set(time);
@@ -86,36 +57,15 @@ export class VideoStateService {
   }
 
   public togglePlayPause(): void {
-    if (this.isPlayerPaused() && this.isAutoPaused()) {
-      this.setAutoPaused(false);
-    }
     this._playPauseRequest.set(Date.now());
   }
 
-  public repeatLastClip(): void {
-    if (this.lastActiveSubtitleClipId()) {
-      this._repeatRequest.set(Date.now());
-    }
+  public repeatCurrentClip(): void {
+    this._repeatRequest.set(Date.now());
   }
 
   public forceContinue(): void {
     this._forceContinueRequest.set(Date.now());
-  }
-
-  public setLastActiveSubtitleClipId(clipId: string | null): void {
-    if (this._lastActiveSubtitleClipId() !== clipId) {
-      this._lastActiveSubtitleClipId.set(clipId);
-    }
-  }
-
-  public recalculateActiveClip(): void {
-    const clip = this.currentClip();
-    if (clip?.hasSubtitle) {
-      this.setLastActiveSubtitleClipId(clip.id);
-    } else {
-      // Do not clear to allow repeat from a gap
-      // Cleared when new subtitle clip is entered
-    }
   }
 
   public seekRelative(time: number): void {
@@ -140,45 +90,6 @@ export class VideoStateService {
 
   public clearForceContinueRequest(): void {
     this._forceContinueRequest.set(null);
-  }
-
-  public goToAdjacentSubtitleClip(direction: SeekDirection): void {
-    const adjacentClip = this.findAdjacentSubtitleClip(direction);
-    if (adjacentClip) {
-      this.seekAbsolute(adjacentClip.startTime);
-    } else if (direction === SeekDirection.Previous) {
-      const currentSubtitleClip = this.lastActiveSubtitleClip();
-      if (currentSubtitleClip) {
-        this.seekAbsolute(currentSubtitleClip.startTime);
-      }
-    }
-  }
-
-  public findAdjacentSubtitleClip(direction: SeekDirection): VideoClip | undefined {
-    const clips = this.clips();
-    if (clips.length === 0) return undefined;
-
-    // Use last active subtitle clip as reference
-    // Fallback to current clip
-    const referenceClip = this.lastActiveSubtitleClip() ?? this.currentClip();
-    if (!referenceClip) return undefined;
-
-    const currentIndex = clips.findIndex(c => c.id === referenceClip.id);
-    if (currentIndex === -1) return undefined; // Safety check
-
-    if (direction === SeekDirection.Next) {
-      // Search for next subtitle clip
-      for (let i = currentIndex + 1; i < clips.length; i++) {
-        if (clips[i].hasSubtitle) return clips[i];
-      }
-    } else { // Previous
-      // Search for previous subtitle clip
-      for (let i = currentIndex - 1; i >= 0; i--) {
-        if (clips[i].hasSubtitle) return clips[i];
-      }
-    }
-
-    return undefined; // No adjacent subtitle clip found
   }
 
   public updateClipTimes(clipId: string, newStartTime: number, newEndTime: number): void {
