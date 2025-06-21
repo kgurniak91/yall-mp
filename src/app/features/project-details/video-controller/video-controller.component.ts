@@ -1,10 +1,8 @@
 import {Component, effect, inject, input, signal, ViewEncapsulation} from '@angular/core';
 import {VideoJsOptions} from './video-controller.type';
 import {VideoStateService} from '../../../state/video/video-state.service';
-import {SettingsStateService} from '../../../state/settings/settings-state.service';
 import {VideoPlayerAction, VideoPlayerCommand} from '../../../model/video.types';
 import {ClipPlayerService} from '../services/clip-player/clip-player.service';
-import type Player from 'video.js/dist/types/player';
 import {VideoPlayerComponent} from '../video-player/video-player.component';
 
 @Component({
@@ -20,28 +18,28 @@ export class VideoControllerComponent {
   options = input.required<VideoJsOptions>();
   protected command = signal<VideoPlayerCommand | null>(null);
   private videoStateService = inject(VideoStateService);
-  private conductor = inject(ClipPlayerService);
+  private clipPlayerService = inject(ClipPlayerService);
 
   protected onClipEnded(): void {
-    this.conductor.onClipFinished();
+    this.clipPlayerService.onClipFinished();
   }
 
-  public onNativePlay(): void {
-    if (!this.conductor.isPlaying()) {
-      this.conductor.playCurrent();
+  protected onNativePlay(): void {
+    if (!this.clipPlayerService.isPlaying()) {
+      this.clipPlayerService.playCurrent();
     }
   }
 
-  public onNativePause(): void {
-    if (this.conductor.isPlaying()) {
-      this.conductor.pause();
+  protected onNativePause(): void {
+    if (this.clipPlayerService.isPlaying()) {
+      this.clipPlayerService.pause();
     }
   }
 
   private conductorCommands = effect(() => {
-    const clipToPlay = this.conductor.currentClip();
-    const isPlaying = this.conductor.isPlaying();
-    const shouldSeek = this.conductor.seekToStart();
+    const clipToPlay = this.clipPlayerService.currentClip();
+    const isPlaying = this.clipPlayerService.isPlaying();
+    const shouldSeek = this.clipPlayerService.seekToStart();
 
     if (isPlaying && clipToPlay) {
       this.command.set({clip: clipToPlay, action: VideoPlayerAction.Play, seekToStart: shouldSeek});
@@ -59,16 +57,16 @@ export class VideoControllerComponent {
   });
 
   private handleTogglePlayPause(): void {
-    if (this.conductor.isPlaying()) {
-      this.conductor.pause();
+    if (this.clipPlayerService.isPlaying()) {
+      this.clipPlayerService.pause();
     } else {
-      this.conductor.resume();
+      this.clipPlayerService.resume();
     }
     this.videoStateService.clearPlayPauseRequest();
   }
 
   private handleRepeat(): void {
-    this.conductor.playCurrent();
+    this.clipPlayerService.playCurrent();
     this.videoStateService.clearRepeatRequest();
   }
 }
