@@ -29,7 +29,6 @@ export class TimelineEditorComponent implements OnDestroy {
   private wsRegions: RegionsPlugin | undefined;
   private currentZoom = signal<number>(INITIAL_ZOOM);
   private lastDrawnClipsSignature: string | null = null;
-  private lastActiveRegionId: string | null = null;
 
   private timelineRenderer = effect(() => {
     const clips = this.videoStateService.clips();
@@ -50,11 +49,13 @@ export class TimelineEditorComponent implements OnDestroy {
       this.lastDrawnClipsSignature = clipsSignature;
     }
 
-    this.applyHighlight(activeClipId);
+    this.syncHighlight();
   });
 
   ngOnDestroy() {
     this.wavesurfer?.un('scroll', this.handleWaveSurferScroll);
+    this.wsRegions?.un('region-updated', this.handleRegionUpdated);
+    this.wsRegions?.un('region-clicked', this.handleRegionClicked);
     this.wsRegions?.un('region-created', this.handleRegionCreated);
     this.wavesurfer?.destroy();
   }
@@ -105,7 +106,6 @@ export class TimelineEditorComponent implements OnDestroy {
     this.currentZoom.set(newZoom);
     this.wavesurfer.zoom(newZoom);
 
-    // hack to refresh the timeline when zooming in/out so that regions don't disappear
     if (!this.clipPlayerService.isPlaying()) {
       this.wavesurfer.zoom(previousZoom);
       this.wavesurfer.zoom(newZoom);
@@ -124,60 +124,59 @@ export class TimelineEditorComponent implements OnDestroy {
     });
 
     this.wsRegions = this.wavesurfer.registerPlugin(RegionsPlugin.create());
-    this.setupEventListeners();
+    this.setupWsRegionsEventListeners();
     this.wavesurfer.on('scroll', this.handleWaveSurferScroll);
   }
 
-  private setupEventListeners() {
+  private setupWsRegionsEventListeners() {
     if (!this.wsRegions) return;
-
-    this.wsRegions.on('region-updated', (region: Region) => {
-      this.videoStateService.updateClipTimes(region.id, region.start, region.end);
-    });
-
-    this.wsRegions.on('region-clicked', (region: Region, e: MouseEvent) => {
-      e.stopPropagation();
-      const clickedClipIndex = this.videoStateService.clips().findIndex(c => c.id === region.id);
-      if (clickedClipIndex > -1) {
-        this.clipPlayerService.selectClip(clickedClipIndex);
-      }
-    });
-
+    this.wsRegions.on('region-updated', this.handleRegionUpdated);
+    this.wsRegions.on('region-clicked', this.handleRegionClicked);
     this.wsRegions.on('region-created', this.handleRegionCreated);
   }
 
+  private handleRegionUpdated = (region: Region) => {
+    this.videoStateService.updateClipTimes(region.id, region.start, region.end);
+  };
+
+  private handleRegionClicked = (region: Region, e: MouseEvent) => {
+    e.stopPropagation();
+    const clickedClipIndex = this.videoStateService.clips().findIndex(c => c.id === region.id);
+    if (clickedClipIndex > -1) {
+      this.clipPlayerService.selectClip(clickedClipIndex);
+    }
+  }
+
   private handleRegionCreated = (region: Region) => {
-    if (region.id === this.clipPlayerService.currentClip()?.id) {
+    // When a region's DOM element is first created, check if it should be highlighted.
+    const activeClipId = this.clipPlayerService.currentClip()?.id || null;
+    if (region.id === activeClipId) {
       (region.element as HTMLElement).style.boxShadow = ACTIVE_GLOW_STYLE;
     }
   };
 
   private handleWaveSurferScroll = () => {
-    this.applyHighlight(this.clipPlayerService.currentClip()?.id || null);
+    this.syncHighlight();
   };
 
-  private applyHighlight(activeClipId: string | null): void {
-    if (this.lastActiveRegionId === activeClipId) return;
-
+  private syncHighlight(): void {
+    const activeClipId = this.clipPlayerService.currentClip()?.id || null;
     const container = this.timelineContainer()?.nativeElement;
     const shadowRoot = container?.querySelector('div')?.shadowRoot;
     if (!shadowRoot) return;
 
-    if (this.lastActiveRegionId) {
-      const oldRegionElement = shadowRoot.querySelector(`[part~="${this.lastActiveRegionId}"]`) as HTMLElement;
-      if (oldRegionElement) {
-        oldRegionElement.style.boxShadow = 'none';
-      }
-    }
+    const allRegionElements = shadowRoot.querySelectorAll('[part~="region"]') as NodeListOf<HTMLElement>;
 
-    if (activeClipId) {
-      const newRegionElement = shadowRoot.querySelector(`[part~="${activeClipId}"]`) as HTMLElement;
-      if (newRegionElement) {
-        newRegionElement.style.boxShadow = ACTIVE_GLOW_STYLE;
-      }
-    }
+    allRegionElements.forEach(regionEl => {
+      const partAttr = regionEl.getAttribute('part') || '';
+      const regionId = partAttr.split(' ').find(p => p !== 'region');
 
-    this.lastActiveRegionId = activeClipId;
+      if (regionId === activeClipId) {
+        regionEl.style.boxShadow = ACTIVE_GLOW_STYLE;
+      } else {
+        regionEl.style.boxShadow = 'none';
+      }
+    });
   }
 
   private drawRegions(clips: VideoClip[]) {
