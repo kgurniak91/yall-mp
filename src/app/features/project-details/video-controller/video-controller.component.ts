@@ -74,6 +74,10 @@ export class VideoControllerComponent {
     }
   }
 
+  protected onProgressBarClicked(targetTime: number): void {
+    this.handleSeek({ time: targetTime, type: SeekType.Absolute });
+  }
+
   private timelineRequestHandler = effect(() => {
     const request = this.clipPlayerService.clipSelectedRequest();
     if (request) {

@@ -1,3 +1,4 @@
 <app-video-player [options]="options()"
                   [command]="command()"
-                  (clipEnded)="onClipEnded()"/>
+                  (clipEnded)="onClipEnded()"
+                  (progressBarClicked)="onProgressBarClicked($event)"/>
