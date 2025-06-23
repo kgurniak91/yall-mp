@@ -8,9 +8,9 @@ import {Button} from 'primeng/button';
 import {Tooltip} from 'primeng/tooltip';
 import {Drawer} from 'primeng/drawer';
 import {ProjectSettingsComponent} from './project-settings/project-settings.component';
-import {KeyboardShortcutsService} from './services/keyboard-shortcuts/keyboard-shortcuts.service';
+import {KeyboardShortcutsService} from './keyboard-shortcuts/keyboard-shortcuts.service';
 import {SeekDirection} from '../../model/video.types';
-import {ClipPlayerService} from './services/clip-player/clip-player.service';
+import {ClipsStateService} from '../../state/clips-state/clips-state.service';
 
 @Component({
   selector: 'app-project-details',
@@ -31,7 +31,7 @@ import {ClipPlayerService} from './services/clip-player/clip-player.service';
 export class ProjectDetailsComponent implements OnInit {
   protected readonly isSettingsVisible = signal(false);
   protected readonly videoStateService = inject(VideoStateService);
-  protected readonly clipPlayerService = inject(ClipPlayerService);
+  protected readonly clipsStateService = inject(ClipsStateService);
   protected readonly options: VideoJsOptions = {
     sources: [
       {
@@ -64,15 +64,15 @@ export class ProjectDetailsComponent implements OnInit {
   async ngOnInit() {
     const response = fetch('/temp/marvel.srt');
     const result: ParsedCaptionsResult = await parseResponse(response, {type: 'srt'});
-    this.videoStateService.setCues(result.cues);
+    this.clipsStateService.setCues(result.cues);
   }
 
   goToNextSubtitleClip() {
-    this.clipPlayerService.goToAdjacentSubtitleClip(SeekDirection.Next);
+    this.clipsStateService.goToAdjacentSubtitleClip(SeekDirection.Next);
   }
 
   goToPreviousSubtitleClip() {
-    this.clipPlayerService.goToAdjacentSubtitleClip(SeekDirection.Previous);
+    this.clipsStateService.goToAdjacentSubtitleClip(SeekDirection.Previous);
   }
 
   togglePlayPause() {

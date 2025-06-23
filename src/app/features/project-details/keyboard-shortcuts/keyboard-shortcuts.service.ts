@@ -1,14 +1,14 @@
 import {inject, Injectable, OnDestroy} from '@angular/core';
-import {VideoStateService} from '../../../../state/video/video-state.service';
-import {KeyboardAction, SeekDirection} from '../../../../model/video.types';
-import {ClipPlayerService} from '../clip-player/clip-player.service';
+import {VideoStateService} from '../../../state/video/video-state.service';
+import {KeyboardAction, SeekDirection} from '../../../model/video.types';
+import {ClipsStateService} from '../../../state/clips-state/clips-state.service';
 
 const SEEK_SECONDS = 2;
 
 @Injectable()
 export class KeyboardShortcutsService implements OnDestroy {
   private videoStateService = inject(VideoStateService);
-  private clipPlayerService = inject(ClipPlayerService);
+  private clipsStateService = inject(ClipsStateService);
 
   constructor() {
     document.addEventListener('keydown', this.handleKeyDown);
@@ -71,10 +71,10 @@ export class KeyboardShortcutsService implements OnDestroy {
         this.videoStateService.seekRelative(SEEK_SECONDS);
         break;
       case KeyboardAction.PreviousSubtitleClip:
-        this.clipPlayerService.goToAdjacentSubtitleClip(SeekDirection.Previous);
+        this.clipsStateService.goToAdjacentSubtitleClip(SeekDirection.Previous);
         break;
       case KeyboardAction.NextSubtitleClip:
-        this.clipPlayerService.goToAdjacentSubtitleClip(SeekDirection.Next);
+        this.clipsStateService.goToAdjacentSubtitleClip(SeekDirection.Next);
         break;
       case KeyboardAction.RepeatCurrentClip:
         this.videoStateService.repeatCurrentClip();

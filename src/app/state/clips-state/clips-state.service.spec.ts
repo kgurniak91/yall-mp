@@ -1,13 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 
-import { ClipPlayerService } from './clip-player.service';
+import { ClipsStateService } from './clips-state.service';
 
-describe('ClipPlayerService', () => {
-  let service: ClipPlayerService;
+describe('ClipsStateService', () => {
+  let service: ClipsStateService;
 
   beforeEach(() => {
     TestBed.configureTestingModule({});
-    service = TestBed.inject(ClipPlayerService);
+    service = TestBed.inject(ClipsStateService);
   });
 
   it('should be created', () => {

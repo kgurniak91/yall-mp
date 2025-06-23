@@ -5,7 +5,7 @@
 </div>
 
 <div class="subtitle-display">
-  @if (clipPlayerService.currentClip(); as currentClip) {
+  @if (clipsStateService.currentClip(); as currentClip) {
     @if (currentClip.hasSubtitle) {
       <span [class.blurred-subtitles]="!videoStateService.subtitlesVisible()">
         {{ currentClip.text }}
@@ -25,8 +25,8 @@
             severity="secondary"
             (onClick)="goToPreviousSubtitleClip()"/>
 
-  <p-button icon="fa-solid {{clipPlayerService.isPlaying() ? 'fa-pause' : 'fa-play'}}"
-            [pTooltip]="clipPlayerService.isPlaying() ? 'Pause' : 'Play'"
+  <p-button icon="fa-solid {{clipsStateService.isPlaying() ? 'fa-pause' : 'fa-play'}}"
+            [pTooltip]="clipsStateService.isPlaying() ? 'Pause' : 'Play'"
             tooltipPosition="top"
             severity="secondary"
             (onClick)="togglePlayPause()"/>

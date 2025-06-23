@@ -9,7 +9,7 @@ import {
   VideoPlayerAction,
   VideoPlayerCommand
 } from '../../../model/video.types';
-import {ClipPlayerService} from '../services/clip-player/clip-player.service';
+import {ClipsStateService} from '../../../state/clips-state/clips-state.service';
 import {VideoPlayerComponent} from '../video-player/video-player.component';
 import {SettingsStateService} from '../../../state/settings/settings-state.service';
 
@@ -26,33 +26,33 @@ export class VideoControllerComponent {
   options = input.required<VideoJsOptions>();
   protected command = signal<VideoPlayerCommand | null>(null);
   private videoStateService = inject(VideoStateService);
-  private clipPlayerService = inject(ClipPlayerService);
+  private clipsStateService = inject(ClipsStateService);
   private settingsStateService = inject(SettingsStateService);
 
   // Called when a clip finishes
   protected onClipEnded(): void {
-    const clipJustFinished = this.clipPlayerService.currentClip()!;
+    const clipJustFinished = this.clipsStateService.currentClip()!;
     const autoPauseAtEnd = this.settingsStateService.autoPauseAtEnd();
 
     if (clipJustFinished.hasSubtitle && autoPauseAtEnd) {
-      this.clipPlayerService.setPlayerState(PlayerState.AutoPausedAtEnd);
+      this.clipsStateService.setPlayerState(PlayerState.AutoPausedAtEnd);
       this.command.set({action: VideoPlayerAction.Pause, clip: clipJustFinished});
       return;
     }
 
-    const isLastClip = this.clipPlayerService.currentClipIndex() === this.videoStateService.clips().length - 1;
+    const isLastClip = this.clipsStateService.currentClipIndex() === this.clipsStateService.clips().length - 1;
     if (isLastClip) {
       // Reached the end of the video.
-      this.clipPlayerService.setPlayerState(PlayerState.Idle);
+      this.clipsStateService.setPlayerState(PlayerState.Idle);
       return;
     }
 
     // Continue to the next clip.
-    this.clipPlayerService.advanceToNextClip();
-    const nextClip = this.clipPlayerService.currentClip();
+    this.clipsStateService.advanceToNextClip();
+    const nextClip = this.clipsStateService.currentClip();
 
     if (!nextClip) {
-      this.clipPlayerService.setPlayerState(PlayerState.Idle);
+      this.clipsStateService.setPlayerState(PlayerState.Idle);
       return;
     }
 
@@ -65,7 +65,7 @@ export class VideoControllerComponent {
     // The next clip is a subtitle clip. Check if it requires pausing at the start.
     const autoPauseAtStart = this.settingsStateService.autoPauseAtStart();
     if (autoPauseAtStart) {
-      this.clipPlayerService.setPlayerState(PlayerState.AutoPausedAtStart);
+      this.clipsStateService.setPlayerState(PlayerState.AutoPausedAtStart);
       // Issue a pause command to ensure the player's time is synced to the start of the new clip.
       this.command.set({action: VideoPlayerAction.Pause, clip: nextClip});
     } else {
@@ -75,17 +75,17 @@ export class VideoControllerComponent {
   }
 
   protected onProgressBarClicked(targetTime: number): void {
-    this.handleSeek({ time: targetTime, type: SeekType.Absolute });
+    this.handleSeek({time: targetTime, type: SeekType.Absolute});
   }
 
   private timelineRequestHandler = effect(() => {
-    const request = this.clipPlayerService.clipSelectedRequest();
+    const request = this.clipsStateService.clipSelectedRequest();
     if (request) {
-      const newClip = this.clipPlayerService.currentClip();
+      const newClip = this.clipsStateService.currentClip();
       if (newClip) {
         this.playClip(newClip, {seekToTime: newClip.startTime});
       }
-      this.clipPlayerService.clearClipSelectedRequest();
+      this.clipsStateService.clearClipSelectedRequest();
     }
   });
 
@@ -109,7 +109,7 @@ export class VideoControllerComponent {
   });
 
   private handleTogglePlayPause(): void {
-    if (this.clipPlayerService.isPlaying()) {
+    if (this.clipsStateService.isPlaying()) {
       this.handlePause();
     } else {
       this.handleResume();
@@ -118,18 +118,18 @@ export class VideoControllerComponent {
   }
 
   private handlePause(): void {
-    this.clipPlayerService.setPlayerState(PlayerState.PausedByUser);
-    this.command.set({action: VideoPlayerAction.Pause, clip: this.clipPlayerService.currentClip()!});
+    this.clipsStateService.setPlayerState(PlayerState.PausedByUser);
+    this.command.set({action: VideoPlayerAction.Pause, clip: this.clipsStateService.currentClip()!});
   }
 
   private handleResume(): void {
-    const playerState = this.clipPlayerService.playerState();
-    const currentClip = this.clipPlayerService.currentClip()!;
+    const playerState = this.clipsStateService.playerState();
+    const currentClip = this.clipsStateService.currentClip()!;
 
     if (playerState === PlayerState.AutoPausedAtEnd) {
       // Resume advances to and plays the next clip.
-      this.clipPlayerService.advanceToNextClip();
-      const nextClip = this.clipPlayerService.currentClip()!;
+      this.clipsStateService.advanceToNextClip();
+      const nextClip = this.clipsStateService.currentClip()!;
       this.playClip(nextClip, {seekToTime: nextClip.startTime});
     } else {
       // Resume plays the current clip.
@@ -139,14 +139,14 @@ export class VideoControllerComponent {
   }
 
   private handleForceContinue(): void {
-    if (!this.clipPlayerService.isPlaying()) {
+    if (!this.clipsStateService.isPlaying()) {
       this.handleResume();
     }
     this.videoStateService.clearForceContinueRequest();
   }
 
   private handleRepeat(): void {
-    const currentClip = this.clipPlayerService.currentClip();
+    const currentClip = this.clipsStateService.currentClip();
     if (currentClip) {
       this.playClip(currentClip, {seekToTime: currentClip.startTime});
     }
@@ -171,16 +171,16 @@ export class VideoControllerComponent {
     targetTime = Math.max(0, Math.min(targetTime, duration - 0.01));
 
     // Find new clip and update the state.
-    const clips = this.videoStateService.clips();
+    const clips = this.clipsStateService.clips();
     const targetClipIndex = clips.findIndex(c => targetTime >= c.startTime && targetTime < c.endTime);
     if (targetClipIndex === -1) {
       this.videoStateService.clearSeekRequest();
       return;
     }
-    this.clipPlayerService.setCurrentClipByIndex(targetClipIndex);
-    const newClip = this.clipPlayerService.currentClip()!;
+    this.clipsStateService.setCurrentClipByIndex(targetClipIndex);
+    const newClip = this.clipsStateService.currentClip()!;
 
-    if (this.clipPlayerService.isPlaying()) {
+    if (this.clipsStateService.isPlaying()) {
       // If playing, continue playing from the new position.
       this.playClip(newClip, {seekToTime: targetTime});
     } else {
@@ -191,9 +191,9 @@ export class VideoControllerComponent {
       // Set the correct PAUSED state for the next resume action.
       const autoPauseAtStart = this.settingsStateService.autoPauseAtStart();
       if (newClip.hasSubtitle && autoPauseAtStart && Math.abs(targetTime - newClip.startTime) < 0.1) {
-        this.clipPlayerService.setPlayerState(PlayerState.AutoPausedAtStart);
+        this.clipsStateService.setPlayerState(PlayerState.AutoPausedAtStart);
       } else {
-        this.clipPlayerService.setPlayerState(PlayerState.PausedByUser);
+        this.clipsStateService.setPlayerState(PlayerState.PausedByUser);
       }
     }
 
@@ -201,7 +201,7 @@ export class VideoControllerComponent {
   }
 
   private playClip(clip: VideoClip, options?: { seekToTime?: number }): void {
-    this.clipPlayerService.setPlayerState(PlayerState.Playing);
+    this.clipsStateService.setPlayerState(PlayerState.Playing);
 
     const subtitledSpeed = this.settingsStateService.subtitledClipSpeed();
     const gapSpeed = this.settingsStateService.gapSpeed();

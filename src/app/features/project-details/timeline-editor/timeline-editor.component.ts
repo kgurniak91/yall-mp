@@ -3,7 +3,7 @@ import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin, {Region} from 'wavesurfer.js/dist/plugins/regions.js';
 import {VideoStateService} from '../../../state/video/video-state.service';
 import {VideoClip} from '../../../model/video.types';
-import {ClipPlayerService} from '../services/clip-player/clip-player.service';
+import {ClipsStateService} from '../../../state/clips-state/clips-state.service';
 
 const INITIAL_ZOOM = 100;
 const MIN_ZOOM = 20;
@@ -24,18 +24,18 @@ const GAP_BACKGROUND = 'rgba(100, 100, 100, 0.1)';
 export class TimelineEditorComponent implements OnDestroy {
   timelineContainer = viewChild.required<ElementRef<HTMLDivElement>>('timeline');
   private videoStateService = inject(VideoStateService);
-  private clipPlayerService = inject(ClipPlayerService);
+  private clipsStateService = inject(ClipsStateService);
   private wavesurfer: WaveSurfer | undefined;
   private wsRegions: RegionsPlugin | undefined;
   private currentZoom = signal<number>(INITIAL_ZOOM);
   private lastDrawnClipsSignature: string | null = null;
 
   private timelineRenderer = effect(() => {
-    const clips = this.videoStateService.clips();
+    const clips = this.clipsStateService.clips();
     const duration = this.videoStateService.duration();
     const videoElement = this.videoStateService.videoElement();
     const container = this.timelineContainer()?.nativeElement;
-    const activeClipId = this.clipPlayerService.currentClip()?.id || null;
+    const activeClipId = this.clipsStateService.currentClip()?.id || null;
     const clipsSignature = clips.map(c => `${c.id}@${c.startTime}:${c.endTime}`).join(',');
 
     if (!this.wavesurfer && videoElement && container && duration > 0) {
@@ -106,7 +106,7 @@ export class TimelineEditorComponent implements OnDestroy {
     this.currentZoom.set(newZoom);
     this.wavesurfer.zoom(newZoom);
 
-    if (!this.clipPlayerService.isPlaying()) {
+    if (!this.clipsStateService.isPlaying()) {
       this.wavesurfer.zoom(previousZoom);
       this.wavesurfer.zoom(newZoom);
     }
@@ -136,20 +136,20 @@ export class TimelineEditorComponent implements OnDestroy {
   }
 
   private handleRegionUpdated = (region: Region) => {
-    this.videoStateService.updateClipTimes(region.id, region.start, region.end);
+    this.clipsStateService.updateClipTimes(region.id, region.start, region.end);
   };
 
   private handleRegionClicked = (region: Region, e: MouseEvent) => {
     e.stopPropagation();
-    const clickedClipIndex = this.videoStateService.clips().findIndex(c => c.id === region.id);
+    const clickedClipIndex = this.clipsStateService.clips().findIndex(c => c.id === region.id);
     if (clickedClipIndex > -1) {
-      this.clipPlayerService.selectClip(clickedClipIndex);
+      this.clipsStateService.selectClip(clickedClipIndex);
     }
   }
 
   private handleRegionCreated = (region: Region) => {
     // When a region's DOM element is first created, check if it should be highlighted.
-    const activeClipId = this.clipPlayerService.currentClip()?.id || null;
+    const activeClipId = this.clipsStateService.currentClip()?.id || null;
     if (region.id === activeClipId) {
       (region.element as HTMLElement).style.boxShadow = ACTIVE_GLOW_STYLE;
     }
@@ -160,7 +160,7 @@ export class TimelineEditorComponent implements OnDestroy {
   };
 
   private syncHighlight(): void {
-    const activeClipId = this.clipPlayerService.currentClip()?.id || null;
+    const activeClipId = this.clipsStateService.currentClip()?.id || null;
     const container = this.timelineContainer()?.nativeElement;
     const shadowRoot = container?.querySelector('div')?.shadowRoot;
     if (!shadowRoot) return;
