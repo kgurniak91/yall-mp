@@ -3,7 +3,7 @@ import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin, {Region} from 'wavesurfer.js/dist/plugins/regions.js';
 import {VideoStateService} from '../../../state/video/video-state.service';
 import {VideoClip} from '../../../model/video.types';
-import {ClipsStateService} from '../../../state/clips-state/clips-state.service';
+import {ClipsStateService} from '../../../state/clips/clips-state.service';
 
 const INITIAL_ZOOM = 100;
 const MIN_ZOOM = 20;

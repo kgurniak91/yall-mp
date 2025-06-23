@@ -1,7 +1,7 @@
 import {inject, Injectable, OnDestroy} from '@angular/core';
 import {VideoStateService} from '../../../state/video/video-state.service';
 import {KeyboardAction, SeekDirection} from '../../../model/video.types';
-import {ClipsStateService} from '../../../state/clips-state/clips-state.service';
+import {ClipsStateService} from '../../../state/clips/clips-state.service';
 
 const SEEK_SECONDS = 2;
 

@@ -10,7 +10,7 @@ import {Drawer} from 'primeng/drawer';
 import {ProjectSettingsComponent} from './project-settings/project-settings.component';
 import {KeyboardShortcutsService} from './keyboard-shortcuts/keyboard-shortcuts.service';
 import {SeekDirection} from '../../model/video.types';
-import {ClipsStateService} from '../../state/clips-state/clips-state.service';
+import {ClipsStateService} from '../../state/clips/clips-state.service';
 
 @Component({
   selector: 'app-project-details',

@@ -9,7 +9,7 @@ import {
   VideoPlayerAction,
   VideoPlayerCommand
 } from '../../../model/video.types';
-import {ClipsStateService} from '../../../state/clips-state/clips-state.service';
+import {ClipsStateService} from '../../../state/clips/clips-state.service';
 import {VideoPlayerComponent} from '../video-player/video-player.component';
 import {SettingsStateService} from '../../../state/settings/settings-state.service';
 
