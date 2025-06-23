@@ -27,4 +27,8 @@ video {
   .vjs-tech {
     pointer-events: none !important;
   }
+
+  .vjs-text-track-display {
+    pointer-events: initial !important;
+  }
 }

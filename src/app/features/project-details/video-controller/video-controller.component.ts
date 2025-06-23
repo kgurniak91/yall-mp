@@ -23,11 +23,12 @@ import {SettingsStateService} from '../../../state/settings/settings-state.servi
   encapsulation: ViewEncapsulation.None
 })
 export class VideoControllerComponent {
-  options = input.required<VideoJsOptions>();
-  protected command = signal<VideoPlayerCommand | null>(null);
-  private videoStateService = inject(VideoStateService);
-  private clipsStateService = inject(ClipsStateService);
-  private settingsStateService = inject(SettingsStateService);
+  public readonly options = input.required<VideoJsOptions>();
+  protected readonly command = signal<VideoPlayerCommand | null>(null);
+  protected readonly PlayerState = PlayerState;
+  protected readonly clipsStateService = inject(ClipsStateService);
+  private readonly videoStateService = inject(VideoStateService);
+  private readonly settingsStateService = inject(SettingsStateService);
 
   // Called when a clip finishes
   protected onClipEnded(): void {
@@ -76,6 +77,10 @@ export class VideoControllerComponent {
 
   protected onProgressBarClicked(targetTime: number): void {
     this.handleSeek({time: targetTime, type: SeekType.Absolute});
+  }
+
+  protected onVideoAreaClicked(): void {
+    this.handleTogglePlayPause();
   }
 
   private timelineRequestHandler = effect(() => {

@@ -16,10 +16,12 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
   public readonly command = input<VideoPlayerCommand | null>();
   public readonly clipEnded = output<void>();
   public readonly progressBarClicked = output<number>();
+  public readonly videoAreaClicked = output<void>();
   private readonly videoElementRef = viewChild.required<ElementRef<HTMLVideoElement>>('video');
   private readonly videoStateService = inject(VideoStateService);
   private player: Player | undefined;
   private progressBarEl: HTMLElement | undefined;
+  private textTrackDisplayEl: HTMLElement | undefined;
   private isDraggingMouseOnProgressBar = false;
   private animationFrameId: number | undefined;
   private segmentEndTime = 0;
@@ -32,6 +34,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
       this.player?.on('loadedmetadata', this.handleLoadedMetadata);
       this.player?.on('timeupdate', this.handleTimeUpdate);
       this.addProgressBarEventListener();
+      this.addVideoAreaEventListeners();
     });
   }
 
@@ -41,6 +44,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
       this.player.off('loadedmetadata', this.handleLoadedMetadata);
       this.player.off('timeupdate', this.handleTimeUpdate);
       this.removeProgressBarEventListeners();
+      this.removeVideoAreaEventListeners();
       this.player.dispose();
     }
   }
@@ -69,6 +73,39 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
     window.removeEventListener('mousemove', this.handleMouseMove);
     window.removeEventListener('mouseup', this.handleMouseUp, {capture: true});
   }
+
+  private addVideoAreaEventListeners() {
+    this.textTrackDisplayEl = this.player?.el()?.querySelector('.vjs-text-track-display') as HTMLElement;
+    if (!this.textTrackDisplayEl) return;
+
+    this.textTrackDisplayEl.addEventListener('click', this.handleVideoAreaClick);
+    this.textTrackDisplayEl.addEventListener('mouseenter', this.handleVideoAreaMouseEnter);
+    this.textTrackDisplayEl.addEventListener('mouseleave', this.handleVideoAreaMouseLeave);
+  }
+
+  private removeVideoAreaEventListeners() {
+    if (!this.textTrackDisplayEl) return;
+
+    this.textTrackDisplayEl.removeEventListener('click', this.handleVideoAreaClick);
+    this.textTrackDisplayEl.removeEventListener('mouseenter', this.handleVideoAreaMouseEnter);
+    this.textTrackDisplayEl.removeEventListener('mouseleave', this.handleVideoAreaMouseLeave);
+  }
+
+  private handleVideoAreaClick = () => {
+    this.videoAreaClicked.emit();
+  };
+
+  private handleVideoAreaMouseEnter = () => {
+    if (this.textTrackDisplayEl) {
+      this.textTrackDisplayEl.style.backgroundColor = 'rgba(0, 0, 0, 0.2)';
+    }
+  };
+
+  private handleVideoAreaMouseLeave = () => {
+    if (this.textTrackDisplayEl) {
+      this.textTrackDisplayEl.style.backgroundColor = 'initial';
+    }
+  };
 
   private videoControllerCommands = effect(() => {
     const command = this.command();

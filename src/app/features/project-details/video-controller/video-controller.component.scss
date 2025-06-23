@@ -1,0 +1,30 @@
+.video-container {
+  position: relative;
+  cursor: pointer;
+}
+
+.play-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 5rem;
+  pointer-events: none;
+
+  &.hover-visible {
+    opacity: 0;
+  }
+
+  .video-container:hover &.hover-visible {
+    opacity: 1;
+  }
+
+  &.always-visible {
+    opacity: 1;
+  }
+}
