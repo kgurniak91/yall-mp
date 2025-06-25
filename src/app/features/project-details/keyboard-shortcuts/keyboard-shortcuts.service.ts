@@ -38,6 +38,10 @@ export class KeyboardShortcutsService implements OnDestroy {
         action = KeyboardAction.RepeatCurrentClip;
       } else if (event.key === 'ArrowDown') {
         action = KeyboardAction.ForceContinue;
+      } else if (event.key === '[') {
+        action = KeyboardAction.AdjustClipStartRight;
+      } else if (event.key === ']') {
+        action = KeyboardAction.AdjustClipEndLeft;
       }
     } else {
       if (event.key === 'ArrowLeft') {
@@ -48,6 +52,10 @@ export class KeyboardShortcutsService implements OnDestroy {
         action = KeyboardAction.RepeatCurrentClip;
       } else if (event.key === 'ArrowDown') {
         action = KeyboardAction.ForceContinue;
+      } else if (event.key === '[') {
+        action = KeyboardAction.AdjustClipStartLeft;
+      } else if (event.key === ']') {
+        action = KeyboardAction.AdjustClipEndRight;
       } else {
         action = keyMap.get(event.key);
       }
@@ -84,6 +92,18 @@ export class KeyboardShortcutsService implements OnDestroy {
         break;
       case KeyboardAction.TogglePlayPause:
         this.videoStateService.togglePlayPause();
+        break;
+      case KeyboardAction.AdjustClipStartLeft:
+        this.clipsStateService.adjustCurrentClipBoundary('start', 'left');
+        break;
+      case KeyboardAction.AdjustClipStartRight:
+        this.clipsStateService.adjustCurrentClipBoundary('start', 'right');
+        break;
+      case KeyboardAction.AdjustClipEndLeft:
+        this.clipsStateService.adjustCurrentClipBoundary('end', 'left');
+        break;
+      case KeyboardAction.AdjustClipEndRight:
+        this.clipsStateService.adjustCurrentClipBoundary('end', 'right');
         break;
     }
   }

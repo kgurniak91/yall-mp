@@ -2,6 +2,10 @@
   display: block;
 }
 
+label {
+  user-select: none;
+}
+
 .settings-container {
   display: flex;
   flex-direction: column;
@@ -20,7 +24,7 @@
   }
 }
 
-.setting-item-column, .speed-setting-item {
+.setting-item-column, .slider-setting-item {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;

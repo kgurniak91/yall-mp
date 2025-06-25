@@ -16,6 +16,10 @@ export enum KeyboardAction {
   RepeatCurrentClip = 'RepeatCurrentClip',
   ForceContinue = 'ForceContinue',
   TogglePlayPause = 'TogglePlayPause',
+  AdjustClipStartLeft = 'AdjustClipStartLeft',
+  AdjustClipStartRight = 'AdjustClipStartRight',
+  AdjustClipEndLeft = 'AdjustClipEndLeft',
+  AdjustClipEndRight = 'AdjustClipEndRight',
 }
 
 export enum SeekType {

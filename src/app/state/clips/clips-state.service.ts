@@ -2,18 +2,22 @@ import {computed, inject, Injectable, Signal, signal} from '@angular/core';
 import {VideoStateService} from '../video/video-state.service';
 import {PlayerState, SeekDirection, VideoClip} from '../../model/video.types';
 import {VTTCue} from 'media-captions';
+import {SettingsStateService} from '../settings/settings-state.service';
 
 const MIN_CLIP_DURATION = 0.1;
+const ADJUST_DEBOUNCE_MS = 50;
 
 @Injectable({
   providedIn: 'root'
 })
 export class ClipsStateService {
   private readonly videoStateService = inject(VideoStateService);
+  private readonly settingsStateService = inject(SettingsStateService);
   private readonly _cues = signal<VTTCue[]>([]);
   private readonly _currentClipIndex = signal(0);
   private readonly _clipSelectedRequest = signal<{ index: number, timestamp: number } | null>(null);
   private readonly _playerState = signal<PlayerState>(PlayerState.Idle);
+  private adjustDebounceTimer: any;
 
   public readonly currentClipIndex = this._currentClipIndex.asReadonly();
   public readonly clipSelectedRequest = this._clipSelectedRequest.asReadonly();
@@ -119,6 +123,45 @@ export class ClipsStateService {
     }
 
     this.updateCuesFromClips(updatedClips);
+  }
+
+  public adjustCurrentClipBoundary(boundary: 'start' | 'end', direction: 'left' | 'right'): void {
+    clearTimeout(this.adjustDebounceTimer);
+
+    this.adjustDebounceTimer = setTimeout(() => {
+      this.performAdjust(boundary, direction);
+    }, ADJUST_DEBOUNCE_MS);
+  }
+
+  private performAdjust(boundary: 'start' | 'end', direction: 'left' | 'right'): void {
+    const currentClip = this.currentClip();
+    if (!currentClip) {
+      return;
+    }
+
+    const adjustAmountSeconds = this.settingsStateService.adjustValueMs() / 1000;
+    const directionMultiplier = (direction === 'left') ? -1 : 1;
+    const changeAmount = adjustAmountSeconds * directionMultiplier;
+
+    let newStartTime = currentClip.startTime;
+    let newEndTime = currentClip.endTime;
+
+    if (boundary === 'start') {
+      newStartTime += changeAmount;
+    } else { // boundary === 'end'
+      newEndTime += changeAmount;
+    }
+
+    if (newStartTime < 0) {
+      newStartTime = 0;
+    }
+
+    const totalDuration = this.videoStateService.duration();
+    if (newEndTime > totalDuration) {
+      newEndTime = totalDuration;
+    }
+
+    this.updateClipTimes(currentClip.id, newStartTime, newEndTime);
   }
 
   private findAdjacentSubtitleClip(direction: SeekDirection): VideoClip | undefined {

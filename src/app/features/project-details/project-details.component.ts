@@ -11,6 +11,7 @@ import {ProjectSettingsComponent} from './project-settings/project-settings.comp
 import {KeyboardShortcutsService} from './keyboard-shortcuts/keyboard-shortcuts.service';
 import {SeekDirection} from '../../model/video.types';
 import {ClipsStateService} from '../../state/clips/clips-state.service';
+import {Popover} from 'primeng/popover';
 
 @Component({
   selector: 'app-project-details',
@@ -20,7 +21,8 @@ import {ClipsStateService} from '../../state/clips/clips-state.service';
     Button,
     Tooltip,
     Drawer,
-    ProjectSettingsComponent
+    ProjectSettingsComponent,
+    Popover
   ],
   templateUrl: './project-details.component.html',
   styleUrl: './project-details.component.scss',
@@ -81,6 +83,22 @@ export class ProjectDetailsComponent implements OnInit {
 
   repeatCurrentClip() {
     this.videoStateService.repeatCurrentClip();
+  }
+
+  adjustClipStartLeft(): void {
+    this.clipsStateService.adjustCurrentClipBoundary('start', 'left');
+  }
+
+  adjustClipStartRight(): void {
+    this.clipsStateService.adjustCurrentClipBoundary('start', 'right');
+  }
+
+  adjustClipEndLeft(): void {
+    this.clipsStateService.adjustCurrentClipBoundary('end', 'left');
+  }
+
+  adjustClipEndRight(): void {
+    this.clipsStateService.adjustCurrentClipBoundary('end', 'right');
   }
 
   toggleSettings(): void {

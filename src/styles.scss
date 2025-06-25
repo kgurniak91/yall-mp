@@ -32,3 +32,8 @@ video {
     pointer-events: initial !important;
   }
 }
+
+.rotate-90 {
+  display: inline-block;
+  transform: rotate(90deg);
+}

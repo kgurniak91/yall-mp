@@ -19,6 +19,22 @@
 </div>
 
 <div class="toolbar">
+  <div>
+    <p-button (click)="opStart.toggle($event)"
+              icon="fa-solid fa-arrows-down-to-line"
+              class="rotate-90"
+              tooltipPosition="left"
+              severity="secondary"
+              pTooltip="Adjust Clip Start"/>
+
+    <p-popover #opStart>
+      <div class="p-buttonset">
+        <p-button (click)="adjustClipStartLeft()" icon="fa fa-chevron-left" severity="secondary" variant="outlined" tooltipPosition="left" pTooltip="Adjust Left ([)"/>
+        <p-button (click)="adjustClipStartRight()" icon="fa fa-chevron-right" severity="secondary" variant="outlined" tooltipPosition="right" pTooltip="Adjust Right (Ctrl+[)"/>
+      </div>
+    </p-popover>
+  </div>
+
   <p-button icon="fa-solid fa-arrow-left"
             pTooltip="Previous subtitled clip"
             tooltipPosition="left"
@@ -43,6 +59,22 @@
             severity="secondary"
             (onClick)="goToNextSubtitleClip()"/>
 
+  <div>
+    <p-button (click)="opEnd.toggle($event)"
+              icon="fa-solid fa-arrows-up-to-line"
+              class="rotate-90"
+              tooltipPosition="right"
+              severity="secondary"
+              pTooltip="Adjust Clip End"/>
+
+    <p-popover #opEnd>
+      <div class="p-buttonset">
+        <p-button (click)="adjustClipEndLeft()" icon="fa fa-chevron-left" severity="secondary" variant="outlined" tooltipPosition="left" pTooltip="Adjust Left (Ctrl+])"/>
+        <p-button (click)="adjustClipEndRight()" icon="fa fa-chevron-right" severity="secondary" variant="outlined" tooltipPosition="right" pTooltip="Adjust Right (])"/>
+      </div>
+    </p-popover>
+  </div>
+
   <div class="settings-wrapper">
     @let subtitlesVisible = videoStateService.subtitlesVisible();
     <p-button icon="{{subtitlesVisible ? 'fa-solid' : 'fa-regular'}} fa-closed-captioning"
@@ -61,6 +93,10 @@
 
 <app-timeline-editor/>
 
-<p-drawer [(visible)]="isSettingsVisible" (onHide)="toggleSettings()" header="Settings" position="right" [style]="{width: '30rem'}">
+<p-drawer [(visible)]="isSettingsVisible"
+          (onHide)="toggleSettings()"
+          header="Settings"
+          position="right"
+          [style]="{width: '30rem'}">
   <app-project-settings/>
 </p-drawer>
