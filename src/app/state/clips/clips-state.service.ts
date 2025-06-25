@@ -77,16 +77,21 @@ export class ClipsStateService {
 
   public updateClipTimes(clipId: string, newStartTime: number, newEndTime: number): void {
     const allClips = this.clips();
-    const clipIndex = allClips.findIndex(c => c.id === clipId);
-    if (clipIndex === -1) return;
+    const originalClipIndex = allClips.findIndex(c => c.id === clipId);
+    if (originalClipIndex === -1) return;
 
-    const updatedClips = JSON.parse(JSON.stringify(allClips));
-    const originalClip = updatedClips[clipIndex];
+    if (this.playerState() === PlayerState.AutoPausedAtEnd && this.currentClipIndex() === originalClipIndex) {
+      // User adjusted current clip boundaries, AutoPausedAtEnd no longer valid
+      this.setPlayerState(PlayerState.PausedByUser);
+    }
+
+    const updatedClips: VideoClip[] = JSON.parse(JSON.stringify(allClips));
+    const originalClip = updatedClips[originalClipIndex];
     let finalStartTime = newStartTime;
     let finalEndTime = newEndTime;
 
     if (originalClip.startTime.toFixed(4) !== finalStartTime.toFixed(4)) {
-      const prevClip = updatedClips[clipIndex - 1];
+      const prevClip = updatedClips[originalClipIndex - 1];
       if (prevClip) {
         if (finalStartTime < prevClip.startTime + MIN_CLIP_DURATION) finalStartTime = prevClip.startTime + MIN_CLIP_DURATION;
         prevClip.endTime = finalStartTime;
@@ -96,7 +101,7 @@ export class ClipsStateService {
     }
 
     if (originalClip.endTime.toFixed(4) !== finalEndTime.toFixed(4)) {
-      const nextClip = updatedClips[clipIndex + 1];
+      const nextClip = updatedClips[originalClipIndex + 1];
       if (nextClip) {
         if (finalEndTime > nextClip.endTime - MIN_CLIP_DURATION) finalEndTime = nextClip.endTime - MIN_CLIP_DURATION;
         nextClip.startTime = finalEndTime;
@@ -110,19 +115,39 @@ export class ClipsStateService {
       finalEndTime = finalStartTime + MIN_CLIP_DURATION;
     }
 
-    const targetClip = updatedClips[clipIndex];
-    targetClip.startTime = finalStartTime;
-    targetClip.endTime = finalEndTime;
+    const targetClipInNewArray = updatedClips[originalClipIndex];
+    targetClipInNewArray.startTime = finalStartTime;
+    targetClipInNewArray.endTime = finalEndTime;
 
-    targetClip.duration = targetClip.endTime - targetClip.startTime;
-    if (updatedClips[clipIndex - 1]) {
-      updatedClips[clipIndex - 1].duration = updatedClips[clipIndex - 1].endTime - updatedClips[clipIndex - 1].startTime;
+    targetClipInNewArray.duration = targetClipInNewArray.endTime - targetClipInNewArray.startTime;
+
+    if (updatedClips[originalClipIndex - 1]) {
+      updatedClips[originalClipIndex - 1].duration = updatedClips[originalClipIndex - 1].endTime - updatedClips[originalClipIndex - 1].startTime;
     }
-    if (updatedClips[clipIndex + 1]) {
-      updatedClips[clipIndex + 1].duration = updatedClips[clipIndex + 1].endTime - updatedClips[clipIndex + 1].startTime;
+
+    if (updatedClips[originalClipIndex + 1]) {
+      updatedClips[originalClipIndex + 1].duration = updatedClips[originalClipIndex + 1].endTime - updatedClips[originalClipIndex + 1].startTime;
     }
+
+    const currentTime = this.videoStateService.currentTime();
 
     this.updateCuesFromClips(updatedClips);
+
+    const currentActiveIndex = this.currentClipIndex();
+    const currentlyActiveClip = updatedClips[currentActiveIndex];
+
+    if (currentlyActiveClip) {
+      const isOutOfSync = currentTime < currentlyActiveClip.startTime || currentTime >= currentlyActiveClip.endTime;
+
+      if (isOutOfSync) {
+        // The playhead is no longer inside the active clip. Find the correct new one.
+        const newCorrectIndex = updatedClips.findIndex(c => currentTime >= c.startTime && currentTime < c.endTime);
+        if (newCorrectIndex !== -1) {
+          // Correct the state.
+          this.setCurrentClipByIndex(newCorrectIndex);
+        }
+      }
+    }
   }
 
   public adjustCurrentClipBoundary(boundary: 'start' | 'end', direction: 'left' | 'right'): void {
