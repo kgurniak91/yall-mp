@@ -12,6 +12,7 @@ import {
 import {ClipsStateService} from '../../../state/clips/clips-state.service';
 import {VideoPlayerComponent} from '../video-player/video-player.component';
 import {SettingsStateService} from '../../../state/settings/settings-state.service';
+import {SubtitleBehavior} from '../../../model/settings.types';
 
 @Component({
   selector: 'app-video-controller',
@@ -82,6 +83,19 @@ export class VideoControllerComponent {
   protected onVideoAreaClicked(): void {
     this.handleTogglePlayPause();
   }
+
+  private subtitleVisibilityHandler = effect(() => {
+    const currentClip = this.clipsStateService.currentClip();
+    const behavior = this.settingsStateService.subtitleBehavior();
+
+    if (currentClip?.hasSubtitle) {
+      if (behavior === SubtitleBehavior.ForceShow) {
+        this.videoStateService.setSubtitlesVisible(true);
+      } else if (behavior === SubtitleBehavior.ForceHide) {
+        this.videoStateService.setSubtitlesVisible(false);
+      }
+    }
+  });
 
   private timelineRequestHandler = effect(() => {
     const request = this.clipsStateService.clipSelectedRequest();
