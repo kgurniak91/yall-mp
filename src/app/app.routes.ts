@@ -1,13 +1,23 @@
-import { Routes } from '@angular/router';
+import {Routes} from '@angular/router';
+import {inject} from '@angular/core';
+import {ProjectsStateService} from './state/projects/projects-state.service';
 
 export const routes: Routes = [
   {
     path: '',
-    redirectTo: 'project/1', // TODO 'list-of-projects'
-    pathMatch: 'full'
+    pathMatch: 'full',
+    redirectTo: () => {
+      const projectStateService = inject(ProjectsStateService);
+      const lastProject = projectStateService.lastOpenedProject();
+      return lastProject ? `/project/${lastProject.id}` : '/new-project';
+    }
   },
   {
-    path: 'list-of-projects',
+    path: 'new-project',
+    loadComponent: () => import('./features/new-project/new-project.component').then(m => m.NewProjectComponent)
+  },
+  {
+    path: 'projects',
     loadComponent: () => import('./features/list-of-projects/list-of-projects.component').then(m => m.ListOfProjectsComponent)
   },
   {
