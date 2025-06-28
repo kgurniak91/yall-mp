@@ -5,19 +5,8 @@ import {LocalStorageService} from '../../core/services/local-storage/local-stora
 const APP_DATA_KEY = 'yall-mp-app-data';
 
 const defaults: AppData = {
-  projects: [
-    {
-      id: 1,
-      name: '',
-      fileName: '',
-      videoUrl: '',
-      subtitleUrl: '',
-      lastOpenedDate: 0,
-      lastModifiedDate: 0,
-      createdDate: 0
-    }
-  ],
-  lastOpenedProjectId: 1
+  projects: [],
+  lastOpenedProjectId: null
 };
 
 @Injectable({
@@ -40,11 +29,24 @@ export class ProjectsStateService {
     this.loadData();
   }
 
-  private loadData(): void {
-    const data = this.storageService.getItem<AppData>(APP_DATA_KEY);
-    if (data) {
-      this._appData.set(data);
-    }
+  public addProject(project: Project): void {
+    this._appData.update(data => {
+      const projectExists = data.projects.some(p => p.id === project.id);
+      if (projectExists) {
+        return data;
+      }
+
+      const updatedProjects = [...data.projects, project];
+
+      const newData: AppData = {
+        ...data,
+        projects: updatedProjects,
+        lastOpenedProjectId: project.id // Make the new project the active one
+      };
+
+      this.storageService.setItem(APP_DATA_KEY, newData);
+      return newData;
+    });
   }
 
   public setCurrentProject(project: Project): void {
@@ -59,5 +61,12 @@ export class ProjectsStateService {
     }));
 
     this.storageService.setItem(APP_DATA_KEY, this._appData());
+  }
+
+  private loadData(): void {
+    const data = this.storageService.getItem<AppData>(APP_DATA_KEY);
+    if (data) {
+      this._appData.set(data);
+    }
   }
 }

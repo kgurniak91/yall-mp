@@ -1,0 +1,83 @@
+
+:host {
+  display: block;
+  height: 100%;
+}
+
+.drop-zone-content {
+  position: relative;
+  display: flex;
+  height: 100%;
+  border: 2px dashed var(--app-border);
+  border-radius: 12px;
+  transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  background-color: var(--app-surface);
+
+  .clickable-area:hover {
+    background-color: var(--app-surface-hover);
+  }
+
+  &.drag-over {
+    border-color: var(--app-primary);
+    border-style: solid;
+    box-shadow: inset 0 0 10px 4px var(--app-primary);
+    transform: scale(1.01);
+  }
+
+  &.file-selected {
+    border-color: var(--app-primary);
+    border-style: solid;
+    background-color: var(--app-surface-hover);
+
+    .icon {
+      color: var(--app-primary);
+    }
+
+    .selected-label {
+      font-weight: 600;
+      color: var(--app-text);
+    }
+  }
+
+  .clickable-area {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .icon {
+    font-size: 4rem;
+    color: var(--app-text-secondary);
+    transition: color 0.2s;
+  }
+
+  .label {
+    font-size: 1.1rem;
+    color: var(--app-text-secondary);
+    text-align: center;
+    padding: 0 1rem;
+    word-break: break-all;
+  }
+}
+
+.clear-icon {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  font-size: 1.5rem;
+  color: var(--app-text-secondary);
+  cursor: pointer;
+  z-index: 10;
+  transition: color 0.2s, transform 0.2s;
+
+  &:hover {
+    color: var(--app-danger);
+    transform: scale(1.2);
+  }
+}

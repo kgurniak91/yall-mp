@@ -1,10 +1,27 @@
+@use "@fontsource-variable/inter";
+
+:root {
+  --app-bg: #1e1e1e;
+  --app-surface: #2a2a2a;
+  --app-surface-hover: #3c3c3c;
+  --app-border: #4a4a4a;
+  --app-primary: rgba(0, 150, 255, 0.6);
+  --app-danger: #ef4444;
+  --app-inactive-subtitle-bg: rgba(255, 165, 0, 0.2);
+  --app-gap-bg: rgba(100, 100, 100, 0.1);
+  --app-text: #e5e7eb;
+  --app-text-secondary: #ceced1;
+  --app-font-family: "Inter Variable";
+}
+
 html, body {
   margin: 0;
   padding: 0;
   height: 100%;
-  background-color: #1a1a1a;
-  color: #f0f0f0;
+  background-color: var(--app-bg);
+  color: var(--app-text);
   overflow: hidden;
+  font-family: var(--app-font-family), sans-serif;
 }
 
 video {

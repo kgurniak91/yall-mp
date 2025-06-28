@@ -1,6 +1,5 @@
 export interface Project {
-  id: number;
-  name: string;
+  id: string;
   fileName: string;
   videoFileHandle?: FileSystemFileHandle;
   subtitleFileHandle?: FileSystemFileHandle;
@@ -13,5 +12,5 @@ export interface Project {
 
 export interface AppData {
   projects: Project[];
-  lastOpenedProjectId: number | null;
+  lastOpenedProjectId: string | null;
 }

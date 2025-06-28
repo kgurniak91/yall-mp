@@ -1,0 +1,46 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100vh;
+  padding: 2rem;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.new-project-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  width: 100%;
+  max-width: 1200px;
+}
+
+.header {
+  text-align: center;
+  color: var(--app-text-secondary);
+  h1 {
+    margin: 0 0 0.5rem 0;
+    font-size: 2.5rem;
+    font-weight: 600;
+    color: var(--app-text);
+  }
+}
+
+.drop-zones-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  height: 350px;
+
+  @media (min-width: 992px) {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+}
