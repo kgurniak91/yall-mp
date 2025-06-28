@@ -14,6 +14,7 @@ import RegionsPlugin, {Region} from 'wavesurfer.js/dist/plugins/regions.js';
 import {VideoStateService} from '../../../state/video/video-state.service';
 import {VideoClip} from '../../../model/video.types';
 import {ClipsStateService} from '../../../state/clips/clips-state.service';
+import {ProgressSpinner} from 'primeng/progressspinner';
 
 const INITIAL_ZOOM = 100;
 const MIN_ZOOM = 20;
@@ -22,12 +23,15 @@ const ZOOM_FACTOR = 1.2;
 
 @Component({
   selector: 'app-timeline-editor',
-  imports: [],
+  imports: [
+    ProgressSpinner
+  ],
   templateUrl: './timeline-editor.component.html',
   styleUrl: './timeline-editor.component.scss'
 })
 export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
-  timelineContainer = viewChild.required<ElementRef<HTMLDivElement>>('timeline');
+  protected readonly timelineContainer = viewChild.required<ElementRef<HTMLDivElement>>('timeline');
+  protected readonly loading = signal(true);
   private videoStateService = inject(VideoStateService);
   private clipsStateService = inject(ClipsStateService);
   private elementRef = inject(ElementRef);
@@ -45,17 +49,11 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
     this.activeGlowStyle = `inset 0 0 8px 4px ${glowColor}`;
     this.inactiveSubtitleBg = computedStyles.getPropertyValue('--app-inactive-subtitle-bg').trim();
     this.gapBg = computedStyles.getPropertyValue('--app-gap-bg').trim();
-
-    if (this.wavesurfer) {
-      // refresh editor after init just in case
-      const currentZoom = this.currentZoom();
-      this.wavesurfer.zoom(currentZoom + 1);
-      this.wavesurfer.zoom(currentZoom);
-    }
   }
 
   ngOnDestroy(): void {
     this.wavesurfer?.un('scroll', this.handleWaveSurferScroll);
+    this.wavesurfer?.un('ready', this.handleWaveSurferReady);
     this.wsRegions?.un('region-updated', this.handleRegionUpdated);
     this.wsRegions?.un('region-clicked', this.handleRegionClicked);
     this.wsRegions?.un('region-created', this.handleRegionCreated);
@@ -149,6 +147,7 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
     this.wsRegions = this.wavesurfer.registerPlugin(RegionsPlugin.create());
     this.setupWsRegionsEventListeners();
     this.wavesurfer.on('scroll', this.handleWaveSurferScroll);
+    this.wavesurfer.on('ready', this.handleWaveSurferReady);
   }
 
   private setupWsRegionsEventListeners() {
@@ -180,6 +179,17 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
 
   private handleWaveSurferScroll = () => {
     this.syncHighlight();
+  };
+
+  private handleWaveSurferReady = () => {
+    // refresh editor after init just in case
+    if (this.wavesurfer) {
+      const currentZoom = this.currentZoom();
+      this.wavesurfer.zoom(currentZoom + 1);
+      this.wavesurfer.zoom(currentZoom);
+      
+    }
+    this.loading.set(false);
   };
 
   private syncHighlight(): void {

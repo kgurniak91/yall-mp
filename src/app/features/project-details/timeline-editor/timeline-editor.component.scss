@@ -3,4 +3,18 @@
   width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
+  height: 143px !important;
+}
+
+.loader-wrapper {
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  flex-direction: column;
+
+  p {
+    margin: 0;
+  }
 }
