@@ -1,5 +1,5 @@
 <div class="drop-zone-content"
-     [class.file-selected]="selectedFile()"
+     [class.file-selected]="isFileSelected()"
      [class.drag-over]="isDragging"
      (dragover)="onDragOver($event)"
      (dragleave)="onDragLeave($event)"
@@ -13,7 +13,7 @@
          hidden/>
 
   <!-- Show "Clear" button if a file is selected -->
-  @if (selectedFile()) {
+  @if (isFileSelected()) {
     <i class="fa-solid fa-circle-xmark clear-icon"
        (click)="onClearFile($event)"
        title="Clear file"></i>
@@ -22,10 +22,6 @@
   <!-- Main content area that opens the file dialog on click -->
   <div class="clickable-area" (click)="fileInput.click()">
     <i class="icon" [class]="icon()"></i>
-    @if (selectedFile(); as selectedFile) {
-      <span class="label selected-label">{{ selectedFile.name }}</span>
-    } @else {
-      <span class="label">{{ label() }}</span>
-    }
+    <span class="label" [class.selected-label]="isFileSelected()">{{ displayLabel() }}</span>
   </div>
 </div>

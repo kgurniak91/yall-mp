@@ -43,4 +43,10 @@
 .actions {
   display: flex;
   justify-content: center;
+  align-items: center;
+  gap: 1rem;
+
+  p-button ::ng-deep button {
+    width: 86px !important;
+  }
 }

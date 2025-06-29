@@ -1,4 +1,4 @@
-import {Component, input, output} from '@angular/core';
+import {Component, computed, input, output} from '@angular/core';
 
 @Component({
   selector: 'app-file-drop-zone',
@@ -11,7 +11,10 @@ export class FileDropZoneComponent {
   icon = input.required<string>();
   accept = input.required<string>();
   selectedFile = input<File | null>(null);
+  existingFileName = input<string | null>(null);
   fileChange = output<File | null>();
+  protected displayLabel = computed(() => this.selectedFile()?.name ?? this.existingFileName() ?? this.label());
+  protected isFileSelected = computed(() => this.selectedFile() || this.existingFileName());
   protected isDragging = false;
 
   onDragOver(event: DragEvent): void {

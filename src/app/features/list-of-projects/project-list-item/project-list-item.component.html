@@ -1,14 +1,21 @@
 <div class="project-card" (click)="selectProject.emit()">
   <div class="project-header">
-    <div>
-      <h2 class="project-title">{{ project().mediaFileName }}</h2>
+    <div class="project-title">
+      <div>
+        <i class="fa-solid fa-file-video"></i>
+        <span>{{ project().mediaFileName }}</span>
+      </div>
+      <div>
+        <i class="fa-solid fa-file-lines"></i>
+        <span>{{ project().subtitleFileName }}</span>
+      </div>
     </div>
 
     <div class="project-actions">
       <p-button icon="fa-solid fa-pencil"
                 severity="secondary"
                 (onClick)="$event.stopPropagation(); editProject.emit();"
-                pTooltip="Edit projects"
+                pTooltip="Edit project"
                 tooltipPosition="top"></p-button>
       <p-button icon="fa-solid fa-trash"
                 severity="secondary"
@@ -21,11 +28,11 @@
   <div class="project-meta">
     <div>
       <i class="fa-solid fa-calendar"></i>
-      <b>Created:</b> {{ createdDate() | date }}
+      <span><b>Created:</b> {{ createdDate() | date }}</span>
     </div>
     <div>
       <i class="fa-solid fa-clock"></i>
-      <b>Last Opened:</b> {{ lastOpenedDate() | date }}
+      <span><b>Last Opened:</b> {{ lastOpenedDate() | date }}</span>
     </div>
   </div>
 

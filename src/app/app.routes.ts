@@ -9,16 +9,20 @@ export const routes: Routes = [
     redirectTo: () => {
       const projectStateService = inject(ProjectsStateService);
       const lastProject = projectStateService.lastOpenedProject();
-      return lastProject ? `/project/${lastProject.id}` : '/new-project';
+      return lastProject ? `/project/${lastProject.id}` : '/project/new';
     }
-  },
-  {
-    path: 'new-project',
-    loadComponent: () => import('./features/new-project/new-project.component').then(m => m.NewProjectComponent)
   },
   {
     path: 'projects',
     loadComponent: () => import('./features/list-of-projects/list-of-projects.component').then(m => m.ListOfProjectsComponent)
+  },
+  {
+    path: 'project/new',
+    loadComponent: () => import('./features/project-form/project-form.component').then(m => m.ProjectFormComponent)
+  },
+  {
+    path: 'project/edit/:id',
+    loadComponent: () => import('./features/project-form/project-form.component').then(m => m.ProjectFormComponent)
   },
   {
     path: 'project/:id',

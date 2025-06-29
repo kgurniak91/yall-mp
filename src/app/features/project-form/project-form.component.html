@@ -1,0 +1,38 @@
+<div class="new-project-container">
+  <div class="header">
+    <h1>{{ pageTitle() }}</h1>
+    <h2>Drag & drop your media and subtitle files into the boxes below, or click to select them.</h2>
+  </div>
+
+  <div class="drop-zones-grid">
+    <!-- Video Drop Zone -->
+    <app-file-drop-zone label="Click here or drop video / audio file inside"
+                        icon="fa-solid fa-file-video"
+                        accept="video/*,audio/*"
+                        [selectedFile]="mediaFile()"
+                        [existingFileName]="existingMediaFileName()"
+                        (fileChange)="onMediaFileChange($event)"/>
+
+    <!-- Subtitle Drop Zone -->
+    <app-file-drop-zone label="Click here or drop subtitle file inside"
+                        icon="fa-solid fa-file-lines"
+                        accept=".srt,.vtt,.ass"
+                        [selectedFile]="subtitleFile()"
+                        [existingFileName]="existingSubtitleFileName()"
+                        (fileChange)="onSubtitleFileChange($event)"/>
+  </div>
+
+  <div class="actions">
+    @if (editMode()) {
+      <p-button label="Back"
+                icon="fa-solid fa-arrow-left"
+                severity="secondary"
+                (onClick)="goBackToProjectsList()"/>
+    }
+
+    <p-button label="Save"
+              icon="fa-solid fa-check"
+              severity="primary"
+              (onClick)="submitProject()"/>
+  </div>
+</div>

@@ -4,7 +4,7 @@ import {Router, RouterLink} from '@angular/router';
 import {Project} from '../../model/project.types';
 import {Button} from 'primeng/button';
 import {DataView} from 'primeng/dataview';
-import {PrimeTemplate} from 'primeng/api';
+import {ConfirmationService, PrimeTemplate} from 'primeng/api';
 import {ProjectListItemComponent} from './project-list-item/project-list-item.component';
 
 @Component({
@@ -20,8 +20,9 @@ import {ProjectListItemComponent} from './project-list-item/project-list-item.co
   styleUrl: './list-of-projects.component.scss'
 })
 export class ListOfProjectsComponent {
-  private readonly router = inject(Router);
   protected readonly projectsStateService = inject(ProjectsStateService);
+  private readonly confirmationService = inject(ConfirmationService);
+  private readonly router = inject(Router);
 
   navigateToProject(project: Project): void {
     // TODO: Update the lastOpened time here before navigating
@@ -30,12 +31,15 @@ export class ListOfProjectsComponent {
   }
 
   editProject(project: Project): void {
-    console.log('Editing project:', project.id);
-    // TODO open a modal to replace files
+    this.router.navigate(['/project/edit', project.id]);
   }
 
   deleteProject(project: Project): void {
-    console.log('Deleting project:', project.id);
-    // TODO confirm and then call projectStateService.deleteProject
+    this.confirmationService.confirm({
+      header: 'Confirm deletion',
+      message: `Are you sure you want to delete the project <b>${project.mediaFileName}</b>?<br>This action cannot be undone.`,
+      icon: 'fa-solid fa-circle-exclamation',
+      accept: () => this.projectsStateService.deleteProject(project.id)
+    });
   }
 }

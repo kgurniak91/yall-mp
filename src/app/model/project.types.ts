@@ -4,7 +4,7 @@ export interface Project {
   subtitleFileName: string;
   mediaFileHandle?: FileSystemFileHandle;
   subtitleFileHandle?: FileSystemFileHandle;
-  videoUrl: string;
+  mediaUrl: string;
   subtitleUrl: string;
   lastOpenedDate: number;
   createdDate: number;

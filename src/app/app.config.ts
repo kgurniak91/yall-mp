@@ -5,7 +5,7 @@ import {routes} from './app.routes';
 import {provideAnimationsAsync} from '@angular/platform-browser/animations/async';
 import {providePrimeNG} from 'primeng/config';
 import Nora from '@primeng/themes/nora';
-import {MessageService} from 'primeng/api';
+import {ConfirmationService, MessageService} from 'primeng/api';
 import {DATE_PIPE_DEFAULT_OPTIONS} from '@angular/common';
 
 export const appConfig: ApplicationConfig = {
@@ -20,6 +20,7 @@ export const appConfig: ApplicationConfig = {
       ripple: true
     }),
     MessageService,
+    ConfirmationService,
     {
       provide: DATE_PIPE_DEFAULT_OPTIONS,
       useValue: {
