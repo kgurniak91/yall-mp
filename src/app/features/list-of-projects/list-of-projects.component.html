@@ -1,1 +1,29 @@
-<p>list-of-projects works!</p>
+<div class="list-container">
+  <div class="header">
+    <h1>Projects</h1>
+    <p-button label="Create New Project"
+              severity="primary"
+              icon="fa-solid fa-plus"
+              [routerLink]="['/new-project']"/>
+  </div>
+
+  <p-dataView [value]="projectsStateService.projects()">
+    <ng-template #list let-projects>
+      <div class="project-list-items">
+        @for (project of projects; track project.id) {
+          <app-project-list-item [project]="project"
+                                 (selectProject)="navigateToProject(project)"
+                                 (editProject)="editProject(project)"
+                                 (removeProject)="deleteProject(project)"/>
+        }
+      </div>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage">
+      <div class="empty-message">
+        <h3>No projects found.</h3>
+        <p>Get started by creating a new one!</p>
+      </div>
+    </ng-template>
+  </p-dataView>
+</div>

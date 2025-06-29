@@ -1,0 +1,76 @@
+.project-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.5rem;
+  background-color: var(--app-surface);
+  transition: background-color 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+
+  &:hover {
+    background-color: var(--app-surface-hover);
+  }
+}
+
+.project-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.project-title {
+  color: var(--app-text);
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.project-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.project-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  color: var(--app-text-secondary);
+  font-size: 0.9rem;
+
+  i {
+    margin-right: 0.5rem;
+  }
+}
+
+.project-progress {
+  position: relative;
+
+  .custom-progress-label {
+    position: absolute;
+
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+
+    z-index: 10;
+
+    color: white;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-shadow: 1px 1px 2px black;
+    white-space: nowrap;
+  }
+
+  p-progressbar {
+    width: 100%;
+    height: 1.25rem;
+
+    ::ng-deep .p-progressbar {
+      background-color: red;
+    }
+  }
+}

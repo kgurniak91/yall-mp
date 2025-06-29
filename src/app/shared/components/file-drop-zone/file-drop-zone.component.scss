@@ -1,4 +1,3 @@
-
 :host {
   display: block;
   height: 100%;
@@ -12,10 +11,6 @@
   border-radius: 12px;
   transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.2s;
   background-color: var(--app-surface);
-
-  .clickable-area:hover {
-    background-color: var(--app-surface-hover);
-  }
 
   &.drag-over {
     border-color: var(--app-primary);
@@ -49,6 +44,11 @@
     height: 100%;
     cursor: pointer;
     transition: background-color 0.2s;
+    border-radius: 12px;
+
+    &:hover {
+      background-color: var(--app-surface-hover);
+    }
   }
 
   .icon {

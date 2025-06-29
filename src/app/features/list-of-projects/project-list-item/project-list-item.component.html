@@ -1,0 +1,36 @@
+<div class="project-card" (click)="selectProject.emit()">
+  <div class="project-header">
+    <div>
+      <h2 class="project-title">{{ project().mediaFileName }}</h2>
+    </div>
+
+    <div class="project-actions">
+      <p-button icon="fa-solid fa-pencil"
+                severity="secondary"
+                (onClick)="$event.stopPropagation(); editProject.emit();"
+                pTooltip="Edit projects"
+                tooltipPosition="top"></p-button>
+      <p-button icon="fa-solid fa-trash"
+                severity="secondary"
+                (onClick)="$event.stopPropagation(); removeProject.emit();"
+                pTooltip="Delete project"
+                tooltipPosition="top"></p-button>
+    </div>
+  </div>
+
+  <div class="project-meta">
+    <div>
+      <i class="fa-solid fa-calendar"></i>
+      <b>Created:</b> {{ createdDate() | date }}
+    </div>
+    <div>
+      <i class="fa-solid fa-clock"></i>
+      <b>Last Opened:</b> {{ lastOpenedDate() | date }}
+    </div>
+  </div>
+
+  <div class="project-progress">
+    <p-progress-bar [value]="completionPercentage()" [showValue]="false"/>
+    <span class="custom-progress-label">{{ completionPercentage() }}%</span>
+  </div>
+</div>

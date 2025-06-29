@@ -16,13 +16,16 @@ export class ProjectsStateService {
   private readonly storageService = inject(LocalStorageService);
   private readonly _appData = signal<AppData>(defaults);
 
-  public readonly projects = computed(() => this._appData().projects);
+  public readonly projects = computed(() => {
+    return this._appData().projects.sort((a, b) => b.lastOpenedDate - a.lastOpenedDate);
+  });
+
+  public readonly lastOpenedProjectId = computed(() => {
+    return this._appData()?.lastOpenedProjectId ?? null;
+  });
+
   public readonly lastOpenedProject = computed(() => {
-    const data = this._appData();
-    if (!data.lastOpenedProjectId) {
-      return null;
-    }
-    return data.projects.find(p => p.id === data.lastOpenedProjectId) ?? null;
+    return this._appData().projects.find(p => p.id === this.lastOpenedProjectId()) ?? null;
   });
 
   constructor() {

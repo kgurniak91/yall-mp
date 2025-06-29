@@ -1,13 +1,17 @@
 export interface Project {
   id: string;
-  fileName: string;
-  videoFileHandle?: FileSystemFileHandle;
+  mediaFileName: string;
+  subtitleFileName: string;
+  mediaFileHandle?: FileSystemFileHandle;
   subtitleFileHandle?: FileSystemFileHandle;
   videoUrl: string;
   subtitleUrl: string;
   lastOpenedDate: number;
-  lastModifiedDate: number;
   createdDate: number;
+  duration: number;
+  lastPlaybackTime: number;
+  lastSubtitledClipEndTime: number;
+  subtitledClipsCount: number;
 }
 
 export interface AppData {

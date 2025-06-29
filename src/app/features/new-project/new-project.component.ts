@@ -5,6 +5,7 @@ import {Project} from '../../model/project.types';
 import {MessageService} from 'primeng/api';
 import {Button} from 'primeng/button';
 import {FileDropZoneComponent} from '../../shared/components/file-drop-zone/file-drop-zone.component';
+import {v4 as uuidv4} from 'uuid';
 
 @Component({
   selector: 'app-new-project',
@@ -38,13 +39,17 @@ export class NewProjectComponent {
     const now = Date.now();
 
     const newProject: Project = {
-      id: crypto.randomUUID(),
-      fileName: video.name,
+      id: uuidv4(),
+      mediaFileName: video.name,
+      subtitleFileName: subtitle.name,
       videoUrl: URL.createObjectURL(video),
       subtitleUrl: URL.createObjectURL(subtitle),
       lastOpenedDate: now,
-      lastModifiedDate: now,
       createdDate: now,
+      duration: 0,
+      lastPlaybackTime: 0,
+      lastSubtitledClipEndTime: 0,
+      subtitledClipsCount: 0,
       // TODO FileSystemFileHandle
     };
 

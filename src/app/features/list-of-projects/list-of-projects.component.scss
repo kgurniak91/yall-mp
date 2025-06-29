@@ -1,0 +1,33 @@
+:host {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  height: 100vh;
+  padding: 2rem;
+  box-sizing: border-box;
+  overflow-y: auto;
+
+  ::ng-deep .p-dataview .p-dataview-content {
+    background: none;
+    padding: 0;
+  }
+}
+
+.list-container {
+  width: 100%;
+  max-width: 1200px;
+}
+
+.project-list-items {
+  padding-bottom: 0.25rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  h1 {
+    margin: 0;
+  }
+}

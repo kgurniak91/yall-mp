@@ -47,6 +47,7 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
       this.removeVideoAreaEventListeners();
       this.player.dispose();
     }
+    this.videoStateService.setVideoElement(null);
   }
 
   private addProgressBarEventListener() {

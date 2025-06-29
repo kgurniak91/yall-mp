@@ -6,6 +6,7 @@ import {provideAnimationsAsync} from '@angular/platform-browser/animations/async
 import {providePrimeNG} from 'primeng/config';
 import Nora from '@primeng/themes/nora';
 import {MessageService} from 'primeng/api';
+import {DATE_PIPE_DEFAULT_OPTIONS} from '@angular/common';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -18,6 +19,12 @@ export const appConfig: ApplicationConfig = {
       },
       ripple: true
     }),
-    MessageService
+    MessageService,
+    {
+      provide: DATE_PIPE_DEFAULT_OPTIONS,
+      useValue: {
+        dateFormat: 'yyyy-MM-dd HH:mm:ss'
+      }
+    },
   ]
 };
