@@ -1,0 +1,23 @@
+<p-toolbar>
+  <ng-template pTemplate="start">
+    <div class="header-wrapper">
+      <div class="menu-button-wrapper">
+        <p-menu #projectMenu [model]="projectMenuItems" [popup]="true"/>
+        <p-button icon="fa-solid fa-bars"
+                  severity="secondary"
+                  size="small"
+                  (click)="projectMenu.toggle($event)"/>
+      </div>
+
+      <div class="filename" [pTooltip]="mediaFileName() || ''" tooltipPosition="bottom">
+        <i class="fa-solid fa-file-video"></i>
+        <span>{{ mediaFileName() || 'Loading media...' }}</span>
+      </div>
+
+      <div class="filename" [pTooltip]="subtitleFileName() || ''" tooltipPosition="bottom">
+        <i class="fa-solid fa-file-lines"></i>
+        <span>{{ subtitleFileName() || 'Loading subtitles...' }}</span>
+      </div>
+    </div>
+  </ng-template>
+</p-toolbar>

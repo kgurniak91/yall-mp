@@ -1,3 +1,13 @@
+@if (project(); as project) {
+  <app-project-header [mediaFileName]="project.mediaFileName"
+                      [subtitleFileName]="project.subtitleFileName"
+                      (newProjectClicked)="onNewProjectClicked()"
+                      (editProjectClicked)="onEditProjectClicked()"
+                      (goToProjectsListClicked)="onGoToProjectsListClicked()"
+                      (helpClicked)="onHelpClicked()"
+                      (deleteProjectClicked)="onDeleteProjectClicked()"/>
+}
+
 <div class="video-area">
   <div class="video-wrapper">
     <app-video-controller [options]="options"/>
@@ -29,8 +39,10 @@
 
     <p-popover #opStart>
       <div class="p-buttonset">
-        <p-button (click)="adjustClipStartLeft()" icon="fa fa-chevron-left" severity="secondary" variant="outlined" tooltipPosition="left" pTooltip="Adjust Left ([)"/>
-        <p-button (click)="adjustClipStartRight()" icon="fa fa-chevron-right" severity="secondary" variant="outlined" tooltipPosition="right" pTooltip="Adjust Right (Ctrl+[)"/>
+        <p-button (click)="adjustClipStartLeft()" icon="fa fa-chevron-left" severity="secondary" variant="outlined"
+                  tooltipPosition="left" pTooltip="Adjust Left ([)"/>
+        <p-button (click)="adjustClipStartRight()" icon="fa fa-chevron-right" severity="secondary" variant="outlined"
+                  tooltipPosition="right" pTooltip="Adjust Right (Ctrl+[)"/>
       </div>
     </p-popover>
   </div>
@@ -69,8 +81,10 @@
 
     <p-popover #opEnd>
       <div class="p-buttonset">
-        <p-button (click)="adjustClipEndLeft()" icon="fa fa-chevron-left" severity="secondary" variant="outlined" tooltipPosition="left" pTooltip="Adjust Left (Ctrl+])"/>
-        <p-button (click)="adjustClipEndRight()" icon="fa fa-chevron-right" severity="secondary" variant="outlined" tooltipPosition="right" pTooltip="Adjust Right (])"/>
+        <p-button (click)="adjustClipEndLeft()" icon="fa fa-chevron-left" severity="secondary" variant="outlined"
+                  tooltipPosition="left" pTooltip="Adjust Left (Ctrl+])"/>
+        <p-button (click)="adjustClipEndRight()" icon="fa fa-chevron-right" severity="secondary" variant="outlined"
+                  tooltipPosition="right" pTooltip="Adjust Right (])"/>
       </div>
     </p-popover>
   </div>

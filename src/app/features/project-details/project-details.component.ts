@@ -12,6 +12,11 @@ import {KeyboardShortcutsService} from './keyboard-shortcuts/keyboard-shortcuts.
 import {SeekDirection} from '../../model/video.types';
 import {ClipsStateService} from '../../state/clips/clips-state.service';
 import {Popover} from 'primeng/popover';
+import {ProjectHeaderComponent} from './project-header/project-header.component';
+import {ActivatedRoute, Router} from '@angular/router';
+import {ConfirmationService} from 'primeng/api';
+import {ProjectsStateService} from '../../state/projects/projects-state.service';
+import {Project} from '../../model/project.types';
 
 @Component({
   selector: 'app-project-details',
@@ -22,7 +27,8 @@ import {Popover} from 'primeng/popover';
     Tooltip,
     Drawer,
     ProjectSettingsComponent,
-    Popover
+    Popover,
+    ProjectHeaderComponent
   ],
   templateUrl: './project-details.component.html',
   styleUrl: './project-details.component.scss',
@@ -34,6 +40,7 @@ export class ProjectDetailsComponent implements OnInit {
   protected readonly isSettingsVisible = signal(false);
   protected readonly videoStateService = inject(VideoStateService);
   protected readonly clipsStateService = inject(ClipsStateService);
+  protected readonly project = signal<Project | null>(null);
   protected readonly options: VideoJsOptions = {
     sources: [
       {
@@ -58,12 +65,26 @@ export class ProjectDetailsComponent implements OnInit {
     }
   };
   private wasPlayingBeforeSettingsOpened = false;
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly projectsStateService = inject(ProjectsStateService);
+  private readonly confirmationService = inject(ConfirmationService);
 
   constructor() {
     inject(KeyboardShortcutsService); // start listening
   }
 
   async ngOnInit() {
+    const projectId = this.route.snapshot.paramMap.get('id');
+    if (projectId) {
+      const foundProject = this.projectsStateService.getProjectById(projectId);
+      if (foundProject) {
+        this.project.set(foundProject);
+      } else {
+        this.router.navigate(['/projects']);
+      }
+    }
+
     const response = fetch('/temp/marvel.srt');
     const result: ParsedCaptionsResult = await parseResponse(response, {type: 'srt'});
     this.clipsStateService.setCues(result.cues);
@@ -121,6 +142,38 @@ export class ProjectDetailsComponent implements OnInit {
       }
 
       this.wasPlayingBeforeSettingsOpened = false;
+    }
+  }
+
+  onNewProjectClicked() {
+    this.router.navigate(['/project/new']);
+  }
+
+  onEditProjectClicked() {
+    const project = this.project();
+    if (project) {
+      this.router.navigate(['/project/edit', project.id]);
+    }
+  }
+
+  onGoToProjectsListClicked() {
+    this.router.navigate(['/projects']);
+  }
+
+  onHelpClicked() {
+    // TODO
+  }
+
+  onDeleteProjectClicked() {
+    const project = this.project();
+    if (project) {
+      // TODO refactor duplicated code
+      this.confirmationService.confirm({
+        header: 'Confirm deletion',
+        message: `Are you sure you want to delete the project <b>${project.mediaFileName}</b>?<br>This action cannot be undone.`,
+        icon: 'fa-solid fa-circle-exclamation',
+        accept: () => this.projectsStateService.deleteProject(project.id)
+      });
     }
   }
 }

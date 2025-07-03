@@ -6,6 +6,7 @@ import {ConfirmationService, MessageService} from 'primeng/api';
 import {Button} from 'primeng/button';
 import {FileDropZoneComponent} from '../../shared/components/file-drop-zone/file-drop-zone.component';
 import {v4 as uuidv4} from 'uuid';
+import {Location} from '@angular/common';
 
 const EDIT_CONFIRMATION_MESSAGE = `
 Are you sure you want to edit this project?
@@ -42,6 +43,7 @@ export class ProjectFormComponent implements OnInit {
   private readonly projectsStateService = inject(ProjectsStateService);
   private readonly messageService = inject(MessageService);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly location = inject(Location);
 
   ngOnInit(): void {
     const projectId = this.route.snapshot.paramMap.get('id');
@@ -53,7 +55,7 @@ export class ProjectFormComponent implements OnInit {
         this.existingMediaFileName.set(project.mediaFileName);
         this.existingSubtitleFileName.set(project.subtitleFileName);
       } else {
-        this.goBackToProjectsList();
+        this.goBack();
       }
     }
   }
@@ -72,8 +74,12 @@ export class ProjectFormComponent implements OnInit {
     }
   }
 
-  protected goBackToProjectsList(): void {
-    this.router.navigate(['/projects']);
+  protected goBack(): void {
+    if (window.history.length > 1) {
+      this.location.back();
+    } else {
+      this.router.navigate(['/projects']);
+    }
   }
 
   protected submitProject(): void {

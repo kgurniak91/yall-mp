@@ -23,12 +23,10 @@
   </div>
 
   <div class="actions">
-    @if (editMode()) {
-      <p-button label="Back"
-                icon="fa-solid fa-arrow-left"
-                severity="secondary"
-                (onClick)="goBackToProjectsList()"/>
-    }
+    <p-button label="Back"
+              icon="fa-solid fa-arrow-left"
+              severity="secondary"
+              (onClick)="goBack()"/>
 
     <p-button label="Save"
               icon="fa-solid fa-check"

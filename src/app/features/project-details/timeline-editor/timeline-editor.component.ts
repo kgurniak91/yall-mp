@@ -187,7 +187,6 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
       const currentZoom = this.currentZoom();
       this.wavesurfer.zoom(currentZoom + 1);
       this.wavesurfer.zoom(currentZoom);
-      
     }
     this.loading.set(false);
   };
