@@ -79,6 +79,11 @@ export class ClipsStateService {
     const allClips = this.clips();
     const currentActiveIndex = this.currentClipIndex();
 
+    const clipBeingEditedIndex = allClips.findIndex(c => c.id === clipId);
+    if (this.playerState() === PlayerState.AutoPausedAtEnd && currentActiveIndex === clipBeingEditedIndex) {
+      this.setPlayerState(PlayerState.PausedByUser);
+    }
+
     const activeClipBeforeUpdate = allClips[currentActiveIndex];
     if (!activeClipBeforeUpdate) {
       return;
