@@ -77,77 +77,28 @@ export class ClipsStateService {
 
   public updateClipTimes(clipId: string, newStartTime: number, newEndTime: number): void {
     const allClips = this.clips();
-    const originalClipIndex = allClips.findIndex(c => c.id === clipId);
-    if (originalClipIndex === -1) return;
+    const currentActiveIndex = this.currentClipIndex();
 
-    if (this.playerState() === PlayerState.AutoPausedAtEnd && this.currentClipIndex() === originalClipIndex) {
-      // User adjusted current clip boundaries, AutoPausedAtEnd no longer valid
-      this.setPlayerState(PlayerState.PausedByUser);
-    }
-
-    const updatedClips: VideoClip[] = JSON.parse(JSON.stringify(allClips));
-    const originalClip = updatedClips[originalClipIndex];
-    let finalStartTime = newStartTime;
-    let finalEndTime = newEndTime;
-
-    if (originalClip.startTime.toFixed(4) !== finalStartTime.toFixed(4)) {
-      const prevClip = updatedClips[originalClipIndex - 1];
-      if (prevClip) {
-        if (finalStartTime < prevClip.startTime + MIN_CLIP_DURATION) finalStartTime = prevClip.startTime + MIN_CLIP_DURATION;
-        prevClip.endTime = finalStartTime;
-      } else {
-        if (finalStartTime < 0) finalStartTime = 0;
-      }
-    }
-
-    if (originalClip.endTime.toFixed(4) !== finalEndTime.toFixed(4)) {
-      const nextClip = updatedClips[originalClipIndex + 1];
-      if (nextClip) {
-        if (finalEndTime > nextClip.endTime - MIN_CLIP_DURATION) finalEndTime = nextClip.endTime - MIN_CLIP_DURATION;
-        nextClip.startTime = finalEndTime;
-      } else {
-        const duration = this.videoStateService.duration();
-        if (finalEndTime > duration) finalEndTime = duration;
-      }
-    }
-
-    if (finalEndTime < finalStartTime + MIN_CLIP_DURATION) {
-      finalEndTime = finalStartTime + MIN_CLIP_DURATION;
-    }
-
-    const targetClipInNewArray = updatedClips[originalClipIndex];
-    targetClipInNewArray.startTime = finalStartTime;
-    targetClipInNewArray.endTime = finalEndTime;
-
-    targetClipInNewArray.duration = targetClipInNewArray.endTime - targetClipInNewArray.startTime;
-
-    if (updatedClips[originalClipIndex - 1]) {
-      updatedClips[originalClipIndex - 1].duration = updatedClips[originalClipIndex - 1].endTime - updatedClips[originalClipIndex - 1].startTime;
-    }
-
-    if (updatedClips[originalClipIndex + 1]) {
-      updatedClips[originalClipIndex + 1].duration = updatedClips[originalClipIndex + 1].endTime - updatedClips[originalClipIndex + 1].startTime;
+    const activeClipBeforeUpdate = allClips[currentActiveIndex];
+    if (!activeClipBeforeUpdate) {
+      return;
     }
 
     const currentTime = this.videoStateService.currentTime();
+    const updatedClips = this.calculateUpdatedClips(allClips, clipId, newStartTime, newEndTime);
+    const activeClipAfterUpdate = updatedClips[currentActiveIndex];
 
-    this.updateCuesFromClips(updatedClips);
+    const boundaryMovedLeftPastPlayhead = (activeClipAfterUpdate.startTime > activeClipBeforeUpdate.startTime) && (currentTime < activeClipAfterUpdate.startTime);
+    const boundaryMovedRightPastPlayPlayhead = (activeClipAfterUpdate.endTime < activeClipBeforeUpdate.endTime) && (currentTime >= activeClipAfterUpdate.endTime);
 
-    const currentActiveIndex = this.currentClipIndex();
-    const currentlyActiveClip = updatedClips[currentActiveIndex];
-
-    if (currentlyActiveClip) {
-      const isOutOfSync = currentTime < currentlyActiveClip.startTime || currentTime >= currentlyActiveClip.endTime;
-
-      if (isOutOfSync) {
-        // The playhead is no longer inside the active clip. Find the correct new one.
-        const newCorrectIndex = updatedClips.findIndex(c => currentTime >= c.startTime && currentTime < c.endTime);
-        if (newCorrectIndex !== -1) {
-          // Correct the state.
-          this.setCurrentClipByIndex(newCorrectIndex);
-        }
+    if (boundaryMovedLeftPastPlayhead || boundaryMovedRightPastPlayPlayhead) {
+      const newCorrectIndex = updatedClips.findIndex(c => currentTime >= c.startTime && currentTime < c.endTime);
+      if (newCorrectIndex !== -1 && newCorrectIndex !== currentActiveIndex) {
+        this.setCurrentClipByIndex(newCorrectIndex);
       }
     }
+
+    this.updateCuesFromClips(updatedClips);
   }
 
   public adjustCurrentClipBoundary(boundary: 'start' | 'end', direction: 'left' | 'right'): void {
@@ -286,5 +237,70 @@ export class ClipsStateService {
       });
     }
     return generatedClips;
+  }
+
+  private calculateUpdatedClips(
+    originalClips: VideoClip[],
+    clipId: string,
+    newStartTime: number,
+    newEndTime: number
+  ): VideoClip[] {
+    const clipIndex = originalClips.findIndex(c => c.id === clipId);
+    if (clipIndex === -1) {
+      return originalClips;
+    }
+
+    const updatedClips: VideoClip[] = JSON.parse(JSON.stringify(originalClips));
+
+    let finalStartTime = newStartTime;
+    let finalEndTime = newEndTime;
+
+    const targetClip = updatedClips[clipIndex];
+    const oldStartTime = targetClip.startTime;
+    const oldEndTime = targetClip.endTime;
+
+    if (oldStartTime.toFixed(4) !== finalStartTime.toFixed(4)) {
+      const prevClip = updatedClips[clipIndex - 1];
+      if (prevClip) {
+        if (finalStartTime < prevClip.startTime + MIN_CLIP_DURATION) {
+          finalStartTime = prevClip.startTime + MIN_CLIP_DURATION;
+        }
+        prevClip.endTime = finalStartTime;
+      } else {
+        if (finalStartTime < 0) {
+          finalStartTime = 0;
+        }
+      }
+    }
+
+    if (oldEndTime.toFixed(4) !== finalEndTime.toFixed(4)) {
+      const nextClip = updatedClips[clipIndex + 1];
+      if (nextClip) {
+        if (finalEndTime > nextClip.endTime - MIN_CLIP_DURATION) {
+          finalEndTime = nextClip.endTime - MIN_CLIP_DURATION;
+        }
+        nextClip.startTime = finalEndTime;
+      } else {
+        const duration = this.videoStateService.duration();
+        if (finalEndTime > duration) {
+          finalEndTime = duration;
+        }
+      }
+    }
+
+    if (finalEndTime < finalStartTime + MIN_CLIP_DURATION) {
+      finalEndTime = finalStartTime + MIN_CLIP_DURATION;
+    }
+
+    targetClip.startTime = finalStartTime;
+    targetClip.endTime = finalEndTime;
+
+    [clipIndex - 1, clipIndex, clipIndex + 1].forEach(idx => {
+      if (updatedClips[idx]) {
+        updatedClips[idx].duration = updatedClips[idx].endTime - updatedClips[idx].startTime;
+      }
+    });
+
+    return updatedClips;
   }
 }
