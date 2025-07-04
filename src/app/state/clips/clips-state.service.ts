@@ -142,6 +142,24 @@ export class ClipsStateService {
       newEndTime = totalDuration;
     }
 
+    if (newStartTime > newEndTime) {
+      newStartTime = newEndTime;
+    }
+
+    const currentTime = this.videoStateService.currentTime();
+
+    // If moving the start boundary to the right would pass the playhead...
+    if (boundary === 'start' && newStartTime > currentTime) {
+      // ...anchor the playhead to the new, sanitized start time.
+      this.videoStateService.seekAbsolute(newStartTime + 0.01);
+    }
+
+    // If moving the end boundary to the left would pass the playhead...
+    if (boundary === 'end' && newEndTime < currentTime) {
+      // ...anchor the playhead to the new, sanitized end time.
+      this.videoStateService.seekAbsolute(newEndTime - 0.01);
+    }
+
     this.updateClipTimes(currentClip.id, newStartTime, newEndTime);
   }
 
