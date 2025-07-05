@@ -40,14 +40,18 @@ export class VideoPlayerComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.cancelAnimationFrame();
+
     if (this.player) {
       this.player.off('loadedmetadata', this.handleLoadedMetadata);
       this.player.off('timeupdate', this.handleTimeUpdate);
       this.removeProgressBarEventListeners();
       this.removeVideoAreaEventListeners();
       this.player.dispose();
+      this.player = undefined;
     }
+
     this.videoStateService.setVideoElement(null);
+    this.videoStateService.setDuration(0);
   }
 
   private addProgressBarEventListener() {
