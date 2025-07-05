@@ -11,4 +11,5 @@ export class SettingsStateService {
   readonly gapSpeed = signal(3.0);
   readonly subtitleBehavior = signal<SubtitleBehavior>(SubtitleBehavior.DoNothing);
   readonly adjustValueMs = signal(50);
+  readonly seekSeconds = signal(2);
 }

@@ -2,13 +2,13 @@ import {inject, Injectable, OnDestroy} from '@angular/core';
 import {VideoStateService} from '../../../state/video/video-state.service';
 import {KeyboardAction, SeekDirection} from '../../../model/video.types';
 import {ClipsStateService} from '../../../state/clips/clips-state.service';
-
-const SEEK_SECONDS = 2;
+import {SettingsStateService} from '../../../state/settings/settings-state.service';
 
 @Injectable()
 export class KeyboardShortcutsService implements OnDestroy {
   private videoStateService = inject(VideoStateService);
   private clipsStateService = inject(ClipsStateService);
+  private settingsStateService = inject(SettingsStateService);
 
   constructor() {
     document.addEventListener('keydown', this.handleKeyDown);
@@ -74,10 +74,10 @@ export class KeyboardShortcutsService implements OnDestroy {
         this.videoStateService.toggleSubtitlesVisible();
         break;
       case KeyboardAction.SeekBackward:
-        this.videoStateService.seekRelative(-SEEK_SECONDS);
+        this.videoStateService.seekRelative(-this.settingsStateService.seekSeconds());
         break;
       case KeyboardAction.SeekForward:
-        this.videoStateService.seekRelative(SEEK_SECONDS);
+        this.videoStateService.seekRelative(this.settingsStateService.seekSeconds());
         break;
       case KeyboardAction.PreviousSubtitleClip:
         this.clipsStateService.goToAdjacentSubtitleClip(SeekDirection.Previous);

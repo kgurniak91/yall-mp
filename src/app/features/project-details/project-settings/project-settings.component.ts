@@ -6,6 +6,7 @@ import {SelectButton} from 'primeng/selectbutton';
 import {Slider} from 'primeng/slider';
 import {InputSwitch} from 'primeng/inputswitch';
 import {FormsModule} from '@angular/forms';
+import {InputNumber} from 'primeng/inputnumber';
 
 @Component({
   selector: 'app-project-settings',
@@ -14,14 +15,14 @@ import {FormsModule} from '@angular/forms';
     SelectButton,
     Slider,
     InputSwitch,
-    FormsModule
+    FormsModule,
+    InputNumber
   ],
   templateUrl: './project-settings.component.html',
   styleUrl: './project-settings.component.scss'
 })
 export class ProjectSettingsComponent {
   protected readonly settingsService = inject(SettingsStateService);
-  protected readonly SubtitleBehavior = SubtitleBehavior;
 
   protected subtitleBehaviorOptions = [
     {label: 'Do Nothing', value: SubtitleBehavior.DoNothing},
