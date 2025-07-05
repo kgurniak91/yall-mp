@@ -17,7 +17,9 @@
 <div class="subtitle-display">
   @if (clipsStateService.currentClip(); as currentClip) {
     @if (currentClip.hasSubtitle) {
-      <span [class.blurred-subtitles]="!videoStateService.subtitlesVisible()">
+      @let showBlurredSubtitles = !videoStateService.subtitlesVisible() && settingsStateService.hiddenSubtitleStyle() === HiddenSubtitleStyle.Blurred;
+      @let hideSubtitles = !videoStateService.subtitlesVisible() && settingsStateService.hiddenSubtitleStyle() === HiddenSubtitleStyle.Hidden;
+      <span [class.blurred-subtitles]="showBlurredSubtitles" [class.hidden-subtitles]="hideSubtitles">
         {{ currentClip.text }}
       </span>
     } @else {

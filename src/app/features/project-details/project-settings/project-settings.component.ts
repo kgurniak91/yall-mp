@@ -1,6 +1,6 @@
 import {Component, inject} from '@angular/core';
 import {SettingsStateService} from '../../../state/settings/settings-state.service';
-import {SubtitleBehavior} from '../../../model/settings.types';
+import {HiddenSubtitleStyle, SubtitleBehavior} from '../../../model/settings.types';
 import {Fieldset} from 'primeng/fieldset';
 import {SelectButton} from 'primeng/selectbutton';
 import {Slider} from 'primeng/slider';
@@ -28,5 +28,10 @@ export class ProjectSettingsComponent {
     {label: 'Do Nothing', value: SubtitleBehavior.DoNothing},
     {label: 'Force Show', value: SubtitleBehavior.ForceShow},
     {label: 'Force Hide', value: SubtitleBehavior.ForceHide}
+  ];
+
+  protected hiddenSubtitleStyleOptions = [
+    {label: 'Blur', value: HiddenSubtitleStyle.Blurred},
+    {label: 'Hide', value: HiddenSubtitleStyle.Hidden}
   ];
 }

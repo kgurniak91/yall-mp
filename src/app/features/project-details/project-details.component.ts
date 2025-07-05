@@ -17,6 +17,8 @@ import {ActivatedRoute, Router} from '@angular/router';
 import {ConfirmationService} from 'primeng/api';
 import {ProjectsStateService} from '../../state/projects/projects-state.service';
 import {Project} from '../../model/project.types';
+import {SettingsStateService} from '../../state/settings/settings-state.service';
+import {HiddenSubtitleStyle} from '../../model/settings.types';
 
 @Component({
   selector: 'app-project-details',
@@ -40,6 +42,8 @@ export class ProjectDetailsComponent implements OnInit {
   protected readonly isSettingsVisible = signal(false);
   protected readonly videoStateService = inject(VideoStateService);
   protected readonly clipsStateService = inject(ClipsStateService);
+  protected readonly settingsStateService = inject(SettingsStateService);
+  protected readonly HiddenSubtitleStyle = HiddenSubtitleStyle;
   protected readonly project = signal<Project | null>(null);
   protected readonly options: VideoJsOptions = {
     sources: [

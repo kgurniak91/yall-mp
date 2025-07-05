@@ -1,5 +1,5 @@
 import {Injectable, signal} from '@angular/core';
-import {SubtitleBehavior} from '../../model/settings.types';
+import {HiddenSubtitleStyle, SubtitleBehavior} from '../../model/settings.types';
 
 @Injectable({
   providedIn: 'root'
@@ -12,4 +12,5 @@ export class SettingsStateService {
   readonly subtitleBehavior = signal<SubtitleBehavior>(SubtitleBehavior.DoNothing);
   readonly adjustValueMs = signal(50);
   readonly seekSeconds = signal(2);
+  readonly hiddenSubtitleStyle = signal<HiddenSubtitleStyle>(HiddenSubtitleStyle.Blurred);
 }
