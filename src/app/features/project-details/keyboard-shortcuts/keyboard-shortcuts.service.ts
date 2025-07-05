@@ -25,6 +25,7 @@ export class KeyboardShortcutsService implements OnDestroy {
     const keyMap = new Map<string, KeyboardAction>();
     keyMap.set('c', KeyboardAction.ToggleSubtitles);
     keyMap.set('C', KeyboardAction.ToggleSubtitles);
+    keyMap.set(',', KeyboardAction.ToggleSettings);
     keyMap.set(' ', KeyboardAction.TogglePlayPause);
 
     let action: KeyboardAction | undefined;
@@ -104,6 +105,9 @@ export class KeyboardShortcutsService implements OnDestroy {
         break;
       case KeyboardAction.AdjustClipEndRight:
         this.clipsStateService.adjustCurrentClipBoundary('end', 'right');
+        break;
+      case KeyboardAction.ToggleSettings:
+        this.videoStateService.toggleSettings();
         break;
     }
   }

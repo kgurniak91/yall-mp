@@ -1,4 +1,4 @@
-import {Component, inject, OnInit, signal} from '@angular/core';
+import {Component, effect, inject, OnInit, signal} from '@angular/core';
 import {VideoControllerComponent} from './video-controller/video-controller.component';
 import {VideoJsOptions} from './video-controller/video-controller.type';
 import {ParsedCaptionsResult, parseResponse} from 'media-captions';
@@ -176,4 +176,11 @@ export class ProjectDetailsComponent implements OnInit {
       });
     }
   }
+
+  private toggleSettingsRequestListener = effect(() => {
+    if (this.videoStateService.toggleSettingsRequest()) {
+      this.toggleSettings();
+      this.videoStateService.clearToggleSettingsRequest();
+    }
+  });
 }

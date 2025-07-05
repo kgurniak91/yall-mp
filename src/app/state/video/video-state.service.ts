@@ -13,6 +13,7 @@ export class VideoStateService {
   private readonly _playPauseRequest = signal<number | null>(null);
   private readonly _repeatRequest = signal<number | null>(null);
   private readonly _forceContinueRequest = signal<number | null>(null);
+  private readonly _toggleSettingsRequest = signal<number | null>(null);
 
   public readonly videoElement: Signal<HTMLVideoElement | null> = this._videoElement.asReadonly();
   public readonly currentTime: Signal<number> = this._currentTime.asReadonly();
@@ -22,6 +23,7 @@ export class VideoStateService {
   public readonly playPauseRequest = this._playPauseRequest.asReadonly();
   public readonly repeatRequest = this._repeatRequest.asReadonly();
   public readonly forceContinueRequest = this._forceContinueRequest.asReadonly();
+  public readonly toggleSettingsRequest = this._toggleSettingsRequest.asReadonly();
 
   public setCurrentTime(time: number): void {
     this._currentTime.set(time);
@@ -45,6 +47,10 @@ export class VideoStateService {
 
   public togglePlayPause(): void {
     this._playPauseRequest.set(Date.now());
+  }
+
+  public toggleSettings(): void {
+    this._toggleSettingsRequest.set(Date.now());
   }
 
   public repeatCurrentClip(): void {
@@ -77,5 +83,9 @@ export class VideoStateService {
 
   public clearForceContinueRequest(): void {
     this._forceContinueRequest.set(null);
+  }
+
+  public clearToggleSettingsRequest(): void {
+    this._toggleSettingsRequest.set(null);
   }
 }

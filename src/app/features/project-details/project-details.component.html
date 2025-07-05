@@ -48,25 +48,25 @@
   </div>
 
   <p-button icon="fa-solid fa-arrow-left"
-            pTooltip="Previous subtitled clip"
+            pTooltip="Previous subtitled clip (Ctrl + ←)"
             tooltipPosition="left"
             severity="secondary"
             (onClick)="goToPreviousSubtitleClip()"/>
 
   <p-button icon="fa-solid {{clipsStateService.isPlaying() ? 'fa-pause' : 'fa-play'}}"
-            [pTooltip]="clipsStateService.isPlaying() ? 'Pause' : 'Play'"
+            [pTooltip]="(clipsStateService.isPlaying() ? 'Pause' : 'Play') + ' (Space)'"
             tooltipPosition="top"
             severity="secondary"
             (onClick)="togglePlayPause()"/>
 
   <p-button icon="fa-solid fa-repeat"
-            pTooltip="Repeat current clip"
+            pTooltip="Repeat current clip (↑)"
             tooltipPosition="top"
             severity="secondary"
             (onClick)="repeatCurrentClip()"/>
 
   <p-button icon="fa-solid fa-arrow-right"
-            pTooltip="Next subtitled clip"
+            pTooltip="Next subtitled clip (Ctrl + →)"
             tooltipPosition="right"
             severity="secondary"
             (onClick)="goToNextSubtitleClip()"/>
@@ -92,13 +92,13 @@
   <div class="settings-wrapper">
     @let subtitlesVisible = videoStateService.subtitlesVisible();
     <p-button icon="{{subtitlesVisible ? 'fa-solid' : 'fa-regular'}} fa-closed-captioning"
-              [pTooltip]="subtitlesVisible ? 'Hide subtitles' : 'Show subtitles'"
+              [pTooltip]="(subtitlesVisible ? 'Hide subtitles' : 'Show subtitles') + ' (c)'"
               (onClick)="videoStateService.toggleSubtitlesVisible()"
               tooltipPosition="left"
               severity="secondary"/>
 
     <p-button icon="fa-solid fa-gear"
-              pTooltip="Settings"
+              pTooltip="Settings (,)"
               tooltipPosition="left"
               severity="secondary"
               (onClick)="toggleSettings()"/>

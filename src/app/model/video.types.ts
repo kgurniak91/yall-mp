@@ -20,6 +20,7 @@ export enum KeyboardAction {
   AdjustClipStartRight = 'AdjustClipStartRight',
   AdjustClipEndLeft = 'AdjustClipEndLeft',
   AdjustClipEndRight = 'AdjustClipEndRight',
+  ToggleSettings = 'ToggleSettings'
 }
 
 export enum SeekType {
