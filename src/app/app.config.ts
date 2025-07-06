@@ -7,6 +7,7 @@ import {providePrimeNG} from 'primeng/config';
 import Nora from '@primeng/themes/nora';
 import {ConfirmationService, MessageService} from 'primeng/api';
 import {DATE_PIPE_DEFAULT_OPTIONS} from '@angular/common';
+import {DialogService} from 'primeng/dynamicdialog';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -21,6 +22,7 @@ export const appConfig: ApplicationConfig = {
     }),
     MessageService,
     ConfirmationService,
+    DialogService,
     {
       provide: DATE_PIPE_DEFAULT_OPTIONS,
       useValue: {

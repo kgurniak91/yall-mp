@@ -20,7 +20,10 @@ export enum KeyboardAction {
   AdjustClipStartRight = 'AdjustClipStartRight',
   AdjustClipEndLeft = 'AdjustClipEndLeft',
   AdjustClipEndRight = 'AdjustClipEndRight',
-  ToggleSettings = 'ToggleSettings'
+  ToggleSettings = 'ToggleSettings',
+  EditCurrentSubtitles = 'EditCurrentSubtitles',
+  Undo = 'Undo',
+  Redo = 'Redo'
 }
 
 export enum SeekType {

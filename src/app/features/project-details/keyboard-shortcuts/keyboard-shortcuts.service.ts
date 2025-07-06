@@ -3,12 +3,14 @@ import {VideoStateService} from '../../../state/video/video-state.service';
 import {KeyboardAction, SeekDirection} from '../../../model/video.types';
 import {ClipsStateService} from '../../../state/clips/clips-state.service';
 import {SettingsStateService} from '../../../state/settings/settings-state.service';
+import {CommandHistoryStateService} from '../../../state/command-history/command-history-state.service';
 
 @Injectable()
 export class KeyboardShortcutsService implements OnDestroy {
   private videoStateService = inject(VideoStateService);
   private clipsStateService = inject(ClipsStateService);
   private settingsStateService = inject(SettingsStateService);
+  private commandHistoryStateService = inject(CommandHistoryStateService);
 
   constructor() {
     document.addEventListener('keydown', this.handleKeyDown);
@@ -27,6 +29,8 @@ export class KeyboardShortcutsService implements OnDestroy {
     keyMap.set('C', KeyboardAction.ToggleSubtitles);
     keyMap.set(',', KeyboardAction.ToggleSettings);
     keyMap.set(' ', KeyboardAction.TogglePlayPause);
+    keyMap.set('s', KeyboardAction.EditCurrentSubtitles);
+    keyMap.set('S', KeyboardAction.EditCurrentSubtitles);
 
     let action: KeyboardAction | undefined;
 
@@ -43,6 +47,14 @@ export class KeyboardShortcutsService implements OnDestroy {
         action = KeyboardAction.AdjustClipStartRight;
       } else if (event.key === ']') {
         action = KeyboardAction.AdjustClipEndLeft;
+      } else if (event.key.toLowerCase() === 'z') {
+        if (event.shiftKey) {
+          action = KeyboardAction.Redo;
+        } else {
+          action = KeyboardAction.Undo;
+        }
+      } else if (event.key.toLowerCase() === 'y') {
+        action = KeyboardAction.Redo;
       }
     } else {
       if (event.key === 'ArrowLeft') {
@@ -108,6 +120,15 @@ export class KeyboardShortcutsService implements OnDestroy {
         break;
       case KeyboardAction.ToggleSettings:
         this.videoStateService.toggleSettings();
+        break;
+      case KeyboardAction.EditCurrentSubtitles:
+        this.videoStateService.requestEditSubtitles();
+        break;
+      case KeyboardAction.Undo:
+        this.commandHistoryStateService.undo();
+        break;
+      case KeyboardAction.Redo:
+        this.commandHistoryStateService.redo();
         break;
     }
   }

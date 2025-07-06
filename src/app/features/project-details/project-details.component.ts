@@ -19,6 +19,11 @@ import {ProjectsStateService} from '../../state/projects/projects-state.service'
 import {Project} from '../../model/project.types';
 import {SettingsStateService} from '../../state/settings/settings-state.service';
 import {HiddenSubtitleStyle} from '../../model/settings.types';
+import {DialogService, DynamicDialogRef} from 'primeng/dynamicdialog';
+import {CommandHistoryStateService} from '../../state/command-history/command-history-state.service';
+import {EditSubtitlesDialogComponent} from './edit-subtitles-dialog/edit-subtitles-dialog.component';
+import {UpdateClipTextCommand} from '../../model/commands/update-clip-text.command';
+import {take} from 'rxjs';
 
 @Component({
   selector: 'app-project-details',
@@ -39,6 +44,8 @@ import {HiddenSubtitleStyle} from '../../model/settings.types';
   ]
 })
 export class ProjectDetailsComponent implements OnInit {
+  protected currentClipHasSubtitles = computed(() => !!this.clipsStateService.currentClip()?.hasSubtitle);
+
   protected isFirstClip = computed(() => {
     const clips = this.clipsStateService.clips();
     if (clips.length === 0) {
@@ -59,7 +66,6 @@ export class ProjectDetailsComponent implements OnInit {
     const clips = this.clipsStateService.clips();
     const currentIndex = this.clipsStateService.currentClipIndex();
     const currentClip = this.clipsStateService.currentClip();
-    const currentTime = this.videoStateService.currentTime();
 
     if (!currentClip) {
       return true;
@@ -88,6 +94,7 @@ export class ProjectDetailsComponent implements OnInit {
   });
 
   protected readonly isSettingsVisible = signal(false);
+  protected readonly commandHistoryStateService = inject(CommandHistoryStateService);
   protected readonly videoStateService = inject(VideoStateService);
   protected readonly clipsStateService = inject(ClipsStateService);
   protected readonly settingsStateService = inject(SettingsStateService);
@@ -121,6 +128,8 @@ export class ProjectDetailsComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly projectsStateService = inject(ProjectsStateService);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly dialogService = inject(DialogService);
+  private dialogRef: DynamicDialogRef | undefined;
 
   constructor() {
     inject(KeyboardShortcutsService); // start listening
@@ -197,6 +206,44 @@ export class ProjectDetailsComponent implements OnInit {
     }
   }
 
+  openEditSubtitlesDialog(): void {
+    const currentClip = this.clipsStateService.currentClip();
+    if (!currentClip || !currentClip.hasSubtitle) {
+      return;
+    }
+
+    this.dialogRef = this.dialogService.open(EditSubtitlesDialogComponent, {
+      header: 'Edit Subtitles',
+      width: '50vw',
+      modal: true,
+      data: {
+        text: currentClip.text || ''
+      }
+    });
+
+    this.dialogRef.onClose.pipe(
+      take(1)
+    ).subscribe((newText: string | undefined) => {
+      if (newText !== undefined && newText !== currentClip.text) {
+        const command = new UpdateClipTextCommand(
+          this.clipsStateService,
+          currentClip.id,
+          currentClip.text || '',
+          newText
+        );
+        this.commandHistoryStateService.execute(command);
+      }
+    });
+  }
+
+  undo(): void {
+    this.commandHistoryStateService.undo();
+  }
+
+  redo(): void {
+    this.commandHistoryStateService.redo();
+  }
+
   onNewProjectClicked() {
     this.router.navigate(['/project/new']);
   }
@@ -233,6 +280,13 @@ export class ProjectDetailsComponent implements OnInit {
     if (this.videoStateService.toggleSettingsRequest()) {
       this.toggleSettings();
       this.videoStateService.clearToggleSettingsRequest();
+    }
+  });
+
+  private editCurrentSubtitlesListener = effect(() => {
+    if (this.videoStateService.editSubtitlesRequest()) {
+      this.openEditSubtitlesDialog();
+      this.videoStateService.clearEditSubtitlesRequest();
     }
   });
 }

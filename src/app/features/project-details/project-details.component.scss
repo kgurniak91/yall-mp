@@ -44,6 +44,15 @@
   background-color: #2a2a2a;
   flex-shrink: 0;
 
+  .history-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    position: absolute;
+    left: 1rem;
+  }
+
   .settings-wrapper {
     display: flex;
     align-items: center;

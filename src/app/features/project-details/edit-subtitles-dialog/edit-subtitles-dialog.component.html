@@ -1,0 +1,14 @@
+<div class="dialog-content">
+  <textarea pTextarea [(ngModel)]="text" [autoResize]="true" rows="5"></textarea>
+  <div class="dialog-actions">
+    <p-button label="Cancel"
+              icon="fa-solid fa-xmark"
+              severity="secondary"
+              (onClick)="close()"/>
+
+    <p-button label="Save"
+              icon="fa-solid fa-check"
+              severity="primary"
+              (onClick)="save()"/>
+  </div>
+</div>

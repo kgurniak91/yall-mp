@@ -3,6 +3,8 @@ import {VideoStateService} from '../video/video-state.service';
 import {PlayerState, SeekDirection, VideoClip} from '../../model/video.types';
 import {VTTCue} from 'media-captions';
 import {SettingsStateService} from '../settings/settings-state.service';
+import {CommandHistoryStateService} from '../command-history/command-history-state.service';
+import {UpdateClipTimesCommand} from '../../model/commands/update-clip-times.command';
 
 const MIN_CLIP_DURATION = 0.1;
 const ADJUST_DEBOUNCE_MS = 50;
@@ -13,6 +15,7 @@ const ADJUST_DEBOUNCE_MS = 50;
 export class ClipsStateService {
   private readonly videoStateService = inject(VideoStateService);
   private readonly settingsStateService = inject(SettingsStateService);
+  private readonly commandHistoryStateService = inject(CommandHistoryStateService);
   private readonly _cues = signal<VTTCue[]>([]);
   private readonly _currentClipIndex = signal(0);
   private readonly _playerState = signal<PlayerState>(PlayerState.Idle);
@@ -40,6 +43,22 @@ export class ClipsStateService {
     }
   }
 
+  public updateClipText(clipId: string, newText: string): void {
+    const allClips = this.clips();
+    const targetClip = allClips.find(c => c.id === clipId);
+
+    if (!targetClip || !targetClip.hasSubtitle) {
+      return;
+    }
+
+    const updatedClips = allClips.map(clip =>
+      clip.id === clipId ? {...clip, text: newText} : clip
+    );
+
+    // TODO directly manipulate the `_cues` signal?
+    this.updateCuesFromClips(updatedClips);
+  }
+
   public advanceToNextClip(): void {
     const nextIndex = this.currentClipIndex() + 1;
     if (nextIndex < this.clips().length) {
@@ -64,15 +83,15 @@ export class ClipsStateService {
   public updateClipTimes(clipId: string, newStartTime: number, newEndTime: number): void {
     const allClips = this.clips();
     const currentActiveIndex = this.currentClipIndex();
+    const activeClipBeforeUpdate = allClips[currentActiveIndex];
+
+    if (!activeClipBeforeUpdate) {
+      return;
+    }
 
     const clipBeingEditedIndex = allClips.findIndex(c => c.id === clipId);
     if (this.playerState() === PlayerState.AutoPausedAtEnd && currentActiveIndex === clipBeingEditedIndex) {
       this.setPlayerState(PlayerState.PausedByUser);
-    }
-
-    const activeClipBeforeUpdate = allClips[currentActiveIndex];
-    if (!activeClipBeforeUpdate) {
-      return;
     }
 
     const currentTime = this.videoStateService.currentTime();
@@ -157,7 +176,16 @@ export class ClipsStateService {
       this.videoStateService.seekAbsolute(newEndTime - 0.01);
     }
 
-    this.updateClipTimes(currentClip.id, newStartTime, newEndTime);
+    const command = new UpdateClipTimesCommand(
+      this, // ClipsStateService instance
+      currentClip.id,
+      currentClip.startTime,
+      currentClip.endTime,
+      newStartTime,
+      newEndTime
+    );
+
+    this.commandHistoryStateService.execute(command);
   }
 
   private findAdjacentSubtitledClip(direction: SeekDirection): VideoClip | undefined {

@@ -31,6 +31,22 @@
 </div>
 
 <div class="toolbar">
+  <div class="history-wrapper">
+    <p-button icon="fa-solid fa-rotate-left"
+              pTooltip="Undo (Ctrl + Z)"
+              tooltipPosition="right"
+              severity="secondary"
+              [disabled]="!commandHistoryStateService.canUndo()"
+              (onClick)="undo()"/>
+
+    <p-button icon="fa-solid fa-rotate-right"
+              pTooltip="Redo (Ctrl + Y)"
+              tooltipPosition="right"
+              severity="secondary"
+              [disabled]="!commandHistoryStateService.canRedo()"
+              (onClick)="redo()"/>
+  </div>
+
   <div>
     <p-button (click)="opStart.toggle($event)"
               icon="fa-solid fa-arrows-down-to-line"
@@ -96,9 +112,16 @@
   </div>
 
   <div class="settings-wrapper">
+    <p-button icon="fa-solid fa-file-pen"
+              (click)="openEditSubtitlesDialog()"
+              pTooltip="Edit subtitles (S)"
+              tooltipPosition="left"
+              severity="secondary"
+              [disabled]="!currentClipHasSubtitles()"/>
+
     @let subtitlesVisible = videoStateService.subtitlesVisible();
     <p-button icon="{{subtitlesVisible ? 'fa-solid' : 'fa-regular'}} fa-closed-captioning"
-              [pTooltip]="(subtitlesVisible ? 'Hide subtitles' : 'Show subtitles') + ' (c)'"
+              [pTooltip]="(subtitlesVisible ? 'Hide subtitles' : 'Show subtitles') + ' (C)'"
               (onClick)="videoStateService.toggleSubtitlesVisible()"
               tooltipPosition="left"
               severity="secondary"/>
