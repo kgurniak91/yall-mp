@@ -162,6 +162,10 @@ export class VideoControllerComponent {
   }
 
   private handleSeek(request: { time: number; type: SeekType }): void {
+    
+    const wasPlaying = this.clipsStateService.isPlaying();
+    const originClipIndex = this.clipsStateService.currentClipIndex();
+
     // Calculate target time from the state service.
     let targetTime: number;
     if (request.type === SeekType.Relative) {
@@ -185,23 +189,34 @@ export class VideoControllerComponent {
       this.videoStateService.clearSeekRequest();
       return;
     }
+
     this.clipsStateService.setCurrentClipByIndex(targetClipIndex);
     const newClip = this.clipsStateService.currentClip()!;
+    const autoPauseAtStart = this.settingsStateService.autoPauseAtStart();
+    const isLandingAtStartOfSubtitleClip = newClip.hasSubtitle && Math.abs(targetTime - newClip.startTime) < 0.1;
+    const isJumpingToNewClip = originClipIndex !== targetClipIndex;
 
-    if (this.clipsStateService.isPlaying()) {
-      // If playing, continue playing from the new position.
-      this.playClip(newClip, {seekToTime: targetTime});
+    if (autoPauseAtStart && isLandingAtStartOfSubtitleClip && isJumpingToNewClip) {
+      
+      this.clipsStateService.setPlayerState(PlayerState.AutoPausedAtStart);
+      this.command.set({
+        action: VideoPlayerAction.Pause,
+        clip: newClip,
+        seekToTime: newClip.startTime
+      });
     } else {
-      // If paused, remain paused at the new position.
-      // A `Pause` command with a `seekToTime` is the correct tool for this.
-      this.command.set({action: VideoPlayerAction.Pause, clip: newClip, seekToTime: targetTime});
-
-      // Set the correct PAUSED state for the next resume action.
-      const autoPauseAtStart = this.settingsStateService.autoPauseAtStart();
-      if (newClip.hasSubtitle && autoPauseAtStart && Math.abs(targetTime - newClip.startTime) < 0.1) {
-        this.clipsStateService.setPlayerState(PlayerState.AutoPausedAtStart);
+      if (wasPlaying) {
+        // If playing, continue playing from the new position.
+        this.playClip(newClip, {seekToTime: targetTime});
       } else {
+        
+        
         this.clipsStateService.setPlayerState(PlayerState.PausedByUser);
+        this.command.set({
+          action: VideoPlayerAction.Pause,
+          clip: newClip,
+          seekToTime: targetTime
+        });
       }
     }
 
