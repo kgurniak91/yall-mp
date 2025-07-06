@@ -193,10 +193,10 @@ export class VideoControllerComponent {
     this.clipsStateService.setCurrentClipByIndex(targetClipIndex);
     const newClip = this.clipsStateService.currentClip()!;
     const autoPauseAtStart = this.settingsStateService.autoPauseAtStart();
-    const isLandingAtStartOfSubtitleClip = newClip.hasSubtitle && Math.abs(targetTime - newClip.startTime) < 0.1;
+    const isLandingAtStartOfSubtitledClip = newClip.hasSubtitle && Math.abs(targetTime - newClip.startTime) < 0.1;
     const isJumpingToNewClip = originClipIndex !== targetClipIndex;
 
-    if (autoPauseAtStart && isLandingAtStartOfSubtitleClip && isJumpingToNewClip) {
+    if (autoPauseAtStart && isLandingAtStartOfSubtitledClip && isJumpingToNewClip) {
       
       this.clipsStateService.setPlayerState(PlayerState.AutoPausedAtStart);
       this.command.set({

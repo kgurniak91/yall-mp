@@ -32,9 +32,9 @@ export class KeyboardShortcutsService implements OnDestroy {
 
     if (event.ctrlKey) {
       if (event.key === 'ArrowLeft') {
-        action = KeyboardAction.PreviousSubtitleClip;
+        action = KeyboardAction.PreviousSubtitledClip;
       } else if (event.key === 'ArrowRight') {
-        action = KeyboardAction.NextSubtitleClip;
+        action = KeyboardAction.NextSubtitledClip;
       } else if (event.key === 'ArrowUp') {
         action = KeyboardAction.RepeatCurrentClip;
       } else if (event.key === 'ArrowDown') {
@@ -79,11 +79,11 @@ export class KeyboardShortcutsService implements OnDestroy {
       case KeyboardAction.SeekForward:
         this.videoStateService.seekRelative(this.settingsStateService.seekSeconds());
         break;
-      case KeyboardAction.PreviousSubtitleClip:
-        this.clipsStateService.goToAdjacentSubtitleClip(SeekDirection.Previous);
+      case KeyboardAction.PreviousSubtitledClip:
+        this.clipsStateService.goToAdjacentSubtitledClip(SeekDirection.Previous);
         break;
-      case KeyboardAction.NextSubtitleClip:
-        this.clipsStateService.goToAdjacentSubtitleClip(SeekDirection.Next);
+      case KeyboardAction.NextSubtitledClip:
+        this.clipsStateService.goToAdjacentSubtitledClip(SeekDirection.Next);
         break;
       case KeyboardAction.RepeatCurrentClip:
         this.videoStateService.repeatCurrentClip();

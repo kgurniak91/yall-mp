@@ -49,8 +49,8 @@ export class ClipsStateService {
     }
   }
 
-  public goToAdjacentSubtitleClip(direction: SeekDirection): void {
-    const adjacentClip = this.findAdjacentSubtitleClip(direction);
+  public goToAdjacentSubtitledClip(direction: SeekDirection): void {
+    const adjacentClip = this.findAdjacentSubtitledClip(direction);
     if (adjacentClip) {
       this.videoStateService.seekAbsolute(adjacentClip.startTime);
     } else if (direction === SeekDirection.Previous) {
@@ -160,7 +160,7 @@ export class ClipsStateService {
     this.updateClipTimes(currentClip.id, newStartTime, newEndTime);
   }
 
-  private findAdjacentSubtitleClip(direction: SeekDirection): VideoClip | undefined {
+  private findAdjacentSubtitledClip(direction: SeekDirection): VideoClip | undefined {
     const clips = this.clips();
     if (clips.length === 0) {
       return undefined;

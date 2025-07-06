@@ -46,6 +46,7 @@ export class ProjectDetailsComponent implements OnInit {
     }
     return this.clipsStateService.currentClipIndex() === 0;
   });
+
   protected isLastClip = computed(() => {
     const clips = this.clipsStateService.clips();
     if (clips.length === 0) {
@@ -53,6 +54,39 @@ export class ProjectDetailsComponent implements OnInit {
     }
     return this.clipsStateService.currentClipIndex() === (clips.length - 1);
   });
+
+  protected isGoToPreviousSubtitledClipActionDisabled = computed(() => {
+    const clips = this.clipsStateService.clips();
+    const currentIndex = this.clipsStateService.currentClipIndex();
+    const currentClip = this.clipsStateService.currentClip();
+    const currentTime = this.videoStateService.currentTime();
+
+    if (!currentClip) {
+      return true;
+    }
+
+    const previousSubtitledClipExists = clips.some((clip, index) => (index < currentIndex) && clip.hasSubtitle);
+    if (previousSubtitledClipExists) {
+      return false;
+    }
+
+    // Playback indicator is either at the 1st gap or 1st subtitled clip
+    // If it is at the gap and there are no subtitled clips before, disable the action:
+    if (!currentClip.hasSubtitle) {
+      return true;
+    }
+
+    // Otherwise, it is at the 1st subtitled clip - enable action to allow rewinding to the beginning of it:
+    return false;
+  });
+
+  protected isGoToNextSubtitledClipActionDisabled = computed(() => {
+    const clips = this.clipsStateService.clips();
+    const currentIndex = this.clipsStateService.currentClipIndex();
+    const nextSubtitledClipExists = clips.some((clip, index) => (index > currentIndex) && clip.hasSubtitle);
+    return !nextSubtitledClipExists;
+  });
+
   protected readonly isSettingsVisible = signal(false);
   protected readonly videoStateService = inject(VideoStateService);
   protected readonly clipsStateService = inject(ClipsStateService);
@@ -108,12 +142,12 @@ export class ProjectDetailsComponent implements OnInit {
     this.clipsStateService.setCues(result.cues);
   }
 
-  goToNextSubtitleClip() {
-    this.clipsStateService.goToAdjacentSubtitleClip(SeekDirection.Next);
+  goToNextSubtitledClip() {
+    this.clipsStateService.goToAdjacentSubtitledClip(SeekDirection.Next);
   }
 
-  goToPreviousSubtitleClip() {
-    this.clipsStateService.goToAdjacentSubtitleClip(SeekDirection.Previous);
+  goToPreviousSubtitledClip() {
+    this.clipsStateService.goToAdjacentSubtitledClip(SeekDirection.Previous);
   }
 
   togglePlayPause() {
