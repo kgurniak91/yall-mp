@@ -163,10 +163,7 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
 
   private handleRegionClicked = (region: Region, e: MouseEvent) => {
     e.stopPropagation();
-    const clickedClipIndex = this.clipsStateService.clips().findIndex(c => c.id === region.id);
-    if (clickedClipIndex > -1) {
-      this.clipsStateService.selectClip(clickedClipIndex);
-    }
+    this.videoStateService.seekAbsolute(region.start);
   }
 
   private handleRegionCreated = (region: Region) => {

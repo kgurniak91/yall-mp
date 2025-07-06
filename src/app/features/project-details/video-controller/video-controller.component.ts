@@ -97,17 +97,6 @@ export class VideoControllerComponent {
     }
   });
 
-  private timelineRequestHandler = effect(() => {
-    const request = this.clipsStateService.clipSelectedRequest();
-    if (request) {
-      const newClip = this.clipsStateService.currentClip();
-      if (newClip) {
-        this.playClip(newClip, {seekToTime: newClip.startTime});
-      }
-      this.clipsStateService.clearClipSelectedRequest();
-    }
-  });
-
   private requestHandler = effect(() => {
     if (this.videoStateService.playPauseRequest()) {
       this.handleTogglePlayPause();

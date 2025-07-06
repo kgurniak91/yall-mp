@@ -15,14 +15,11 @@ export class ClipsStateService {
   private readonly settingsStateService = inject(SettingsStateService);
   private readonly _cues = signal<VTTCue[]>([]);
   private readonly _currentClipIndex = signal(0);
-  private readonly _clipSelectedRequest = signal<{ index: number, timestamp: number } | null>(null);
   private readonly _playerState = signal<PlayerState>(PlayerState.Idle);
   private adjustDebounceTimer: any;
 
   public readonly currentClipIndex = this._currentClipIndex.asReadonly();
-  public readonly clipSelectedRequest = this._clipSelectedRequest.asReadonly();
   public readonly playerState = this._playerState.asReadonly();
-
   public readonly isPlaying = computed(() => this.playerState() === PlayerState.Playing);
   public readonly clips: Signal<VideoClip[]> = computed(() => this.generateClips());
   public readonly currentClip = computed<VideoClip | undefined>(() => {
@@ -35,17 +32,6 @@ export class ClipsStateService {
 
   public setCues(cues: VTTCue[]): void {
     this._cues.set(cues);
-  }
-
-  public selectClip(index: number): void {
-    if (index >= 0 && index < this.clips().length) {
-      this._currentClipIndex.set(index);
-      this._clipSelectedRequest.set({index, timestamp: Date.now()});
-    }
-  }
-
-  public clearClipSelectedRequest(): void {
-    this._clipSelectedRequest.set(null);
   }
 
   public setCurrentClipByIndex(index: number): void {
