@@ -1,4 +1,4 @@
-import {Component, effect, inject, OnInit, signal} from '@angular/core';
+import {Component, computed, effect, inject, OnInit, signal} from '@angular/core';
 import {VideoControllerComponent} from './video-controller/video-controller.component';
 import {VideoJsOptions} from './video-controller/video-controller.type';
 import {ParsedCaptionsResult, parseResponse} from 'media-captions';
@@ -39,6 +39,20 @@ import {HiddenSubtitleStyle} from '../../model/settings.types';
   ]
 })
 export class ProjectDetailsComponent implements OnInit {
+  protected isFirstClip = computed(() => {
+    const clips = this.clipsStateService.clips();
+    if (clips.length === 0) {
+      return true; // No clips, so it's the "first"
+    }
+    return this.clipsStateService.currentClipIndex() === 0;
+  });
+  protected isLastClip = computed(() => {
+    const clips = this.clipsStateService.clips();
+    if (clips.length === 0) {
+      return true; // No clips, so it's the "last"
+    }
+    return this.clipsStateService.currentClipIndex() === (clips.length - 1);
+  });
   protected readonly isSettingsVisible = signal(false);
   protected readonly videoStateService = inject(VideoStateService);
   protected readonly clipsStateService = inject(ClipsStateService);

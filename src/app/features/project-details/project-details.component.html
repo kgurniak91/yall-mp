@@ -37,7 +37,8 @@
               class="rotate-90"
               tooltipPosition="left"
               severity="secondary"
-              pTooltip="Adjust Clip Start"/>
+              pTooltip="Adjust Clip Start"
+              [disabled]="isFirstClip()"/>
 
     <p-popover #opStart>
       <div class="p-buttonset">
@@ -79,7 +80,8 @@
               class="rotate-90"
               tooltipPosition="right"
               severity="secondary"
-              pTooltip="Adjust Clip End"/>
+              pTooltip="Adjust Clip End"
+              [disabled]="isLastClip()"/>
 
     <p-popover #opEnd>
       <div class="p-buttonset">

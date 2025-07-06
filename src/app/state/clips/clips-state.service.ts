@@ -106,6 +106,17 @@ export class ClipsStateService {
       return;
     }
 
+    const currentClipIndex = this.currentClipIndex();
+    const totalClips = this.clips().length;
+
+    if (currentClipIndex === 0 && boundary === 'start') {
+      return;
+    }
+
+    if (currentClipIndex === (totalClips - 1) && boundary === 'end') {
+      return;
+    }
+
     const adjustAmountSeconds = this.settingsStateService.adjustValueMs() / 1000;
     const directionMultiplier = (direction === 'left') ? -1 : 1;
     const changeAmount = adjustAmountSeconds * directionMultiplier;
