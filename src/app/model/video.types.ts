@@ -23,7 +23,9 @@ export enum KeyboardAction {
   ToggleSettings = 'ToggleSettings',
   EditCurrentSubtitles = 'EditCurrentSubtitles',
   Undo = 'Undo',
-  Redo = 'Redo'
+  Redo = 'Redo',
+  SplitClip = 'SplitClip',
+  DeleteGap = 'DeleteGap'
 }
 
 export enum SeekType {

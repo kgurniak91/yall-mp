@@ -112,6 +112,20 @@
   </div>
 
   <div class="settings-wrapper">
+    <p-button icon="fa-solid fa-scissors"
+              (click)="clipsStateService.splitCurrentClip()"
+              pTooltip="Split subtitled clip (Insert)"
+              tooltipPosition="left"
+              severity="secondary"
+              [disabled]="!currentClipHasSubtitles()"/>
+
+    <p-button icon="fa-solid fa-eraser"
+              (click)="clipsStateService.deleteCurrentGap()"
+              pTooltip="Delete gap (Delete)"
+              tooltipPosition="left"
+              severity="secondary"
+              [disabled]="currentClipHasSubtitles()"/>
+
     <p-button icon="fa-solid fa-file-pen"
               (click)="openEditSubtitlesDialog()"
               pTooltip="Edit subtitles (S)"

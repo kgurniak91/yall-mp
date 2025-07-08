@@ -5,9 +5,12 @@ import {VTTCue} from 'media-captions';
 import {SettingsStateService} from '../settings/settings-state.service';
 import {CommandHistoryStateService} from '../command-history/command-history-state.service';
 import {UpdateClipTimesCommand} from '../../model/commands/update-clip-times.command';
+import {ToastService} from '../../shared/services/toast/toast.service';
 
 const MIN_CLIP_DURATION = 0.1;
 const ADJUST_DEBOUNCE_MS = 50;
+const NEW_GAP_DURATION = 0.1;
+const MIN_SPLITTABLE_CLIP_DURATION = 0.5;
 
 @Injectable({
   providedIn: 'root'
@@ -16,6 +19,7 @@ export class ClipsStateService {
   private readonly videoStateService = inject(VideoStateService);
   private readonly settingsStateService = inject(SettingsStateService);
   private readonly commandHistoryStateService = inject(CommandHistoryStateService);
+  private readonly toastService = inject(ToastService);
   private readonly _cues = signal<VTTCue[]>([]);
   private readonly _currentClipIndex = signal(0);
   private readonly _playerState = signal<PlayerState>(PlayerState.Idle);
@@ -40,6 +44,91 @@ export class ClipsStateService {
   public setCurrentClipByIndex(index: number): void {
     if (index >= 0 && index < this.clips().length) {
       this._currentClipIndex.set(index);
+    }
+  }
+
+  public splitCurrentClip(): void {
+    const currentClip = this.currentClip();
+
+    if (!currentClip || !currentClip.hasSubtitle) {
+      return;
+    }
+
+    if (currentClip.duration < MIN_SPLITTABLE_CLIP_DURATION) {
+      this.toastService.warn(`Selected clip is too short to split. Minimum required duration is ${MIN_SPLITTABLE_CLIP_DURATION}s.`);
+      return;
+    }
+
+    const originalCueId = currentClip.id.replace('subtitle-', '');
+    const cues = this._cues();
+    const cueIndex = cues.findIndex(c => c.id === originalCueId);
+    if (cueIndex === -1) {
+      return;
+    }
+
+    const originalCue = cues[cueIndex];
+    const splitPoint = originalCue.startTime + ((originalCue.endTime - originalCue.startTime) / 2);
+    const newCues = [...cues];
+
+    const secondPartCue = new VTTCue(
+      splitPoint + NEW_GAP_DURATION,
+      originalCue.endTime,
+      originalCue.text
+    );
+    secondPartCue.id = crypto.randomUUID(); // Give it a new unique ID
+
+    originalCue.endTime = splitPoint;
+    newCues.splice(cueIndex + 1, 0, secondPartCue);
+    this._cues.set(newCues);
+  }
+
+  public deleteCurrentGap(): void {
+    const clips = this.clips();
+    const currentClipIndex = this.currentClipIndex();
+    const currentClip = clips[currentClipIndex];
+
+    if (!currentClip || currentClip.hasSubtitle) {
+      return;
+    }
+
+    const prevClip = clips[currentClipIndex - 1];
+    const nextClip = clips[currentClipIndex + 1];
+    if (!prevClip || !nextClip || !prevClip.hasSubtitle || !nextClip.hasSubtitle) {
+      this.toastService.warn('Cannot delete a gap that is not surrounded by two subtitle clips.');
+      return;
+    }
+
+    const timeBeforeDelete = this.videoStateService.currentTime();
+    const prevCueId = prevClip.id.replace('subtitle-', '');
+    const nextCueId = nextClip.id.replace('subtitle-', '');
+    const cues = this._cues();
+    const prevCueIndex = cues.findIndex(c => c.id === prevCueId);
+    const nextCueIndex = cues.findIndex(c => c.id === nextCueId);
+
+    if (prevCueIndex === -1 || nextCueIndex === -1) {
+      return;
+    }
+
+    const newCues = [...cues];
+    const prevCue = newCues[prevCueIndex];
+    const nextCue = newCues[nextCueIndex];
+
+    prevCue.endTime = nextCue.endTime; // Extend the first cue to cover the second
+    prevCue.text += `\n${nextCue.text}`; // Merge text with a new line
+
+    newCues.splice(nextCueIndex, 1);
+
+    this._cues.set(newCues);
+
+    // Re-synchronize the active clip index:
+    const newClipsArray = this.clips();
+
+    const newCorrectIndex = newClipsArray.findIndex(c =>
+      timeBeforeDelete >= c.startTime && timeBeforeDelete < c.endTime
+    );
+
+    if (newCorrectIndex !== -1) {
+      this._currentClipIndex.set(newCorrectIndex);
     }
   }
 
