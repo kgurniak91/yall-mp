@@ -6,6 +6,8 @@ import {SettingsStateService} from '../settings/settings-state.service';
 import {CommandHistoryStateService} from '../command-history/command-history-state.service';
 import {UpdateClipTimesCommand} from '../../model/commands/update-clip-times.command';
 import {ToastService} from '../../shared/services/toast/toast.service';
+import {SplitSubtitledClipCommand} from '../../model/commands/split-subtitled-clip.command';
+import {DeleteGapCommand} from '../../model/commands/delete-gap.command';
 
 const MIN_CLIP_DURATION = 0.1;
 const ADJUST_DEBOUNCE_MS = 50;
@@ -47,7 +49,7 @@ export class ClipsStateService {
     }
   }
 
-  public splitCurrentClip(): void {
+  public splitCurrentSubtitledClip(): void {
     const currentClip = this.currentClip();
 
     if (!currentClip || !currentClip.hasSubtitle) {
@@ -59,7 +61,12 @@ export class ClipsStateService {
       return;
     }
 
-    const originalCueId = currentClip.id.replace('subtitle-', '');
+    const command = new SplitSubtitledClipCommand(this, currentClip.id);
+    this.commandHistoryStateService.execute(command);
+  }
+
+  public splitClip(clipId: string, onSplitCallback?: (originalText: string, newCueId: string) => void): void {
+    const originalCueId = clipId.replace('subtitle-', '');
     const cues = this._cues();
     const cueIndex = cues.findIndex(c => c.id === originalCueId);
     if (cueIndex === -1) {
@@ -75,7 +82,8 @@ export class ClipsStateService {
       originalCue.endTime,
       originalCue.text
     );
-    secondPartCue.id = crypto.randomUUID(); // Give it a new unique ID
+    secondPartCue.id = crypto.randomUUID();
+    onSplitCallback?.(originalCue.text, secondPartCue.id);
 
     originalCue.endTime = splitPoint;
     newCues.splice(cueIndex + 1, 0, secondPartCue);
@@ -94,30 +102,48 @@ export class ClipsStateService {
     const prevClip = clips[currentClipIndex - 1];
     const nextClip = clips[currentClipIndex + 1];
     if (!prevClip || !nextClip || !prevClip.hasSubtitle || !nextClip.hasSubtitle) {
-      this.toastService.warn('Cannot delete a gap that is not surrounded by two subtitle clips.');
+      this.toastService.warn('Cannot delete a gap that is not surrounded by two subtitled clips.');
       return;
     }
 
-    const timeBeforeDelete = this.videoStateService.currentTime();
-    const prevCueId = prevClip.id.replace('subtitle-', '');
-    const nextCueId = nextClip.id.replace('subtitle-', '');
-    const cues = this._cues();
-    const prevCueIndex = cues.findIndex(c => c.id === prevCueId);
-    const nextCueIndex = cues.findIndex(c => c.id === nextCueId);
+    const command = new DeleteGapCommand(this, prevClip.id, nextClip.id);
+    this.commandHistoryStateService.execute(command);
+  }
 
-    if (prevCueIndex === -1 || nextCueIndex === -1) {
+  public mergeClips(
+    firstClipId: string,
+    secondClipId: string,
+    onMergeCallback?: (originalFirstCue: VTTCue, deletedSecondCue: VTTCue) => void,
+    newText?: string
+  ): void {
+    const timeBeforeDelete = this.videoStateService.currentTime();
+    const firstCueId = firstClipId.replace('subtitle-', '');
+    const secondCueId = secondClipId.replace('subtitle-', '');
+    const cues = this._cues();
+    const firstCueIndex = cues.findIndex(c => c.id === firstCueId);
+    const secondCueIndex = cues.findIndex(c => c.id === secondCueId);
+
+    if (firstCueIndex === -1 || secondCueIndex === -1) {
       return;
     }
 
     const newCues = [...cues];
-    const prevCue = newCues[prevCueIndex];
-    const nextCue = newCues[nextCueIndex];
+    const firstCue = newCues[firstCueIndex];
+    const secondCue = newCues[secondCueIndex];
 
-    prevCue.endTime = nextCue.endTime; // Extend the first cue to cover the second
-    prevCue.text += `\n${nextCue.text}`; // Merge text with a new line
+    // The callback provides the original data to the command for its undo state
+    onMergeCallback?.(firstCue, secondCue);
 
-    newCues.splice(nextCueIndex, 1);
+    // Perform the merge
+    firstCue.endTime = secondCue.endTime;
 
+    if (newText !== undefined) {
+      firstCue.text = newText;
+    } else {
+      firstCue.text += `\n${secondCue.text}`;
+    }
+
+    newCues.splice(secondCueIndex, 1);
     this._cues.set(newCues);
 
     // Re-synchronize the active clip index:
@@ -130,6 +156,31 @@ export class ClipsStateService {
     if (newCorrectIndex !== -1) {
       this._currentClipIndex.set(newCorrectIndex);
     }
+  }
+
+  public unmergeClips(
+    firstClipId: string,
+    originalEndTime: number,
+    originalText: string,
+    secondCueToRestore: VTTCue
+  ): void {
+    const firstCueId = firstClipId.replace('subtitle-', '');
+    const cues = this._cues();
+    const firstCueIndex = cues.findIndex(c => c.id === firstCueId);
+    if (firstCueIndex === -1) {
+      return;
+    }
+
+    const newCues = [...cues];
+
+    // Restore the first cue to its original state
+    newCues[firstCueIndex].endTime = originalEndTime;
+    newCues[firstCueIndex].text = originalText;
+
+    // Re-insert the second cue
+    newCues.splice(firstCueIndex + 1, 0, secondCueToRestore);
+
+    this._cues.set(newCues);
   }
 
   public updateClipText(clipId: string, newText: string): void {
