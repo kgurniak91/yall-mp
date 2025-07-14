@@ -4,7 +4,7 @@ import {Router, RouterLink} from '@angular/router';
 import {Project} from '../../model/project.types';
 import {Button} from 'primeng/button';
 import {DataView} from 'primeng/dataview';
-import {ConfirmationService, PrimeTemplate} from 'primeng/api';
+import {ConfirmationService} from 'primeng/api';
 import {ProjectListItemComponent} from './project-list-item/project-list-item.component';
 
 @Component({
@@ -13,7 +13,6 @@ import {ProjectListItemComponent} from './project-list-item/project-list-item.co
     Button,
     DataView,
     RouterLink,
-    PrimeTemplate,
     ProjectListItemComponent
   ],
   templateUrl: './list-of-projects.component.html',

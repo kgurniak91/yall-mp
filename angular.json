@@ -60,6 +60,9 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "electron": {
+              "baseHref": "./"
             }
           },
           "defaultConfiguration": "production"

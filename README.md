@@ -1,8 +1,8 @@
-# YALL MP - Yet Another Language Learning Media Player
+# Y'ALL MP - Yet Another Language Learning Media Player
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.12.
 
-## Development server
+## Web development server
 
 To start a local development server, run:
 
@@ -11,6 +11,20 @@ ng serve
 ```
 
 Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+
+## Desktop app development
+
+Run this command first and wait for it to stabilize:
+
+```bash
+npm run electron:watch:build
+```
+
+Then run the second command to automatically reload whenever you modify any of the source files:
+
+```bash
+npm run electron:watch:run
+```
 
 ## Code scaffolding
 

@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "module": "CommonJS",
+    "target": "ES2022",
+    "outDir": ".",
+    "esModuleInterop": true,
+    "sourceMap": true,
+    "strict": true,
+    "moduleResolution": "node"
+  },
+  "include": [
+    "electron-main.ts"
+  ],
+  "exclude": []
+}

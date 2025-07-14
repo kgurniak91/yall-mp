@@ -42,3 +42,7 @@ testem.log
 .DS_Store
 Thumbs.db
 /public/temp/
+
+# Electron
+electron-main.js
+electron-main.js.map
