@@ -2,11 +2,12 @@ import {Component, computed, inject, OnInit, signal} from '@angular/core';
 import {ActivatedRoute, Router} from '@angular/router';
 import {ProjectsStateService} from '../../state/projects/projects-state.service';
 import {Project} from '../../model/project.types';
-import {ConfirmationService, MessageService} from 'primeng/api';
+import {ConfirmationService} from 'primeng/api';
 import {Button} from 'primeng/button';
 import {FileDropZoneComponent} from '../../shared/components/file-drop-zone/file-drop-zone.component';
 import {v4 as uuidv4} from 'uuid';
 import {Location} from '@angular/common';
+import {ToastService} from '../../shared/services/toast/toast.service';
 
 const EDIT_CONFIRMATION_MESSAGE = `
 Are you sure you want to edit this project?
@@ -30,18 +31,20 @@ This action cannot be undone.
   styleUrl: './project-form.component.scss'
 })
 export class ProjectFormComponent implements OnInit {
-  protected readonly mediaFile = signal<File | null>(null);
-  protected readonly subtitleFile = signal<File | null>(null);
+  protected readonly mediaFilePath = signal<string | null>(null);
+  protected readonly subtitleFilePath = signal<string | null>(null);
   protected readonly existingMediaFileName = signal<string | null>(null);
   protected readonly existingSubtitleFileName = signal<string | null>(null);
+  protected readonly mediaFileJustChanged = signal(false);
+  protected readonly subtitleFileJustChanged = signal(false);
   protected readonly editMode = signal(false);
   protected readonly pageTitle = computed(() => this.editMode() ? 'Edit Project' : 'Create a New Project');
-  private readonly isValid = computed(() => Boolean(this.mediaFile()) && Boolean(this.subtitleFile()));
+  private readonly isValid = computed(() => Boolean(this.mediaFilePath()) && Boolean(this.subtitleFilePath()));
   private readonly editingProjectId = signal<string | null>(null);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly projectsStateService = inject(ProjectsStateService);
-  private readonly messageService = inject(MessageService);
+  private readonly toastService = inject(ToastService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly location = inject(Location);
 
@@ -52,25 +55,52 @@ export class ProjectFormComponent implements OnInit {
       this.editingProjectId.set(projectId);
       const project = this.projectsStateService.getProjectById(projectId);
       if (project) {
+        this.mediaFilePath.set(project.mediaPath);
+        this.subtitleFilePath.set(project.subtitlePath);
         this.existingMediaFileName.set(project.mediaFileName);
         this.existingSubtitleFileName.set(project.subtitleFileName);
       } else {
+        this.toastService.error('Project not found');
         this.goBack();
       }
     }
   }
 
-  protected onMediaFileChange(file: File | null) {
-    this.mediaFile.set(file);
-    if (!file) {
+  protected onMediaFilePathChange(path: string | null) {
+    this.mediaFilePath.set(path);
+    this.mediaFileJustChanged.set(true);
+    if (!path) {
       this.existingMediaFileName.set(null);
     }
   }
 
-  protected onSubtitleFileChange(file: File | null) {
-    this.subtitleFile.set(file);
-    if (!file) {
+  protected onSubtitleFilePathChange(path: string | null) {
+    this.subtitleFilePath.set(path);
+    this.subtitleFileJustChanged.set(true);
+    if (!path) {
       this.existingSubtitleFileName.set(null);
+    }
+  }
+
+  protected async onSelectMediaFile() {
+    const filePaths = await window.electronAPI.openFileDialog({
+      title: 'Select Media File',
+      properties: ['openFile'],
+      filters: [{name: 'Media Files', extensions: ['mp4', 'mkv', 'webm', 'mov', 'avi']}]
+    });
+    if (filePaths?.length > 0) {
+      this.mediaFilePath.set(filePaths[0]);
+    }
+  }
+
+  protected async onSelectSubtitleFile() {
+    const filePaths = await window.electronAPI.openFileDialog({
+      title: 'Select Subtitle File',
+      properties: ['openFile'],
+      filters: [{name: 'Subtitle Files', extensions: ['srt', 'vtt']}]
+    });
+    if (filePaths?.length > 0) {
+      this.subtitleFilePath.set(filePaths[0]);
     }
   }
 
@@ -97,35 +127,29 @@ export class ProjectFormComponent implements OnInit {
 
   private createNewProject() {
     if (!this.isValid()) {
-      this.messageService.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Both media and subtitle files are required.'
-      })
+      this.toastService.error('Both media and subtitle files are required');
       return;
     }
 
-    const media = this.mediaFile()!;
-    const subtitle = this.subtitleFile()!;
+    const mediaPath = this.mediaFilePath()!;
+    const subtitlePath = this.subtitleFilePath()!;
     const now = Date.now();
 
     const newProject: Project = {
       id: uuidv4(),
-      mediaFileName: media.name,
-      subtitleFileName: subtitle.name,
-      mediaUrl: URL.createObjectURL(media),
-      subtitleUrl: URL.createObjectURL(subtitle),
+      mediaFileName: this.getBaseName(mediaPath),
+      subtitleFileName: this.getBaseName(subtitlePath),
+      mediaPath: mediaPath,
+      subtitlePath: subtitlePath,
       lastOpenedDate: now,
       createdDate: now,
       duration: 0,
       lastPlaybackTime: 0,
       lastSubtitledClipEndTime: 0,
-      subtitledClipsCount: 0,
-      // TODO FileSystemFileHandle
+      subtitledClipsCount: 0
     };
 
     this.projectsStateService.createProject(newProject);
-
     this.router.navigate(['/project', newProject.id]);
   }
 
@@ -133,24 +157,26 @@ export class ProjectFormComponent implements OnInit {
     const projectId = this.editingProjectId();
     if (!projectId) return;
 
-    const newVideo = this.mediaFile();
-    const newSubtitle = this.subtitleFile();
+    const mediaPath = this.mediaFilePath()!;
+    const subtitlePath = this.subtitleFilePath()!;
 
-    const updates: Partial<Project> = {};
-
-    if (newVideo) {
-      updates.mediaUrl = URL.createObjectURL(newVideo);
-      updates.mediaFileName = newVideo.name;
-      updates.duration = 0; // TODO
-    }
-
-    if (newSubtitle) {
-      updates.subtitleUrl = URL.createObjectURL(newSubtitle);
-      updates.subtitleFileName = newSubtitle.name;
-      // TODO update subtitle stats here as well if a new sub file is provided
-    }
+    const updates: Partial<Project> = {
+      mediaPath: mediaPath,
+      subtitlePath: subtitlePath,
+      mediaFileName: this.getBaseName(mediaPath),
+      subtitleFileName: this.getBaseName(subtitlePath),
+      duration: 0, // TODO
+      lastPlaybackTime: 0,
+      lastSubtitledClipEndTime: 0,
+      subtitledClipsCount: 0
+    };
 
     this.projectsStateService.updateProject(projectId, updates);
-    this.router.navigate(['/projects']);
+    this.toastService.success();
+    this.router.navigate(['/project', projectId]);
+  }
+
+  private getBaseName(filePath: string): string {
+    return filePath.split(/[\\/]/).pop() || '';
   }
 }

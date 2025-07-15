@@ -38,7 +38,16 @@
               "node_modules/media-captions/styles/regions.css",
               "src/styles.scss"
             ],
-            "scripts": []
+            "scripts": [],
+            "allowedCommonJsDependencies": [
+              "video.js",
+              "wavesurfer.js",
+              "mux.js",
+              "@xmldom/xmldom",
+              "videojs-vtt.js",
+              "@videojs/xhr",
+              "global"
+            ]
           },
           "configurations": {
             "production": {

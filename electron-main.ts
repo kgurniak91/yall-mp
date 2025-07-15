@@ -1,4 +1,4 @@
-import {app, BrowserWindow} from 'electron';
+import {app, BrowserWindow, dialog, ipcMain} from 'electron';
 import path from 'path';
 
 function createWindow() {
@@ -8,7 +8,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      // preload: path.join(__dirname, 'preload.js') // TODO uncomment later
+      preload: path.join(__dirname, 'preload.js')
     },
   });
 
@@ -21,6 +21,10 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  ipcMain.handle('dialog:openFile', (event, options) => {
+    return handleFileOpen(options);
+  });
+
   createWindow();
 
   app.on('activate', () => {
@@ -35,3 +39,11 @@ app.on('window-all-closed', () => {
     app.quit();
   }
 });
+
+async function handleFileOpen(options: Electron.OpenDialogOptions) {
+  const {canceled, filePaths} = await dialog.showOpenDialog(options);
+  if (!canceled) {
+    return filePaths;
+  }
+  return []; // Return an empty array if the user cancels
+}

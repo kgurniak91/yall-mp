@@ -6,20 +6,18 @@
 
   <div class="drop-zones-grid">
     <!-- Video Drop Zone -->
-    <app-file-drop-zone label="Click here or drop video / audio file inside"
+    <app-file-drop-zone label="Drop media file here or click to select"
                         icon="fa-solid fa-file-video"
-                        accept="video/*,audio/*"
-                        [selectedFile]="mediaFile()"
-                        [existingFileName]="existingMediaFileName()"
-                        (fileChange)="onMediaFileChange($event)"/>
+                        [accept]="['mp4', 'mkv', 'webm', 'mov', 'avi']"
+                        [existingFileName]="!mediaFileJustChanged() ? existingMediaFileName() : null"
+                        (filePathChange)="onMediaFilePathChange($event)"/>
 
     <!-- Subtitle Drop Zone -->
-    <app-file-drop-zone label="Click here or drop subtitle file inside"
+    <app-file-drop-zone label="Drop subtitle file here or click to select"
                         icon="fa-solid fa-file-lines"
-                        accept=".srt,.vtt,.ass"
-                        [selectedFile]="subtitleFile()"
-                        [existingFileName]="existingSubtitleFileName()"
-                        (fileChange)="onSubtitleFileChange($event)"/>
+                        [accept]="['srt', 'vtt']"
+                        [existingFileName]="!subtitleFileJustChanged() ? existingSubtitleFileName() : null"
+                        (filePathChange)="onSubtitleFilePathChange($event)"/>
   </div>
 
   <div class="actions">

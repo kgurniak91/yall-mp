@@ -5,13 +5,6 @@
      (dragleave)="onDragLeave($event)"
      (drop)="onDrop($event)">
 
-  <!-- This input is triggered by clicking the div -->
-  <input type="file"
-         [accept]="accept()"
-         (change)="onFileSelect($event)"
-         #fileInput
-         hidden/>
-
   <!-- Show "Clear" button if a file is selected -->
   @if (isFileSelected()) {
     <i class="fa-solid fa-circle-xmark clear-icon"
@@ -20,7 +13,7 @@
   }
 
   <!-- Main content area that opens the file dialog on click -->
-  <div class="clickable-area" (click)="fileInput.click()">
+  <div class="clickable-area" (click)="onZoneClicked()">
     <i class="icon" [class]="icon()"></i>
     <span class="label" [class.selected-label]="isFileSelected()">{{ displayLabel() }}</span>
   </div>

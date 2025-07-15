@@ -2,10 +2,8 @@ export interface Project {
   id: string;
   mediaFileName: string;
   subtitleFileName: string;
-  mediaFileHandle?: FileSystemFileHandle;
-  subtitleFileHandle?: FileSystemFileHandle;
-  mediaUrl: string;
-  subtitleUrl: string;
+  mediaPath: string;
+  subtitlePath: string;
   lastOpenedDate: number;
   createdDate: number;
   duration: number;
