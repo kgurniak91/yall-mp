@@ -20,16 +20,14 @@ export class ProjectsStateService {
     return this._appData().projects.sort((a, b) => b.lastOpenedDate - a.lastOpenedDate);
   });
 
-  public readonly lastOpenedProjectId = computed(() => {
-    return this._appData()?.lastOpenedProjectId ?? null;
-  });
+  public readonly lastOpenedProjectId = computed(() => this._appData()?.lastOpenedProjectId);
 
   public readonly lastOpenedProject = computed(() => {
     return this._appData().projects.find(p => p.id === this.lastOpenedProjectId()) ?? null;
   });
 
   constructor() {
-    this.loadData();
+    this.loadAppDataFromStorage();
   }
 
   public getProjectById(projectId: string): Project | null {
@@ -40,39 +38,32 @@ export class ProjectsStateService {
     this._appData.update(data => {
       const projectExists = data.projects.some(p => p.id === project.id);
       if (projectExists) {
-        return data;
+        return data; // Project already exists, do nothing
       }
 
       const updatedProjects = [...data.projects, project];
-
-      // TODO parse subtiles etc.
-
       const newData: AppData = {
         ...data,
         projects: updatedProjects,
         lastOpenedProjectId: project.id // Make the new project the active one
       };
-
-      this.storageService.setItem(APP_DATA_KEY, newData);
+      this.saveAppDataToStorage(newData);
       return newData;
     });
   }
 
   public updateProject(projectId: string, updates: Partial<Project>): void {
-    const data = this._appData();
-    const projectIndex = data.projects.findIndex(p => p.id === projectId);
-
-    if (projectIndex === -1) {
-      console.error(`Project with ID ${projectId} not found. Cannot update.`);
-      return;
-    }
-
-    const originalProject = data.projects[projectIndex];
-    const updatedProject = { ...originalProject, ...updates };
-
-    // TODO parse subtiles etc.
-
     this._appData.update(currentData => {
+      const projectIndex = currentData.projects.findIndex(p => p.id === projectId);
+      if (projectIndex === -1) {
+        console.error(`Project with ID ${projectId} not found. Cannot update.`);
+        return currentData;
+      }
+
+      const updatedProject = {
+        ...currentData.projects[projectIndex],
+        ...updates
+      };
       const projectsCopy = [...currentData.projects];
       projectsCopy[projectIndex] = updatedProject;
 
@@ -80,39 +71,44 @@ export class ProjectsStateService {
         ...currentData,
         projects: projectsCopy
       };
-
-      this.storageService.setItem(APP_DATA_KEY, newData);
+      this.saveAppDataToStorage(newData);
       return newData;
     });
   }
 
-  public setCurrentProject(project: Project): void {
-    // 1. Get blob URLs from file handles
-    // 2. Update Video.js source
-    // 3. Parse subtitles and call clipsStateService.setCues()
-    // 4. Reset other states
+  public setCurrentProject(projectId: string): void {
+    this._appData.update(currentData => {
+      const projectIndex = currentData.projects.findIndex(p => p.id === projectId);
+      if (projectIndex === -1) {
+        return currentData; // Project not found
+      }
 
-    this._appData.update(data => ({
-      ...data,
-      lastOpenProjectId: project.id
-    }));
+      const projectToUpdate = {
+        ...currentData.projects[projectIndex],
+        lastOpenedDate: Date.now()
+      };
+      const projectsCopy = [...currentData.projects];
+      projectsCopy[projectIndex] = projectToUpdate;
 
-    this.storageService.setItem(APP_DATA_KEY, this._appData());
+      const newData: AppData = {
+        ...currentData,
+        projects: projectsCopy,
+        lastOpenedProjectId: projectId
+      };
+      this.saveAppDataToStorage(newData);
+      return newData;
+    });
   }
 
   public deleteProject(projectId: string): void {
     this._appData.update(data => {
-      const updatedProjects = this.projects().filter(p => p.id !== projectId);
+      const updatedProjects = data.projects.filter(p => p.id !== projectId);
+      let newLastOpenedProjectId = data.lastOpenedProjectId;
 
-      let newLastOpenedProjectId: string | null;
       if (data.lastOpenedProjectId === projectId) {
-        if (updatedProjects.length) {
-          newLastOpenedProjectId = updatedProjects[0].id; // last opened on top
-        } else {
-          newLastOpenedProjectId = null;
-        }
-      } else {
-        newLastOpenedProjectId = data.lastOpenedProjectId; // no change
+        // Sort remaining projects to find the most recently opened one
+        const sortedRemaining = updatedProjects.sort((a, b) => b.lastOpenedDate - a.lastOpenedDate);
+        newLastOpenedProjectId = sortedRemaining.length > 0 ? sortedRemaining[0].id : null;
       }
 
       const newData: AppData = {
@@ -120,17 +116,19 @@ export class ProjectsStateService {
         projects: updatedProjects,
         lastOpenedProjectId: newLastOpenedProjectId
       };
-
-      this.storageService.setItem(APP_DATA_KEY, newData);
-
+      this.saveAppDataToStorage(newData);
       return newData;
     });
   }
 
-  private loadData(): void {
+  private loadAppDataFromStorage(): void {
     const data = this.storageService.getItem<AppData>(APP_DATA_KEY);
     if (data) {
       this._appData.set(data);
     }
+  }
+
+  private saveAppDataToStorage(newData: AppData) {
+    this.storageService.setItem(APP_DATA_KEY, newData);
   }
 }

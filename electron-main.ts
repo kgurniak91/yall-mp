@@ -1,5 +1,7 @@
 import {app, BrowserWindow, dialog, ipcMain} from 'electron';
 import path from 'path';
+import {promises as fs} from 'fs';
+import {CaptionsFileFormat, ParsedCaptionsResult, parseResponse, VTTCue} from 'media-captions';
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -21,9 +23,8 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-  ipcMain.handle('dialog:openFile', (event, options) => {
-    return handleFileOpen(options);
-  });
+  ipcMain.handle('dialog:openFile', (_, options) => handleFileOpen(options));
+  ipcMain.handle('subtitle:parse', (_, filePath) => handleSubtitleParse(filePath));
 
   createWindow();
 
@@ -46,4 +47,22 @@ async function handleFileOpen(options: Electron.OpenDialogOptions) {
     return filePaths;
   }
   return []; // Return an empty array if the user cancels
+}
+
+async function handleSubtitleParse(filePath: string): Promise<null | VTTCue[]> {
+  try {
+    const content = await fs.readFile(filePath, 'utf-8');
+    const response = new Response(content);
+    const extension = path.extname(filePath).replace('.', ''); // .srt -> srt
+    const result: ParsedCaptionsResult = await parseResponse(response, {type: extension as CaptionsFileFormat});
+
+    if (result.errors.length > 0) {
+      console.warn('Encountered errors parsing subtitle file:', result.errors);
+    }
+
+    return result.cues;
+  } catch (error) {
+    console.error(`Error reading or parsing subtitle file at ${filePath}:`, error);
+    return null;
+  }
 }

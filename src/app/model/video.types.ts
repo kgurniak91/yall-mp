@@ -65,3 +65,6 @@ export interface PauseCommand {
 }
 
 export type VideoPlayerCommand = PlayCommand | PauseCommand;
+
+export const SUPPORTED_MEDIA_TYPES = ['mp4', 'mkv', 'webm', 'mov', 'avi'];
+export const SUPPORTED_SUBTITLE_TYPES = ['vtt', 'srt', 'ssa', 'ass'];

@@ -24,7 +24,8 @@ import {SubtitleBehavior} from '../../../model/settings.types';
   encapsulation: ViewEncapsulation.None
 })
 export class VideoControllerComponent {
-  public readonly options = input.required<VideoJsOptions>();
+  public readonly mediaPath = input.required<string | null>();
+  protected readonly options = signal<VideoJsOptions | null>(null);
   protected readonly command = signal<VideoPlayerCommand | null>(null);
   protected readonly PlayerState = PlayerState;
   protected readonly clipsStateService = inject(ClipsStateService);
@@ -83,6 +84,33 @@ export class VideoControllerComponent {
   protected onVideoAreaClicked(): void {
     this.handleTogglePlayPause();
   }
+
+  private initOptions = effect(() => {
+    const path = this.mediaPath();
+    if (path) {
+      this.options.set({
+        sources: [{
+          src: `file://${path}`,
+          type: this.getMimeType(path)
+        }],
+        autoplay: false,
+        loop: false,
+        controls: true,
+        fluid: true,
+        muted: false,
+        inactivityTimeout: 0,
+        responsive: true,
+        controlBar: {
+          fullscreenToggle: false,
+          pictureInPictureToggle: false,
+          playToggle: false
+        },
+        userActions: {
+          doubleClick: false
+        }
+      });
+    }
+  });
 
   private subtitleVisibilityHandler = effect(() => {
     const currentClip = this.clipsStateService.currentClip();
@@ -237,5 +265,21 @@ export class VideoControllerComponent {
       seekToTime: options?.seekToTime,
     };
     this.command.set(command);
+  }
+
+  private getMimeType(filename: string): string {
+    const extension = filename.split('.').pop()?.toLowerCase();
+    switch (extension) {
+      case 'mp4':
+        return 'video/mp4';
+      case 'mkv':
+        return 'video/mkv';
+      case 'webm':
+        return 'video/webm';
+      case 'ogv':
+        return 'video/ogg';
+      default:
+        return 'video/mp4'; // Default fallback
+    }
   }
 }

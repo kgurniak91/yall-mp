@@ -1,9 +1,11 @@
 <div class="video-container">
-  <app-video-player [options]="options()"
-                    [command]="command()"
-                    (clipEnded)="onClipEnded()"
-                    (progressBarClicked)="onProgressBarClicked($event)"
-                    (videoAreaClicked)="onVideoAreaClicked()"/>
+  @if (options(); as options) {
+    <app-video-player [options]="options"
+                      [command]="command()"
+                      (clipEnded)="onClipEnded()"
+                      (progressBarClicked)="onProgressBarClicked($event)"
+                      (videoAreaClicked)="onVideoAreaClicked()"/>
+  }
 
   @if (clipsStateService.playerState() !== PlayerState.Playing) {
     <div class="play-overlay always-visible">

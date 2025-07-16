@@ -1,7 +1,5 @@
 import {Component, computed, effect, inject, OnInit, signal} from '@angular/core';
 import {VideoControllerComponent} from './video-controller/video-controller.component';
-import {VideoJsOptions} from './video-controller/video-controller.type';
-import {ParsedCaptionsResult, parseResponse} from 'media-captions';
 import {VideoStateService} from '../../state/video/video-state.service';
 import {TimelineEditorComponent} from './timeline-editor/timeline-editor.component';
 import {Button} from 'primeng/button';
@@ -24,6 +22,7 @@ import {CommandHistoryStateService} from '../../state/command-history/command-hi
 import {EditSubtitlesDialogComponent} from './edit-subtitles-dialog/edit-subtitles-dialog.component';
 import {UpdateClipTextCommand} from '../../model/commands/update-clip-text.command';
 import {take} from 'rxjs';
+import {ToastService} from '../../shared/services/toast/toast.service';
 
 @Component({
   selector: 'app-project-details',
@@ -100,35 +99,14 @@ export class ProjectDetailsComponent implements OnInit {
   protected readonly settingsStateService = inject(SettingsStateService);
   protected readonly HiddenSubtitleStyle = HiddenSubtitleStyle;
   protected readonly project = signal<Project | null>(null);
-  protected readonly options: VideoJsOptions = {
-    sources: [
-      {
-        src: '/temp/marvel.mp4',
-        type: 'video/mp4'
-      }
-    ],
-    autoplay: false,
-    loop: false,
-    controls: true,
-    fluid: true,
-    muted: false,
-    inactivityTimeout: 0,
-    responsive: true,
-    controlBar: {
-      fullscreenToggle: false,
-      pictureInPictureToggle: false,
-      playToggle: false
-    },
-    userActions: {
-      doubleClick: false
-    }
-  };
+  protected readonly mediaPath = signal<string | null>(null);
   private wasPlayingBeforeSettingsOpened = false;
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly projectsStateService = inject(ProjectsStateService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly dialogService = inject(DialogService);
+  private readonly toastService = inject(ToastService);
   private dialogRef: DynamicDialogRef | undefined;
 
   constructor() {
@@ -137,18 +115,33 @@ export class ProjectDetailsComponent implements OnInit {
 
   async ngOnInit() {
     const projectId = this.route.snapshot.paramMap.get('id');
-    if (projectId) {
-      const foundProject = this.projectsStateService.getProjectById(projectId);
-      if (foundProject) {
-        this.project.set(foundProject);
-      } else {
-        this.router.navigate(['/projects']);
-      }
+
+    if (!projectId) {
+      this.toastService.error('No project ID provided');
+      this.router.navigate(['/projects']);
+      return;
     }
 
-    const response = fetch('/temp/marvel.srt');
-    const result: ParsedCaptionsResult = await parseResponse(response, {type: 'srt'});
-    this.clipsStateService.setCues(result.cues);
+    const foundProject = this.projectsStateService.getProjectById(projectId);
+
+    if (!foundProject) {
+      this.toastService.error(`Project with ID ${projectId} not found`);
+      this.router.navigate(['/projects']);
+      return;
+    }
+
+    this.project.set(foundProject);
+    this.mediaPath.set(foundProject!.mediaPath);
+    this.projectsStateService.setCurrentProject(projectId);
+
+    let cues = await window.electronAPI.parseSubtitleFile(foundProject.subtitlePath);
+
+    if (!cues) {
+      this.toastService.error('Error parsing subtitles');
+      cues = [];
+    }
+
+    this.clipsStateService.setCues(cues);
   }
 
   goToNextSubtitledClip() {

@@ -8,6 +8,7 @@ import {FileDropZoneComponent} from '../../shared/components/file-drop-zone/file
 import {v4 as uuidv4} from 'uuid';
 import {Location} from '@angular/common';
 import {ToastService} from '../../shared/services/toast/toast.service';
+import {SUPPORTED_MEDIA_TYPES, SUPPORTED_SUBTITLE_TYPES} from '../../model/video.types';
 
 const EDIT_CONFIRMATION_MESSAGE = `
 Are you sure you want to edit this project?
@@ -39,6 +40,8 @@ export class ProjectFormComponent implements OnInit {
   protected readonly subtitleFileJustChanged = signal(false);
   protected readonly editMode = signal(false);
   protected readonly pageTitle = computed(() => this.editMode() ? 'Edit Project' : 'Create a New Project');
+  protected readonly SUPPORTED_SUBTITLE_TYPES = SUPPORTED_SUBTITLE_TYPES;
+  protected readonly SUPPORTED_MEDIA_TYPES = SUPPORTED_MEDIA_TYPES;
   private readonly isValid = computed(() => Boolean(this.mediaFilePath()) && Boolean(this.subtitleFilePath()));
   private readonly editingProjectId = signal<string | null>(null);
   private readonly router = inject(Router);
@@ -79,28 +82,6 @@ export class ProjectFormComponent implements OnInit {
     this.subtitleFileJustChanged.set(true);
     if (!path) {
       this.existingSubtitleFileName.set(null);
-    }
-  }
-
-  protected async onSelectMediaFile() {
-    const filePaths = await window.electronAPI.openFileDialog({
-      title: 'Select Media File',
-      properties: ['openFile'],
-      filters: [{name: 'Media Files', extensions: ['mp4', 'mkv', 'webm', 'mov', 'avi']}]
-    });
-    if (filePaths?.length > 0) {
-      this.mediaFilePath.set(filePaths[0]);
-    }
-  }
-
-  protected async onSelectSubtitleFile() {
-    const filePaths = await window.electronAPI.openFileDialog({
-      title: 'Select Subtitle File',
-      properties: ['openFile'],
-      filters: [{name: 'Subtitle Files', extensions: ['srt', 'vtt']}]
-    });
-    if (filePaths?.length > 0) {
-      this.subtitleFilePath.set(filePaths[0]);
     }
   }
 
