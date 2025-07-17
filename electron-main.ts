@@ -3,6 +3,8 @@ import path from 'path';
 import {promises as fs} from 'fs';
 import {CaptionsFileFormat, ParsedCaptionsResult, parseResponse, VTTCue} from 'media-captions';
 
+const FORCED_GAP_SECONDS = 0.05;
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1920,
@@ -60,9 +62,42 @@ async function handleSubtitleParse(filePath: string): Promise<null | VTTCue[]> {
       console.warn('Encountered errors parsing subtitle file:', result.errors);
     }
 
-    return result.cues;
+    return preprocessCues(result.cues);
   } catch (error) {
     console.error(`Error reading or parsing subtitle file at ${filePath}:`, error);
     return null;
   }
+}
+
+function preprocessCues(cues: VTTCue[]): VTTCue[] {
+  if (cues.length < 2) {
+    return cues;
+  }
+
+  const sanitizedCues: VTTCue[] = [];
+  // The first cue is always fine as-is.
+  sanitizedCues.push(cues[0]);
+
+  for (let i = 1; i < cues.length; i++) {
+    const previousCue = sanitizedCues[i - 1];
+    const currentCue = cues[i];
+
+    if (currentCue.startTime <= previousCue.endTime) {
+      // CONFLICT: The current cue starts too early, adjust it.
+      const originalDuration = currentCue.endTime - currentCue.startTime;
+
+      // Push the start time forward by the previous cue's end time plus the gap.
+      const newStartTime = previousCue.endTime + FORCED_GAP_SECONDS;
+      const newEndTime = newStartTime + originalDuration;
+      const adjustedCue = new VTTCue(newStartTime, newEndTime, currentCue.text);
+      adjustedCue.id = currentCue.id;
+
+      sanitizedCues.push(adjustedCue);
+    } else {
+      // NO CONFLICT: The natural gap is sufficient. Add the cue as-is.
+      sanitizedCues.push(currentCue);
+    }
+  }
+
+  return sanitizedCues;
 }
