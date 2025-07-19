@@ -2,7 +2,7 @@ import {Component, computed, input, output} from '@angular/core';
 import {Project} from '../../../model/project.types';
 import {Button} from 'primeng/button';
 import {Tooltip} from 'primeng/tooltip';
-import {DatePipe} from '@angular/common';
+import {DatePipe, DecimalPipe} from '@angular/common';
 import {ProgressBar} from 'primeng/progressbar';
 
 @Component({
@@ -11,7 +11,8 @@ import {ProgressBar} from 'primeng/progressbar';
     Button,
     Tooltip,
     DatePipe,
-    ProgressBar
+    ProgressBar,
+    DecimalPipe
   ],
   templateUrl: './project-list-item.component.html',
   styleUrl: './project-list-item.component.scss'
@@ -24,9 +25,19 @@ export class ProjectListItemComponent {
 
   protected readonly completionPercentage = computed(() => {
     const project = this.project();
+    const subtitles = project.subtitles;
+
+    if (!subtitles) {
+      return 0;
+    } else if (subtitles.length === 0) {
+      return 100;
+    }
+
+    const lastSubtitleEndTime = subtitles[subtitles.length - 1].endTime;
+
     if (!project.duration) {
       return 0;
-    } else if (project.lastPlaybackTime >= project.lastSubtitledClipEndTime) {
+    } else if (project.lastPlaybackTime >= lastSubtitleEndTime) {
       return 100;
     } else {
       return (project.lastPlaybackTime / project.duration) * 100;

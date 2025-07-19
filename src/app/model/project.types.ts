@@ -1,4 +1,5 @@
 import {ProjectSettings} from './settings.types';
+import type {SubtitleData} from '../../../shared/types/subtitle.type';
 
 export interface Project {
   id: string;
@@ -10,9 +11,8 @@ export interface Project {
   createdDate: number;
   duration: number;
   lastPlaybackTime: number;
-  lastSubtitledClipEndTime: number;
-  subtitledClipsCount: number;
   settings: ProjectSettings;
+  subtitles: SubtitleData[];
 }
 
 export interface AppData {

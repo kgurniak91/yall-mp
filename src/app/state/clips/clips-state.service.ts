@@ -1,13 +1,14 @@
-import {computed, inject, Injectable, Signal, signal} from '@angular/core';
+import {computed, effect, inject, Injectable, Signal, signal} from '@angular/core';
 import {VideoStateService} from '../video/video-state.service';
 import {PlayerState, SeekDirection, VideoClip} from '../../model/video.types';
-import {VTTCue} from 'media-captions';
 import {ProjectSettingsStateService} from '../project-settings/project-settings-state.service';
 import {CommandHistoryStateService} from '../command-history/command-history-state.service';
 import {UpdateClipTimesCommand} from '../../model/commands/update-clip-times.command';
 import {ToastService} from '../../shared/services/toast/toast.service';
 import {SplitSubtitledClipCommand} from '../../model/commands/split-subtitled-clip.command';
 import {DeleteGapCommand} from '../../model/commands/delete-gap.command';
+import {ProjectsStateService} from '../projects/projects-state.service';
+import type {SubtitleData} from '../../../../shared/types/subtitle.type';
 
 const MIN_CLIP_DURATION = 0.1;
 const ADJUST_DEBOUNCE_MS = 50;
@@ -19,11 +20,14 @@ export class ClipsStateService {
   private readonly videoStateService = inject(VideoStateService);
   private readonly projectSettingsStateService = inject(ProjectSettingsStateService);
   private readonly commandHistoryStateService = inject(CommandHistoryStateService);
+  private readonly projectsStateService = inject(ProjectsStateService);
   private readonly toastService = inject(ToastService);
-  private readonly _cues = signal<VTTCue[]>([]);
+  private readonly _subtitles = signal<SubtitleData[]>([]);
   private readonly _currentClipIndex = signal(0);
   private readonly _playerState = signal<PlayerState>(PlayerState.Idle);
   private adjustDebounceTimer: any;
+  private isInitialized = false;
+  private _projectId: string | null = null;
 
   public readonly currentClipIndex = this._currentClipIndex.asReadonly();
   public readonly playerState = this._playerState.asReadonly();
@@ -33,12 +37,30 @@ export class ClipsStateService {
     return this.clips()[this.currentClipIndex()];
   });
 
+  constructor() {
+    effect(() => {
+      const subtitles = this._subtitles();
+      const projectId = this._projectId;
+
+      if (!projectId || (subtitles.length === 0 && !this.isInitialized)) {
+        return;
+      }
+
+      this.projectsStateService.updateProject(projectId, {subtitles});
+    });
+  }
+
+  public setProjectId(id: string): void {
+    this._projectId = id;
+  }
+
   public setPlayerState(playerState: PlayerState): void {
     this._playerState.set(playerState);
   }
 
-  public setCues(cues: VTTCue[]): void {
-    this._cues.set(cues);
+  public setSubtitles(subtitles: SubtitleData[]): void {
+    this._subtitles.set(subtitles);
+    this.isInitialized = true;
   }
 
   public setCurrentClipByIndex(index: number): void {
@@ -63,29 +85,29 @@ export class ClipsStateService {
     this.commandHistoryStateService.execute(command);
   }
 
-  public splitClip(clipId: string, onSplitCallback?: (originalText: string, newCueId: string) => void): void {
-    const originalCueId = clipId.replace('subtitle-', '');
-    const cues = this._cues();
-    const cueIndex = cues.findIndex(c => c.id === originalCueId);
-    if (cueIndex === -1) {
+  public splitSubtitledClip(clipId: string, onSplitCallback?: (originalText: string, newSubtitleId: string) => void): void {
+    const originalSubtitleId = clipId.replace('subtitle-', '');
+    const subtitles = this._subtitles();
+    const subtitleIndex = subtitles.findIndex(c => c.id === originalSubtitleId);
+    if (subtitleIndex === -1) {
       return;
     }
 
-    const originalCue = cues[cueIndex];
-    const splitPoint = originalCue.startTime + ((originalCue.endTime - originalCue.startTime) / 2);
-    const newCues = [...cues];
+    const originalSubtitle = subtitles[subtitleIndex];
+    const splitPoint = originalSubtitle.startTime + ((originalSubtitle.endTime - originalSubtitle.startTime) / 2);
+    const newSubtitles = [...subtitles];
 
-    const secondPartCue = new VTTCue(
-      splitPoint + NEW_GAP_DURATION,
-      originalCue.endTime,
-      originalCue.text
-    );
-    secondPartCue.id = crypto.randomUUID();
-    onSplitCallback?.(originalCue.text, secondPartCue.id);
+    const secondPartSubtitle: SubtitleData = {
+      ...originalSubtitle,
+      id: crypto.randomUUID(),
+      startTime: splitPoint + NEW_GAP_DURATION
+    }
 
-    originalCue.endTime = splitPoint;
-    newCues.splice(cueIndex + 1, 0, secondPartCue);
-    this._cues.set(newCues);
+    onSplitCallback?.(originalSubtitle.text, secondPartSubtitle.id);
+
+    originalSubtitle.endTime = splitPoint;
+    newSubtitles.splice(subtitleIndex + 1, 0, secondPartSubtitle);
+    this._subtitles.set(newSubtitles);
   }
 
   public deleteCurrentGap(): void {
@@ -111,38 +133,38 @@ export class ClipsStateService {
   public mergeClips(
     firstClipId: string,
     secondClipId: string,
-    onMergeCallback?: (originalFirstCue: VTTCue, deletedSecondCue: VTTCue) => void,
+    onMergeCallback?: (originalFirstSubtitle: SubtitleData, deletedSecondSubtitle: SubtitleData) => void,
     newText?: string
   ): void {
     const timeBeforeDelete = this.videoStateService.currentTime();
-    const firstCueId = firstClipId.replace('subtitle-', '');
-    const secondCueId = secondClipId.replace('subtitle-', '');
-    const cues = this._cues();
-    const firstCueIndex = cues.findIndex(c => c.id === firstCueId);
-    const secondCueIndex = cues.findIndex(c => c.id === secondCueId);
+    const firstSubtitleId = firstClipId.replace('subtitle-', '');
+    const secondSubtitleId = secondClipId.replace('subtitle-', '');
+    const subtitles = this._subtitles();
+    const firstSubtitleIndex = subtitles.findIndex(c => c.id === firstSubtitleId);
+    const secondSubtitleIndex = subtitles.findIndex(c => c.id === secondSubtitleId);
 
-    if (firstCueIndex === -1 || secondCueIndex === -1) {
+    if (firstSubtitleIndex === -1 || secondSubtitleIndex === -1) {
       return;
     }
 
-    const newCues = [...cues];
-    const firstCue = newCues[firstCueIndex];
-    const secondCue = newCues[secondCueIndex];
+    const newSubtitles = [...subtitles];
+    const firstSubtitle = newSubtitles[firstSubtitleIndex];
+    const secondSubtitle = newSubtitles[secondSubtitleIndex];
 
     // The callback provides the original data to the command for its undo state
-    onMergeCallback?.(firstCue, secondCue);
+    onMergeCallback?.(firstSubtitle, secondSubtitle);
 
     // Perform the merge
-    firstCue.endTime = secondCue.endTime;
+    firstSubtitle.endTime = secondSubtitle.endTime;
 
     if (newText !== undefined) {
-      firstCue.text = newText;
+      firstSubtitle.text = newText;
     } else {
-      firstCue.text += `\n${secondCue.text}`;
+      firstSubtitle.text += `\n${secondSubtitle.text}`;
     }
 
-    newCues.splice(secondCueIndex, 1);
-    this._cues.set(newCues);
+    newSubtitles.splice(secondSubtitleIndex, 1);
+    this._subtitles.set(newSubtitles);
 
     // Re-synchronize the active clip index:
     const newClipsArray = this.clips();
@@ -160,25 +182,25 @@ export class ClipsStateService {
     firstClipId: string,
     originalEndTime: number,
     originalText: string,
-    secondCueToRestore: VTTCue
+    secondSubtitleToRestore: SubtitleData
   ): void {
-    const firstCueId = firstClipId.replace('subtitle-', '');
-    const cues = this._cues();
-    const firstCueIndex = cues.findIndex(c => c.id === firstCueId);
-    if (firstCueIndex === -1) {
+    const firstSubtitleId = firstClipId.replace('subtitle-', '');
+    const subtitles = this._subtitles();
+    const firstSubtitleIndex = subtitles.findIndex(c => c.id === firstSubtitleId);
+    if (firstSubtitleIndex === -1) {
       return;
     }
 
-    const newCues = [...cues];
+    const newSubtitles = [...subtitles];
 
-    // Restore the first cue to its original state
-    newCues[firstCueIndex].endTime = originalEndTime;
-    newCues[firstCueIndex].text = originalText;
+    // Restore the first subtitle to its original state
+    newSubtitles[firstSubtitleIndex].endTime = originalEndTime;
+    newSubtitles[firstSubtitleIndex].text = originalText;
 
-    // Re-insert the second cue
-    newCues.splice(firstCueIndex + 1, 0, secondCueToRestore);
+    // Re-insert the second subtitle
+    newSubtitles.splice(firstSubtitleIndex + 1, 0, secondSubtitleToRestore);
 
-    this._cues.set(newCues);
+    this._subtitles.set(newSubtitles);
   }
 
   public updateClipText(clipId: string, newText: string): void {
@@ -193,8 +215,7 @@ export class ClipsStateService {
       clip.id === clipId ? {...clip, text: newText} : clip
     );
 
-    // TODO directly manipulate the `_cues` signal?
-    this.updateCuesFromClips(updatedClips);
+    this.updateSubtitlesFromClips(updatedClips);
   }
 
   public advanceToNextClip(): void {
@@ -246,7 +267,7 @@ export class ClipsStateService {
       }
     }
 
-    this.updateCuesFromClips(updatedClips);
+    this.updateSubtitlesFromClips(updatedClips);
   }
 
   public adjustCurrentClipBoundary(boundary: 'start' | 'end', direction: 'left' | 'right'): void {
@@ -372,45 +393,46 @@ export class ClipsStateService {
     return undefined; // No adjacent subtitle clip was found
   }
 
-  private updateCuesFromClips(updatedClips: VideoClip[]): void {
-    const newCues: VTTCue[] = updatedClips
+  private updateSubtitlesFromClips(updatedClips: VideoClip[]): void {
+    const newSubtitles: SubtitleData[] = updatedClips
       .filter(clip => clip.hasSubtitle)
       .map(clip => {
-        const newCue = new VTTCue(clip.startTime, clip.endTime, clip.text || '');
-        const originalCueId = clip.id.startsWith('subtitle-') ? clip.id.substring('subtitle-'.length) : clip.id;
-        newCue.id = originalCueId;
-        return newCue;
+        return {
+          ...clip,
+          text: clip.text || '',
+          id: clip.id.startsWith('subtitle-') ? clip.id.substring('subtitle-'.length) : clip.id
+        };
       });
-    this._cues.set(newCues);
+    this._subtitles.set(newSubtitles);
   }
 
   private generateClips(): VideoClip[] {
-    const cues = this._cues();
+    const subtitles = this._subtitles();
     const duration = this.videoStateService.duration();
     if (!duration) return [];
 
     const generatedClips: VideoClip[] = [];
     let lastTime = 0;
 
-    cues.forEach((cue, index) => {
-      if (cue.startTime > lastTime) {
+    subtitles.forEach((subtitle, index) => {
+      if (subtitle.startTime > lastTime) {
         generatedClips.push({
           id: `gap-${index}`,
           startTime: lastTime,
-          endTime: cue.startTime,
-          duration: cue.startTime - lastTime,
+          endTime: subtitle.startTime,
+          duration: subtitle.startTime - lastTime,
           hasSubtitle: false
         });
       }
       generatedClips.push({
-        id: `subtitle-${cue.id}`,
-        startTime: cue.startTime,
-        endTime: cue.endTime,
-        duration: cue.endTime - cue.startTime,
-        text: cue.text,
+        id: `subtitle-${subtitle.id}`,
+        startTime: subtitle.startTime,
+        endTime: subtitle.endTime,
+        duration: subtitle.endTime - subtitle.startTime,
+        text: subtitle.text,
         hasSubtitle: true
       });
-      lastTime = cue.endTime;
+      lastTime = subtitle.endTime;
     });
 
     if (lastTime < duration) {

@@ -127,9 +127,8 @@ export class ProjectFormComponent implements OnInit {
       createdDate: now,
       duration: 0,
       lastPlaybackTime: 0,
-      lastSubtitledClipEndTime: 0,
-      subtitledClipsCount: 0,
-      settings: {...DEFAULT_PROJECT_SETTINGS}
+      settings: {...DEFAULT_PROJECT_SETTINGS},
+      subtitles: []
     };
 
     this.projectsStateService.createProject(newProject);
@@ -148,10 +147,8 @@ export class ProjectFormComponent implements OnInit {
       subtitlePath: subtitlePath,
       mediaFileName: this.getBaseName(mediaPath),
       subtitleFileName: this.getBaseName(subtitlePath),
-      duration: 0, // TODO
-      lastPlaybackTime: 0,
-      lastSubtitledClipEndTime: 0,
-      subtitledClipsCount: 0
+      duration: 0,
+      lastPlaybackTime: 0
     };
 
     this.projectsStateService.updateProject(projectId, updates);

@@ -1,8 +1,11 @@
-import {Injectable, Signal, signal} from '@angular/core';
+import {DestroyRef, inject, Injectable, Injector, OnDestroy, Signal, signal} from '@angular/core';
 import {SeekType} from '../../model/video.types';
+import {ProjectsStateService} from '../projects/projects-state.service';
+import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
+import {auditTime, throttleTime} from 'rxjs';
 
 @Injectable()
-export class VideoStateService {
+export class VideoStateService implements OnDestroy {
   private readonly _currentTime = signal(0);
   private readonly _duration = signal(0);
   private readonly _videoElement = signal<HTMLVideoElement | null>(null);
@@ -13,6 +16,11 @@ export class VideoStateService {
   private readonly _forceContinueRequest = signal<number | null>(null);
   private readonly _toggleSettingsRequest = signal<number | null>(null);
   private readonly _editSubtitlesRequest = signal<number | null>(null);
+  private readonly _syncTimelineRequest = signal<number | null>(null);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
+  private readonly projectsStateService = inject(ProjectsStateService);
+  private _projectId: string | null = null;
 
   public readonly videoElement: Signal<HTMLVideoElement | null> = this._videoElement.asReadonly();
   public readonly currentTime: Signal<number> = this._currentTime.asReadonly();
@@ -24,6 +32,22 @@ export class VideoStateService {
   public readonly forceContinueRequest = this._forceContinueRequest.asReadonly();
   public readonly toggleSettingsRequest = this._toggleSettingsRequest.asReadonly();
   public readonly editSubtitlesRequest = this._editSubtitlesRequest.asReadonly();
+  public readonly syncTimelineRequest = this._syncTimelineRequest.asReadonly();
+
+  ngOnDestroy(): void {
+    if (!this._projectId) {
+      return;
+    }
+
+    this.projectsStateService.updateProject(this._projectId, {
+      lastPlaybackTime: this.currentTime()
+    });
+  }
+
+  public setProjectId(id: string): void {
+    this._projectId = id;
+    this.setupPeriodicSaving();
+  }
 
   public setCurrentTime(time: number): void {
     this._currentTime.set(time);
@@ -67,10 +91,12 @@ export class VideoStateService {
 
   public seekRelative(time: number): void {
     this._seekRequest.set({time, type: SeekType.Relative});
+    this._syncTimelineRequest.set(Date.now());
   }
 
   public seekAbsolute(time: number): void {
     this._seekRequest.set({time, type: SeekType.Absolute});
+    this._syncTimelineRequest.set(Date.now());
   }
 
   public clearSeekRequest(): void {
@@ -95,5 +121,20 @@ export class VideoStateService {
 
   public clearEditSubtitlesRequest(): void {
     this._editSubtitlesRequest.set(null);
+  }
+
+  private setupPeriodicSaving(): void {
+    if (!this._projectId) {
+      return;
+    }
+
+    toObservable(this.currentTime, {injector: this.injector}).pipe(
+      auditTime(5000),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(currentTime => {
+      if (this._projectId && this.duration() > 0) {
+        this.projectsStateService.updateProject(this._projectId, {lastPlaybackTime: currentTime});
+      }
+    });
   }
 }

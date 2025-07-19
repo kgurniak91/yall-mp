@@ -1,10 +1,11 @@
 import {Command} from './commands.types';
 import {ClipsStateService} from '../../state/clips/clips-state.service';
+import type {SubtitleData} from '../../../../shared/types/subtitle.type';
 
 export class DeleteGapCommand implements Command {
-  private originalSecondCue: VTTCue | undefined;
-  private originalFirstCueEndTime: number | undefined;
-  private originalFirstCueText: string | undefined;
+  private originalSecondSubtitle: SubtitleData | undefined;
+  private originalFirstSubtitleEndTime: number | undefined;
+  private originalFirstSubtitleText: string | undefined;
 
   constructor(
     private clipsStateService: ClipsStateService,
@@ -17,30 +18,25 @@ export class DeleteGapCommand implements Command {
     this.clipsStateService.mergeClips(
       this.firstClipId,
       this.secondClipId,
-      (originalFirstCue, deletedSecondCue) => {
-        this.originalFirstCueEndTime = originalFirstCue.endTime;
-        this.originalFirstCueText = originalFirstCue.text;
-        this.originalSecondCue = new VTTCue(
-          deletedSecondCue.startTime,
-          deletedSecondCue.endTime,
-          deletedSecondCue.text
-        );
-        this.originalSecondCue.id = deletedSecondCue.id;
+      (originalFirstSubtitle, deletedSecondSubtitle) => {
+        this.originalFirstSubtitleEndTime = originalFirstSubtitle.endTime;
+        this.originalFirstSubtitleText = originalFirstSubtitle.text;
+        this.originalSecondSubtitle = {...deletedSecondSubtitle};
       }
     );
   }
 
   undo(): void {
-    if (!this.originalSecondCue || this.originalFirstCueEndTime === undefined || this.originalFirstCueText === undefined) {
-      console.error("Cannot undo merge: original cue data was not captured.");
+    if (!this.originalSecondSubtitle || this.originalFirstSubtitleEndTime === undefined || this.originalFirstSubtitleText === undefined) {
+      console.error("Cannot undo merge: original subtitle data was not captured.");
       return;
     }
 
     this.clipsStateService.unmergeClips(
       this.firstClipId,
-      this.originalFirstCueEndTime,
-      this.originalFirstCueText,
-      this.originalSecondCue
+      this.originalFirstSubtitleEndTime,
+      this.originalFirstSubtitleText,
+      this.originalSecondSubtitle
     );
   }
 }

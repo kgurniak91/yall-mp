@@ -1,6 +1,6 @@
 export interface IElectronAPI {
   openFileDialog: (options: any) => Promise<string[]>;
-  parseSubtitleFile: (filePath: string) => Promise<VTTCue[] | null>;
+  parseSubtitleFile: (filePath: string) => Promise<SubtitleData[]>;
 }
 
 declare global {

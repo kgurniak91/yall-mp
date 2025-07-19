@@ -38,6 +38,6 @@
 
   <div class="project-progress">
     <p-progress-bar [value]="completionPercentage()" [showValue]="false"/>
-    <span class="custom-progress-label">{{ completionPercentage() }}%</span>
+    <span class="custom-progress-label">{{ completionPercentage() | number:'1.2-2' }}%</span>
   </div>
 </div>

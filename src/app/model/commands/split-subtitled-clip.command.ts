@@ -2,7 +2,7 @@ import {Command} from './commands.types';
 import {ClipsStateService} from '../../state/clips/clips-state.service';
 
 export class SplitSubtitledClipCommand implements Command {
-  private newCueId: string | undefined;
+  private newSubtitleId: string | undefined;
   private originalText: string | undefined;
 
   constructor(
@@ -12,24 +12,24 @@ export class SplitSubtitledClipCommand implements Command {
   }
 
   execute(): void {
-    this.clipsStateService.splitClip(
+    this.clipsStateService.splitSubtitledClip(
       this.clipIdToSplit,
-      (originalText, newlyCreatedCueId) => {
+      (originalText, newlyCreatedSubtitleId) => {
         this.originalText = originalText;
-        this.newCueId = newlyCreatedCueId;
+        this.newSubtitleId = newlyCreatedSubtitleId;
       }
     );
   }
 
   undo(): void {
-    if (!this.newCueId || this.originalText === undefined) {
-      console.error("Cannot undo split: original text or new cue ID was not captured.");
+    if (!this.newSubtitleId || this.originalText === undefined) {
+      console.error("Cannot undo split: original text or new subtitle ID was not captured.");
       return;
     }
 
     this.clipsStateService.mergeClips(
       this.clipIdToSplit,
-      this.newCueId,
+      this.newSubtitleId,
       undefined, // No onMerge callback needed for undo
       this.originalText // Pass the original text to restore
     );

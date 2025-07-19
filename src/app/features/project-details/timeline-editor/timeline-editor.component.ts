@@ -6,7 +6,7 @@ import {
   HostListener,
   inject,
   OnDestroy,
-  signal,
+  signal, untracked,
   viewChild
 } from '@angular/core';
 import WaveSurfer from 'wavesurfer.js';
@@ -32,6 +32,7 @@ const ZOOM_FACTOR = 1.2;
 export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
   protected readonly timelineContainer = viewChild.required<ElementRef<HTMLDivElement>>('timeline');
   protected readonly loading = signal(true);
+  private readonly isWaveSurferReady = signal(false);
   private videoStateService = inject(VideoStateService);
   private clipsStateService = inject(ClipsStateService);
   private elementRef = inject(ElementRef);
@@ -112,6 +113,16 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
     }
   }
 
+  private syncTimelineListener = effect(() => {
+    const isReady = this.isWaveSurferReady();
+    const syncRequest = this.videoStateService.syncTimelineRequest();
+
+    if (isReady && syncRequest) {
+      const timeToScroll = untracked(() => this.videoStateService.currentTime());
+      this.wavesurfer?.setScrollTime(timeToScroll);
+    }
+  });
+
   private timelineRenderer = effect(() => {
     const clips = this.clipsStateService.clips();
     const duration = this.videoStateService.duration();
@@ -184,6 +195,7 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
       const currentZoom = this.currentZoom();
       this.wavesurfer.zoom(currentZoom + 1);
       this.wavesurfer.zoom(currentZoom);
+      this.isWaveSurferReady.set(true);
     }
     this.loading.set(false);
   };

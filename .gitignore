@@ -46,3 +46,5 @@ Thumbs.db
 # Electron
 electron-main.js
 electron-main.js.map
+/shared/types/*.js
+/shared/types/*.js.map

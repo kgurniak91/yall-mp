@@ -2,6 +2,7 @@ import {app, BrowserWindow, dialog, ipcMain} from 'electron';
 import path from 'path';
 import {promises as fs} from 'fs';
 import {CaptionsFileFormat, ParsedCaptionsResult, parseResponse, VTTCue} from 'media-captions';
+import type {SubtitleData} from './shared/types/subtitle.type';
 
 const FORCED_GAP_SECONDS = 0.05;
 
@@ -51,7 +52,7 @@ async function handleFileOpen(options: Electron.OpenDialogOptions) {
   return []; // Return an empty array if the user cancels
 }
 
-async function handleSubtitleParse(filePath: string): Promise<null | VTTCue[]> {
+async function handleSubtitleParse(filePath: string): Promise<SubtitleData[]> {
   try {
     const content = await fs.readFile(filePath, 'utf-8');
     const response = new Response(content);
@@ -62,42 +63,52 @@ async function handleSubtitleParse(filePath: string): Promise<null | VTTCue[]> {
       console.warn('Encountered errors parsing subtitle file:', result.errors);
     }
 
-    return preprocessCues(result.cues);
+    const subtitles: SubtitleData[] = result.cues.map((vttCue: VTTCue) => ({
+      id: vttCue.id,
+      startTime: vttCue.startTime,
+      endTime: vttCue.endTime,
+      text: vttCue.text
+    }));
+
+    return preprocessSubtitles(subtitles);
   } catch (error) {
     console.error(`Error reading or parsing subtitle file at ${filePath}:`, error);
-    return null;
+    return [];
   }
 }
 
-function preprocessCues(cues: VTTCue[]): VTTCue[] {
-  if (cues.length < 2) {
-    return cues;
+function preprocessSubtitles(subtitles: SubtitleData[]): SubtitleData[] {
+  if (subtitles.length < 2) {
+    return subtitles;
   }
 
-  const sanitizedCues: VTTCue[] = [];
-  // The first cue is always fine as-is.
-  sanitizedCues.push(cues[0]);
+  const sanitizedSubtitles: SubtitleData[] = [];
+  // The first subtitle is always fine as-is.
+  sanitizedSubtitles.push(subtitles[0]);
 
-  for (let i = 1; i < cues.length; i++) {
-    const previousCue = sanitizedCues[i - 1];
-    const currentCue = cues[i];
+  for (let i = 1; i < subtitles.length; i++) {
+    const previousSubtitle = sanitizedSubtitles[i - 1];
+    const currentSubtitle = subtitles[i];
 
-    if (currentCue.startTime <= previousCue.endTime) {
-      // CONFLICT: The current cue starts too early, adjust it.
-      const originalDuration = currentCue.endTime - currentCue.startTime;
+    if (currentSubtitle.startTime <= previousSubtitle.endTime) {
+      // CONFLICT: The current subtitle starts too early, adjust it.
+      const originalDuration = currentSubtitle.endTime - currentSubtitle.startTime;
 
-      // Push the start time forward by the previous cue's end time plus the gap.
-      const newStartTime = previousCue.endTime + FORCED_GAP_SECONDS;
+      // Push the start time forward by the previous subtitle's end time plus the gap
+      const newStartTime = previousSubtitle.endTime + FORCED_GAP_SECONDS;
       const newEndTime = newStartTime + originalDuration;
-      const adjustedCue = new VTTCue(newStartTime, newEndTime, currentCue.text);
-      adjustedCue.id = currentCue.id;
+      const adjustedSubtitle: SubtitleData = {
+        ...currentSubtitle,
+        startTime: newStartTime,
+        endTime: newEndTime
+      }
 
-      sanitizedCues.push(adjustedCue);
+      sanitizedSubtitles.push(adjustedSubtitle);
     } else {
-      // NO CONFLICT: The natural gap is sufficient. Add the cue as-is.
-      sanitizedCues.push(currentCue);
+      // NO CONFLICT: The natural gap is sufficient. Add the subtitle as-is.
+      sanitizedSubtitles.push(currentSubtitle);
     }
   }
 
-  return sanitizedCues;
+  return sanitizedSubtitles;
 }

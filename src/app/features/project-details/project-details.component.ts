@@ -1,4 +1,4 @@
-import {Component, computed, effect, inject, OnInit, signal} from '@angular/core';
+import {Component, computed, effect, inject, OnInit, signal, untracked} from '@angular/core';
 import {VideoControllerComponent} from './video-controller/video-controller.component';
 import {VideoStateService} from '../../state/video/video-state.service';
 import {TimelineEditorComponent} from './timeline-editor/timeline-editor.component';
@@ -23,6 +23,7 @@ import {EditSubtitlesDialogComponent} from './edit-subtitles-dialog/edit-subtitl
 import {UpdateClipTextCommand} from '../../model/commands/update-clip-text.command';
 import {take} from 'rxjs';
 import {ToastService} from '../../shared/services/toast/toast.service';
+import type {SubtitleData} from '../../../../shared/types/subtitle.type';
 
 @Component({
   selector: 'app-project-details',
@@ -123,6 +124,28 @@ export class ProjectDetailsComponent implements OnInit {
         this.projectsStateService.updateProject(currentProject.id, {settings: currentSettings});
       }
     });
+
+    effect(() => {
+      const duration = this.videoStateService.duration();
+      const project = this.project();
+
+      if (project && duration > 0 && project.duration !== duration) {
+        this.projectsStateService.updateProject(project.id, {duration: duration});
+      }
+    });
+
+    effect(() => {
+      const project = this.project();
+      const duration = this.videoStateService.duration();
+
+      if (project && duration > 0) {
+        const seekTime = untracked(() => project.lastPlaybackTime);
+
+        if (seekTime > 0) {
+          this.videoStateService.seekAbsolute(seekTime);
+        }
+      }
+    });
   }
 
   async ngOnInit() {
@@ -146,15 +169,17 @@ export class ProjectDetailsComponent implements OnInit {
     this.mediaPath.set(foundProject!.mediaPath);
     this.projectSettingsStateService.loadSettings(foundProject.settings);
     this.projectsStateService.setCurrentProject(projectId);
+    this.clipsStateService.setProjectId(projectId);
+    this.videoStateService.setProjectId(projectId);
 
-    let cues = await window.electronAPI.parseSubtitleFile(foundProject.subtitlePath);
-
-    if (!cues) {
-      this.toastService.error('Error parsing subtitles');
-      cues = [];
+    let subtitles: SubtitleData[];
+    if (foundProject.subtitles?.length > 0) {
+      subtitles = foundProject.subtitles;
+    } else {
+      subtitles = await window.electronAPI.parseSubtitleFile(foundProject.subtitlePath);
     }
 
-    this.clipsStateService.setCues(cues);
+    this.clipsStateService.setSubtitles(subtitles);
   }
 
   goToNextSubtitledClip() {
