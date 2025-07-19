@@ -1,3 +1,5 @@
+import {ProjectSettings} from './settings.types';
+
 export interface Project {
   id: string;
   mediaFileName: string;
@@ -10,6 +12,7 @@ export interface Project {
   lastPlaybackTime: number;
   lastSubtitledClipEndTime: number;
   subtitledClipsCount: number;
+  settings: ProjectSettings;
 }
 
 export interface AppData {

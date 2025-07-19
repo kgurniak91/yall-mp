@@ -1,5 +1,5 @@
 import {Component, inject} from '@angular/core';
-import {SettingsStateService} from '../../../state/settings/settings-state.service';
+import {ProjectSettingsStateService} from '../../../state/project-settings/project-settings-state.service';
 import {HiddenSubtitleStyle, SubtitleBehavior} from '../../../model/settings.types';
 import {Fieldset} from 'primeng/fieldset';
 import {SelectButton} from 'primeng/selectbutton';
@@ -22,7 +22,7 @@ import {InputNumber} from 'primeng/inputnumber';
   styleUrl: './project-settings.component.scss'
 })
 export class ProjectSettingsComponent {
-  protected readonly settingsService = inject(SettingsStateService);
+  protected readonly projectSettingsStateService = inject(ProjectSettingsStateService);
 
   protected subtitleBehaviorOptions = [
     {label: 'Do Nothing', value: SubtitleBehavior.DoNothing},

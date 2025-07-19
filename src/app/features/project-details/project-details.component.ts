@@ -15,7 +15,7 @@ import {ActivatedRoute, Router} from '@angular/router';
 import {ConfirmationService} from 'primeng/api';
 import {ProjectsStateService} from '../../state/projects/projects-state.service';
 import {Project} from '../../model/project.types';
-import {SettingsStateService} from '../../state/settings/settings-state.service';
+import {ProjectSettingsStateService} from '../../state/project-settings/project-settings-state.service';
 import {HiddenSubtitleStyle} from '../../model/settings.types';
 import {DialogService, DynamicDialogRef} from 'primeng/dynamicdialog';
 import {CommandHistoryStateService} from '../../state/command-history/command-history-state.service';
@@ -39,7 +39,11 @@ import {ToastService} from '../../shared/services/toast/toast.service';
   templateUrl: './project-details.component.html',
   styleUrl: './project-details.component.scss',
   providers: [
-    KeyboardShortcutsService
+    KeyboardShortcutsService,
+    ClipsStateService,
+    CommandHistoryStateService,
+    ProjectSettingsStateService,
+    VideoStateService
   ]
 })
 export class ProjectDetailsComponent implements OnInit {
@@ -96,7 +100,7 @@ export class ProjectDetailsComponent implements OnInit {
   protected readonly commandHistoryStateService = inject(CommandHistoryStateService);
   protected readonly videoStateService = inject(VideoStateService);
   protected readonly clipsStateService = inject(ClipsStateService);
-  protected readonly settingsStateService = inject(SettingsStateService);
+  protected readonly projectSettingsStateService = inject(ProjectSettingsStateService);
   protected readonly HiddenSubtitleStyle = HiddenSubtitleStyle;
   protected readonly project = signal<Project | null>(null);
   protected readonly mediaPath = signal<string | null>(null);
@@ -111,6 +115,14 @@ export class ProjectDetailsComponent implements OnInit {
 
   constructor() {
     inject(KeyboardShortcutsService); // start listening
+
+    effect(() => {
+      const currentSettings = this.projectSettingsStateService.settings();
+      const currentProject = this.project();
+      if (currentProject) {
+        this.projectsStateService.updateProject(currentProject.id, {settings: currentSettings});
+      }
+    });
   }
 
   async ngOnInit() {
@@ -132,6 +144,7 @@ export class ProjectDetailsComponent implements OnInit {
 
     this.project.set(foundProject);
     this.mediaPath.set(foundProject!.mediaPath);
+    this.projectSettingsStateService.loadSettings(foundProject.settings);
     this.projectsStateService.setCurrentProject(projectId);
 
     let cues = await window.electronAPI.parseSubtitleFile(foundProject.subtitlePath);

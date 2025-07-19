@@ -2,33 +2,44 @@
   <p-fieldset legend="Playback Control" [toggleable]="false" class="mb-4">
     <div class="setting-item">
       <label for="auto-pause-start" class="font-semibold">Pause at Start of Subtitle</label>
-      <p-inputSwitch inputId="auto-pause-start" [(ngModel)]="settingsService.autoPauseAtStart"/>
+      <p-inputSwitch inputId="auto-pause-start"
+                     [ngModel]="projectSettingsStateService.autoPauseAtStart()"
+                     (ngModelChange)="projectSettingsStateService.setAutoPauseAtStart($event)"/>
     </div>
     <div class="setting-item">
       <label for="auto-pause-end" class="font-semibold">Pause at End of Subtitle</label>
-      <p-inputSwitch inputId="auto-pause-end" [(ngModel)]="settingsService.autoPauseAtEnd"/>
+      <p-inputSwitch inputId="auto-pause-end"
+                     [ngModel]="projectSettingsStateService.autoPauseAtEnd()"
+                     (ngModelChange)="projectSettingsStateService.setAutoPauseAtEnd($event)"/>
     </div>
   </p-fieldset>
 
   <p-fieldset legend="Playback Speed" [toggleable]="false" class="mb-4">
     <div class="slider-setting-item">
       <label for="sub-speed" class="font-semibold">
-        Subtitled Clip Speed ({{ settingsService.subtitledClipSpeed() }}x)
+        Subtitled Clip Speed ({{ projectSettingsStateService.subtitledClipSpeed() }}x)
       </label>
-      <p-slider id="sub-speed" [(ngModel)]="settingsService.subtitledClipSpeed" [min]="0.5" [max]="5" [step]="0.1"/>
+      <p-slider id="sub-speed"
+                [ngModel]="projectSettingsStateService.subtitledClipSpeed()"
+                (ngModelChange)="projectSettingsStateService.setSubtitledClipSpeed($event)"
+                [min]="0.5" [max]="5" [step]="0.1"/>
     </div>
     <div class="slider-setting-item">
       <label for="gap-speed" class="font-semibold">
-        Gap Speed ({{ settingsService.gapSpeed() }}x)
+        Gap Speed ({{ projectSettingsStateService.gapSpeed() }}x)
       </label>
-      <p-slider id="gap-speed" [(ngModel)]="settingsService.gapSpeed" [min]="0.5" [max]="5" [step]="0.1"/>
+      <p-slider id="gap-speed"
+                [ngModel]="projectSettingsStateService.gapSpeed()"
+                (ngModelChange)="projectSettingsStateService.setGapSpeed($event)"
+                [min]="0.5" [max]="5" [step]="0.1"/>
     </div>
   </p-fieldset>
 
   <p-fieldset legend="Subtitle Display" [toggleable]="false">
     <div class="setting-item">
       <label for="seek-seconds">Seek Amount (seconds)</label>
-      <p-inputNumber [(ngModel)]="settingsService.seekSeconds"
+      <p-inputNumber [ngModel]="projectSettingsStateService.seekSeconds()"
+                     (ngModelChange)="projectSettingsStateService.setSeekSeconds($event)"
                      [showButtons]="true"
                      [min]="1"
                      [max]="30"
@@ -42,14 +53,16 @@
         Behavior at Start of Subtitle
       </label>
       <p-selectButton id="subtitle-behavior" [options]="subtitleBehaviorOptions"
-                      [(ngModel)]="settingsService.subtitleBehavior"
+                      [ngModel]="projectSettingsStateService.subtitleBehavior()"
+                      (ngModelChange)="projectSettingsStateService.setSubtitleBehavior($event)"
                       optionLabel="label" optionValue="value"/>
     </div>
 
     <div class="setting-item">
       <label>When Subtitles are Off</label>
       <p-selectButton [options]="hiddenSubtitleStyleOptions"
-                      [(ngModel)]="settingsService.hiddenSubtitleStyle"
+                      [ngModel]="projectSettingsStateService.hiddenSubtitleStyle()"
+                      (ngModelChange)="projectSettingsStateService.setHiddenSubtitleStyle($event)"
                       optionLabel="label"
                       optionValue="value"
                       aria-labelledby="basic"/>
@@ -59,10 +72,11 @@
   <p-fieldset legend="Timeline Editing" [toggleable]="true">
     <div class="slider-setting-item">
       <label for="adjustValue">
-        Boundary Adjust Amount ({{ settingsService.adjustValueMs() }}ms)
+        Boundary Adjust Amount ({{ projectSettingsStateService.adjustValueMs() }}ms)
       </label>
       <p-slider id="adjustValue"
-                [(ngModel)]="settingsService.adjustValueMs"
+                [ngModel]="projectSettingsStateService.adjustValueMs()"
+                (ngModelChange)="projectSettingsStateService.setAdjustValueMs($event)"
                 [min]="0"
                 [max]="100"
                 [step]="10"/>

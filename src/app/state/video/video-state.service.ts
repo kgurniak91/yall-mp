@@ -1,9 +1,7 @@
 import {Injectable, Signal, signal} from '@angular/core';
 import {SeekType} from '../../model/video.types';
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable()
 export class VideoStateService {
   private readonly _currentTime = signal(0);
   private readonly _duration = signal(0);

@@ -9,6 +9,7 @@ import {v4 as uuidv4} from 'uuid';
 import {Location} from '@angular/common';
 import {ToastService} from '../../shared/services/toast/toast.service';
 import {SUPPORTED_MEDIA_TYPES, SUPPORTED_SUBTITLE_TYPES} from '../../model/video.types';
+import {DEFAULT_PROJECT_SETTINGS} from '../../model/settings.types';
 
 const EDIT_CONFIRMATION_MESSAGE = `
 Are you sure you want to edit this project?
@@ -127,7 +128,8 @@ export class ProjectFormComponent implements OnInit {
       duration: 0,
       lastPlaybackTime: 0,
       lastSubtitledClipEndTime: 0,
-      subtitledClipsCount: 0
+      subtitledClipsCount: 0,
+      settings: {...DEFAULT_PROJECT_SETTINGS}
     };
 
     this.projectsStateService.createProject(newProject);

@@ -2,7 +2,7 @@ import {computed, inject, Injectable, Signal, signal} from '@angular/core';
 import {VideoStateService} from '../video/video-state.service';
 import {PlayerState, SeekDirection, VideoClip} from '../../model/video.types';
 import {VTTCue} from 'media-captions';
-import {SettingsStateService} from '../settings/settings-state.service';
+import {ProjectSettingsStateService} from '../project-settings/project-settings-state.service';
 import {CommandHistoryStateService} from '../command-history/command-history-state.service';
 import {UpdateClipTimesCommand} from '../../model/commands/update-clip-times.command';
 import {ToastService} from '../../shared/services/toast/toast.service';
@@ -14,12 +14,10 @@ const ADJUST_DEBOUNCE_MS = 50;
 const NEW_GAP_DURATION = 0.1;
 const MIN_SPLITTABLE_CLIP_DURATION = 0.5;
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable()
 export class ClipsStateService {
   private readonly videoStateService = inject(VideoStateService);
-  private readonly settingsStateService = inject(SettingsStateService);
+  private readonly projectSettingsStateService = inject(ProjectSettingsStateService);
   private readonly commandHistoryStateService = inject(CommandHistoryStateService);
   private readonly toastService = inject(ToastService);
   private readonly _cues = signal<VTTCue[]>([]);
@@ -276,7 +274,7 @@ export class ClipsStateService {
       return;
     }
 
-    const adjustAmountSeconds = this.settingsStateService.adjustValueMs() / 1000;
+    const adjustAmountSeconds = this.projectSettingsStateService.adjustValueMs() / 1000;
     const directionMultiplier = (direction === 'left') ? -1 : 1;
     const changeAmount = adjustAmountSeconds * directionMultiplier;
 

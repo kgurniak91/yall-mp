@@ -3,9 +3,7 @@ import {Command} from '../../model/commands/commands.types';
 
 const MAX_HISTORY_SIZE = 100;
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable()
 export class CommandHistoryStateService {
   private readonly undoStack = signal<Command[]>([]);
   private readonly redoStack = signal<Command[]>([]);

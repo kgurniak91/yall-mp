@@ -11,7 +11,7 @@ import {
 } from '../../../model/video.types';
 import {ClipsStateService} from '../../../state/clips/clips-state.service';
 import {VideoPlayerComponent} from '../video-player/video-player.component';
-import {SettingsStateService} from '../../../state/settings/settings-state.service';
+import {ProjectSettingsStateService} from '../../../state/project-settings/project-settings-state.service';
 import {SubtitleBehavior} from '../../../model/settings.types';
 
 @Component({
@@ -30,12 +30,12 @@ export class VideoControllerComponent {
   protected readonly PlayerState = PlayerState;
   protected readonly clipsStateService = inject(ClipsStateService);
   private readonly videoStateService = inject(VideoStateService);
-  private readonly settingsStateService = inject(SettingsStateService);
+  private readonly projectSettingsStateService = inject(ProjectSettingsStateService);
 
   // Called when a clip finishes
   protected onClipEnded(): void {
     const clipJustFinished = this.clipsStateService.currentClip()!;
-    const autoPauseAtEnd = this.settingsStateService.autoPauseAtEnd();
+    const autoPauseAtEnd = this.projectSettingsStateService.autoPauseAtEnd();
 
     if (clipJustFinished.hasSubtitle && autoPauseAtEnd) {
       this.clipsStateService.setPlayerState(PlayerState.AutoPausedAtEnd);
@@ -66,7 +66,7 @@ export class VideoControllerComponent {
     }
 
     // The next clip is a subtitle clip. Check if it requires pausing at the start.
-    const autoPauseAtStart = this.settingsStateService.autoPauseAtStart();
+    const autoPauseAtStart = this.projectSettingsStateService.autoPauseAtStart();
     if (autoPauseAtStart) {
       this.clipsStateService.setPlayerState(PlayerState.AutoPausedAtStart);
       // Issue a pause command to ensure the player's time is synced to the start of the new clip.
@@ -114,7 +114,7 @@ export class VideoControllerComponent {
 
   private subtitleVisibilityHandler = effect(() => {
     const currentClip = this.clipsStateService.currentClip();
-    const behavior = this.settingsStateService.subtitleBehavior();
+    const behavior = this.projectSettingsStateService.subtitleBehavior();
 
     if (currentClip?.hasSubtitle) {
       if (behavior === SubtitleBehavior.ForceShow) {
@@ -220,7 +220,7 @@ export class VideoControllerComponent {
 
     this.clipsStateService.setCurrentClipByIndex(targetClipIndex);
     const newClip = this.clipsStateService.currentClip()!;
-    const autoPauseAtStart = this.settingsStateService.autoPauseAtStart();
+    const autoPauseAtStart = this.projectSettingsStateService.autoPauseAtStart();
     const isLandingAtStartOfSubtitledClip = newClip.hasSubtitle && Math.abs(targetTime - newClip.startTime) < 0.1;
     const isJumpingToNewClip = originClipIndex !== targetClipIndex;
 
@@ -254,8 +254,8 @@ export class VideoControllerComponent {
   private playClip(clip: VideoClip, options?: { seekToTime?: number }): void {
     this.clipsStateService.setPlayerState(PlayerState.Playing);
 
-    const subtitledSpeed = this.settingsStateService.subtitledClipSpeed();
-    const gapSpeed = this.settingsStateService.gapSpeed();
+    const subtitledSpeed = this.projectSettingsStateService.subtitledClipSpeed();
+    const gapSpeed = this.projectSettingsStateService.gapSpeed();
     const playbackRate = clip.hasSubtitle ? subtitledSpeed : gapSpeed;
 
     const command: PlayCommand = {
