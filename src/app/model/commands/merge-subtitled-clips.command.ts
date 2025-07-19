@@ -2,7 +2,7 @@ import {Command} from './commands.types';
 import {ClipsStateService} from '../../state/clips/clips-state.service';
 import type {SubtitleData} from '../../../../shared/types/subtitle.type';
 
-export class DeleteGapCommand implements Command {
+export class MergeSubtitledClipsCommand implements Command {
   private originalSecondSubtitle: SubtitleData | undefined;
   private originalFirstSubtitleEndTime: number | undefined;
   private originalFirstSubtitleText: string | undefined;

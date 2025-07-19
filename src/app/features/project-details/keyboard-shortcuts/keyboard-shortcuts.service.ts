@@ -136,7 +136,7 @@ export class KeyboardShortcutsService implements OnDestroy {
         this.clipsStateService.splitCurrentSubtitledClip();
         break;
       case KeyboardAction.DeleteGap:
-        this.clipsStateService.deleteCurrentGap();
+        this.clipsStateService.deleteCurrentClip();
         break;
     }
   }

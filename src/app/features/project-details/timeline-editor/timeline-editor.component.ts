@@ -39,6 +39,7 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
   private wavesurfer: WaveSurfer | undefined;
   private wsRegions: RegionsPlugin | undefined;
   private currentZoom = signal<number>(INITIAL_ZOOM);
+  private hasPerformedInitialSync = signal(false);
   private lastDrawnClipsSignature: string | null = null;
   private activeGlowStyle!: string;
   private inactiveSubtitleBg!: string;
@@ -117,9 +118,10 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
     const isReady = this.isWaveSurferReady();
     const syncRequest = this.videoStateService.syncTimelineRequest();
 
-    if (isReady && syncRequest) {
+    if (isReady && syncRequest && !this.hasPerformedInitialSync()) {
       const timeToScroll = untracked(() => this.videoStateService.currentTime());
       this.wavesurfer?.setScrollTime(timeToScroll);
+      this.hasPerformedInitialSync.set(true);
     }
   });
 

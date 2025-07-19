@@ -113,18 +113,18 @@
 
   <div class="settings-wrapper">
     @if (currentClipHasSubtitles()) {
-      <p-button icon="fa-solid fa-scissors"
+      <p-button icon="fa-solid fa-divide rotate-90"
                 (click)="clipsStateService.splitCurrentSubtitledClip()"
                 pTooltip="Split subtitled clip (\)"
                 tooltipPosition="left"
                 severity="secondary"/>
-    } @else {
-      <p-button icon="fa-solid fa-eraser"
-                (click)="clipsStateService.deleteCurrentGap()"
-                pTooltip="Delete gap (Delete)"
-                tooltipPosition="left"
-                severity="secondary"/>
     }
+
+    <p-button icon="fa-solid fa-eraser"
+              (click)="clipsStateService.deleteCurrentClip()"
+              pTooltip="Delete clip (Delete)"
+              tooltipPosition="left"
+              severity="secondary"/>
 
     <p-button icon="fa-solid fa-file-pen"
               (click)="openEditSubtitlesDialog()"

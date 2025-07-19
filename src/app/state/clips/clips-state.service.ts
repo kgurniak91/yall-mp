@@ -6,9 +6,10 @@ import {CommandHistoryStateService} from '../command-history/command-history-sta
 import {UpdateClipTimesCommand} from '../../model/commands/update-clip-times.command';
 import {ToastService} from '../../shared/services/toast/toast.service';
 import {SplitSubtitledClipCommand} from '../../model/commands/split-subtitled-clip.command';
-import {DeleteGapCommand} from '../../model/commands/delete-gap.command';
+import {MergeSubtitledClipsCommand} from '../../model/commands/merge-subtitled-clips.command';
 import {ProjectsStateService} from '../projects/projects-state.service';
 import type {SubtitleData} from '../../../../shared/types/subtitle.type';
+import {DeleteSubtitledClipCommand} from '../../model/commands/delete-subtitled-clip.command';
 
 const MIN_CLIP_DURATION = 0.1;
 const ADJUST_DEBOUNCE_MS = 50;
@@ -110,24 +111,35 @@ export class ClipsStateService {
     this._subtitles.set(newSubtitles);
   }
 
-  public deleteCurrentGap(): void {
-    const clips = this.clips();
-    const currentClipIndex = this.currentClipIndex();
-    const currentClip = clips[currentClipIndex];
+  public deleteCurrentClip(): void {
+    const currentClip = this.currentClip();
+    if (!currentClip) return;
 
-    if (!currentClip || currentClip.hasSubtitle) {
-      return;
+    if (currentClip.hasSubtitle) {
+      const subtitles = this._subtitles();
+
+      if (subtitles.length <= 1) {
+        this.toastService.warn('Cannot delete the last remaining subtitle clip.');
+        return;
+      }
+
+      const subtitleId = currentClip.id.replace('subtitle-', '');
+      const command = new DeleteSubtitledClipCommand(this, subtitleId);
+      this.commandHistoryStateService.execute(command);
+    } else {
+      const clips = this.clips();
+      const currentIndex = this.currentClipIndex();
+      const prevClip = clips[currentIndex - 1];
+      const nextClip = clips[currentIndex + 1];
+
+      if (!prevClip || !nextClip || !prevClip.hasSubtitle || !nextClip.hasSubtitle) {
+        this.toastService.warn('Cannot delete a gap at the beginning or end of the timeline.');
+        return;
+      }
+
+      const command = new MergeSubtitledClipsCommand(this, prevClip.id, nextClip.id);
+      this.commandHistoryStateService.execute(command);
     }
-
-    const prevClip = clips[currentClipIndex - 1];
-    const nextClip = clips[currentClipIndex + 1];
-    if (!prevClip || !nextClip || !prevClip.hasSubtitle || !nextClip.hasSubtitle) {
-      this.toastService.warn('Cannot delete a gap that is not surrounded by two subtitled clips.');
-      return;
-    }
-
-    const command = new DeleteGapCommand(this, prevClip.id, nextClip.id);
-    this.commandHistoryStateService.execute(command);
   }
 
   public mergeClips(
@@ -200,6 +212,39 @@ export class ClipsStateService {
     // Re-insert the second subtitle
     newSubtitles.splice(firstSubtitleIndex + 1, 0, secondSubtitleToRestore);
 
+    this._subtitles.set(newSubtitles);
+  }
+
+  public deleteSubtitle(subtitleId: string): { deletedSubtitle: SubtitleData, originalIndex: number } | null {
+    const subtitles = this._subtitles();
+    const indexToDelete = subtitles.findIndex(s => s.id === subtitleId);
+
+    if (indexToDelete === -1) {
+      return null;
+    }
+
+    const timeBeforeDelete = this.videoStateService.currentTime();
+    const deletedSubtitle = subtitles[indexToDelete];
+    const newSubtitles = [...subtitles];
+    newSubtitles.splice(indexToDelete, 1);
+
+    this._subtitles.set(newSubtitles);
+
+    const newClipsArray = this.clips();
+    const newCorrectIndex = newClipsArray.findIndex(c =>
+      timeBeforeDelete >= c.startTime && timeBeforeDelete < c.endTime
+    );
+
+    if (newCorrectIndex !== -1) {
+      this._currentClipIndex.set(newCorrectIndex);
+    }
+
+    return {deletedSubtitle, originalIndex: indexToDelete};
+  }
+
+  public insertSubtitle(subtitle: SubtitleData, index: number): void {
+    const newSubtitles = [...this._subtitles()];
+    newSubtitles.splice(index, 0, subtitle);
     this._subtitles.set(newSubtitles);
   }
 
