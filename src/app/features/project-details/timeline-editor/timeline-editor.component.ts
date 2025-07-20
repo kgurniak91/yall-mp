@@ -171,7 +171,7 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
   }
 
   private handleRegionUpdated = (region: Region) => {
-    this.clipsStateService.updateClipTimes(region.id, region.start, region.end);
+    this.clipsStateService.updateClipTimesFromTimeline(region.id, region.start, region.end);
   };
 
   private handleRegionClicked = (region: Region, e: MouseEvent) => {

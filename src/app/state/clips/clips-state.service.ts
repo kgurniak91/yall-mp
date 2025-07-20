@@ -378,6 +378,26 @@ export class ClipsStateService {
     this.updateSubtitlesFromClips(updatedClips);
   }
 
+  public updateClipTimesFromTimeline(clipId: string, newStartTime: number, newEndTime: number): void {
+    const clipToUpdate = this.clips().find(c => c.id === clipId);
+
+    if (!clipToUpdate) {
+      console.error(`Cannot update times for clip ID ${clipId}: Clip not found.`);
+      return;
+    }
+
+    const command = new UpdateClipTimesCommand(
+      this,
+      clipId,
+      clipToUpdate.startTime,
+      clipToUpdate.endTime,
+      newStartTime,
+      newEndTime
+    );
+
+    this.commandHistoryStateService.execute(command);
+  }
+
   public adjustCurrentClipBoundary(boundary: 'start' | 'end', direction: 'left' | 'right'): void {
     clearTimeout(this.adjustDebounceTimer);
 
