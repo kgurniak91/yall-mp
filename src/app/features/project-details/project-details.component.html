@@ -163,6 +163,21 @@
           header="Settings"
           position="right"
           [style]="{width: '30rem'}">
+
+  <div class="settings-preset-fieldset">
+    <p-fieldset legend="Settings Preset" [toggleable]="false">
+      <div class="setting-item">
+        <p-select id="preset-selector"
+                  [options]="settingsPresets()"
+                  optionLabel="name"
+                  placeholder="Custom"
+                  [ngModel]="selectedSettingsPreset()"
+                  (ngModelChange)="onSettingsPresetChange($event)">
+        </p-select>
+      </div>
+    </p-fieldset>
+  </div>
+
   <app-project-settings [settings]="projectSettingsStateService.settings()"
                         (settingsChange)="projectSettingsStateService.setSettings($event)"/>
 </p-drawer>

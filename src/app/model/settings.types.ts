@@ -38,3 +38,31 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   hiddenSubtitleStyle: HiddenSubtitleStyle.Blurred,
   defaultProjectSettings: DEFAULT_PROJECT_SETTINGS
 };
+
+export interface SettingsPreset {
+  name: string;
+  settings: Partial<ProjectSettings>;
+}
+
+export const ListeningPracticeSettingsPreset: SettingsPreset = {
+  name: 'Listening Practice',
+  settings: {
+    autoPauseAtStart: false,
+    autoPauseAtEnd: true,
+    subtitleBehavior: SubtitleBehavior.ForceHide
+  }
+};
+
+export const SpeakingPracticeSettingsPreset: SettingsPreset = {
+  name: 'Speaking Practice',
+  settings: {
+    autoPauseAtStart: true,
+    autoPauseAtEnd: false,
+    subtitleBehavior: SubtitleBehavior.ForceShow
+  }
+};
+
+export const BuiltInSettingsPresets: SettingsPreset[] = [
+  ListeningPracticeSettingsPreset,
+  SpeakingPracticeSettingsPreset
+];

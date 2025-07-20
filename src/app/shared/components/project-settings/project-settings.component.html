@@ -1,5 +1,5 @@
 <div class="settings-container p-4">
-  <p-fieldset legend="Playback Control" [toggleable]="false" class="mb-4">
+  <p-fieldset legend="Playback Control" [toggleable]="false">
     <div class="setting-item">
       <label for="auto-pause-start" class="font-semibold">Pause at Start of Subtitle</label>
       <p-inputSwitch inputId="auto-pause-start"
@@ -14,7 +14,19 @@
     </div>
   </p-fieldset>
 
-  <p-fieldset legend="Playback Speed" [toggleable]="false" class="mb-4">
+  <p-fieldset legend="Subtitle Display" [toggleable]="false">
+    <div class="setting-item-column">
+      <label for="subtitle-behavior" class="font-semibold mb-2">
+        Behavior at Start of Subtitle
+      </label>
+      <p-selectButton id="subtitle-behavior" [options]="subtitleBehaviorOptions"
+                      [ngModel]="settings().subtitleBehavior"
+                      (ngModelChange)="onSettingChange('subtitleBehavior', $event)"
+                      optionLabel="label" optionValue="value"/>
+    </div>
+  </p-fieldset>
+
+  <p-fieldset legend="Playback Speed" [toggleable]="false">
     <div class="setting-item-column">
       <label for="sub-speed" class="font-semibold">
         Subtitled Clip Speed ({{ settings().subtitledClipSpeed }}x)
@@ -32,18 +44,6 @@
                 [ngModel]="settings().gapSpeed"
                 (ngModelChange)="onSettingChange('gapSpeed', $event)"
                 [min]="0.5" [max]="5" [step]="0.1"/>
-    </div>
-  </p-fieldset>
-
-  <p-fieldset legend="Subtitle Display" [toggleable]="false">
-    <div class="setting-item-column">
-      <label for="subtitle-behavior" class="font-semibold mb-2">
-        Behavior at Start of Subtitle
-      </label>
-      <p-selectButton id="subtitle-behavior" [options]="subtitleBehaviorOptions"
-                      [ngModel]="settings().subtitleBehavior"
-                      (ngModelChange)="onSettingChange('subtitleBehavior', $event)"
-                      optionLabel="label" optionValue="value"/>
     </div>
   </p-fieldset>
 </div>

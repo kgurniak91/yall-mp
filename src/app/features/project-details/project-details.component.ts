@@ -16,7 +16,7 @@ import {ConfirmationService} from 'primeng/api';
 import {ProjectsStateService} from '../../state/projects/projects-state.service';
 import {Project} from '../../model/project.types';
 import {ProjectSettingsStateService} from '../../state/project-settings/project-settings-state.service';
-import {HiddenSubtitleStyle} from '../../model/settings.types';
+import {BuiltInSettingsPresets, HiddenSubtitleStyle, ProjectSettings, SettingsPreset} from '../../model/settings.types';
 import {DialogService, DynamicDialogRef} from 'primeng/dynamicdialog';
 import {CommandHistoryStateService} from '../../state/command-history/command-history-state.service';
 import {EditSubtitlesDialogComponent} from './edit-subtitles-dialog/edit-subtitles-dialog.component';
@@ -26,6 +26,10 @@ import {ToastService} from '../../shared/services/toast/toast.service';
 import type {SubtitleData} from '../../../../shared/types/subtitle.type';
 import {GlobalSettingsStateService} from '../../state/global-settings/global-settings-state.service';
 import {GlobalSettingsDialogComponent} from '../global-settings-dialog/global-settings-dialog.component';
+import {DropdownModule} from 'primeng/dropdown';
+import {FormsModule} from '@angular/forms';
+import {Fieldset} from 'primeng/fieldset';
+import {Select} from 'primeng/select';
 
 @Component({
   selector: 'app-project-details',
@@ -37,7 +41,11 @@ import {GlobalSettingsDialogComponent} from '../global-settings-dialog/global-se
     Drawer,
     ProjectSettingsComponent,
     Popover,
-    ProjectHeaderComponent
+    ProjectHeaderComponent,
+    DropdownModule,
+    FormsModule,
+    Fieldset,
+    Select
   ],
   templateUrl: './project-details.component.html',
   styleUrl: './project-details.component.scss',
@@ -108,6 +116,8 @@ export class ProjectDetailsComponent implements OnInit {
   protected readonly HiddenSubtitleStyle = HiddenSubtitleStyle;
   protected readonly project = signal<Project | null>(null);
   protected readonly mediaPath = signal<string | null>(null);
+  protected readonly settingsPresets = signal<SettingsPreset[]>(BuiltInSettingsPresets);
+  protected readonly selectedSettingsPreset = signal<SettingsPreset | null>(null);
   private wasPlayingBeforeSettingsOpened = false;
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -302,6 +312,18 @@ export class ProjectDetailsComponent implements OnInit {
     // TODO
   }
 
+  onSettingsPresetChange(preset: SettingsPreset | null): void {
+    this.selectedSettingsPreset.set(preset);
+
+    if (preset) {
+      const currentProjectSettings = this.projectSettingsStateService.settings();
+      this.projectSettingsStateService.setSettings({
+        ...currentProjectSettings,
+        ...preset.settings
+      });
+    }
+  }
+
   onGlobalSettingsClicked() {
     this.dialogService.open(GlobalSettingsDialogComponent, {
       header: 'Global settings',
@@ -337,5 +359,17 @@ export class ProjectDetailsComponent implements OnInit {
       this.openEditSubtitlesDialog();
       this.videoStateService.clearEditSubtitlesRequest();
     }
+  });
+
+  private matchingSettingsPresetListener = effect(() => {
+    const currentSettings = this.projectSettingsStateService.settings();
+
+    const matchingPreset = this.settingsPresets().find(preset =>
+      Object.entries(preset.settings).every(([key, value]) =>
+        currentSettings[key as keyof ProjectSettings] === value
+      )
+    );
+
+    this.selectedSettingsPreset.set(matchingPreset || null);
   });
 }
