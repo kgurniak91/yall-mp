@@ -10,11 +10,14 @@ import {MergeSubtitledClipsCommand} from '../../model/commands/merge-subtitled-c
 import {ProjectsStateService} from '../projects/projects-state.service';
 import type {SubtitleData} from '../../../../shared/types/subtitle.type';
 import {DeleteSubtitledClipCommand} from '../../model/commands/delete-subtitled-clip.command';
+import {CreateSubtitledClipCommand} from '../../model/commands/create-subtitled-clip.command';
 
 const MIN_CLIP_DURATION = 0.1;
 const ADJUST_DEBOUNCE_MS = 50;
 const NEW_GAP_DURATION = 0.1;
 const MIN_SPLITTABLE_CLIP_DURATION = 0.5;
+const FORCED_GAP_SECONDS = 0.05;
+const MIN_SUBTITLE_DURATION = 0.5;
 
 @Injectable()
 export class ClipsStateService {
@@ -116,13 +119,6 @@ export class ClipsStateService {
     if (!currentClip) return;
 
     if (currentClip.hasSubtitle) {
-      const subtitles = this._subtitles();
-
-      if (subtitles.length <= 1) {
-        this.toastService.warn('Cannot delete the last remaining subtitle clip.');
-        return;
-      }
-
       const subtitleId = currentClip.id.replace('subtitle-', '');
       const command = new DeleteSubtitledClipCommand(this, subtitleId);
       this.commandHistoryStateService.execute(command);
@@ -211,6 +207,73 @@ export class ClipsStateService {
 
     // Re-insert the second subtitle
     newSubtitles.splice(firstSubtitleIndex + 1, 0, secondSubtitleToRestore);
+
+    this._subtitles.set(newSubtitles);
+  }
+
+  public createNewSubtitledClipAtCurrentTime(): void {
+    const currentClip = this.currentClip();
+
+    // Must be in a gap:
+    if (!currentClip || currentClip.hasSubtitle) {
+      this.toastService.info('A new subtitle can only be added inside a gap.');
+      return;
+    }
+
+    // The gap must be large enough for the new subtitle and its surrounding gaps.
+    const minimumRequiredSpace = MIN_SUBTITLE_DURATION + (2 * FORCED_GAP_SECONDS);
+    if (currentClip.duration < minimumRequiredSpace) {
+      this.toastService.warn(`This gap is too small to add a new subtitle. Minimum space required: ${minimumRequiredSpace.toFixed(2)}s`);
+      return;
+    }
+
+    // Define boundaries for the new subtitle
+    let newStartTime = this.videoStateService.currentTime();
+    let newEndTime = newStartTime + MIN_SUBTITLE_DURATION;
+
+    // Ensure the new subtitle respects the required gaps within the current gap.
+    const earliestPossibleStart = currentClip.startTime + FORCED_GAP_SECONDS;
+    const latestPossibleEnd = currentClip.endTime - FORCED_GAP_SECONDS;
+
+    // Adjust start time if the user's cursor is too close to the beginning
+    if (newStartTime < earliestPossibleStart) {
+      newStartTime = earliestPossibleStart;
+      newEndTime = newStartTime + MIN_SUBTITLE_DURATION;
+    }
+
+    // Final check: Does the new clip, after potential adjustments, still fit?
+    if (newEndTime > latestPossibleEnd) {
+      this.toastService.warn('Not enough space to add a new subtitle at this exact time.');
+      return;
+    }
+
+    const newSubtitle: SubtitleData = {
+      id: crypto.randomUUID(),
+      startTime: newStartTime,
+      endTime: newEndTime,
+      text: 'New Subtitle' // Placeholder text
+    };
+
+    const command = new CreateSubtitledClipCommand(this, newSubtitle);
+    this.commandHistoryStateService.execute(command);
+
+    // Seek to the start of the new clip for immediate feedback
+    this.videoStateService.seekAbsolute(newStartTime);
+  }
+
+  public addSubtitle(subtitle: SubtitleData): void {
+    const currentSubtitles = this._subtitles();
+
+    const insertIndex = currentSubtitles.findIndex(s => s.startTime > subtitle.startTime);
+
+    const newSubtitles = [...currentSubtitles];
+
+    if (insertIndex === -1) {
+      // If no subtitle starts after the new one, add it to the end
+      newSubtitles.push(subtitle);
+    } else {
+      newSubtitles.splice(insertIndex, 0, subtitle);
+    }
 
     this._subtitles.set(newSubtitles);
   }

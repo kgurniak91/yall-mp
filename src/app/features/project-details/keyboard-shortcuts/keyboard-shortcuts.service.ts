@@ -32,7 +32,8 @@ export class KeyboardShortcutsService implements OnDestroy {
     keyMap.set('s', KeyboardAction.EditCurrentSubtitles);
     keyMap.set('S', KeyboardAction.EditCurrentSubtitles);
     keyMap.set('\\', KeyboardAction.SplitClip);
-    keyMap.set('Delete', KeyboardAction.DeleteGap);
+    keyMap.set('Delete', KeyboardAction.DeleteClip);
+    keyMap.set('Insert', KeyboardAction.CreateClip);
 
     let action: KeyboardAction | undefined;
 
@@ -135,8 +136,11 @@ export class KeyboardShortcutsService implements OnDestroy {
       case KeyboardAction.SplitClip:
         this.clipsStateService.splitCurrentSubtitledClip();
         break;
-      case KeyboardAction.DeleteGap:
+      case KeyboardAction.DeleteClip:
         this.clipsStateService.deleteCurrentClip();
+        break;
+      case KeyboardAction.CreateClip:
+        this.clipsStateService.createNewSubtitledClipAtCurrentTime();
         break;
     }
   }

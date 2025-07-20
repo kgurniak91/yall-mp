@@ -43,7 +43,7 @@ export class ProjectFormComponent implements OnInit {
   protected readonly pageTitle = computed(() => this.editMode() ? 'Edit Project' : 'Create a New Project');
   protected readonly SUPPORTED_SUBTITLE_TYPES = SUPPORTED_SUBTITLE_TYPES;
   protected readonly SUPPORTED_MEDIA_TYPES = SUPPORTED_MEDIA_TYPES;
-  private readonly isValid = computed(() => Boolean(this.mediaFilePath()) && Boolean(this.subtitleFilePath()));
+  private readonly isValid = computed(() => Boolean(this.mediaFilePath()));
   private readonly editingProjectId = signal<string | null>(null);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -109,20 +109,20 @@ export class ProjectFormComponent implements OnInit {
 
   private createNewProject() {
     if (!this.isValid()) {
-      this.toastService.error('Both media and subtitle files are required');
+      this.toastService.error('A media file is required to create a project.');
       return;
     }
 
     const mediaPath = this.mediaFilePath()!;
-    const subtitlePath = this.subtitleFilePath()!;
+    const subtitlePath = this.subtitleFilePath();
     const now = Date.now();
 
     const newProject: Project = {
       id: uuidv4(),
       mediaFileName: this.getBaseName(mediaPath),
-      subtitleFileName: this.getBaseName(subtitlePath),
+      subtitleFileName: subtitlePath ? this.getBaseName(subtitlePath) : '',
       mediaPath: mediaPath,
-      subtitlePath: subtitlePath,
+      subtitlePath: subtitlePath || '',
       lastOpenedDate: now,
       createdDate: now,
       duration: 0,
@@ -140,13 +140,13 @@ export class ProjectFormComponent implements OnInit {
     if (!projectId) return;
 
     const mediaPath = this.mediaFilePath()!;
-    const subtitlePath = this.subtitleFilePath()!;
+    const subtitlePath = this.subtitleFilePath();
 
     const updates: Partial<Project> = {
       mediaPath: mediaPath,
-      subtitlePath: subtitlePath,
+      subtitlePath: subtitlePath || '',
       mediaFileName: this.getBaseName(mediaPath),
-      subtitleFileName: this.getBaseName(subtitlePath),
+      subtitleFileName: subtitlePath ? this.getBaseName(subtitlePath) : '',
       duration: 0,
       lastPlaybackTime: 0
     };

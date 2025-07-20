@@ -16,5 +16,6 @@
   <div class="clickable-area" (click)="onZoneClicked()">
     <i class="icon" [class]="icon()"></i>
     <span class="label" [class.selected-label]="isFileSelected()">{{ displayLabel() }}</span>
+    <span class="label"><b>({{isRequired() ? 'required' : 'optional'}})</b></span>
   </div>
 </div>

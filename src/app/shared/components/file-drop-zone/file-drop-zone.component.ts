@@ -8,6 +8,7 @@ import {Component, computed, input, output, signal} from '@angular/core';
 })
 export class FileDropZoneComponent {
   label = input.required<string>();
+  isRequired = input.required<boolean>();
   icon = input.required<string>();
   accept = input.required<string[]>();
   existingFileName = input<string | null>(null);

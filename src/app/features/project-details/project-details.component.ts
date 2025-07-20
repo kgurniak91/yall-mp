@@ -172,11 +172,16 @@ export class ProjectDetailsComponent implements OnInit {
     this.clipsStateService.setProjectId(projectId);
     this.videoStateService.setProjectId(projectId);
 
+    const hasExistingSubtitles = foundProject?.subtitles?.length > 0;
+    const hasSubtitleFile = foundProject?.subtitlePath?.length > 0;
+
     let subtitles: SubtitleData[];
-    if (foundProject.subtitles?.length > 0) {
+    if (hasExistingSubtitles) {
       subtitles = foundProject.subtitles;
-    } else {
+    } else if (hasSubtitleFile) {
       subtitles = await window.electronAPI.parseSubtitleFile(foundProject.subtitlePath);
+    } else {
+      subtitles = [];
     }
 
     this.clipsStateService.setSubtitles(subtitles);

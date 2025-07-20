@@ -25,7 +25,8 @@ export enum KeyboardAction {
   Undo = 'Undo',
   Redo = 'Redo',
   SplitClip = 'SplitClip',
-  DeleteGap = 'DeleteGap'
+  DeleteClip = 'DeleteClip',
+  CreateClip = 'CreateClip'
 }
 
 export enum SeekType {

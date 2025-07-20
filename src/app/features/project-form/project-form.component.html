@@ -8,6 +8,7 @@
     <!-- Video Drop Zone -->
     <app-file-drop-zone label="Drop media file here or click to select"
                         icon="fa-solid fa-file-video"
+                        [isRequired]="true"
                         [accept]="SUPPORTED_MEDIA_TYPES"
                         [existingFileName]="!mediaFileJustChanged() ? existingMediaFileName() : null"
                         (filePathChange)="onMediaFilePathChange($event)"/>
@@ -15,6 +16,7 @@
     <!-- Subtitle Drop Zone -->
     <app-file-drop-zone label="Drop subtitle file here or click to select"
                         icon="fa-solid fa-file-lines"
+                        [isRequired]="false"
                         [accept]="SUPPORTED_SUBTITLE_TYPES"
                         [existingFileName]="!subtitleFileJustChanged() ? existingSubtitleFileName() : null"
                         (filePathChange)="onSubtitleFilePathChange($event)"/>

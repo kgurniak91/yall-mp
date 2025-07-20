@@ -112,19 +112,25 @@
   </div>
 
   <div class="settings-wrapper">
+    <p-button icon="fa-solid fa-eraser"
+              (click)="clipsStateService.deleteCurrentClip()"
+              pTooltip="Delete clip (Delete)"
+              tooltipPosition="left"
+              severity="secondary"/>
+
     @if (currentClipHasSubtitles()) {
       <p-button icon="fa-solid fa-divide rotate-90"
                 (click)="clipsStateService.splitCurrentSubtitledClip()"
                 pTooltip="Split subtitled clip (\)"
                 tooltipPosition="left"
                 severity="secondary"/>
+    } @else {
+      <p-button icon="fa-regular fa-square-plus"
+                (click)="clipsStateService.createNewSubtitledClipAtCurrentTime()"
+                pTooltip="Create subtitled clip (Insert)"
+                tooltipPosition="left"
+                severity="secondary"/>
     }
-
-    <p-button icon="fa-solid fa-eraser"
-              (click)="clipsStateService.deleteCurrentClip()"
-              pTooltip="Delete clip (Delete)"
-              tooltipPosition="left"
-              severity="secondary"/>
 
     <p-button icon="fa-solid fa-file-pen"
               (click)="openEditSubtitlesDialog()"
