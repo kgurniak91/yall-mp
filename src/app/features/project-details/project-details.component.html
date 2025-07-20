@@ -5,6 +5,7 @@
                       (editProjectClicked)="onEditProjectClicked()"
                       (goToProjectsListClicked)="onGoToProjectsListClicked()"
                       (helpClicked)="onHelpClicked()"
+                      (globalSettingsClicked)="onGlobalSettingsClicked()"
                       (deleteProjectClicked)="onDeleteProjectClicked()"/>
 }
 
@@ -17,8 +18,9 @@
 <div class="subtitle-display">
   @if (clipsStateService.currentClip(); as currentClip) {
     @if (currentClip.hasSubtitle) {
-      @let showBlurredSubtitles = !videoStateService.subtitlesVisible() && projectSettingsStateService.hiddenSubtitleStyle() === HiddenSubtitleStyle.Blurred;
-      @let hideSubtitles = !videoStateService.subtitlesVisible() && projectSettingsStateService.hiddenSubtitleStyle() === HiddenSubtitleStyle.Hidden;
+      @let hiddenSubtitleStyle = globalSettingsStateService.hiddenSubtitleStyle();
+      @let showBlurredSubtitles = !videoStateService.subtitlesVisible() && hiddenSubtitleStyle === HiddenSubtitleStyle.Blurred;
+      @let hideSubtitles = !videoStateService.subtitlesVisible() && hiddenSubtitleStyle === HiddenSubtitleStyle.Hidden;
       <span [class.blurred-subtitles]="showBlurredSubtitles" [class.hidden-subtitles]="hideSubtitles">
         {{ currentClip.text }}
       </span>
@@ -161,5 +163,6 @@
           header="Settings"
           position="right"
           [style]="{width: '30rem'}">
-  <app-project-settings/>
+  <app-project-settings [settings]="projectSettingsStateService.settings()"
+                        (settingsChange)="projectSettingsStateService.setSettings($event)"/>
 </p-drawer>

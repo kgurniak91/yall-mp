@@ -1,12 +1,10 @@
-import {Component, inject} from '@angular/core';
-import {ProjectSettingsStateService} from '../../../state/project-settings/project-settings-state.service';
-import {HiddenSubtitleStyle, SubtitleBehavior} from '../../../model/settings.types';
+import {Component, input, output} from '@angular/core';
+import {HiddenSubtitleStyle, ProjectSettings, SubtitleBehavior} from '../../../model/settings.types';
 import {Fieldset} from 'primeng/fieldset';
 import {SelectButton} from 'primeng/selectbutton';
 import {Slider} from 'primeng/slider';
 import {InputSwitch} from 'primeng/inputswitch';
 import {FormsModule} from '@angular/forms';
-import {InputNumber} from 'primeng/inputnumber';
 
 @Component({
   selector: 'app-project-settings',
@@ -15,23 +13,25 @@ import {InputNumber} from 'primeng/inputnumber';
     SelectButton,
     Slider,
     InputSwitch,
-    FormsModule,
-    InputNumber
+    FormsModule
   ],
   templateUrl: './project-settings.component.html',
   styleUrl: './project-settings.component.scss'
 })
 export class ProjectSettingsComponent {
-  protected readonly projectSettingsStateService = inject(ProjectSettingsStateService);
+  public readonly settings = input.required<ProjectSettings>();
+  public readonly settingsChange = output<ProjectSettings>();
 
-  protected subtitleBehaviorOptions = [
+  protected readonly subtitleBehaviorOptions = [
     {label: 'Do Nothing', value: SubtitleBehavior.DoNothing},
     {label: 'Force Show', value: SubtitleBehavior.ForceShow},
     {label: 'Force Hide', value: SubtitleBehavior.ForceHide}
   ];
 
-  protected hiddenSubtitleStyleOptions = [
-    {label: 'Blur', value: HiddenSubtitleStyle.Blurred},
-    {label: 'Hide', value: HiddenSubtitleStyle.Hidden}
-  ];
+  protected onSettingChange<K extends keyof ProjectSettings>(key: K, value: ProjectSettings[K]): void {
+    this.settingsChange.emit({
+      ...this.settings(),
+      [key]: value
+    });
+  }
 }

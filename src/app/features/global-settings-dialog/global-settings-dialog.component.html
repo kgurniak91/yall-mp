@@ -1,0 +1,67 @@
+<p-tabs [value]="0" scrollable>
+  <p-tablist>
+    <p-tab [value]="0">General</p-tab>
+    <p-tab [value]="1">Project Defaults</p-tab>
+    <p-tab [value]="2">Anki integration</p-tab>
+  </p-tablist>
+  <p-tabpanels>
+    <p-tabpanel [value]="0">
+      <p>
+        Global settings common for all projects.
+      </p>
+      <div class="settings-container p-4">
+        <p-fieldset legend="Playback Control" [toggleable]="false">
+          <div class="setting-item">
+            <label for="seek-seconds">Seek Amount (seconds)</label>
+            <p-inputNumber [ngModel]="globalSettingsStateService.seekAmountSeconds()"
+                           (ngModelChange)="globalSettingsStateService.setSeekAmountSeconds($event)"
+                           [showButtons]="true"
+                           [min]="1"
+                           [max]="30"
+                           [step]="1"
+                           inputId="seek-seconds"
+                           suffix="s"/>
+          </div>
+        </p-fieldset>
+
+        <p-fieldset legend="Subtitle Display" [toggleable]="false">
+          <div class="setting-item">
+            <label>When Subtitles are Off</label>
+            <p-selectButton [options]="hiddenSubtitleStyleOptions"
+                            [ngModel]="globalSettingsStateService.hiddenSubtitleStyle()"
+                            (ngModelChange)="globalSettingsStateService.setHiddenSubtitleStyle($event)"
+                            optionLabel="label"
+                            optionValue="value"
+                            aria-labelledby="basic"/>
+          </div>
+        </p-fieldset>
+
+        <p-fieldset legend="Timeline Editing" [toggleable]="true">
+          <div class="setting-item-column">
+            <label for="adjustValue">
+              Boundary Adjust Amount ({{ globalSettingsStateService.boundaryAdjustAmountMs() }}ms)
+            </label>
+            <p-slider id="adjustValue"
+                      [ngModel]="globalSettingsStateService.boundaryAdjustAmountMs()"
+                      (ngModelChange)="globalSettingsStateService.setBoundaryAdjustAmountMs($event)"
+                      [min]="0"
+                      [max]="100"
+                      [step]="10"/>
+          </div>
+        </p-fieldset>
+      </div>
+    </p-tabpanel>
+    <p-tabpanel [value]="1">
+      <p>
+        Settings that will be applied by default to all new projects.
+      </p>
+      <app-project-settings [settings]="globalSettingsStateService.defaultProjectSettings()"
+                            (settingsChange)="onDefaultSettingsChange($event)"/>
+    </p-tabpanel>
+    <p-tabpanel [value]="2">
+      <p>
+        Anki is a smart spaced repetition flashcard program.
+      </p>
+    </p-tabpanel>
+  </p-tabpanels>
+</p-tabs>

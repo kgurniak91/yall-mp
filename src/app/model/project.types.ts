@@ -1,4 +1,4 @@
-import {ProjectSettings} from './settings.types';
+import {GlobalSettings, ProjectSettings} from './settings.types';
 import type {SubtitleData} from '../../../shared/types/subtitle.type';
 
 export interface Project {
@@ -18,4 +18,5 @@ export interface Project {
 export interface AppData {
   projects: Project[];
   lastOpenedProjectId: string | null;
+  globalSettings: GlobalSettings;
 }

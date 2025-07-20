@@ -11,6 +11,7 @@ import {ProjectsStateService} from '../projects/projects-state.service';
 import type {SubtitleData} from '../../../../shared/types/subtitle.type';
 import {DeleteSubtitledClipCommand} from '../../model/commands/delete-subtitled-clip.command';
 import {CreateSubtitledClipCommand} from '../../model/commands/create-subtitled-clip.command';
+import {GlobalSettingsStateService} from '../global-settings/global-settings-state.service';
 
 const MIN_CLIP_DURATION = 0.1;
 const ADJUST_DEBOUNCE_MS = 50;
@@ -23,6 +24,7 @@ const MIN_SUBTITLE_DURATION = 0.5;
 export class ClipsStateService {
   private readonly videoStateService = inject(VideoStateService);
   private readonly projectSettingsStateService = inject(ProjectSettingsStateService);
+  private readonly globalSettingsStateService = inject(GlobalSettingsStateService);
   private readonly commandHistoryStateService = inject(CommandHistoryStateService);
   private readonly projectsStateService = inject(ProjectsStateService);
   private readonly toastService = inject(ToastService);
@@ -423,7 +425,7 @@ export class ClipsStateService {
       return;
     }
 
-    const adjustAmountSeconds = this.projectSettingsStateService.adjustValueMs() / 1000;
+    const adjustAmountSeconds = this.globalSettingsStateService.boundaryAdjustAmountMs() / 1000;
     const directionMultiplier = (direction === 'left') ? -1 : 1;
     const changeAmount = adjustAmountSeconds * directionMultiplier;
 

@@ -5,7 +5,7 @@ import {TimelineEditorComponent} from './timeline-editor/timeline-editor.compone
 import {Button} from 'primeng/button';
 import {Tooltip} from 'primeng/tooltip';
 import {Drawer} from 'primeng/drawer';
-import {ProjectSettingsComponent} from './project-settings/project-settings.component';
+import {ProjectSettingsComponent} from '../../shared/components/project-settings/project-settings.component';
 import {KeyboardShortcutsService} from './keyboard-shortcuts/keyboard-shortcuts.service';
 import {SeekDirection} from '../../model/video.types';
 import {ClipsStateService} from '../../state/clips/clips-state.service';
@@ -24,6 +24,8 @@ import {UpdateClipTextCommand} from '../../model/commands/update-clip-text.comma
 import {take} from 'rxjs';
 import {ToastService} from '../../shared/services/toast/toast.service';
 import type {SubtitleData} from '../../../../shared/types/subtitle.type';
+import {GlobalSettingsStateService} from '../../state/global-settings/global-settings-state.service';
+import {GlobalSettingsDialogComponent} from '../global-settings-dialog/global-settings-dialog.component';
 
 @Component({
   selector: 'app-project-details',
@@ -102,6 +104,7 @@ export class ProjectDetailsComponent implements OnInit {
   protected readonly videoStateService = inject(VideoStateService);
   protected readonly clipsStateService = inject(ClipsStateService);
   protected readonly projectSettingsStateService = inject(ProjectSettingsStateService);
+  protected readonly globalSettingsStateService = inject(GlobalSettingsStateService);
   protected readonly HiddenSubtitleStyle = HiddenSubtitleStyle;
   protected readonly project = signal<Project | null>(null);
   protected readonly mediaPath = signal<string | null>(null);
@@ -167,7 +170,7 @@ export class ProjectDetailsComponent implements OnInit {
 
     this.project.set(foundProject);
     this.mediaPath.set(foundProject!.mediaPath);
-    this.projectSettingsStateService.loadSettings(foundProject.settings);
+    this.projectSettingsStateService.setSettings(foundProject.settings);
     this.projectsStateService.setCurrentProject(projectId);
     this.clipsStateService.setProjectId(projectId);
     this.videoStateService.setProjectId(projectId);
@@ -297,6 +300,16 @@ export class ProjectDetailsComponent implements OnInit {
 
   onHelpClicked() {
     // TODO
+  }
+
+  onGlobalSettingsClicked() {
+    this.dialogService.open(GlobalSettingsDialogComponent, {
+      header: 'Global settings',
+      width: 'clamp(20rem, 95vw, 60rem)',
+      focusOnShow: false,
+      closable: true,
+      modal: true
+    });
   }
 
   onDeleteProjectClicked() {

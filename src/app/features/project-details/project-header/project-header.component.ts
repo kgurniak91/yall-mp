@@ -25,6 +25,7 @@ export class ProjectHeaderComponent {
   goToProjectsListClicked = output<void>();
   deleteProjectClicked = output<void>();
   helpClicked = output<void>();
+  globalSettingsClicked = output<void>();
 
   readonly projectMenuItems: MenuItem[] = [
     {
@@ -46,6 +47,11 @@ export class ProjectHeaderComponent {
       label: 'Help & Shortcuts',
       icon: 'fa-solid fa-circle-question',
       command: () => this.helpClicked.emit()
+    },
+    {
+      label: 'Global settings',
+      icon: 'fa-solid fa-gear',
+      command: () => this.globalSettingsClicked.emit()
     },
     {
       separator: true

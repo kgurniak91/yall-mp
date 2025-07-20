@@ -10,6 +10,7 @@ import {Location} from '@angular/common';
 import {ToastService} from '../../shared/services/toast/toast.service';
 import {SUPPORTED_MEDIA_TYPES, SUPPORTED_SUBTITLE_TYPES} from '../../model/video.types';
 import {DEFAULT_PROJECT_SETTINGS} from '../../model/settings.types';
+import {GlobalSettingsStateService} from '../../state/global-settings/global-settings-state.service';
 
 const EDIT_CONFIRMATION_MESSAGE = `
 Are you sure you want to edit this project?
@@ -48,6 +49,7 @@ export class ProjectFormComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly projectsStateService = inject(ProjectsStateService);
+  private readonly globalSettingsStateService = inject(GlobalSettingsStateService);
   private readonly toastService = inject(ToastService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly location = inject(Location);
@@ -127,7 +129,7 @@ export class ProjectFormComponent implements OnInit {
       createdDate: now,
       duration: 0,
       lastPlaybackTime: 0,
-      settings: {...DEFAULT_PROJECT_SETTINGS},
+      settings: {...this.globalSettingsStateService.defaultProjectSettings()},
       subtitles: []
     };
 

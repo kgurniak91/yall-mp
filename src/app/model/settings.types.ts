@@ -15,9 +15,6 @@ export interface ProjectSettings {
   subtitledClipSpeed: number;
   gapSpeed: number;
   subtitleBehavior: SubtitleBehavior;
-  adjustValueMs: number;
-  seekSeconds: number;
-  hiddenSubtitleStyle: HiddenSubtitleStyle;
 }
 
 export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
@@ -25,8 +22,19 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
   autoPauseAtEnd: false,
   subtitledClipSpeed: 1.0,
   gapSpeed: 3.0,
-  subtitleBehavior: SubtitleBehavior.DoNothing,
-  adjustValueMs: 50,
-  seekSeconds: 2,
+  subtitleBehavior: SubtitleBehavior.DoNothing
+};
+
+export interface GlobalSettings {
+  boundaryAdjustAmountMs: number;
+  seekAmountSeconds: number;
+  hiddenSubtitleStyle: HiddenSubtitleStyle;
+  defaultProjectSettings: ProjectSettings;
+}
+
+export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
+  boundaryAdjustAmountMs: 50,
+  seekAmountSeconds: 2,
   hiddenSubtitleStyle: HiddenSubtitleStyle.Blurred,
+  defaultProjectSettings: DEFAULT_PROJECT_SETTINGS
 };

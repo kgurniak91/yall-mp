@@ -1,12 +1,14 @@
 import {computed, inject, Injectable, signal} from '@angular/core';
 import {AppData, Project} from '../../model/project.types';
 import {LocalStorageService} from '../../core/services/local-storage/local-storage.service';
+import {DEFAULT_GLOBAL_SETTINGS, GlobalSettings} from '../../model/settings.types';
 
 const APP_DATA_KEY = 'yall-mp-app-data';
 
 const defaults: AppData = {
   projects: [],
-  lastOpenedProjectId: null
+  lastOpenedProjectId: null,
+  globalSettings: DEFAULT_GLOBAL_SETTINGS
 };
 
 @Injectable({
@@ -25,6 +27,8 @@ export class ProjectsStateService {
   public readonly lastOpenedProject = computed(() => {
     return this._appData().projects.find(p => p.id === this.lastOpenedProjectId()) ?? null;
   });
+
+  public readonly globalSettings = computed(() => this._appData().globalSettings);
 
   constructor() {
     this.loadAppDataFromStorage();
@@ -121,14 +125,23 @@ export class ProjectsStateService {
     });
   }
 
+  public updateGlobalSettings(updates: Partial<GlobalSettings>): void {
+    this._appData.update(currentData => {
+      const newGlobalSettings = {...currentData.globalSettings, ...updates};
+      const newData = {...currentData, globalSettings: newGlobalSettings};
+      this.saveAppDataToStorage(newData);
+      return newData;
+    });
+  }
+
+  private saveAppDataToStorage(newData: AppData) {
+    this.storageService.setItem(APP_DATA_KEY, newData);
+  }
+
   private loadAppDataFromStorage(): void {
     const data = this.storageService.getItem<AppData>(APP_DATA_KEY);
     if (data) {
       this._appData.set(data);
     }
-  }
-
-  private saveAppDataToStorage(newData: AppData) {
-    this.storageService.setItem(APP_DATA_KEY, newData);
   }
 }
