@@ -176,7 +176,15 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
 
   private handleRegionClicked = (region: Region, e: MouseEvent) => {
     e.stopPropagation();
-    this.videoStateService.seekAbsolute(region.start);
+    const wrapper = this.wavesurfer?.getWrapper();
+    if (wrapper) {
+      const bbox = wrapper.getBoundingClientRect();
+      const progress = (e.clientX - bbox.left) / bbox.width;
+      const time = progress * (this.wavesurfer?.getDuration() || 0);
+      this.videoStateService.seekAbsolute(time);
+    } else {
+      this.videoStateService.seekAbsolute(region.start);
+    }
   }
 
   private handleRegionCreated = (region: Region) => {
