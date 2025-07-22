@@ -112,3 +112,11 @@ p-fieldset {
     padding: 0 1.25rem 1.25rem 1.25rem;
   }
 }
+
+label {
+  font-weight: bold;
+}
+
+p-accordion-panel:not(.p-accordionpanel-active) p-accordion-content {
+  display: none !important;
+}

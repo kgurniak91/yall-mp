@@ -44,14 +44,14 @@ export class ProjectHeaderComponent {
       command: () => this.goToProjectsListClicked.emit()
     },
     {
-      label: 'Help & Shortcuts',
-      icon: 'fa-solid fa-circle-question',
-      command: () => this.helpClicked.emit()
-    },
-    {
       label: 'Global settings',
       icon: 'fa-solid fa-gear',
       command: () => this.globalSettingsClicked.emit()
+    },
+    {
+      label: 'Help & Shortcuts',
+      icon: 'fa-solid fa-circle-question',
+      command: () => this.helpClicked.emit()
     },
     {
       separator: true

@@ -1,0 +1,41 @@
+<div class="settings-container">
+  <p-fieldset legend="Playback Control" [toggleable]="false">
+    <div class="setting-item">
+      <label for="seek-seconds">Seek Amount (seconds)</label>
+      <p-inputNumber [ngModel]="globalSettingsStateService.seekAmountSeconds()"
+                     (ngModelChange)="globalSettingsStateService.setSeekAmountSeconds($event)"
+                     [showButtons]="true"
+                     [min]="1"
+                     [max]="30"
+                     [step]="1"
+                     inputId="seek-seconds"
+                     suffix="s"/>
+    </div>
+  </p-fieldset>
+
+  <p-fieldset legend="Subtitle Display" [toggleable]="false">
+    <div class="setting-item">
+      <label>When Subtitles are Off</label>
+      <p-selectButton [options]="hiddenSubtitleStyleOptions"
+                      [ngModel]="globalSettingsStateService.hiddenSubtitleStyle()"
+                      (ngModelChange)="globalSettingsStateService.setHiddenSubtitleStyle($event)"
+                      optionLabel="label"
+                      optionValue="value"
+                      aria-labelledby="basic"/>
+    </div>
+  </p-fieldset>
+
+  <p-fieldset legend="Timeline Editing" [toggleable]="false">
+    <div class="setting-item-column">
+      <label for="adjustValue">
+        Boundary Adjust Amount ({{ globalSettingsStateService.boundaryAdjustAmountMs() }}ms)
+      </label>
+      <p-slider id="adjustValue"
+                [ngModel]="globalSettingsStateService.boundaryAdjustAmountMs()"
+                (ngModelChange)="globalSettingsStateService.setBoundaryAdjustAmountMs($event)"
+                [min]="0"
+                [max]="100"
+                [step]="10"/>
+    </div>
+  </p-fieldset>
+</div>

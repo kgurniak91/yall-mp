@@ -1,5 +1,5 @@
 import {Component, inject} from '@angular/core';
-import {ProjectsStateService} from '../../state/projects/projects-state.service';
+import {AppStateService} from '../../state/app/app-state.service';
 import {Router, RouterLink} from '@angular/router';
 import {Project} from '../../model/project.types';
 import {Button} from 'primeng/button';
@@ -19,7 +19,7 @@ import {ProjectListItemComponent} from './project-list-item/project-list-item.co
   styleUrl: './list-of-projects.component.scss'
 })
 export class ListOfProjectsComponent {
-  protected readonly projectsStateService = inject(ProjectsStateService);
+  protected readonly appStateService = inject(AppStateService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly router = inject(Router);
 
@@ -38,7 +38,7 @@ export class ListOfProjectsComponent {
       header: 'Confirm deletion',
       message: `Are you sure you want to delete the project <b>${project.mediaFileName}</b>?<br>This action cannot be undone.`,
       icon: 'fa-solid fa-circle-exclamation',
-      accept: () => this.projectsStateService.deleteProject(project.id)
+      accept: () => this.appStateService.deleteProject(project.id)
     });
   }
 }

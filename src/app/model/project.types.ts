@@ -1,5 +1,6 @@
 import {GlobalSettings, ProjectSettings} from './settings.types';
 import type {SubtitleData} from '../../../shared/types/subtitle.type';
+import {AnkiSettings} from './anki.types';
 
 export interface Project {
   id: string;
@@ -19,4 +20,5 @@ export interface AppData {
   projects: Project[];
   lastOpenedProjectId: string | null;
   globalSettings: GlobalSettings;
+  ankiSettings: AnkiSettings;
 }

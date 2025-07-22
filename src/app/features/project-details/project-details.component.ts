@@ -13,7 +13,7 @@ import {Popover} from 'primeng/popover';
 import {ProjectHeaderComponent} from './project-header/project-header.component';
 import {ActivatedRoute, Router} from '@angular/router';
 import {ConfirmationService} from 'primeng/api';
-import {ProjectsStateService} from '../../state/projects/projects-state.service';
+import {AppStateService} from '../../state/app/app-state.service';
 import {Project} from '../../model/project.types';
 import {ProjectSettingsStateService} from '../../state/project-settings/project-settings-state.service';
 import {BuiltInSettingsPresets, HiddenSubtitleStyle, ProjectSettings, SettingsPreset} from '../../model/settings.types';
@@ -121,7 +121,7 @@ export class ProjectDetailsComponent implements OnInit {
   private wasPlayingBeforeSettingsOpened = false;
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly projectsStateService = inject(ProjectsStateService);
+  private readonly appStateService = inject(AppStateService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly dialogService = inject(DialogService);
   private readonly toastService = inject(ToastService);
@@ -134,7 +134,7 @@ export class ProjectDetailsComponent implements OnInit {
       const currentSettings = this.projectSettingsStateService.settings();
       const currentProject = this.project();
       if (currentProject) {
-        this.projectsStateService.updateProject(currentProject.id, {settings: currentSettings});
+        this.appStateService.updateProject(currentProject.id, {settings: currentSettings});
       }
     });
 
@@ -143,7 +143,7 @@ export class ProjectDetailsComponent implements OnInit {
       const project = this.project();
 
       if (project && duration > 0 && project.duration !== duration) {
-        this.projectsStateService.updateProject(project.id, {duration: duration});
+        this.appStateService.updateProject(project.id, {duration: duration});
       }
     });
 
@@ -170,7 +170,7 @@ export class ProjectDetailsComponent implements OnInit {
       return;
     }
 
-    const foundProject = this.projectsStateService.getProjectById(projectId);
+    const foundProject = this.appStateService.getProjectById(projectId);
 
     if (!foundProject) {
       this.toastService.error(`Project with ID ${projectId} not found`);
@@ -181,7 +181,7 @@ export class ProjectDetailsComponent implements OnInit {
     this.project.set(foundProject);
     this.mediaPath.set(foundProject!.mediaPath);
     this.projectSettingsStateService.setSettings(foundProject.settings);
-    this.projectsStateService.setCurrentProject(projectId);
+    this.appStateService.setCurrentProject(projectId);
     this.clipsStateService.setProjectId(projectId);
     this.videoStateService.setProjectId(projectId);
 
@@ -342,7 +342,7 @@ export class ProjectDetailsComponent implements OnInit {
         header: 'Confirm deletion',
         message: `Are you sure you want to delete the project <b>${project.mediaFileName}</b>?<br>This action cannot be undone.`,
         icon: 'fa-solid fa-circle-exclamation',
-        accept: () => this.projectsStateService.deleteProject(project.id)
+        accept: () => this.appStateService.deleteProject(project.id)
       });
     }
   }

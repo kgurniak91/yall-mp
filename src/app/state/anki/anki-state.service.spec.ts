@@ -1,13 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 
-import { ProjectsStateService } from './projects-state.service';
+import { AnkiStateService } from './anki-state.service';
 
-describe('ProjectsStateService', () => {
-  let service: ProjectsStateService;
+describe('AnkiStateService', () => {
+  let service: AnkiStateService;
 
   beforeEach(() => {
     TestBed.configureTestingModule({});
-    service = TestBed.inject(ProjectsStateService);
+    service = TestBed.inject(AnkiStateService);
   });
 
   it('should be created', () => {

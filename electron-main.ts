@@ -28,6 +28,10 @@ function createWindow() {
 app.whenReady().then(() => {
   ipcMain.handle('dialog:openFile', (_, options) => handleFileOpen(options));
   ipcMain.handle('subtitle:parse', (_, filePath) => handleSubtitleParse(filePath));
+  ipcMain.handle('anki:check', () => invokeAnkiConnect('version'));
+  ipcMain.handle('anki:getDeckNames', () => invokeAnkiConnect('deckNames'));
+  ipcMain.handle('anki:getNoteTypes', () => invokeAnkiConnect('modelNames'));
+  ipcMain.handle('anki:getNoteTypeFieldNames', (event, modelName) => invokeAnkiConnect('modelFieldNames', { modelName }));
 
   createWindow();
 
@@ -111,4 +115,21 @@ function preprocessSubtitles(subtitles: SubtitleData[]): SubtitleData[] {
   }
 
   return sanitizedSubtitles;
+}
+
+async function invokeAnkiConnect(action: string, params = {}) {
+  try {
+    const response = await fetch('http://localhost:8765', {
+      method: 'POST',
+      body: JSON.stringify({action, version: 6, params})
+    });
+    const data = await response.json();
+    if (data.error) {
+      throw new Error(data.error);
+    }
+    return data.result;
+  } catch (e) {
+    console.error(`AnkiConnect action '${action}' failed:`, e);
+    return null;
+  }
 }

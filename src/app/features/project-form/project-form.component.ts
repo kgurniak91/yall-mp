@@ -1,6 +1,6 @@
 import {Component, computed, inject, OnInit, signal} from '@angular/core';
 import {ActivatedRoute, Router} from '@angular/router';
-import {ProjectsStateService} from '../../state/projects/projects-state.service';
+import {AppStateService} from '../../state/app/app-state.service';
 import {Project} from '../../model/project.types';
 import {ConfirmationService} from 'primeng/api';
 import {Button} from 'primeng/button';
@@ -48,7 +48,7 @@ export class ProjectFormComponent implements OnInit {
   private readonly editingProjectId = signal<string | null>(null);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
-  private readonly projectsStateService = inject(ProjectsStateService);
+  private readonly appStateService = inject(AppStateService);
   private readonly globalSettingsStateService = inject(GlobalSettingsStateService);
   private readonly toastService = inject(ToastService);
   private readonly confirmationService = inject(ConfirmationService);
@@ -59,7 +59,7 @@ export class ProjectFormComponent implements OnInit {
     if (projectId) {
       this.editMode.set(true);
       this.editingProjectId.set(projectId);
-      const project = this.projectsStateService.getProjectById(projectId);
+      const project = this.appStateService.getProjectById(projectId);
       if (project) {
         this.mediaFilePath.set(project.mediaPath);
         this.subtitleFilePath.set(project.subtitlePath);
@@ -133,7 +133,7 @@ export class ProjectFormComponent implements OnInit {
       subtitles: []
     };
 
-    this.projectsStateService.createProject(newProject);
+    this.appStateService.createProject(newProject);
     this.router.navigate(['/project', newProject.id]);
   }
 
@@ -153,7 +153,7 @@ export class ProjectFormComponent implements OnInit {
       lastPlaybackTime: 0
     };
 
-    this.projectsStateService.updateProject(projectId, updates);
+    this.appStateService.updateProject(projectId, updates);
     this.toastService.success();
     this.router.navigate(['/project', projectId]);
   }

@@ -7,7 +7,7 @@
               [routerLink]="['/project/new']"/>
   </div>
 
-  <p-dataView [value]="projectsStateService.projects()">
+  <p-dataView [value]="appStateService.projects()">
     <ng-template #list let-projects>
       <div class="project-list-items">
         @for (project of projects; track project.id) {

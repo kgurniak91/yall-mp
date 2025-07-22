@@ -9,47 +9,7 @@
       <p>
         Global settings common for all projects.
       </p>
-      <div class="settings-container p-4">
-        <p-fieldset legend="Playback Control" [toggleable]="false">
-          <div class="setting-item">
-            <label for="seek-seconds">Seek Amount (seconds)</label>
-            <p-inputNumber [ngModel]="globalSettingsStateService.seekAmountSeconds()"
-                           (ngModelChange)="globalSettingsStateService.setSeekAmountSeconds($event)"
-                           [showButtons]="true"
-                           [min]="1"
-                           [max]="30"
-                           [step]="1"
-                           inputId="seek-seconds"
-                           suffix="s"/>
-          </div>
-        </p-fieldset>
-
-        <p-fieldset legend="Subtitle Display" [toggleable]="false">
-          <div class="setting-item">
-            <label>When Subtitles are Off</label>
-            <p-selectButton [options]="hiddenSubtitleStyleOptions"
-                            [ngModel]="globalSettingsStateService.hiddenSubtitleStyle()"
-                            (ngModelChange)="globalSettingsStateService.setHiddenSubtitleStyle($event)"
-                            optionLabel="label"
-                            optionValue="value"
-                            aria-labelledby="basic"/>
-          </div>
-        </p-fieldset>
-
-        <p-fieldset legend="Timeline Editing" [toggleable]="true">
-          <div class="setting-item-column">
-            <label for="adjustValue">
-              Boundary Adjust Amount ({{ globalSettingsStateService.boundaryAdjustAmountMs() }}ms)
-            </label>
-            <p-slider id="adjustValue"
-                      [ngModel]="globalSettingsStateService.boundaryAdjustAmountMs()"
-                      (ngModelChange)="globalSettingsStateService.setBoundaryAdjustAmountMs($event)"
-                      [min]="0"
-                      [max]="100"
-                      [step]="10"/>
-          </div>
-        </p-fieldset>
-      </div>
+      <app-global-settings/>
     </p-tabpanel>
     <p-tabpanel [value]="1">
       <p>
@@ -60,8 +20,12 @@
     </p-tabpanel>
     <p-tabpanel [value]="2">
       <p>
-        Anki is a smart spaced repetition flashcard program.
+        <a href="https://apps.ankiweb.net/">Anki</a> is a smart spaced repetition flashcard program.
+        Make sure you have the <a href="https://ankiweb.net/shared/info/2055492159">AnkiConnect</a> addon installed.
+        Open the Anki program and go to <a href="http://localhost:8765/">http://localhost:8765/</a> - you should see something like this:
+        <code>&#123;"apiVersion": "AnkiConnect v.6"&#125;</code>
       </p>
+      <app-anki-settings/>
     </p-tabpanel>
   </p-tabpanels>
 </p-tabs>

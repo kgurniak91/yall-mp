@@ -1,0 +1,96 @@
+<div class="settings-container">
+  <p-fieldset legend="AnkiConnect Status" [toggleable]="false">
+    <div class="flex align-items-center gap-2">
+      <label>
+        @switch (ankiStateService.status()) {
+          @case ('connected') {
+            Connected
+          }
+          @case ('disconnected') {
+            Failed to connect. Is Anki open?
+          }
+          @case ('checking') {
+            Checking...
+          }
+          @case ('error') {
+            An unexpected error occurred.
+          }
+        }
+      </label>
+      <p-button label="Refresh"
+                icon="fa-solid fa-rotate"
+                severity="primary"
+                [loading]="ankiStateService.status() === 'checking'"
+                (onClick)="ankiStateService.checkAnkiConnection()"/>
+    </div>
+  </p-fieldset>
+
+  <p-fieldset legend="Card templates" [toggleable]="false">
+    @if (ankiStateService.status() === 'connected') {
+      <div class="mb-3">
+        <p-button label="Add New Template"
+                  severity="primary"
+                  icon="fa-solid fa-plus"
+                  (onClick)="addAnkiCardTemplate()"/>
+      </div>
+
+      <p-accordion [multiple]="false"
+                   [value]="accordionActiveIndex()"
+                   (onOpen)="onTabOpen($event)"
+                   (onClose)="onTabClose()">
+        @for (template of ankiCardTemplates(); track template.id) {
+          <p-accordion-panel [value]="$index">
+            <p-accordion-header>
+              <b>{{ template.name || 'New Card Template' }}</b>
+            </p-accordion-header>
+            <p-accordion-content>
+              <div class="flex flex-column gap-4">
+                <div class="flex flex-column gap-2">
+                  <label>Template Name</label>
+                  <input pInputText
+                         [ngModel]="template.name"
+                         (ngModelChange)="updateAnkiCardTemplate(template.id, { name: $event })"/>
+                </div>
+
+                <div class="flex flex-column gap-2">
+                  <label>Deck</label>
+                  <p-select [options]="ankiStateService.deckNames()"
+                            [loading]="ankiStateService.isLoadingDecks()"
+                            [ngModel]="template.ankiDeck"
+                            (ngModelChange)="updateAnkiCardTemplate(template.id, { ankiDeck: $event })"
+                            appendTo="body"
+                            placeholder="Select Deck"></p-select>
+                </div>
+
+                <div class="flex flex-column gap-2">
+                  <label>Note Type</label>
+                  <p-select [options]="ankiStateService.noteTypes()"
+                            [loading]="ankiStateService.isLoadingNoteTypes()"
+                            [ngModel]="template.ankiNoteType"
+                            (ngModelChange)="updateAnkiCardTemplate(template.id, { ankiNoteType: $event })"
+                            appendTo="body"
+                            placeholder="Select Note Type"></p-select>
+                </div>
+
+                <div class="flex justify-content-end">
+                  <p-button label="Delete Template"
+                            severity="danger"
+                            icon="fa-solid fa-trash"
+                            (onClick)="deleteAnkiCardTemplate(template.id)"/>
+                </div>
+              </div>
+            </p-accordion-content>
+          </p-accordion-panel>
+        } @empty {
+          <p class="text-center">
+            No templates found.
+          </p>
+        }
+      </p-accordion>
+    } @else {
+      <p class="text-center">
+        Connect to Anki in order to configure card templates.
+      </p>
+    }
+  </p-fieldset>
+</div>

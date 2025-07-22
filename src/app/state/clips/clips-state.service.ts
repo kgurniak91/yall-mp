@@ -1,13 +1,12 @@
 import {computed, effect, inject, Injectable, Signal, signal} from '@angular/core';
 import {VideoStateService} from '../video/video-state.service';
 import {PlayerState, SeekDirection, VideoClip} from '../../model/video.types';
-import {ProjectSettingsStateService} from '../project-settings/project-settings-state.service';
 import {CommandHistoryStateService} from '../command-history/command-history-state.service';
 import {UpdateClipTimesCommand} from '../../model/commands/update-clip-times.command';
 import {ToastService} from '../../shared/services/toast/toast.service';
 import {SplitSubtitledClipCommand} from '../../model/commands/split-subtitled-clip.command';
 import {MergeSubtitledClipsCommand} from '../../model/commands/merge-subtitled-clips.command';
-import {ProjectsStateService} from '../projects/projects-state.service';
+import {AppStateService} from '../app/app-state.service';
 import type {SubtitleData} from '../../../../shared/types/subtitle.type';
 import {DeleteSubtitledClipCommand} from '../../model/commands/delete-subtitled-clip.command';
 import {CreateSubtitledClipCommand} from '../../model/commands/create-subtitled-clip.command';
@@ -23,10 +22,9 @@ const MIN_SUBTITLE_DURATION = 0.5;
 @Injectable()
 export class ClipsStateService {
   private readonly videoStateService = inject(VideoStateService);
-  private readonly projectSettingsStateService = inject(ProjectSettingsStateService);
   private readonly globalSettingsStateService = inject(GlobalSettingsStateService);
   private readonly commandHistoryStateService = inject(CommandHistoryStateService);
-  private readonly projectsStateService = inject(ProjectsStateService);
+  private readonly appStateService = inject(AppStateService);
   private readonly toastService = inject(ToastService);
   private readonly _subtitles = signal<SubtitleData[]>([]);
   private readonly _currentClipIndex = signal(0);
@@ -52,7 +50,7 @@ export class ClipsStateService {
         return;
       }
 
-      this.projectsStateService.updateProject(projectId, {subtitles});
+      this.appStateService.updateProject(projectId, {subtitles});
     });
   }
 

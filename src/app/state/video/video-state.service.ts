@@ -1,6 +1,6 @@
 import {DestroyRef, inject, Injectable, Injector, OnDestroy, Signal, signal} from '@angular/core';
 import {SeekType} from '../../model/video.types';
-import {ProjectsStateService} from '../projects/projects-state.service';
+import {AppStateService} from '../app/app-state.service';
 import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
 import {auditTime, throttleTime} from 'rxjs';
 
@@ -19,7 +19,7 @@ export class VideoStateService implements OnDestroy {
   private readonly _syncTimelineRequest = signal<number | null>(null);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
-  private readonly projectsStateService = inject(ProjectsStateService);
+  private readonly appStateService = inject(AppStateService);
   private _projectId: string | null = null;
 
   public readonly videoElement: Signal<HTMLVideoElement | null> = this._videoElement.asReadonly();
@@ -39,7 +39,7 @@ export class VideoStateService implements OnDestroy {
       return;
     }
 
-    this.projectsStateService.updateProject(this._projectId, {
+    this.appStateService.updateProject(this._projectId, {
       lastPlaybackTime: this.currentTime()
     });
   }
@@ -133,7 +133,7 @@ export class VideoStateService implements OnDestroy {
       takeUntilDestroyed(this.destroyRef)
     ).subscribe(currentTime => {
       if (this._projectId && this.duration() > 0) {
-        this.projectsStateService.updateProject(this._projectId, {lastPlaybackTime: currentTime});
+        this.appStateService.updateProject(this._projectId, {lastPlaybackTime: currentTime});
       }
     });
   }

@@ -1,14 +1,14 @@
 import {Routes} from '@angular/router';
 import {inject} from '@angular/core';
-import {ProjectsStateService} from './state/projects/projects-state.service';
+import {AppStateService} from './state/app/app-state.service';
 
 export const routes: Routes = [
   {
     path: '',
     pathMatch: 'full',
     redirectTo: () => {
-      const projectStateService = inject(ProjectsStateService);
-      const lastProject = projectStateService.lastOpenedProject();
+      const appStateService = inject(AppStateService);
+      const lastProject = appStateService.lastOpenedProject();
       return lastProject ? `/project/${lastProject.id}` : '/project/new';
     }
   },

@@ -2,19 +2,23 @@ import {computed, inject, Injectable, signal} from '@angular/core';
 import {AppData, Project} from '../../model/project.types';
 import {LocalStorageService} from '../../core/services/local-storage/local-storage.service';
 import {DEFAULT_GLOBAL_SETTINGS, GlobalSettings} from '../../model/settings.types';
+import {AnkiSettings} from '../../model/anki.types';
 
 const APP_DATA_KEY = 'yall-mp-app-data';
 
 const defaults: AppData = {
   projects: [],
   lastOpenedProjectId: null,
-  globalSettings: DEFAULT_GLOBAL_SETTINGS
+  globalSettings: DEFAULT_GLOBAL_SETTINGS,
+  ankiSettings: {
+    ankiCardTemplates: []
+  }
 };
 
 @Injectable({
   providedIn: 'root'
 })
-export class ProjectsStateService {
+export class AppStateService {
   private readonly storageService = inject(LocalStorageService);
   private readonly _appData = signal<AppData>(defaults);
 
@@ -29,6 +33,7 @@ export class ProjectsStateService {
   });
 
   public readonly globalSettings = computed(() => this._appData().globalSettings);
+  public readonly ankiSettings = computed(() => this._appData().ankiSettings);
 
   constructor() {
     this.loadAppDataFromStorage();
@@ -129,6 +134,15 @@ export class ProjectsStateService {
     this._appData.update(currentData => {
       const newGlobalSettings = {...currentData.globalSettings, ...updates};
       const newData = {...currentData, globalSettings: newGlobalSettings};
+      this.saveAppDataToStorage(newData);
+      return newData;
+    });
+  }
+
+  public updateAnkiSettings(updates: Partial<AnkiSettings>): void {
+    this._appData.update(currentData => {
+      const newAnkiSettings = {...currentData.ankiSettings, ...updates};
+      const newData = {...currentData, ankiSettings: newAnkiSettings};
       this.saveAppDataToStorage(newData);
       return newData;
     });
