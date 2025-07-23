@@ -1,0 +1,57 @@
+<div class="flex flex-column gap-4">
+  <div class="flex flex-column gap-2">
+    <label>Template Name</label>
+    <input pInputText
+           [ngModel]="template().name"
+           (ngModelChange)="onFieldChange('name', $event)"/>
+  </div>
+
+  <div class="flex flex-column gap-2">
+    <label>Deck</label>
+    <p-select [options]="decks()"
+              [ngModel]="template().ankiDeck"
+              (ngModelChange)="onFieldChange('ankiDeck', $event)"
+              appendTo="body"
+              placeholder="Select Deck"></p-select>
+  </div>
+
+  <div class="flex flex-column gap-2">
+    <label>Note Type</label>
+    <p-select [options]="noteTypes()"
+              [ngModel]="template().ankiNoteType"
+              (ngModelChange)="onFieldChange('ankiNoteType', $event)"
+              appendTo="body"
+              placeholder="Select Note Type"></p-select>
+  </div>
+
+  @if (fields().length > 0) {
+    <p-fieldset legend="Field Mappings" [toggleable]="false">
+      <div class="flex flex-column gap-3">
+        @for (fieldName of fields(); track fieldName) {
+          <div class="grid align-items-center">
+            <div class="col-4">
+              <label class="font-bold">{{ fieldName }}</label>
+            </div>
+            <div class="col-8">
+              <p-select
+                placeholder="Select source..."
+                [options]="appSources"
+                [showClear]="true"
+                appendTo="body"
+                [ngModel]="getSourceForField(fieldName)"
+                (ngModelChange)="onMappingChange(fieldName, $event)">
+              </p-select>
+            </div>
+          </div>
+        }
+      </div>
+    </p-fieldset>
+  }
+
+  <div class="flex justify-content-end">
+    <p-button label="Delete Template"
+              severity="danger"
+              icon="fa-solid fa-trash"
+              (onClick)="delete.emit()"/>
+  </div>
+</div>

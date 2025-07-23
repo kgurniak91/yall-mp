@@ -1,5 +1,7 @@
+export type AnkiFieldMappingSource = 'text' | 'audio' | 'screenshot' | 'video';
+
 export interface AnkiFieldMapping {
-  source: 'text' | 'audio' | 'screenshot' | 'video'; // App's data fields
+  source: AnkiFieldMappingSource; // App's data fields
   destination: string; // The name of the field in the Anki Note Type
 }
 
@@ -9,6 +11,7 @@ export interface AnkiCardTemplate {
   ankiDeck: string | null;
   ankiNoteType: string | null;
   fieldMappings: AnkiFieldMapping[];
+  isValid: boolean;
 }
 
 export type AnkiConnectStatus = 'connected' | 'disconnected' | 'checking' | 'error';

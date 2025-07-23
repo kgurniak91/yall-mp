@@ -1,27 +1,26 @@
 import {Component, computed, effect, inject, signal} from '@angular/core';
 import {Button} from 'primeng/button';
 import {Fieldset} from 'primeng/fieldset';
-import {Select} from 'primeng/select';
 import {AnkiStateService} from '../../../state/anki/anki-state.service';
-import {AppStateService} from '../../../state/app/app-state.service';
-import {AnkiCardTemplate} from '../../../model/anki.types';
-import {v4 as uuidv4} from 'uuid';
 import {Accordion, AccordionContent, AccordionHeader, AccordionPanel, AccordionTabOpenEvent} from 'primeng/accordion';
 import {FormsModule} from '@angular/forms';
-import {InputText} from 'primeng/inputtext';
+import {AnkiCardTemplateFormComponent} from './anki-card-template-form/anki-card-template-form.component';
+import {Badge} from 'primeng/badge';
+import {ToastService} from '../../../shared/services/toast/toast.service';
+import {ConfirmationService} from 'primeng/api';
 
 @Component({
   selector: 'app-anki-settings',
   imports: [
     Button,
     Fieldset,
-    Select,
     Accordion,
     AccordionPanel,
     AccordionHeader,
     AccordionContent,
     FormsModule,
-    InputText
+    AnkiCardTemplateFormComponent,
+    Badge
   ],
   templateUrl: './anki-settings.component.html',
   styleUrl: './anki-settings.component.scss'
@@ -32,23 +31,28 @@ export class AnkiSettingsComponent {
     const selected = this.selectedTemplateIndex();
     return selected === undefined ? -1 : selected;
   });
-  protected readonly ankiCardTemplates = computed(() => this.appStateService.ankiSettings().ankiCardTemplates);
   protected readonly ankiStateService = inject(AnkiStateService);
-  private readonly appStateService = inject(AppStateService);
+  protected readonly fieldsForSelectedNoteType = computed(() => {
+    const index = this.selectedTemplateIndex();
+    if (index === undefined) return [];
+
+    const template = this.ankiStateService.ankiCardTemplates()[index];
+    if (!template?.ankiNoteType) return [];
+
+    return this.ankiStateService.noteTypeFields()[template.ankiNoteType] || [];
+  });
+  private readonly confirmationService = inject(ConfirmationService);
+  private readonly toastService = inject(ToastService);
 
   constructor() {
     effect(() => {
       const index = this.selectedTemplateIndex();
       if (index !== undefined) {
-        const template = this.ankiCardTemplates()[index];
+        const template = this.ankiStateService.ankiCardTemplates()[index];
         const noteType = template?.ankiNoteType;
         if (noteType) {
           this.ankiStateService.fetchNoteTypeFields(noteType);
-        } else {
-          this.ankiStateService.noteTypeFields.set([]);
         }
-      } else {
-        this.ankiStateService.noteTypeFields.set([]);
       }
     });
   }
@@ -61,31 +65,27 @@ export class AnkiSettingsComponent {
     this.selectedTemplateIndex.set(undefined);
   }
 
-  protected addAnkiCardTemplate(): string {
-    const newTemplate: AnkiCardTemplate = {
-      id: uuidv4(),
-      name: 'New Card Template',
-      ankiDeck: null,
-      ankiNoteType: null,
-      fieldMappings: []
-    };
+  protected onAddNewTemplate(): void {
+    const invalidTemplate = this.ankiStateService.ankiCardTemplates().find(t => !t.isValid);
 
-    const currentTemplates = this.ankiCardTemplates();
-    this.appStateService.updateAnkiSettings({ankiCardTemplates: [...currentTemplates, newTemplate]});
-    return newTemplate.id;
+    if (invalidTemplate) {
+      this.toastService.warn('Make sure all templates are valid before adding a new one.');
+      return;
+    }
+
+    this.ankiStateService.addAnkiCardTemplate();
+    this.selectedTemplateIndex.set(0);
   }
 
-  protected updateAnkiCardTemplate(id: string, updates: Partial<AnkiCardTemplate>): void {
-    const currentTemplates = this.ankiCardTemplates();
-    const newTemplates = currentTemplates.map(t => t.id === id ? {...t, ...updates} : t);
-    this.appStateService.updateAnkiSettings({ankiCardTemplates: newTemplates});
+  protected onDeleteTemplate(id: string): void {
+    this.confirmationService.confirm({
+      header: 'Confirm deletion',
+      message: `Are you sure you want to delete this template?<br>This action cannot be undone.`,
+      icon: 'fa-solid fa-circle-exclamation',
+      accept: () => {
+        this.ankiStateService.deleteCardTemplate(id);
+        this.selectedTemplateIndex.set(undefined);
+      }
+    });
   }
-
-  protected deleteAnkiCardTemplate(id: string): void {
-    console.log('Deleting template:', id);
-    const currentTemplates = this.ankiCardTemplates();
-    const newTemplates = currentTemplates.filter(t => t.id !== id);
-    this.appStateService.updateAnkiSettings({ankiCardTemplates: newTemplates});
-  }
-
 }
