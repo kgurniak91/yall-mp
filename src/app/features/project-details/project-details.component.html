@@ -141,6 +141,13 @@
               severity="secondary"
               [disabled]="!currentClipHasSubtitles()"/>
 
+    <p-button icon="fa-solid fa-e"
+              (click)="openAnkiExportDialog()"
+              pTooltip="Export to Anki (E)"
+              tooltipPosition="left"
+              severity="secondary"
+              [disabled]="!currentClipHasSubtitles()"/>
+
     @let subtitlesVisible = videoStateService.subtitlesVisible();
     <p-button icon="{{subtitlesVisible ? 'fa-solid' : 'fa-regular'}} fa-closed-captioning"
               [pTooltip]="(subtitlesVisible ? 'Hide subtitles' : 'Show subtitles') + ' (C)'"

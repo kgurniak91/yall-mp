@@ -19,3 +19,10 @@ export type AnkiConnectStatus = 'connected' | 'disconnected' | 'checking' | 'err
 export interface AnkiSettings {
   ankiCardTemplates: AnkiCardTemplate[];
 }
+
+export interface AnkiCard {
+  deckName: string;
+  modelName: string;
+  fields: Record<string, string>;
+  tags: string[];
+}

@@ -3,6 +3,7 @@ import path from 'path';
 import {promises as fs} from 'fs';
 import {CaptionsFileFormat, ParsedCaptionsResult, parseResponse, VTTCue} from 'media-captions';
 import type {SubtitleData} from './shared/types/subtitle.type';
+import {AnkiCard} from './src/app/model/anki.types';
 
 const FORCED_GAP_SECONDS = 0.05;
 
@@ -32,6 +33,7 @@ app.whenReady().then(() => {
   ipcMain.handle('anki:getDeckNames', () => invokeAnkiConnect('deckNames'));
   ipcMain.handle('anki:getNoteTypes', () => invokeAnkiConnect('modelNames'));
   ipcMain.handle('anki:getNoteTypeFieldNames', (event, modelName) => invokeAnkiConnect('modelFieldNames', { modelName }));
+  ipcMain.handle('anki:createAnkiCard', (event, card: AnkiCard) => invokeAnkiConnect('addNote', { note: card }));
 
   createWindow();
 

@@ -17,6 +17,7 @@ export class VideoStateService implements OnDestroy {
   private readonly _toggleSettingsRequest = signal<number | null>(null);
   private readonly _editSubtitlesRequest = signal<number | null>(null);
   private readonly _syncTimelineRequest = signal<number | null>(null);
+  private readonly _ankiExportRequest = signal<number | null>(null);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly appStateService = inject(AppStateService);
@@ -33,6 +34,7 @@ export class VideoStateService implements OnDestroy {
   public readonly toggleSettingsRequest = this._toggleSettingsRequest.asReadonly();
   public readonly editSubtitlesRequest = this._editSubtitlesRequest.asReadonly();
   public readonly syncTimelineRequest = this._syncTimelineRequest.asReadonly();
+  public readonly ankiExportRequest = this._ankiExportRequest.asReadonly();
 
   ngOnDestroy(): void {
     if (!this._projectId) {
@@ -81,6 +83,10 @@ export class VideoStateService implements OnDestroy {
     this._editSubtitlesRequest.set(Date.now());
   }
 
+  public requestAnkiExport(): void {
+    this._ankiExportRequest.set(Date.now());
+  }
+
   public repeatCurrentClip(): void {
     this._repeatRequest.set(Date.now());
   }
@@ -121,6 +127,10 @@ export class VideoStateService implements OnDestroy {
 
   public clearEditSubtitlesRequest(): void {
     this._editSubtitlesRequest.set(null);
+  }
+
+  public clearAnkiExportRequest(): void {
+    this._ankiExportRequest.set(null);
   }
 
   private setupPeriodicSaving(): void {

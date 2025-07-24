@@ -30,6 +30,8 @@ import {DropdownModule} from 'primeng/dropdown';
 import {FormsModule} from '@angular/forms';
 import {Fieldset} from 'primeng/fieldset';
 import {Select} from 'primeng/select';
+import {AnkiStateService} from '../../state/anki/anki-state.service';
+import {ExportToAnkiDialogComponent} from './export-to-anki-dialog/export-to-anki-dialog.component';
 
 @Component({
   selector: 'app-project-details',
@@ -110,6 +112,7 @@ export class ProjectDetailsComponent implements OnInit {
   protected readonly isSettingsVisible = signal(false);
   protected readonly commandHistoryStateService = inject(CommandHistoryStateService);
   protected readonly videoStateService = inject(VideoStateService);
+  protected readonly ankiStateService = inject(AnkiStateService);
   protected readonly clipsStateService = inject(ClipsStateService);
   protected readonly projectSettingsStateService = inject(ProjectSettingsStateService);
   protected readonly globalSettingsStateService = inject(GlobalSettingsStateService);
@@ -255,6 +258,32 @@ export class ProjectDetailsComponent implements OnInit {
     }
   }
 
+  openAnkiExportDialog(): void {
+    const currentClip = this.clipsStateService.currentClip();
+
+    if (!currentClip || !currentClip.hasSubtitle) {
+      this.toastService.info('Anki export is only available for subtitle clips.');
+      return;
+    }
+
+    const hasValidTemplates = this.ankiStateService.ankiCardTemplates().some(t => t.isValid);
+    if (!hasValidTemplates) {
+      this.toastService.warn('Please configure at least one valid Anki template in the settings.');
+      return;
+    }
+
+    this.dialogService.open(ExportToAnkiDialogComponent, {
+      header: 'Export to Anki',
+      width: 'clamp(20rem, 95vw, 40rem)',
+      focusOnShow: false,
+      modal: true,
+      closable: true,
+      data: {
+        subtitleClip: currentClip
+      }
+    });
+  }
+
   openEditSubtitlesDialog(): void {
     const currentClip = this.clipsStateService.currentClip();
     if (!currentClip || !currentClip.hasSubtitle) {
@@ -371,5 +400,12 @@ export class ProjectDetailsComponent implements OnInit {
     );
 
     this.selectedSettingsPreset.set(matchingPreset || null);
+  });
+
+  private requestAnkiExportListener = effect(() => {
+    if (this.videoStateService.ankiExportRequest()) {
+      this.openAnkiExportDialog();
+      this.videoStateService.clearAnkiExportRequest();
+    }
   });
 }

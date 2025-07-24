@@ -26,7 +26,8 @@ export enum KeyboardAction {
   Redo = 'Redo',
   SplitClip = 'SplitClip',
   DeleteClip = 'DeleteClip',
-  CreateClip = 'CreateClip'
+  CreateClip = 'CreateClip',
+  ExportToAnki = 'ExportToAnki'
 }
 
 export enum SeekType {

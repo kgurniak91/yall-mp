@@ -34,6 +34,8 @@ export class KeyboardShortcutsService implements OnDestroy {
     keyMap.set('\\', KeyboardAction.SplitClip);
     keyMap.set('Delete', KeyboardAction.DeleteClip);
     keyMap.set('Insert', KeyboardAction.CreateClip);
+    keyMap.set('e', KeyboardAction.ExportToAnki);
+    keyMap.set('E', KeyboardAction.ExportToAnki);
 
     let action: KeyboardAction | undefined;
 
@@ -141,6 +143,9 @@ export class KeyboardShortcutsService implements OnDestroy {
         break;
       case KeyboardAction.CreateClip:
         this.clipsStateService.createNewSubtitledClipAtCurrentTime();
+        break;
+      case KeyboardAction.ExportToAnki:
+        this.videoStateService.requestAnkiExport();
         break;
     }
   }

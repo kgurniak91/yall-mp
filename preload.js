@@ -1,4 +1,4 @@
-const {contextBridge, ipcRenderer, ipcMain} = require('electron');
+const {contextBridge, ipcRenderer} = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   openFileDialog: (options) => ipcRenderer.invoke('dialog:openFile', options),
@@ -7,4 +7,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getAnkiDeckNames: () => ipcRenderer.invoke('anki:getDeckNames'),
   getAnkiNoteTypes: () => ipcRenderer.invoke('anki:getNoteTypes'),
   getAnkiNoteTypeFieldNames: (noteTypeName) => ipcRenderer.invoke('anki:getNoteTypeFieldNames', noteTypeName),
+  createAnkiCard: (ankiCard) => ipcRenderer.invoke('anki:createAnkiCard', ankiCard),
 });

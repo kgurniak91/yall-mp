@@ -1,0 +1,30 @@
+<div class="flex flex-column gap-4">
+  <div class="flex flex-column gap-2">
+    <label>Subtitle Text</label>
+    <span>{{subtitleClip.text}}</span>
+  </div>
+
+  <div class="flex flex-column gap-2">
+    <label for="template-select">Export using template:</label>
+    <p-select id="template-select"
+              [options]="validTemplates()"
+              optionLabel="name"
+              placeholder="Select a valid template"
+              [(ngModel)]="selectedTemplate">
+    </p-select>
+  </div>
+
+  <div class="flex align-items-center justify-content-end gap-2">
+    <p-button label="Cancel"
+              icon="fa-solid fa-close"
+              severity="secondary"
+              (click)="onCancel()"></p-button>
+
+    <p-button label="Export"
+              icon="fa-solid fa-upload"
+              [disabled]="!selectedTemplate()"
+              [loading]="isExporting()"
+              (click)="onExport()">
+    </p-button>
+  </div>
+</div>
