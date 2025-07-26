@@ -146,7 +146,7 @@
               pTooltip="Export to Anki (E)"
               tooltipPosition="left"
               severity="secondary"
-              [disabled]="!currentClipHasSubtitles()"/>
+              [disabled]="!ankiStateService.isAnkiExportAvailable() || !currentClipHasSubtitles()"/>
 
     @let subtitlesVisible = videoStateService.subtitlesVisible();
     <p-button icon="{{subtitlesVisible ? 'fa-solid' : 'fa-regular'}} fa-closed-captioning"

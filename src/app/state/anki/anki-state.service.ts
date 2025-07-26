@@ -15,10 +15,12 @@ export class AnkiStateService {
   readonly isLoadingNoteTypes = signal(false);
   readonly isLoadingNoteTypeFields = signal(false);
   readonly ankiCardTemplates = computed(() => this.appStateService.ankiSettings().ankiCardTemplates);
+  readonly isAnkiExportAvailable = signal(false);
   private readonly appStateService = inject(AppStateService);
 
   constructor() {
     this.checkAnkiConnection();
+    this.checkFFmpegAvailability();
 
     effect(() => {
       const templates = this.ankiCardTemplates();
@@ -55,6 +57,11 @@ export class AnkiStateService {
     } catch (e) {
       this.status.set('error');
     }
+  }
+
+  private async checkFFmpegAvailability(): Promise<void> {
+    const isAvailable = await window.electronAPI.checkFFmpegAvailability();
+    this.isAnkiExportAvailable.set(isAvailable);
   }
 
   async fetchDeckNames(): Promise<void> {
@@ -165,7 +172,7 @@ export class AnkiStateService {
       return false;
     }
 
-    const requiredSources: AnkiFieldMappingSource[] = ['text', 'audio'];
+    const requiredSources: AnkiFieldMappingSource[] = ['id', 'text', 'audio'];
     const mappedSources = template.fieldMappings.map(m => m.source);
     return requiredSources.every(required => mappedSources.includes(required));
   }

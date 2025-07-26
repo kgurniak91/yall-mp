@@ -6,7 +6,7 @@ import {InputText} from 'primeng/inputtext';
 import {Select} from 'primeng/select';
 import {Fieldset} from 'primeng/fieldset';
 
-const APP_DATA_SOURCES: AnkiFieldMappingSource[] = ['text', 'audio', 'screenshot', 'video'];
+const APP_DATA_SOURCES: AnkiFieldMappingSource[] = ['id', 'text', 'audio', 'screenshot', 'video'];
 
 @Component({
   selector: 'app-anki-card-template-form',

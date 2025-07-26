@@ -1,4 +1,4 @@
-import {AnkiCard} from './app/model/anki.types';
+import {AnkiExportRequest} from './app/model/anki.types';
 import {SubtitleData} from '../shared/types/subtitle.type';
 
 export interface IElectronAPI {
@@ -8,7 +8,8 @@ export interface IElectronAPI {
   getAnkiDeckNames: () => Promise<any>;
   getAnkiNoteTypes: () => Promise<any>;
   getAnkiNoteTypeFieldNames: (noteTypeName: string) => Promise<any>;
-  createAnkiCard: (ankiCard: AnkiCard) => Promise<number | null>;
+  exportAnkiCard: (exportRquest: AnkiExportRequest) => Promise<{ cardId: number | null; error?: string }>;
+  checkFFmpegAvailability: () => Promise<boolean>;
 }
 
 declare global {

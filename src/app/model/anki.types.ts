@@ -1,4 +1,7 @@
-export type AnkiFieldMappingSource = 'text' | 'audio' | 'screenshot' | 'video';
+import {SubtitleData} from '../../../shared/types/subtitle.type';
+import {Project} from './project.types';
+
+export type AnkiFieldMappingSource = 'id' | 'text' | 'audio' | 'screenshot' | 'video';
 
 export interface AnkiFieldMapping {
   source: AnkiFieldMappingSource; // App's data fields
@@ -25,4 +28,20 @@ export interface AnkiCard {
   modelName: string;
   fields: Record<string, string>;
   tags: string[];
+  options: {
+    allowDuplicate: boolean;
+  };
+}
+
+export interface AnkiExportRequest {
+  template: AnkiCardTemplate;
+  subtitleData: SubtitleData;
+  mediaPath: string;
+  exportTime: number;
+}
+
+export interface ExportToAnkiDialogData {
+  project: Project;
+  subtitleData: SubtitleData;
+  exportTime: number;
 }

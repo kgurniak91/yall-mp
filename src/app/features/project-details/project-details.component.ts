@@ -32,6 +32,7 @@ import {Fieldset} from 'primeng/fieldset';
 import {Select} from 'primeng/select';
 import {AnkiStateService} from '../../state/anki/anki-state.service';
 import {ExportToAnkiDialogComponent} from './export-to-anki-dialog/export-to-anki-dialog.component';
+import {ExportToAnkiDialogData} from '../../model/anki.types';
 
 @Component({
   selector: 'app-project-details',
@@ -259,17 +260,33 @@ export class ProjectDetailsComponent implements OnInit {
   }
 
   openAnkiExportDialog(): void {
+    if (!this.ankiStateService.isAnkiExportAvailable()) {
+      this.toastService.error('Anki export is not available. FFmpeg could not be found.');
+      return;
+    }
+
+    if (this.ankiStateService.status() !== 'connected') {
+      this.toastService.error('Failed to connect. Is Anki open?');
+      return;
+    }
+
     const currentClip = this.clipsStateService.currentClip();
 
     if (!currentClip || !currentClip.hasSubtitle) {
-      this.toastService.info('Anki export is only available for subtitle clips.');
+      this.toastService.info('Anki export is only available for subtitled clips.');
       return;
     }
 
     const hasValidTemplates = this.ankiStateService.ankiCardTemplates().some(t => t.isValid);
     if (!hasValidTemplates) {
-      this.toastService.warn('Please configure at least one valid Anki template in the settings.');
+      this.toastService.warn('Please configure at least one valid Anki template in the global settings.');
       return;
+    }
+
+    const data: ExportToAnkiDialogData = {
+      subtitleData: currentClip as SubtitleData,
+      project: this.project()!,
+      exportTime: this.videoStateService.currentTime()
     }
 
     this.dialogService.open(ExportToAnkiDialogComponent, {
@@ -278,9 +295,7 @@ export class ProjectDetailsComponent implements OnInit {
       focusOnShow: false,
       modal: true,
       closable: true,
-      data: {
-        subtitleClip: currentClip
-      }
+      data
     });
   }
 

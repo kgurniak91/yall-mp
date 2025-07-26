@@ -34,8 +34,6 @@ export class KeyboardShortcutsService implements OnDestroy {
     keyMap.set('\\', KeyboardAction.SplitClip);
     keyMap.set('Delete', KeyboardAction.DeleteClip);
     keyMap.set('Insert', KeyboardAction.CreateClip);
-    keyMap.set('e', KeyboardAction.ExportToAnki);
-    keyMap.set('E', KeyboardAction.ExportToAnki);
 
     let action: KeyboardAction | undefined;
 
@@ -60,6 +58,8 @@ export class KeyboardShortcutsService implements OnDestroy {
         }
       } else if (event.key.toLowerCase() === 'y') {
         action = KeyboardAction.Redo;
+      } else if (event.key.toLowerCase() === 'e') {
+        action = KeyboardAction.ExportToAnki;
       }
     } else {
       if (event.key === 'ArrowLeft') {
@@ -74,6 +74,8 @@ export class KeyboardShortcutsService implements OnDestroy {
         action = KeyboardAction.AdjustClipStartLeft;
       } else if (event.key === ']') {
         action = KeyboardAction.AdjustClipEndRight;
+      } else if (event.key.toLowerCase() === 'e') {
+        action = KeyboardAction.ExportToAnki;
       } else {
         action = keyMap.get(event.key);
       }
