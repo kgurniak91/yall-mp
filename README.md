@@ -1,6 +1,8 @@
 # Y'ALL MP - Yet Another Language Learning Media Player
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.12.
+This project uses MPV as its video playback engine to provide broad codec support. The MPV binaries are not included in this Git repository.
+
+The project is configured to download the necessary MPV binaries automatically after you install the dependencies.
 
 ## Web development server
 

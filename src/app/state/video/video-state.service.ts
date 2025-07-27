@@ -36,6 +36,25 @@ export class VideoStateService implements OnDestroy {
   public readonly syncTimelineRequest = this._syncTimelineRequest.asReadonly();
   public readonly ankiExportRequest = this._ankiExportRequest.asReadonly();
 
+  constructor() {
+    window.electronAPI.onMpvEvent((status) => {
+      console.log('mpv event', status);
+      if (status.event === 'property-change') {
+        switch(status.name) {
+          case 'time-pos':
+            this.setCurrentTime(status.data);
+            break;
+          case 'duration':
+            this.setDuration(status.data);
+            break;
+          case 'pause':
+            // TODO Handle pause state changes
+            break;
+        }
+      }
+    });
+  }
+
   ngOnDestroy(): void {
     if (!this._projectId) {
       return;
@@ -72,6 +91,7 @@ export class VideoStateService implements OnDestroy {
   }
 
   public togglePlayPause(): void {
+    window.electronAPI.mpvCommand(['cycle', 'pause']);
     this._playPauseRequest.set(Date.now());
   }
 
@@ -96,11 +116,13 @@ export class VideoStateService implements OnDestroy {
   }
 
   public seekRelative(time: number): void {
+    window.electronAPI.mpvCommand(['seek', time, 'relative']);
     this._seekRequest.set({time, type: SeekType.Relative});
     this._syncTimelineRequest.set(Date.now());
   }
 
   public seekAbsolute(time: number): void {
+    window.electronAPI.mpvCommand(['seek', time, 'absolute']);
     this._seekRequest.set({time, type: SeekType.Absolute});
     this._syncTimelineRequest.set(Date.now());
   }

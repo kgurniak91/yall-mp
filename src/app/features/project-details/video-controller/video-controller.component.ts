@@ -1,14 +1,6 @@
-import {Component, effect, inject, input, signal, ViewEncapsulation} from '@angular/core';
-import {VideoJsOptions} from './video-controller.type';
+import {Component, effect, inject, OnDestroy, ViewEncapsulation} from '@angular/core';
 import {VideoStateService} from '../../../state/video/video-state.service';
-import {
-  PlayCommand,
-  PlayerState,
-  SeekType,
-  VideoClip,
-  VideoPlayerAction,
-  VideoPlayerCommand
-} from '../../../model/video.types';
+import {PlayerState, SeekType, VideoClip} from '../../../model/video.types';
 import {ClipsStateService} from '../../../state/clips/clips-state.service';
 import {VideoPlayerComponent} from '../video-player/video-player.component';
 import {ProjectSettingsStateService} from '../../../state/project-settings/project-settings-state.service';
@@ -23,96 +15,74 @@ import {SubtitleBehavior} from '../../../model/settings.types';
   styleUrl: './video-controller.component.scss',
   encapsulation: ViewEncapsulation.None
 })
-export class VideoControllerComponent {
-  public readonly mediaPath = input.required<string | null>();
-  protected readonly options = signal<VideoJsOptions | null>(null);
-  protected readonly command = signal<VideoPlayerCommand | null>(null);
-  protected readonly PlayerState = PlayerState;
+export class VideoControllerComponent implements OnDestroy {
   protected readonly clipsStateService = inject(ClipsStateService);
+  protected readonly PlayerState = PlayerState;
   private readonly videoStateService = inject(VideoStateService);
   private readonly projectSettingsStateService = inject(ProjectSettingsStateService);
+  private hasStartedPlayback = false;
 
-  // Called when a clip finishes
-  protected onClipEnded(): void {
-    const clipJustFinished = this.clipsStateService.currentClip()!;
-    const autoPauseAtEnd = this.projectSettingsStateService.autoPauseAtEnd();
-
-    if (clipJustFinished.hasSubtitle && autoPauseAtEnd) {
-      this.clipsStateService.setPlayerState(PlayerState.AutoPausedAtEnd);
-      this.command.set({action: VideoPlayerAction.Pause, clip: clipJustFinished});
-      return;
-    }
-
-    const isLastClip = this.clipsStateService.currentClipIndex() === this.clipsStateService.clips().length - 1;
-    if (isLastClip) {
-      // Reached the end of the video.
-      this.clipsStateService.setPlayerState(PlayerState.Idle);
-      return;
-    }
-
-    // Continue to the next clip.
-    this.clipsStateService.advanceToNextClip();
-    const nextClip = this.clipsStateService.currentClip();
-
-    if (!nextClip) {
-      this.clipsStateService.setPlayerState(PlayerState.Idle);
-      return;
-    }
-
-    // If the next clip is a gap, always play it.
-    if (!nextClip.hasSubtitle) {
-      this.playClip(nextClip, {seekToTime: nextClip.startTime});
-      return;
-    }
-
-    // The next clip is a subtitle clip. Check if it requires pausing at the start.
-    const autoPauseAtStart = this.projectSettingsStateService.autoPauseAtStart();
-    if (autoPauseAtStart) {
-      this.clipsStateService.setPlayerState(PlayerState.AutoPausedAtStart);
-      // Issue a pause command to ensure the player's time is synced to the start of the new clip.
-      this.command.set({action: VideoPlayerAction.Pause, clip: nextClip});
-    } else {
-      // No auto-pause, so just play the subtitle clip.
-      this.playClip(nextClip, {seekToTime: nextClip.startTime});
-    }
-  }
-
-  protected onProgressBarClicked(targetTime: number): void {
-    this.handleSeek({time: targetTime, type: SeekType.Absolute});
+  ngOnDestroy() {
+    window.electronAPI.mpvCommand(['stop']);
   }
 
   protected onVideoAreaClicked(): void {
     this.handleTogglePlayPause();
   }
 
-  private initOptions = effect(() => {
-    const path = this.mediaPath();
-    if (path) {
-      this.options.set({
-        sources: [{
-          src: `file://${path}`,
-          type: this.getMimeType(path)
-        }],
-        autoplay: false,
-        loop: false,
-        controls: true,
-        fluid: true,
-        muted: false,
-        inactivityTimeout: 0,
-        responsive: true,
-        controlBar: {
-          fullscreenToggle: false,
-          pictureInPictureToggle: false,
-          playToggle: false
-        },
-        userActions: {
-          doubleClick: false
-        }
-      });
+  private initialPlaybackHandler = effect(() => {
+    const duration = this.videoStateService.duration();
+
+    if (duration > 0 && !this.hasStartedPlayback) {
+      this.hasStartedPlayback = true;
+
+      const initialClip = this.clipsStateService.clips()[0];
+      if (initialClip) {
+        this.playClip(initialClip, { seekToTime: initialClip.startTime });
+      }
     }
   });
 
-  private subtitleVisibilityHandler = effect(() => {
+  private clipProgressionHandler = effect(() => {
+    const currentTime = this.videoStateService.currentTime();
+    const currentClip = this.clipsStateService.currentClip();
+    const isPlaying = this.clipsStateService.isPlaying();
+
+    if (!currentClip || !isPlaying || currentTime === 0) {
+      return;
+    }
+
+    if (currentTime >= currentClip.endTime) {
+      this.handleClipEnd(currentClip);
+    }
+  });
+
+  private handleClipEnd(clipJustFinished: VideoClip) {
+    const autoPauseAtEnd = this.projectSettingsStateService.autoPauseAtEnd();
+
+    if (clipJustFinished.hasSubtitle && autoPauseAtEnd) {
+      this.clipsStateService.setPlayerState(PlayerState.AutoPausedAtEnd);
+      window.electronAPI.mpvSetProperty('pause', true);
+      return;
+    }
+
+    const isLastClip = this.clipsStateService.currentClipIndex() === this.clipsStateService.clips().length - 1;
+    if (isLastClip) {
+      this.clipsStateService.setPlayerState(PlayerState.Idle);
+      return;
+    }
+
+    this.clipsStateService.advanceToNextClip();
+    const nextClip = this.clipsStateService.currentClip()!;
+    this.playClip(nextClip, {seekToTime: nextClip.startTime});
+  }
+
+  private mpvSubtitleSync = effect(() => {
+    const subtitlesVisible = this.videoStateService.subtitlesVisible();
+    window.electronAPI.mpvSetProperty('sub-visibility', subtitlesVisible);
+  });
+
+  private subtitleBehaviorEnforcer = effect(() => {
     const currentClip = this.clipsStateService.currentClip();
     const behavior = this.projectSettingsStateService.subtitleBehavior();
 
@@ -145,17 +115,8 @@ export class VideoControllerComponent {
   });
 
   private handleTogglePlayPause(): void {
-    if (this.clipsStateService.isPlaying()) {
-      this.handlePause();
-    } else {
-      this.handleResume();
-    }
+    window.electronAPI.mpvCommand(['cycle', 'pause']);
     this.videoStateService.clearPlayPauseRequest();
-  }
-
-  private handlePause(): void {
-    this.clipsStateService.setPlayerState(PlayerState.PausedByUser);
-    this.command.set({action: VideoPlayerAction.Pause, clip: this.clipsStateService.currentClip()!});
   }
 
   private handleResume(): void {
@@ -169,8 +130,7 @@ export class VideoControllerComponent {
       this.playClip(nextClip, {seekToTime: nextClip.startTime});
     } else {
       // Resume plays the current clip.
-      const seekToTime = (playerState !== PlayerState.PausedByUser) ? currentClip.startTime : undefined;
-      this.playClip(currentClip, {seekToTime});
+      this.playClip(currentClip);
     }
   }
 
@@ -217,8 +177,8 @@ export class VideoControllerComponent {
       this.videoStateService.clearSeekRequest();
       return;
     }
-
     this.clipsStateService.setCurrentClipByIndex(targetClipIndex);
+
     const newClip = this.clipsStateService.currentClip()!;
     const autoPauseAtStart = this.projectSettingsStateService.autoPauseAtStart();
     const isLandingAtStartOfSubtitledClip = newClip.hasSubtitle && Math.abs(targetTime - newClip.startTime) < 0.1;
@@ -227,11 +187,8 @@ export class VideoControllerComponent {
     if (autoPauseAtStart && isLandingAtStartOfSubtitledClip && isJumpingToNewClip) {
       
       this.clipsStateService.setPlayerState(PlayerState.AutoPausedAtStart);
-      this.command.set({
-        action: VideoPlayerAction.Pause,
-        clip: newClip,
-        seekToTime: newClip.startTime
-      });
+      window.electronAPI.mpvCommand(['seek', newClip.startTime, 'absolute']);
+      window.electronAPI.mpvSetProperty('pause', true);
     } else {
       if (wasPlaying) {
         // If playing, continue playing from the new position.
@@ -240,11 +197,8 @@ export class VideoControllerComponent {
         
         
         this.clipsStateService.setPlayerState(PlayerState.PausedByUser);
-        this.command.set({
-          action: VideoPlayerAction.Pause,
-          clip: newClip,
-          seekToTime: targetTime
-        });
+        window.electronAPI.mpvCommand(['seek', targetTime, 'absolute']);
+        window.electronAPI.mpvSetProperty('pause', true);
       }
     }
 
@@ -258,28 +212,12 @@ export class VideoControllerComponent {
     const gapSpeed = this.projectSettingsStateService.gapSpeed();
     const playbackRate = clip.hasSubtitle ? subtitledSpeed : gapSpeed;
 
-    const command: PlayCommand = {
-      action: VideoPlayerAction.Play,
-      clip,
-      playbackRate,
-      seekToTime: options?.seekToTime,
-    };
-    this.command.set(command);
-  }
+    window.electronAPI.mpvSetProperty('speed', playbackRate);
 
-  private getMimeType(filename: string): string {
-    const extension = filename.split('.').pop()?.toLowerCase();
-    switch (extension) {
-      case 'mp4':
-        return 'video/mp4';
-      case 'mkv':
-        return 'video/mkv';
-      case 'webm':
-        return 'video/webm';
-      case 'ogv':
-        return 'video/ogg';
-      default:
-        return 'video/mp4'; // Default fallback
+    if (options?.seekToTime != null) {
+      window.electronAPI.mpvCommand(['seek', options.seekToTime, 'absolute']);
     }
+
+    window.electronAPI.mpvSetProperty('pause', false);
   }
 }

@@ -119,7 +119,6 @@ export class ProjectDetailsComponent implements OnInit {
   protected readonly globalSettingsStateService = inject(GlobalSettingsStateService);
   protected readonly HiddenSubtitleStyle = HiddenSubtitleStyle;
   protected readonly project = signal<Project | null>(null);
-  protected readonly mediaPath = signal<string | null>(null);
   protected readonly settingsPresets = signal<SettingsPreset[]>(BuiltInSettingsPresets);
   protected readonly selectedSettingsPreset = signal<SettingsPreset | null>(null);
   private wasPlayingBeforeSettingsOpened = false;
@@ -151,7 +150,7 @@ export class ProjectDetailsComponent implements OnInit {
       }
     });
 
-    effect(() => {
+    /*effect(() => {
       const project = this.project();
       const duration = this.videoStateService.duration();
 
@@ -162,7 +161,7 @@ export class ProjectDetailsComponent implements OnInit {
           this.videoStateService.seekAbsolute(seekTime);
         }
       }
-    });
+    });*/
   }
 
   async ngOnInit() {
@@ -183,7 +182,7 @@ export class ProjectDetailsComponent implements OnInit {
     }
 
     this.project.set(foundProject);
-    this.mediaPath.set(foundProject!.mediaPath);
+    await window.electronAPI.mpvLoad(foundProject.mediaPath);
     this.projectSettingsStateService.setSettings(foundProject.settings);
     this.appStateService.setCurrentProject(projectId);
     this.clipsStateService.setProjectId(projectId);

@@ -11,7 +11,16 @@
     "test:once": "ng test --no-watch --no-progress --browsers=ChromeHeadless",
     "electron:build": "ng build --configuration=electron && tsc --project tsconfig.electron.json",
     "electron:watch:build": "concurrently \"ng build --watch --configuration=electron\" \"tsc --watch --project tsconfig.electron.json\"",
-    "electron:watch:run": "nodemon"
+    "electron:watch:run": "nodemon",
+    "postinstall": "node scripts/download-mpv.js"
+  },
+  "build": {
+    "extraResources": [
+      {
+        "from": "electron-resources/",
+        "to": "electron-resources/"
+      }
+    ]
   },
   "private": true,
   "dependencies": {

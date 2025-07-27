@@ -1,9 +1,4 @@
-import {Component, effect, ElementRef, inject, input, OnDestroy, OnInit, output, viewChild} from '@angular/core';
-import {VideoStateService} from '../../../state/video/video-state.service';
-import {VideoJsOptions} from '../video-controller/video-controller.type';
-import {PauseCommand, PlayCommand, VideoPlayerAction, VideoPlayerCommand} from '../../../model/video.types';
-import Player from 'video.js/dist/types/player';
-import videojs from 'video.js';
+import {AfterViewInit, Component, ElementRef, OnDestroy, viewChild} from '@angular/core';
 
 @Component({
   selector: 'app-video-player',
@@ -11,212 +6,33 @@ import videojs from 'video.js';
   templateUrl: './video-player.component.html',
   styleUrl: './video-player.component.scss'
 })
-export class VideoPlayerComponent implements OnInit, OnDestroy {
-  public readonly options = input.required<VideoJsOptions>();
-  public readonly command = input<VideoPlayerCommand | null>();
-  public readonly clipEnded = output<void>();
-  public readonly progressBarClicked = output<number>();
-  public readonly videoAreaClicked = output<void>();
-  private readonly videoElementRef = viewChild.required<ElementRef<HTMLVideoElement>>('video');
-  private readonly videoStateService = inject(VideoStateService);
-  private player: Player | undefined;
-  private progressBarEl: HTMLElement | undefined;
-  private textTrackDisplayEl: HTMLElement | undefined;
-  private isDraggingMouseOnProgressBar = false;
-  private animationFrameId: number | undefined;
-  private segmentEndTime = 0;
+export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
+  private readonly mpvPlaceholderRef = viewChild.required<ElementRef<HTMLVideoElement>>('mpvPlaceholder');
+  private resizeObserver: ResizeObserver | undefined;
 
-  ngOnInit() {
-    const videoElement = this.videoElementRef().nativeElement;
-    this.videoStateService.setVideoElement(videoElement);
+  ngAfterViewInit() {
+    const placeholder = this.mpvPlaceholderRef().nativeElement;
 
-    this.player = videojs(videoElement, this.options(), () => {
-      this.player?.on('loadedmetadata', this.handleLoadedMetadata);
-      this.player?.on('timeupdate', this.handleTimeUpdate);
-      this.addProgressBarEventListener();
-      this.addVideoAreaEventListeners();
+    this.resizeObserver = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        const rect = entry.target.getBoundingClientRect();
+        const dpr = window.devicePixelRatio;
+
+        window.electronAPI.mpvResize({
+          x: Math.round(rect.left * dpr),
+          y: Math.round(rect.top * dpr),
+          width: Math.round(rect.width * dpr),
+          height: Math.round(rect.height * dpr),
+        });
+      }
     });
+
+    this.resizeObserver.observe(placeholder);
   }
 
   ngOnDestroy() {
-    this.cancelAnimationFrame();
-
-    if (this.player) {
-      this.player.off('loadedmetadata', this.handleLoadedMetadata);
-      this.player.off('timeupdate', this.handleTimeUpdate);
-      this.removeProgressBarEventListeners();
-      this.removeVideoAreaEventListeners();
-      this.player.dispose();
-      this.player = undefined;
-    }
-
-    this.videoStateService.setVideoElement(null);
-    this.videoStateService.setDuration(0);
-  }
-
-  private addProgressBarEventListener() {
-    this.progressBarEl = this.player?.el()?.querySelector('.vjs-progress-control') as HTMLElement;
-    if (this.progressBarEl) {
-      this.progressBarEl.addEventListener('mousedown', this.handleMouseDown, {capture: true});
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
     }
   }
-
-  private removeProgressBarEventListeners() {
-    if (this.progressBarEl) {
-      this.progressBarEl.removeEventListener('mousedown', this.handleMouseDown, {capture: true});
-    }
-    // Clean up window listeners in case the component is destroyed mid-drag
-    this.removeWindowListeners();
-  }
-
-  private addWindowListeners() {
-    window.addEventListener('mousemove', this.handleMouseMove);
-    window.addEventListener('mouseup', this.handleMouseUp, {capture: true});
-  }
-
-  private removeWindowListeners() {
-    window.removeEventListener('mousemove', this.handleMouseMove);
-    window.removeEventListener('mouseup', this.handleMouseUp, {capture: true});
-  }
-
-  private addVideoAreaEventListeners() {
-    this.textTrackDisplayEl = this.player?.el()?.querySelector('.vjs-text-track-display') as HTMLElement;
-    if (!this.textTrackDisplayEl) return;
-
-    this.textTrackDisplayEl.addEventListener('click', this.handleVideoAreaClick);
-    this.textTrackDisplayEl.addEventListener('mouseenter', this.handleVideoAreaMouseEnter);
-    this.textTrackDisplayEl.addEventListener('mouseleave', this.handleVideoAreaMouseLeave);
-  }
-
-  private removeVideoAreaEventListeners() {
-    if (!this.textTrackDisplayEl) return;
-
-    this.textTrackDisplayEl.removeEventListener('click', this.handleVideoAreaClick);
-    this.textTrackDisplayEl.removeEventListener('mouseenter', this.handleVideoAreaMouseEnter);
-    this.textTrackDisplayEl.removeEventListener('mouseleave', this.handleVideoAreaMouseLeave);
-  }
-
-  private handleVideoAreaClick = () => {
-    this.videoAreaClicked.emit();
-  };
-
-  private handleVideoAreaMouseEnter = () => {
-    if (this.textTrackDisplayEl) {
-      this.textTrackDisplayEl.style.backgroundColor = 'rgba(0, 0, 0, 0.2)';
-    }
-  };
-
-  private handleVideoAreaMouseLeave = () => {
-    if (this.textTrackDisplayEl) {
-      this.textTrackDisplayEl.style.backgroundColor = 'initial';
-    }
-  };
-
-  private videoControllerCommands = effect(() => {
-    const command = this.command();
-    if (!command) return;
-
-    if (command.action === VideoPlayerAction.Play) {
-      this.playSegment(command);
-    } else if (command.action === VideoPlayerAction.Pause) {
-      this.pause(command);
-    }
-  });
-
-  private playSegment(command: PlayCommand): void {
-    if (!this.player) {
-      return;
-    }
-
-    this.segmentEndTime = command.clip.endTime;
-    this.player.playbackRate(command.playbackRate);
-
-    if (command.seekToTime != null) {
-      this.player.currentTime(command.seekToTime);
-    }
-
-    this.cancelAnimationFrame();
-
-    this.player.play();
-    this.checkTime();
-  }
-
-  private pause(command: PauseCommand): void {
-    if (!this.player) {
-      return;
-    }
-
-    this.cancelAnimationFrame();
-
-    if (command.seekToTime != null) {
-      this.player.currentTime(command.seekToTime);
-    }
-
-    this.player?.pause();
-  }
-
-  private checkTime = () => {
-    if (!this.player) {
-      return;
-    }
-
-    const currentTime = this.player.currentTime() || 0;
-    if (currentTime >= (this.segmentEndTime - 0.01)) {
-      this.cancelAnimationFrame();
-      this.player.currentTime(this.segmentEndTime);
-      this.clipEnded.emit();
-    } else {
-      this.animationFrameId = requestAnimationFrame(this.checkTime);
-    }
-  };
-
-  private handleTimeUpdate = () => {
-    if (this.player) {
-      this.videoStateService.setCurrentTime(this.player.currentTime() || 0);
-    }
-  };
-
-  private handleLoadedMetadata = () => {
-    if (this.player) {
-      this.videoStateService.setDuration(this.player.duration() || 0);
-    }
-  };
-
-  private cancelAnimationFrame(): void {
-    if (this.animationFrameId) {
-      cancelAnimationFrame(this.animationFrameId);
-      this.animationFrameId = undefined;
-    }
-  }
-
-  private handleMouseDown = (event: MouseEvent) => {
-    this.isDraggingMouseOnProgressBar = true;
-    this.addWindowListeners();
-    this.calculateAndEmitTime(event);
-  };
-
-  private handleMouseMove = (event: MouseEvent) => {
-    if (!this.isDraggingMouseOnProgressBar) return;
-    this.calculateAndEmitTime(event);
-  };
-
-  private handleMouseUp = (event: MouseEvent) => {
-    if (!this.isDraggingMouseOnProgressBar) return;
-    this.isDraggingMouseOnProgressBar = false;
-    this.removeWindowListeners();
-    this.calculateAndEmitTime(event);
-  };
-
-  private calculateAndEmitTime = (event: MouseEvent) => {
-    const holder = this.progressBarEl?.querySelector('.vjs-progress-holder') as HTMLElement;
-    if (!this.player || !holder) return;
-
-    const progressBarRect = holder.getBoundingClientRect();
-    const clickPositionX = event.clientX - progressBarRect.left;
-    const clickPercent = clickPositionX / progressBarRect.width;
-    const clampedPercent = Math.max(0, Math.min(1, clickPercent));
-    const targetTime = clampedPercent * (this.player?.duration() || 0);
-
-    this.progressBarClicked.emit(targetTime);
-  };
 }

@@ -5,9 +5,13 @@ import {promises as fs} from 'fs';
 import {CaptionsFileFormat, ParsedCaptionsResult, parseResponse, VTTCue} from 'media-captions';
 import type {SubtitleData} from './shared/types/subtitle.type';
 import {AnkiCard, AnkiExportRequest} from './src/app/model/anki.types';
-import {spawn} from 'child_process';
 import ffmpegStatic from 'ffmpeg-static';
 import {v4 as uuidv4} from 'uuid';
+import {spawn} from 'child_process';
+import {MpvManager} from './mpv-manager';
+
+let mpvManager: MpvManager | null = null;
+let mainWindow: BrowserWindow | null = null;
 
 let isFFmpegAvailable = false;
 let ffmpegPath = '';
@@ -32,6 +36,8 @@ function createWindow() {
     },
   });
 
+  mainWindow = win;
+
   // Serve the Angular app
   const indexPath = path.join(__dirname, './dist/yall-mp/browser/index.html');
   win.loadFile(indexPath);
@@ -49,6 +55,44 @@ app.whenReady().then(() => {
   ipcMain.handle('anki:getNoteTypeFieldNames', (_, modelName) => invokeAnkiConnect('modelFieldNames', {modelName}));
   ipcMain.handle('anki:exportAnkiCard', (_, exportRquest: AnkiExportRequest) => handleAnkiExport(exportRquest));
   ipcMain.handle('ffmpeg:check', () => isFFmpegAvailable);
+
+  ipcMain.handle('mpv:load', async (_, mediaPath: string) => {
+    if (!mainWindow) {
+      return;
+    }
+
+    if (mpvManager) {
+      mpvManager.stop();
+    }
+
+    mpvManager = new MpvManager(mainWindow);
+
+    mpvManager.on('status', (status) => {
+      mainWindow?.webContents.send('mpv-event', status);
+    });
+
+    mpvManager.on('error', (err) => {
+      console.error('MPV Manager error', err);
+    });
+
+    await mpvManager.start(mediaPath);
+
+    mpvManager.observeProperty('time-pos');
+    mpvManager.observeProperty('duration');
+    mpvManager.observeProperty('pause');
+  });
+
+  ipcMain.handle('mpv:command', (_, commandArray) => {
+    mpvManager?.sendCommand(commandArray);
+  });
+
+  ipcMain.handle('mpv:setProperty', (_, property, value) => {
+    mpvManager?.setProperty(property, value);
+  });
+
+  ipcMain.handle('mpv:resize', (_, rect) => {
+    mpvManager?.resize(rect);
+  });
 
   createWindow();
 
