@@ -1,4 +1,4 @@
-import {Component, computed, effect, inject, OnInit, signal, untracked} from '@angular/core';
+import {Component, computed, effect, inject, OnInit, signal} from '@angular/core';
 import {VideoControllerComponent} from './video-controller/video-controller.component';
 import {VideoStateService} from '../../state/video/video-state.service';
 import {TimelineEditorComponent} from './timeline-editor/timeline-editor.component';
@@ -129,6 +129,9 @@ export class ProjectDetailsComponent implements OnInit {
   private readonly dialogService = inject(DialogService);
   private readonly toastService = inject(ToastService);
   private dialogRef: DynamicDialogRef | undefined;
+  private isMpvReady = signal(false);
+  private isUiReady = signal(false);
+  private hasStartedPlayback = false;
 
   constructor() {
     inject(KeyboardShortcutsService); // start listening
@@ -150,18 +153,20 @@ export class ProjectDetailsComponent implements OnInit {
       }
     });
 
-    /*effect(() => {
-      const project = this.project();
-      const duration = this.videoStateService.duration();
-
-      if (project && duration > 0) {
-        const seekTime = untracked(() => project.lastPlaybackTime);
-
-        if (seekTime > 0) {
-          this.videoStateService.seekAbsolute(seekTime);
+    effect(() => {
+      // Wait until BOTH the UI is ready AND the MPV manager is ready
+      if (this.isUiReady() && this.isMpvReady()) {
+        if (!this.hasStartedPlayback) {
+          this.hasStartedPlayback = true;
+          this.startPlaybackSequence();
         }
       }
-    });*/
+    });
+
+    window.electronAPI.onMpvManagerReady(() => {
+      console.log('[ProjectDetails] Received mpv:managerReady signal!');
+      this.isMpvReady.set(true);
+    });
   }
 
   async ngOnInit() {
@@ -182,7 +187,6 @@ export class ProjectDetailsComponent implements OnInit {
     }
 
     this.project.set(foundProject);
-    await window.electronAPI.mpvLoad(foundProject.mediaPath);
     this.projectSettingsStateService.setSettings(foundProject.settings);
     this.appStateService.setCurrentProject(projectId);
     this.clipsStateService.setProjectId(projectId);
@@ -201,6 +205,12 @@ export class ProjectDetailsComponent implements OnInit {
     }
 
     this.clipsStateService.setSubtitles(subtitles);
+    await window.electronAPI.mpvCreateViewport(foundProject.mediaPath);
+  }
+
+  onPlayerReady(): void {
+    console.log('[ProjectDetails] Received onPlayerReady signal from UI!');
+    this.isUiReady.set(true);
   }
 
   goToNextSubtitledClip() {
@@ -422,4 +432,33 @@ export class ProjectDetailsComponent implements OnInit {
       this.videoStateService.clearAnkiExportRequest();
     }
   });
+
+  private startupEffect = effect(() => {
+    if (this.isMpvReady()) {
+      this.startPlaybackSequence();
+    }
+  });
+
+  private startPlaybackSequence(): void {
+    const project = this.project();
+    if (!project) {
+      return;
+    }
+
+    // Prevent this from running multiple times
+    if (this.videoStateService.duration() > 0) {
+      return;
+    }
+
+    const seekTime = project.lastPlaybackTime;
+    console.log(`[ProjectDetails] Both UI and MPV are ready. Seeking to: ${seekTime}`);
+
+    if (seekTime > 0) {
+      this.videoStateService.seekAbsolute(seekTime);
+    }
+
+    setTimeout(() => {
+      this.videoStateService.togglePlayPause();
+    }, 100);
+  }
 }

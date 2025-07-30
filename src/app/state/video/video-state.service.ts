@@ -122,6 +122,7 @@ export class VideoStateService implements OnDestroy {
   }
 
   public seekAbsolute(time: number): void {
+    console.log(`[Renderer] VideoStateService: Sending "seek absolute" command to ${time}.`);
     window.electronAPI.mpvCommand(['seek', time, 'absolute']);
     this._seekRequest.set({time, type: SeekType.Absolute});
     this._syncTimelineRequest.set(Date.now());

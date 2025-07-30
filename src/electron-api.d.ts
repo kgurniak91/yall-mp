@@ -13,11 +13,13 @@ export interface IElectronAPI {
   // --- FFmpeg
   checkFFmpegAvailability: () => Promise<boolean>;
   // --- MPV
-  mpvLoad: (mediaPath: string) => Promise<void>;
+  mpvCreateViewport: (mediaPath: string) => Promise<void>;
+  mpvResizeViewport: (rect: {x: number, y: number, width: number, height: number}) => Promise<void>;
   mpvCommand: (commandArray: any[]) => Promise<void>;
   mpvSetProperty: (property: string, value: any) => Promise<void>;
   onMpvEvent: (callback: (status: any) => void) => void;
-  mpvResize: (rect: { x: number, y: number, width: number, height: number }) => Promise<void>;
+  onMainWindowMoved: (callback: () => void) => void;
+  onMpvManagerReady: (callback: () => void) => void;
 }
 
 declare global {

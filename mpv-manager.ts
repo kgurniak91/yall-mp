@@ -12,11 +12,9 @@ export class MpvManager extends EventEmitter {
 
   constructor(private win: BrowserWindow) {
     super();
-    if (process.platform === 'win32') {
-      this.ipcPath = `\\\\.\\pipe\\mpv-ipc-socket-${Date.now()}`;
-    } else {
-      this.ipcPath = `/tmp/mpv-ipc-socket-${Date.now()}`;
-    }
+    this.ipcPath = process.platform === 'win32'
+      ? `\\\\.\\pipe\\mpv-ipc-socket-${Date.now()}`
+      : `/tmp/mpv-ipc-socket-${Date.now()}`;
   }
 
   public async start(mediaPath: string): Promise<void> {
@@ -25,63 +23,68 @@ export class MpvManager extends EventEmitter {
       const args = [
         `--input-ipc-server=${this.ipcPath}`,
         `--wid=${this.win.getNativeWindowHandle().readInt32LE(0)}`,
-        "--no-osc",
-        "--no-osd-bar",
-        "--input-default-bindings=no",
-        "--keep-open=always",
-        "--idle=yes",
-        "--pause",
-        mediaPath // The file to play
+        '--vo=gpu',
+        '--gpu-context=d3d11',
+        '--no-osc',
+        '--no-osd-bar',
+        '--no-border',
+        '--input-default-bindings=no',
+        '--keep-open=always',
+        '--idle=yes',
+        '--pause',
+        "--sub-visibility=no",
+        mediaPath
       ];
 
       this.mpvProcess = spawn(mpvExecutable, args);
 
       this.mpvProcess.on('error', (err) => {
-        console.error('Failed to start MPV process.', err);
-        this.emit('error', err);
-        reject(err);
+        reject(new Error(`Failed to start MPV process: ${err.message}`));
       });
 
       this.mpvProcess.on('close', (code) => {
-        console.log(`MPV process exited with code ${code}`);
-        this.emit('close');
-        this.cleanup();
+        // Reject if process exits before connection
+        reject(new Error(`MPV process exited prematurely with code ${code}`));
       });
 
-      // Give MPV a moment to create the IPC socket, then try to connect.
-      setTimeout(() => this.connect(resolve, reject), 200);
-    });
-  }
+      let retries = 0;
+      const maxRetries = 10; // Try for 2 seconds (10 * 200ms)
 
-  private connect(resolve: () => void, reject: (err: Error) => void) {
-    this.client = net.createConnection(this.ipcPath, () => {
-      console.log('Connected to MPV IPC server.');
-      this.emit('ready');
-      resolve();
-    });
+      const tryConnect = () => {
+        this.client = net.createConnection(this.ipcPath, () => {
+          console.log('[MpvManager] Successfully connected to MPV IPC server.');
+          this.emit('ready');
 
-    this.client.on('data', (data) => {
-      // Data from MPV can contain multiple JSON objects, separated by newlines.
-      const messages = data.toString().trim().split('\n');
-      for (const message of messages) {
-        try {
-          const parsed = JSON.parse(message);
-          this.emit('status', parsed); // Emit every event
-        } catch (e) {
-          console.warn('Could not parse MPV message:', message);
-        }
-      }
-    });
+          this.client?.on('data', (data) => {
+            const messages = data.toString().trim().split('\n');
+            for (const message of messages) {
+              try { this.emit('status', JSON.parse(message)); } catch (e) { /* ignore */ }
+            }
+          });
 
-    this.client.on('error', (err) => {
-      console.error('MPV IPC connection error:', err);
-      this.emit('error', err);
-      reject(err);
+          resolve();
+        });
+
+        this.client.on('error', (err) => {
+          retries++;
+          if (retries < maxRetries) {
+            setTimeout(tryConnect, 200);
+          } else {
+            reject(new Error(`Failed to connect to MPV IPC socket after ${maxRetries} retries. MPV may have crashed.`));
+          }
+        });
+      };
+
+      tryConnect();
     });
   }
 
   public sendCommand(command: any[]): void {
-    if (!this.client) return;
+    if (!this.client) {
+      console.error('[MpvManager] ERROR: Attempted to send command but IPC client is not connected!');
+      return;
+    }
+    console.log('[MpvManager] Writing command to socket:', JSON.stringify({command}));
     const cmd = {command};
     this.client.write(JSON.stringify(cmd) + '\n');
   }

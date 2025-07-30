@@ -1,13 +1,14 @@
 <div class="video-container">
-  <app-video-player/>
+  <app-video-player (ready)="ready.emit()"/>
 
-  @if (clipsStateService.playerState() !== PlayerState.Playing) {
-    <div class="play-overlay always-visible">
-      <i class="fa-solid fa-play"></i>
-    </div>
-  } @else {
-    <div class="play-overlay hover-visible">
-      <i class="fa-solid fa-pause"></i>
-    </div>
-  }
+  <!-- TODO delete ? -->
+<!--  @if (clipsStateService.playerState() !== PlayerState.Playing) {-->
+<!--    <div class="play-overlay always-visible">-->
+<!--      <i class="fa-solid fa-play"></i>-->
+<!--    </div>-->
+<!--  } @else {-->
+<!--    <div class="play-overlay hover-visible">-->
+<!--      <i class="fa-solid fa-pause"></i>-->
+<!--    </div>-->
+<!--  }-->
 </div>

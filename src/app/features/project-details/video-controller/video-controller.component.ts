@@ -1,4 +1,4 @@
-import {Component, effect, inject, OnDestroy, ViewEncapsulation} from '@angular/core';
+import {Component, effect, inject, OnDestroy, output, ViewEncapsulation} from '@angular/core';
 import {VideoStateService} from '../../../state/video/video-state.service';
 import {PlayerState, SeekType, VideoClip} from '../../../model/video.types';
 import {ClipsStateService} from '../../../state/clips/clips-state.service';
@@ -16,11 +16,11 @@ import {SubtitleBehavior} from '../../../model/settings.types';
   encapsulation: ViewEncapsulation.None
 })
 export class VideoControllerComponent implements OnDestroy {
+  public readonly ready = output<void>();
   protected readonly clipsStateService = inject(ClipsStateService);
   protected readonly PlayerState = PlayerState;
   private readonly videoStateService = inject(VideoStateService);
   private readonly projectSettingsStateService = inject(ProjectSettingsStateService);
-  private hasStartedPlayback = false;
 
   ngOnDestroy() {
     window.electronAPI.mpvCommand(['stop']);
@@ -29,19 +29,6 @@ export class VideoControllerComponent implements OnDestroy {
   protected onVideoAreaClicked(): void {
     this.handleTogglePlayPause();
   }
-
-  private initialPlaybackHandler = effect(() => {
-    const duration = this.videoStateService.duration();
-
-    if (duration > 0 && !this.hasStartedPlayback) {
-      this.hasStartedPlayback = true;
-
-      const initialClip = this.clipsStateService.clips()[0];
-      if (initialClip) {
-        this.playClip(initialClip, { seekToTime: initialClip.startTime });
-      }
-    }
-  });
 
   private clipProgressionHandler = effect(() => {
     const currentTime = this.videoStateService.currentTime();
@@ -115,6 +102,7 @@ export class VideoControllerComponent implements OnDestroy {
   });
 
   private handleTogglePlayPause(): void {
+    console.log('[Renderer] VideoStateService: Sending "cycle pause" command.');
     window.electronAPI.mpvCommand(['cycle', 'pause']);
     this.videoStateService.clearPlayPauseRequest();
   }

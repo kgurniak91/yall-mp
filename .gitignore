@@ -46,6 +46,8 @@ Thumbs.db
 # Electron
 electron-main.js
 electron-main.js.map
+mpv-manager.js
+mpv-manager.js.map
 /shared/types/*.js
 /shared/types/*.js.map
 /src/app/model/*.js

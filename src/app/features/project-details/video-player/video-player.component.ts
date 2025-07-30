@@ -1,4 +1,4 @@
-import {AfterViewInit, Component, ElementRef, OnDestroy, viewChild} from '@angular/core';
+import {AfterViewInit, Component, ElementRef, OnDestroy, output, viewChild} from '@angular/core';
 
 @Component({
   selector: 'app-video-player',
@@ -7,32 +7,44 @@ import {AfterViewInit, Component, ElementRef, OnDestroy, viewChild} from '@angul
   styleUrl: './video-player.component.scss'
 })
 export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
-  private readonly mpvPlaceholderRef = viewChild.required<ElementRef<HTMLVideoElement>>('mpvPlaceholder');
+  public readonly ready = output<void>();
+  private readonly mpvPlaceholderRef = viewChild.required<ElementRef<HTMLDivElement>>('mpvPlaceholder');
   private resizeObserver: ResizeObserver | undefined;
+  private isReadyEmitted = false;
 
   ngAfterViewInit() {
-    const placeholder = this.mpvPlaceholderRef().nativeElement;
+    this.resizeObserver = new ResizeObserver(() => this.sendResizeCommand());
+    this.resizeObserver.observe(this.mpvPlaceholderRef().nativeElement);
 
-    this.resizeObserver = new ResizeObserver(entries => {
-      for (const entry of entries) {
-        const rect = entry.target.getBoundingClientRect();
-        const dpr = window.devicePixelRatio;
-
-        window.electronAPI.mpvResize({
-          x: Math.round(rect.left * dpr),
-          y: Math.round(rect.top * dpr),
-          width: Math.round(rect.width * dpr),
-          height: Math.round(rect.height * dpr),
-        });
-      }
+    window.electronAPI.onMainWindowMoved(() => {
+      this.sendResizeCommand();
     });
 
-    this.resizeObserver.observe(placeholder);
+    setTimeout(() => this.sendResizeCommand(), 150);
   }
 
   ngOnDestroy() {
-    if (this.resizeObserver) {
-      this.resizeObserver.disconnect();
+    this.resizeObserver?.disconnect();
+  }
+
+  private sendResizeCommand(): void {
+    if (!this.mpvPlaceholderRef) {
+      return;
+    }
+    const rect = this.mpvPlaceholderRef().nativeElement.getBoundingClientRect();
+
+    if (rect.width > 0 && rect.height > 0) {
+      if (!this.isReadyEmitted) {
+        this.isReadyEmitted = true;
+        this.ready.emit();
+      }
+
+      window.electronAPI.mpvResizeViewport({
+        x: rect.left,
+        y: rect.top,
+        width: rect.width,
+        height: rect.height,
+      });
     }
   }
 }

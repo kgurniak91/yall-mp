@@ -9,7 +9,8 @@
     "moduleResolution": "node"
   },
   "include": [
-    "electron-main.ts"
+    "electron-main.ts",
+    "mpv-manager.ts"
   ],
   "exclude": []
 }

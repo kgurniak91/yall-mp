@@ -12,6 +12,7 @@ import {MpvManager} from './mpv-manager';
 
 let mpvManager: MpvManager | null = null;
 let mainWindow: BrowserWindow | null = null;
+let videoWindow: BrowserWindow | null = null;
 
 let isFFmpegAvailable = false;
 let ffmpegPath = '';
@@ -26,9 +27,11 @@ if (ffmpegStatic) {
 const FORCED_GAP_SECONDS = 0.05;
 
 function createWindow() {
-  const win = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1920,
     height: 1080,
+    transparent: true,
+    frame: false,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -36,14 +39,26 @@ function createWindow() {
     },
   });
 
-  mainWindow = win;
+  // Sync main window and video window positions
+  const triggerResize = () => {
+    mainWindow?.webContents.send('mpv:mainWindowMovedOrResized');
+  };
+  mainWindow.on('resize', triggerResize);
+  mainWindow.on('move', triggerResize);
+
+  // When the main window is gone, ensure everything is cleaned up
+  mainWindow.on('closed', () => {
+    mpvManager?.stop();
+    videoWindow?.close();
+    mainWindow = null;
+  });
 
   // Serve the Angular app
   const indexPath = path.join(__dirname, './dist/yall-mp/browser/index.html');
-  win.loadFile(indexPath);
+  mainWindow.loadFile(indexPath);
 
-  // Open DevTools for debugging
-  win.webContents.openDevTools();
+  // Open DevTools for debugging in a separate window
+  mainWindow.webContents.openDevTools({mode: 'detach'});
 }
 
 app.whenReady().then(() => {
@@ -56,25 +71,34 @@ app.whenReady().then(() => {
   ipcMain.handle('anki:exportAnkiCard', (_, exportRquest: AnkiExportRequest) => handleAnkiExport(exportRquest));
   ipcMain.handle('ffmpeg:check', () => isFFmpegAvailable);
 
-  ipcMain.handle('mpv:load', async (_, mediaPath: string) => {
+  ipcMain.handle('mpv:createViewport', async (_, mediaPath: string) => {
     if (!mainWindow) {
       return;
     }
 
-    if (mpvManager) {
-      mpvManager.stop();
-    }
+    // Clean up any old instances
+    videoWindow?.close();
+    mpvManager?.stop();
 
-    mpvManager = new MpvManager(mainWindow);
-
-    mpvManager.on('status', (status) => {
-      mainWindow?.webContents.send('mpv-event', status);
+    // Create the new, borderless child window. It starts hidden.
+    videoWindow = new BrowserWindow({
+      parent: mainWindow,
+      frame: false,
+      show: false,
+      skipTaskbar: true, // Don't show a separate icon on the taskbar
+      transparent: true,
     });
 
-    mpvManager.on('error', (err) => {
-      console.error('MPV Manager error', err);
+    mpvManager = new MpvManager(videoWindow);
+
+    mpvManager.on('status', (status) => mainWindow?.webContents.send('mpv:event', status));
+    mpvManager.on('error', (err) => console.error("MPV Error:", err));
+    mpvManager.on('ready', () => {
+      console.log('[Main Process] MpvManager is ready. Notifying renderer.');
+      mainWindow?.webContents.send('mpv:managerReady');
     });
 
+    // Start MPV inside the child window's handle
     await mpvManager.start(mediaPath);
 
     mpvManager.observeProperty('time-pos');
@@ -82,16 +106,40 @@ app.whenReady().then(() => {
     mpvManager.observeProperty('pause');
   });
 
+  ipcMain.handle('mpv:resizeViewport', (event, rect: {x: number, y: number, width: number, height: number}) => {
+    if (!videoWindow || !mainWindow) {
+      console.error('[Main Process] Resize called but a window is missing!');
+      return;
+    }
+
+    // Get coordinates relative to the main window's content
+    const [parentX, parentY] = mainWindow.getPosition();
+
+    const finalBounds = {
+      x: parentX + Math.round(rect.x),
+      y: parentY + Math.round(rect.y),
+      width: Math.round(rect.width),
+      height: Math.round(rect.height),
+    };
+
+    console.log(`[Main Process] Resizing video window. Parent at [${parentX}, ${parentY}]. Div at [${rect.x}, ${rect.y}]. Final Bounds:`, finalBounds);
+
+    // The final position is: parent's top-left corner + div's top-left corner
+    videoWindow.setBounds(finalBounds);
+
+    if (!videoWindow.isVisible()) {
+      videoWindow.show();
+    }
+  });
+
   ipcMain.handle('mpv:command', (_, commandArray) => {
+    console.log('[Main Process]  Received mpv:command:', commandArray);
     mpvManager?.sendCommand(commandArray);
   });
 
   ipcMain.handle('mpv:setProperty', (_, property, value) => {
+    console.log(`[Main Process] Received mpv:setProperty: ${property}=${value}`);
     mpvManager?.setProperty(property, value);
-  });
-
-  ipcMain.handle('mpv:resize', (_, rect) => {
-    mpvManager?.resize(rect);
   });
 
   createWindow();
