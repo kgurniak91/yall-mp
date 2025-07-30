@@ -102,8 +102,16 @@ export class VideoControllerComponent implements OnDestroy {
   });
 
   private handleTogglePlayPause(): void {
-    console.log('[Renderer] VideoStateService: Sending "cycle pause" command.');
-    window.electronAPI.mpvCommand(['cycle', 'pause']);
+    const state = this.clipsStateService.playerState();
+
+    if (state === PlayerState.Playing) {
+      console.log('[VideoController] handleTogglePlayPause -> pause');
+      window.electronAPI.mpvSetProperty('pause', true);
+    } else {
+      console.log('[VideoController] handleTogglePlayPause -> resume');
+      this.handleResume();
+    }
+
     this.videoStateService.clearPlayPauseRequest();
   }
 

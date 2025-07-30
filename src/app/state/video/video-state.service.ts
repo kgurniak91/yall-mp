@@ -18,6 +18,7 @@ export class VideoStateService implements OnDestroy {
   private readonly _editSubtitlesRequest = signal<number | null>(null);
   private readonly _syncTimelineRequest = signal<number | null>(null);
   private readonly _ankiExportRequest = signal<number | null>(null);
+  private readonly _isPaused = signal(true);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly appStateService = inject(AppStateService);
@@ -35,6 +36,7 @@ export class VideoStateService implements OnDestroy {
   public readonly editSubtitlesRequest = this._editSubtitlesRequest.asReadonly();
   public readonly syncTimelineRequest = this._syncTimelineRequest.asReadonly();
   public readonly ankiExportRequest = this._ankiExportRequest.asReadonly();
+  public readonly isPaused = this._isPaused.asReadonly();
 
   constructor() {
     window.electronAPI.onMpvEvent((status) => {
@@ -48,7 +50,7 @@ export class VideoStateService implements OnDestroy {
             this.setDuration(status.data);
             break;
           case 'pause':
-            // TODO Handle pause state changes
+            this._isPaused.set(status.data);
             break;
         }
       }
@@ -91,7 +93,6 @@ export class VideoStateService implements OnDestroy {
   }
 
   public togglePlayPause(): void {
-    window.electronAPI.mpvCommand(['cycle', 'pause']);
     this._playPauseRequest.set(Date.now());
   }
 
@@ -116,14 +117,11 @@ export class VideoStateService implements OnDestroy {
   }
 
   public seekRelative(time: number): void {
-    window.electronAPI.mpvCommand(['seek', time, 'relative']);
     this._seekRequest.set({time, type: SeekType.Relative});
     this._syncTimelineRequest.set(Date.now());
   }
 
   public seekAbsolute(time: number): void {
-    console.log(`[Renderer] VideoStateService: Sending "seek absolute" command to ${time}.`);
-    window.electronAPI.mpvCommand(['seek', time, 'absolute']);
     this._seekRequest.set({time, type: SeekType.Absolute});
     this._syncTimelineRequest.set(Date.now());
   }
