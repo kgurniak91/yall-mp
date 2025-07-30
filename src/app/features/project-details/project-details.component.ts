@@ -246,24 +246,19 @@ export class ProjectDetailsComponent implements OnInit {
   }
 
   toggleSettings(): void {
-    const videoElement = this.videoStateService.videoElement();
-    if (!videoElement) return;
+    const isVisible = this.isSettingsVisible();
 
-    if (!this.isSettingsVisible()) {
-      this.wasPlayingBeforeSettingsOpened = !videoElement.paused;
-
+    if (!isVisible) {
+      this.wasPlayingBeforeSettingsOpened = this.clipsStateService.isPlaying();
       if (this.wasPlayingBeforeSettingsOpened) {
-        videoElement.pause();
+        window.electronAPI.mpvSetProperty('pause', true);
       }
-
       this.isSettingsVisible.set(true);
     } else {
-      this.isSettingsVisible.set(false);
-
       if (this.wasPlayingBeforeSettingsOpened) {
-        videoElement.play();
+        window.electronAPI.mpvSetProperty('pause', false);
       }
-
+      this.isSettingsVisible.set(false);
       this.wasPlayingBeforeSettingsOpened = false;
     }
   }
