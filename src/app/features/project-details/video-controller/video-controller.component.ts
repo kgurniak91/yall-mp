@@ -34,12 +34,13 @@ export class VideoControllerComponent implements OnDestroy {
     const currentTime = this.videoStateService.currentTime();
     const currentClip = this.clipsStateService.currentClip();
     const isPlaying = this.clipsStateService.isPlaying();
+    const isManuallySeeking = this.clipsStateService.isManuallySeeking();
 
     if (!currentClip || !isPlaying || currentTime === 0) {
       return;
     }
 
-    if (currentTime >= currentClip.endTime) {
+    if (currentTime >= currentClip.endTime && !isManuallySeeking) {
       this.handleClipEnd(currentClip);
     }
   });

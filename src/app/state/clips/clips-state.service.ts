@@ -32,6 +32,7 @@ export class ClipsStateService {
   private adjustDebounceTimer: any;
   private isInitialized = false;
   private _projectId: string | null = null;
+  private readonly _isManuallySeeking = signal(false);
 
   public readonly currentClipIndex = this._currentClipIndex.asReadonly();
   public readonly playerState = this._playerState.asReadonly();
@@ -40,6 +41,7 @@ export class ClipsStateService {
   public readonly currentClip = computed<VideoClip | undefined>(() => {
     return this.clips()[this.currentClipIndex()];
   });
+  public readonly isManuallySeeking = this._isManuallySeeking.asReadonly();
 
   constructor() {
     effect(() => {
@@ -349,11 +351,15 @@ export class ClipsStateService {
   public goToAdjacentSubtitledClip(direction: SeekDirection): void {
     const adjacentClip = this.findAdjacentSubtitledClip(direction);
     if (adjacentClip) {
+      this._isManuallySeeking.set(true);
       this.videoStateService.seekAbsolute(adjacentClip.startTime);
+      setTimeout(() => this._isManuallySeeking.set(false), 100);
     } else if (direction === SeekDirection.Previous) {
       const current = this.currentClip();
       if (current?.hasSubtitle) {
+        this._isManuallySeeking.set(true);
         this.videoStateService.seekAbsolute(current.startTime);
+        setTimeout(() => this._isManuallySeeking.set(false), 100);
       }
     }
   }
