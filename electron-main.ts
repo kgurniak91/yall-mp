@@ -82,7 +82,6 @@ app.whenReady().then(() => {
 
     // Create the new, borderless child window. It starts hidden.
     videoWindow = new BrowserWindow({
-      parent: mainWindow,
       frame: false,
       show: false,
       skipTaskbar: true, // Don't show a separate icon on the taskbar
