@@ -144,35 +144,70 @@ app.whenReady().then(() => {
     mpvManager.observeProperty('pause');
   });
 
-  ipcMain.handle('mpv:resizeViewport', (event, rect: { x: number, y: number, width: number, height: number }) => {
-    if (!videoWindow || !mainWindow) {
+  ipcMain.handle('mpv:resizeViewport', async (_, containerRect: {
+    x: number,
+    y: number,
+    width: number,
+    height: number
+  }) => {
+    if (!videoWindow || !mainWindow || !mpvManager) {
       console.error('[Main Process] Resize called but a window is missing!');
       return;
     }
 
-    // Get coordinates relative to the main window's content
-    const [parentX, parentY] = mainWindow.getPosition();
+    try {
+      // Get the video's aspect ratio from MPV.
+      const videoAspectRatio = await mpvManager.getProperty('video-params/aspect');
 
-    const finalBounds = {
-      x: parentX + Math.round(rect.x),
-      y: parentY + Math.round(rect.y),
-      width: Math.round(rect.width),
-      height: Math.round(rect.height),
-    };
+      // Fallback if the aspect ratio isn't available yet.
+      if (!videoAspectRatio || videoAspectRatio <= 0) {
+        if (!videoWindow.isVisible()) {
+          videoWindow.showInactive();
+        }
+        return;
+      }
 
-    console.log(`[Main Process] Resizing video window. Parent at [${parentX}, ${parentY}]. Div at [${rect.x}, ${rect.y}]. Final Bounds:`, finalBounds);
+      // Perform the aspect ratio calculation.
+      let newWidth = containerRect.width;
+      let newHeight = newWidth / videoAspectRatio;
 
-    // The final position is: parent's top-left corner + div's top-left corner
-    videoWindow.setBounds(finalBounds);
+      if (newHeight > containerRect.height) {
+        newHeight = containerRect.height;
+        newWidth = newHeight * videoAspectRatio;
+      }
 
-    if (!videoWindow.isVisible()) {
-      videoWindow.show();
+      // Calculate the centered position.
+      const [parentX, parentY] = mainWindow.getPosition();
+      const offsetX = (containerRect.width - newWidth) / 2;
+      const offsetY = (containerRect.height - newHeight) / 2;
+
+      const finalBounds = {
+        x: parentX + Math.round(containerRect.x) + Math.round(offsetX),
+        y: parentY + Math.round(containerRect.y) + Math.round(offsetY),
+        width: Math.round(newWidth),
+        height: Math.round(newHeight),
+      };
+
+      // Set the final bounds on the video window.
+      videoWindow.setBounds(finalBounds);
+
+      if (!videoWindow.isVisible()) {
+        videoWindow.showInactive();
+      }
+    } catch (e) {
+      console.error("Error during viewport resize:", e);
     }
   });
 
   ipcMain.handle('mpv:command', (_, commandArray) => {
     console.log('[Main Process]  Received mpv:command:', commandArray);
     mpvManager?.sendCommand(commandArray);
+  });
+
+  ipcMain.handle('mpv:getProperty', (_, property) => {
+    const value = mpvManager?.getProperty(property);
+    console.log(`[Main Process] Received mpv:getProperty: ${property}=${value}`);
+    return value;
   });
 
   ipcMain.handle('mpv:setProperty', (_, property, value) => {

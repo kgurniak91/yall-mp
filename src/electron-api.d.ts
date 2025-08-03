@@ -16,6 +16,7 @@ export interface IElectronAPI {
   mpvCreateViewport: (mediaPath: string) => Promise<void>;
   mpvResizeViewport: (rect: {x: number, y: number, width: number, height: number}) => Promise<void>;
   mpvCommand: (commandArray: any[]) => Promise<void>;
+  mpvGetProperty: (property: string) => Promise<any>;
   mpvSetProperty: (property: string, value: any) => Promise<void>;
   onMpvEvent: (callback: (status: any) => void) => void;
   onMainWindowMoved: (callback: () => void) => void;

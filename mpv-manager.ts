@@ -9,6 +9,9 @@ export class MpvManager extends EventEmitter {
   private mpvProcess: ChildProcess | null = null;
   private client: Socket | null = null;
   private ipcPath: string;
+  private requestId = 2;
+  private readonly pendingRequests = new Map<number, (value: any) => void>();
+
 
   constructor(private win: BrowserWindow) {
     super();
@@ -42,8 +45,9 @@ export class MpvManager extends EventEmitter {
       });
 
       this.mpvProcess.on('close', (code) => {
-        // Reject if process exits before connection
-        reject(new Error(`MPV process exited prematurely with code ${code}`));
+        if (code !== 0) {
+          reject(new Error(`MPV process exited prematurely with code ${code}`));
+        }
       });
 
       let retries = 0;
@@ -57,7 +61,18 @@ export class MpvManager extends EventEmitter {
           this.client?.on('data', (data) => {
             const messages = data.toString().trim().split('\n');
             for (const message of messages) {
-              try { this.emit('status', JSON.parse(message)); } catch (e) { /* ignore */ }
+              try {
+                const json = JSON.parse(message);
+                // Check if this message is a response to a specific request
+                if (json.request_id && this.pendingRequests.has(json.request_id)) {
+                  // Fulfill the promise associated with this request
+                  this.pendingRequests.get(json.request_id)?.(json.data);
+                  this.pendingRequests.delete(json.request_id);
+                } else {
+                  // Otherwise, it's a general status event
+                  this.emit('status', json);
+                }
+              } catch (e) { /* ignore */ }
             }
           });
 
@@ -92,8 +107,20 @@ export class MpvManager extends EventEmitter {
     this.sendCommand(['set_property', property, value]);
   }
 
+  public getProperty(property: string): Promise<any> {
+    return new Promise((resolve) => {
+      const reqId = this.requestId++;
+      this.pendingRequests.set(reqId, resolve);
+      // Send the command with unique request_id
+      const command = {command: ['get_property', property], request_id: reqId};
+      this.client?.write(JSON.stringify(command) + '\n');
+    });
+  }
+
   public observeProperty(property: string): void {
-    this.sendCommand(['observe_property', 1, property]); // Using 1 as a unique request ID
+    // request_id of 1 is reserved for observed properties by convention
+    const command = {command: ['observe_property', 1, property]};
+    this.client?.write(JSON.stringify(command) + '\n');
   }
 
   public stop(): void {

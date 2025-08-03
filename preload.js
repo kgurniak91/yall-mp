@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   mpvCreateViewport: (mediaPath) => ipcRenderer.invoke('mpv:createViewport', mediaPath),
   mpvResizeViewport: (rect) => ipcRenderer.invoke('mpv:resizeViewport', rect),
   mpvCommand: (commandArray) => ipcRenderer.invoke('mpv:command', commandArray),
+  mpvGetProperty: (property) => ipcRenderer.invoke('mpv:getProperty', property),
   mpvSetProperty: (property, value) => ipcRenderer.invoke('mpv:setProperty', property, value),
   onMpvEvent: (callback) => ipcRenderer.on('mpv:event', (_event, value) => callback(value)),
   onMainWindowMoved: (callback) => ipcRenderer.on('mpv:mainWindowMovedOrResized', callback),

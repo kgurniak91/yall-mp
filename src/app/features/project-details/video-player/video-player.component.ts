@@ -20,7 +20,7 @@ export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
       this.sendResizeCommand();
     });
 
-    setTimeout(() => this.sendResizeCommand(), 150);
+    setTimeout(() => this.sendResizeCommand(), 200);
   }
 
   ngOnDestroy() {
@@ -28,10 +28,12 @@ export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
   }
 
   private sendResizeCommand(): void {
-    if (!this.mpvPlaceholderRef) {
+    const videoContainer = this.mpvPlaceholderRef()?.nativeElement;
+    if (!videoContainer) {
       return;
     }
-    const rect = this.mpvPlaceholderRef().nativeElement.getBoundingClientRect();
+
+    const rect = videoContainer.getBoundingClientRect();
 
     if (rect.width > 0 && rect.height > 0) {
       if (!this.isReadyEmitted) {

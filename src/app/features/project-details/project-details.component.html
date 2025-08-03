@@ -1,190 +1,192 @@
-@if (project(); as project) {
-  <app-project-header [mediaFileName]="project.mediaFileName"
-                      [subtitleFileName]="project.subtitleFileName"
-                      (newProjectClicked)="onNewProjectClicked()"
-                      (editProjectClicked)="onEditProjectClicked()"
-                      (goToProjectsListClicked)="onGoToProjectsListClicked()"
-                      (helpClicked)="onHelpClicked()"
-                      (globalSettingsClicked)="onGlobalSettingsClicked()"
-                      (deleteProjectClicked)="onDeleteProjectClicked()"/>
-}
+<div class="content-wrapper">
+  @if (project(); as project) {
+    <app-project-header [mediaFileName]="project.mediaFileName"
+                        [subtitleFileName]="project.subtitleFileName"
+                        (newProjectClicked)="onNewProjectClicked()"
+                        (editProjectClicked)="onEditProjectClicked()"
+                        (goToProjectsListClicked)="onGoToProjectsListClicked()"
+                        (helpClicked)="onHelpClicked()"
+                        (globalSettingsClicked)="onGlobalSettingsClicked()"
+                        (deleteProjectClicked)="onDeleteProjectClicked()"/>
+  }
 
-<div class="video-area">
-  <div class="video-wrapper">
+  <div class="video-area">
     <app-video-controller (ready)="onPlayerReady()"/>
   </div>
-</div>
 
-<div class="subtitle-display">
-  @if (clipsStateService.currentClip(); as currentClip) {
-    @if (currentClip.hasSubtitle) {
-      @let hiddenSubtitleStyle = globalSettingsStateService.hiddenSubtitleStyle();
-      @let showBlurredSubtitles = !videoStateService.subtitlesVisible() && hiddenSubtitleStyle === HiddenSubtitleStyle.Blurred;
-      @let hideSubtitles = !videoStateService.subtitlesVisible() && hiddenSubtitleStyle === HiddenSubtitleStyle.Hidden;
-      <span [class.blurred-subtitles]="showBlurredSubtitles" [class.hidden-subtitles]="hideSubtitles">
+  <div class="subtitle-display">
+    @if (clipsStateService.currentClip(); as currentClip) {
+      @if (currentClip.hasSubtitle) {
+        @let hiddenSubtitleStyle = globalSettingsStateService.hiddenSubtitleStyle();
+        @let showBlurredSubtitles = !videoStateService.subtitlesVisible() && hiddenSubtitleStyle === HiddenSubtitleStyle.Blurred;
+        @let hideSubtitles = !videoStateService.subtitlesVisible() && hiddenSubtitleStyle === HiddenSubtitleStyle.Hidden;
+        <span [class.blurred-subtitles]="showBlurredSubtitles" [class.hidden-subtitles]="hideSubtitles">
         {{ currentClip.text }}
       </span>
+      } @else {
+        &nbsp;
+      }
     } @else {
       &nbsp;
     }
-  } @else {
-    &nbsp;
-  }
-</div>
-
-<div class="toolbar">
-  <div class="history-wrapper">
-    <p-button icon="fa-solid fa-rotate-left"
-              pTooltip="Undo (Ctrl + Z)"
-              tooltipPosition="right"
-              severity="secondary"
-              [disabled]="!commandHistoryStateService.canUndo()"
-              (onClick)="undo()"/>
-
-    <p-button icon="fa-solid fa-rotate-right"
-              pTooltip="Redo (Ctrl + Y)"
-              tooltipPosition="right"
-              severity="secondary"
-              [disabled]="!commandHistoryStateService.canRedo()"
-              (onClick)="redo()"/>
   </div>
 
-  <div>
-    <p-button (click)="opStart.toggle($event)"
-              icon="fa-solid fa-arrows-down-to-line"
-              class="rotate-90"
+  <div class="toolbar">
+    <div class="history-wrapper">
+      <p-button icon="fa-solid fa-rotate-left"
+                pTooltip="Undo (Ctrl + Z)"
+                tooltipPosition="right"
+                severity="secondary"
+                [disabled]="!commandHistoryStateService.canUndo()"
+                (onClick)="undo()"/>
+
+      <p-button icon="fa-solid fa-rotate-right"
+                pTooltip="Redo (Ctrl + Y)"
+                tooltipPosition="right"
+                severity="secondary"
+                [disabled]="!commandHistoryStateService.canRedo()"
+                (onClick)="redo()"/>
+    </div>
+
+    <div>
+      <p-button (click)="opStart.toggle($event)"
+                icon="fa-solid fa-arrows-down-to-line"
+                class="rotate-90"
+                tooltipPosition="left"
+                severity="secondary"
+                pTooltip="Adjust Clip Start"
+                [disabled]="isFirstClip()"/>
+
+      <p-popover #opStart>
+        <div class="p-buttonset">
+          <p-button (click)="adjustClipStartLeft()" icon="fa fa-chevron-left" severity="secondary" variant="outlined"
+                    tooltipPosition="left" pTooltip="Adjust Left ([)"/>
+          <p-button (click)="adjustClipStartRight()" icon="fa fa-chevron-right" severity="secondary" variant="outlined"
+                    tooltipPosition="right" pTooltip="Adjust Right (Ctrl+[)"/>
+        </div>
+      </p-popover>
+    </div>
+
+    <p-button icon="fa-solid fa-arrow-left"
+              pTooltip="Previous subtitled clip (Ctrl + ←)"
               tooltipPosition="left"
               severity="secondary"
-              pTooltip="Adjust Clip Start"
-              [disabled]="isFirstClip()"/>
+              [disabled]="isGoToPreviousSubtitledClipActionDisabled()"
+              (onClick)="goToPreviousSubtitledClip()"/>
 
-    <p-popover #opStart>
-      <div class="p-buttonset">
-        <p-button (click)="adjustClipStartLeft()" icon="fa fa-chevron-left" severity="secondary" variant="outlined"
-                  tooltipPosition="left" pTooltip="Adjust Left ([)"/>
-        <p-button (click)="adjustClipStartRight()" icon="fa fa-chevron-right" severity="secondary" variant="outlined"
-                  tooltipPosition="right" pTooltip="Adjust Right (Ctrl+[)"/>
-      </div>
-    </p-popover>
-  </div>
+    <p-button icon="fa-solid {{clipsStateService.isPlaying() ? 'fa-pause' : 'fa-play'}}"
+              [pTooltip]="(clipsStateService.isPlaying() ? 'Pause' : 'Play') + ' (Space)'"
+              tooltipPosition="top"
+              severity="secondary"
+              (onClick)="togglePlayPause()"/>
 
-  <p-button icon="fa-solid fa-arrow-left"
-            pTooltip="Previous subtitled clip (Ctrl + ←)"
-            tooltipPosition="left"
-            severity="secondary"
-            [disabled]="isGoToPreviousSubtitledClipActionDisabled()"
-            (onClick)="goToPreviousSubtitledClip()"/>
+    <p-button icon="fa-solid fa-repeat"
+              pTooltip="Repeat current clip (↑)"
+              tooltipPosition="top"
+              severity="secondary"
+              (onClick)="repeatCurrentClip()"/>
 
-  <p-button icon="fa-solid {{clipsStateService.isPlaying() ? 'fa-pause' : 'fa-play'}}"
-            [pTooltip]="(clipsStateService.isPlaying() ? 'Pause' : 'Play') + ' (Space)'"
-            tooltipPosition="top"
-            severity="secondary"
-            (onClick)="togglePlayPause()"/>
-
-  <p-button icon="fa-solid fa-repeat"
-            pTooltip="Repeat current clip (↑)"
-            tooltipPosition="top"
-            severity="secondary"
-            (onClick)="repeatCurrentClip()"/>
-
-  <p-button icon="fa-solid fa-arrow-right"
-            pTooltip="Next subtitled clip (Ctrl + →)"
-            tooltipPosition="right"
-            severity="secondary"
-            [disabled]="isGoToNextSubtitledClipActionDisabled()"
-            (onClick)="goToNextSubtitledClip()"/>
-
-  <div>
-    <p-button (click)="opEnd.toggle($event)"
-              icon="fa-solid fa-arrows-up-to-line"
-              class="rotate-90"
+    <p-button icon="fa-solid fa-arrow-right"
+              pTooltip="Next subtitled clip (Ctrl + →)"
               tooltipPosition="right"
               severity="secondary"
-              pTooltip="Adjust Clip End"
-              [disabled]="isLastClip()"/>
+              [disabled]="isGoToNextSubtitledClipActionDisabled()"
+              (onClick)="goToNextSubtitledClip()"/>
 
-    <p-popover #opEnd>
-      <div class="p-buttonset">
-        <p-button (click)="adjustClipEndLeft()" icon="fa fa-chevron-left" severity="secondary" variant="outlined"
-                  tooltipPosition="left" pTooltip="Adjust Left (Ctrl+])"/>
-        <p-button (click)="adjustClipEndRight()" icon="fa fa-chevron-right" severity="secondary" variant="outlined"
-                  tooltipPosition="right" pTooltip="Adjust Right (])"/>
-      </div>
-    </p-popover>
-  </div>
+    <div>
+      <p-button (click)="opEnd.toggle($event)"
+                icon="fa-solid fa-arrows-up-to-line"
+                class="rotate-90"
+                tooltipPosition="right"
+                severity="secondary"
+                pTooltip="Adjust Clip End"
+                [disabled]="isLastClip()"/>
 
-  <div class="settings-wrapper">
-    <p-button icon="fa-solid fa-eraser"
-              (click)="clipsStateService.deleteCurrentClip()"
-              pTooltip="Delete clip (Delete)"
-              tooltipPosition="left"
-              severity="secondary"/>
+      <p-popover #opEnd>
+        <div class="p-buttonset">
+          <p-button (click)="adjustClipEndLeft()" icon="fa fa-chevron-left" severity="secondary" variant="outlined"
+                    tooltipPosition="left" pTooltip="Adjust Left (Ctrl+])"/>
+          <p-button (click)="adjustClipEndRight()" icon="fa fa-chevron-right" severity="secondary" variant="outlined"
+                    tooltipPosition="right" pTooltip="Adjust Right (])"/>
+        </div>
+      </p-popover>
+    </div>
 
-    @if (currentClipHasSubtitles()) {
-      <p-button icon="fa-solid fa-divide rotate-90"
-                (click)="clipsStateService.splitCurrentSubtitledClip()"
-                pTooltip="Split subtitled clip (\)"
+    <div class="settings-wrapper">
+      <p-button icon="fa-solid fa-eraser"
+                (click)="clipsStateService.deleteCurrentClip()"
+                pTooltip="Delete clip (Delete)"
                 tooltipPosition="left"
                 severity="secondary"/>
-    } @else {
-      <p-button icon="fa-regular fa-square-plus"
-                (click)="clipsStateService.createNewSubtitledClipAtCurrentTime()"
-                pTooltip="Create subtitled clip (Insert)"
+
+      @if (currentClipHasSubtitles()) {
+        <p-button icon="fa-solid fa-divide rotate-90"
+                  (click)="clipsStateService.splitCurrentSubtitledClip()"
+                  pTooltip="Split subtitled clip (\)"
+                  tooltipPosition="left"
+                  severity="secondary"/>
+      } @else {
+        <p-button icon="fa-regular fa-square-plus"
+                  (click)="clipsStateService.createNewSubtitledClipAtCurrentTime()"
+                  pTooltip="Create subtitled clip (Insert)"
+                  tooltipPosition="left"
+                  severity="secondary"/>
+      }
+
+      <p-button icon="fa-solid fa-file-pen"
+                (click)="openEditSubtitlesDialog()"
+                pTooltip="Edit subtitles (S)"
+                tooltipPosition="left"
+                severity="secondary"
+                [disabled]="!currentClipHasSubtitles()"/>
+
+      <p-button icon="fa-solid fa-e"
+                (click)="openAnkiExportDialog()"
+                pTooltip="Export to Anki (E)"
+                tooltipPosition="left"
+                severity="secondary"
+                [disabled]="!ankiStateService.isAnkiExportAvailable() || !currentClipHasSubtitles()"/>
+
+      @let subtitlesVisible = videoStateService.subtitlesVisible();
+      <p-button icon="{{subtitlesVisible ? 'fa-solid' : 'fa-regular'}} fa-closed-captioning"
+                [pTooltip]="(subtitlesVisible ? 'Hide subtitles' : 'Show subtitles') + ' (C)'"
+                (onClick)="videoStateService.toggleSubtitlesVisible()"
                 tooltipPosition="left"
                 severity="secondary"/>
-    }
 
-    <p-button icon="fa-solid fa-file-pen"
-              (click)="openEditSubtitlesDialog()"
-              pTooltip="Edit subtitles (S)"
-              tooltipPosition="left"
-              severity="secondary"
-              [disabled]="!currentClipHasSubtitles()"/>
-
-    <p-button icon="fa-solid fa-e"
-              (click)="openAnkiExportDialog()"
-              pTooltip="Export to Anki (E)"
-              tooltipPosition="left"
-              severity="secondary"
-              [disabled]="!ankiStateService.isAnkiExportAvailable() || !currentClipHasSubtitles()"/>
-
-    @let subtitlesVisible = videoStateService.subtitlesVisible();
-    <p-button icon="{{subtitlesVisible ? 'fa-solid' : 'fa-regular'}} fa-closed-captioning"
-              [pTooltip]="(subtitlesVisible ? 'Hide subtitles' : 'Show subtitles') + ' (C)'"
-              (onClick)="videoStateService.toggleSubtitlesVisible()"
-              tooltipPosition="left"
-              severity="secondary"/>
-
-    <p-button icon="fa-solid fa-gear"
-              pTooltip="Settings (,)"
-              tooltipPosition="left"
-              severity="secondary"
-              (onClick)="toggleSettings()"/>
+      <p-button icon="fa-solid fa-gear"
+                pTooltip="Settings (,)"
+                tooltipPosition="left"
+                severity="secondary"
+                (onClick)="toggleSettings()"/>
+    </div>
   </div>
+
+  <div class="timeline-area">
+    <app-timeline-editor/>
+  </div>
+
+  <p-drawer [(visible)]="isSettingsVisible"
+            (onHide)="toggleSettings()"
+            header="Settings"
+            position="right"
+            [style]="{width: '30rem'}">
+
+    <div class="settings-preset-fieldset">
+      <p-fieldset legend="Settings Preset" [toggleable]="false">
+        <div class="setting-item">
+          <p-select id="preset-selector"
+                    [options]="settingsPresets()"
+                    optionLabel="name"
+                    placeholder="Custom"
+                    [ngModel]="selectedSettingsPreset()"
+                    (ngModelChange)="onSettingsPresetChange($event)">
+          </p-select>
+        </div>
+      </p-fieldset>
+    </div>
+
+    <app-project-settings [settings]="projectSettingsStateService.settings()"
+                          (settingsChange)="projectSettingsStateService.setSettings($event)"/>
+  </p-drawer>
 </div>
-
-<app-timeline-editor/>
-
-<p-drawer [(visible)]="isSettingsVisible"
-          (onHide)="toggleSettings()"
-          header="Settings"
-          position="right"
-          [style]="{width: '30rem'}">
-
-  <div class="settings-preset-fieldset">
-    <p-fieldset legend="Settings Preset" [toggleable]="false">
-      <div class="setting-item">
-        <p-select id="preset-selector"
-                  [options]="settingsPresets()"
-                  optionLabel="name"
-                  placeholder="Custom"
-                  [ngModel]="selectedSettingsPreset()"
-                  (ngModelChange)="onSettingsPresetChange($event)">
-        </p-select>
-      </div>
-    </p-fieldset>
-  </div>
-
-  <app-project-settings [settings]="projectSettingsStateService.settings()"
-                        (settingsChange)="projectSettingsStateService.setSettings($event)"/>
-</p-drawer>
