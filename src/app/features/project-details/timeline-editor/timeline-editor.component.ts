@@ -151,7 +151,7 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
     const currentTime = this.videoStateService.currentTime();
     const duration = this.videoStateService.duration();
 
-    if (duration > 0 && !this.clipsStateService.isPlaying()) {
+    if (duration > 0) {
       const progress = currentTime / duration;
       this.wavesurfer.seekTo(progress);
     }
@@ -164,14 +164,17 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
       progressColor: '#f55',
       barWidth: 2,
       barGap: 1,
-      minPxPerSec: this.currentZoom()
+      minPxPerSec: this.currentZoom(),
+      // Prevent wavesurfer from interacting with media, because the player is driven externally
+      media: undefined,
+      // Pass the URL directly to load the waveform
+      url: `file://${mediaPath}`
     });
 
     this.wsRegions = this.wavesurfer.registerPlugin(RegionsPlugin.create());
     this.setupWsRegionsEventListeners();
     this.wavesurfer.on('scroll', this.handleWaveSurferScroll);
     this.wavesurfer.on('ready', this.handleWaveSurferReady);
-    this.wavesurfer.load(`file://${mediaPath}`);
   }
 
   private setupWsRegionsEventListeners() {
