@@ -154,8 +154,9 @@ export class ProjectDetailsComponent implements OnInit {
     });
 
     effect(() => {
-      // Wait until BOTH the UI is ready AND the MPV manager is ready
-      if (this.isUiReady() && this.isMpvReady()) {
+      const clips = this.clipsStateService.clips();
+      // Wait until UI and MPV are ready, and clips have been generated from the video's duration.
+      if (this.isUiReady() && this.isMpvReady() && clips.length > 0) {
         if (!this.hasStartedPlayback) {
           this.hasStartedPlayback = true;
           this.startPlaybackSequence();
@@ -429,32 +430,21 @@ export class ProjectDetailsComponent implements OnInit {
     }
   });
 
-  private startupEffect = effect(() => {
-    if (this.isMpvReady()) {
-      this.startPlaybackSequence();
-    }
-  });
-
   private startPlaybackSequence(): void {
     const project = this.project();
     if (!project) {
       return;
     }
 
-    // Prevent this from running multiple times
-    if (this.videoStateService.duration() > 0) {
+    if (this.videoStateService.duration() <= 0) {
       return;
     }
 
     const seekTime = project.lastPlaybackTime;
-    console.log(`[ProjectDetails] Both UI and MPV are ready. Seeking to: ${seekTime}`);
+    console.log(`[ProjectDetails] Startup sequence. Seeking to last known time: ${seekTime}`);
 
     if (seekTime > 0) {
       this.videoStateService.seekAbsolute(seekTime);
     }
-
-    setTimeout(() => {
-      this.videoStateService.togglePlayPause();
-    }, 100);
   }
 }
