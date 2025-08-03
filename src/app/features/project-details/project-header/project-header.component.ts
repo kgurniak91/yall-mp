@@ -27,6 +27,7 @@ export class ProjectHeaderComponent implements OnInit {
   helpClicked = output<void>();
   globalSettingsClicked = output<void>();
   protected readonly isMaximized = signal(false);
+  protected readonly isFullScreen = signal(false);
   protected readonly projectMenuItems: MenuItem[] = [
     {
       label: 'Create new project',
@@ -66,6 +67,7 @@ export class ProjectHeaderComponent implements OnInit {
 
   ngOnInit() {
     window.electronAPI.onWindowMaximizedStateChanged((isMaximized: boolean) => this.isMaximized.set(isMaximized));
+    window.electronAPI.onWindowFullScreenStateChanged((isFullScreen: boolean) => this.isFullScreen.set(isFullScreen));
   }
 
   protected onMinimizeClicked(): void {
@@ -74,6 +76,10 @@ export class ProjectHeaderComponent implements OnInit {
 
   protected onToggleMaximizeClicked(): void {
     window.electronAPI.windowToggleMaximize();
+  }
+
+  protected onToggleFullScreenClicked(): void {
+    window.electronAPI.windowToggleFullScreen();
   }
 
   protected onCloseClicked(): void {

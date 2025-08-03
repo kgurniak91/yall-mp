@@ -4,8 +4,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // --- Window control
   windowMinimize: () => ipcRenderer.send('window:minimize'),
   windowToggleMaximize: () => ipcRenderer.send('window:toggle-maximize'),
+  windowToggleFullScreen: () => ipcRenderer.send('window:toggle-fullscreen'),
+  windowEscape: () => ipcRenderer.send('window:escape'),
   windowClose: () => ipcRenderer.send('window:close'),
   onWindowMaximizedStateChanged: (callback) => ipcRenderer.on('window:maximized-state-changed', (_event, value) => callback(value)),
+  onWindowFullScreenStateChanged: (callback) => ipcRenderer.on('window:fullscreen-state-changed', (_event, value) => callback(value)),
   // --- Files
   openFileDialog: (options) => ipcRenderer.invoke('dialog:openFile', options),
   parseSubtitleFile: (filePath) => ipcRenderer.invoke('subtitle:parse', filePath),

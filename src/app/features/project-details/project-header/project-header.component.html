@@ -33,6 +33,11 @@
                 severity="secondary"
                 size="small"
                 text/>
+      <p-button (click)="onToggleFullScreenClicked()"
+                icon="fa-solid {{isFullScreen() ? 'fa-compress' : 'fa-expand'}}"
+                severity="secondary"
+                size="small"
+                text/>
       <p-button (click)="onCloseClicked()"
                 icon="fa-solid fa-xmark"
                 severity="danger"

@@ -24,6 +24,12 @@ export class KeyboardShortcutsService implements OnDestroy {
     const target = event.target as HTMLElement;
     if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
 
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      window.electronAPI.windowEscape();
+      return;
+    }
+
     const keyMap = new Map<string, KeyboardAction>();
     keyMap.set('c', KeyboardAction.ToggleSubtitles);
     keyMap.set('C', KeyboardAction.ToggleSubtitles);

@@ -15,6 +15,7 @@ let mainWindow: BrowserWindow | null = null;
 let videoWindow: BrowserWindow | null = null;
 let backgroundWindow: BrowserWindow | null = null;
 let preMaximizeBounds: Electron.Rectangle | null = null;
+let isFullScreen = false;
 
 let isFFmpegAvailable = false;
 let ffmpegPath = '';
@@ -103,6 +104,16 @@ function createWindow() {
     mainWindow?.webContents.send('window:maximized-state-changed', false);
   });
 
+  mainWindow.on('enter-full-screen', () => {
+    isFullScreen = true;
+    mainWindow?.webContents.send('window:fullscreen-state-changed', true);
+  });
+
+  mainWindow.on('leave-full-screen', () => {
+    isFullScreen = false;
+    mainWindow?.webContents.send('window:fullscreen-state-changed', false);
+  });
+
   // Serve the Angular app
   const indexPath = path.join(__dirname, './dist/yall-mp/browser/index.html');
   mainWindow.loadFile(indexPath);
@@ -140,6 +151,31 @@ app.whenReady().then(() => {
       const display = screen.getPrimaryDisplay();
       mainWindow.setBounds(display.workArea);
       mainWindow.webContents.send('window:maximized-state-changed', true);
+    }
+  });
+
+  ipcMain.on('window:toggle-fullscreen', () => {
+    if (mainWindow) {
+      mainWindow.setFullScreen(!isFullScreen);
+    }
+  });
+
+  ipcMain.on('window:escape', () => {
+    if (!mainWindow) {
+      return;
+    }
+
+    if (isFullScreen) {
+      // If fullscreen, exit fullscreen
+      mainWindow.setFullScreen(false);
+    } else if (preMaximizeBounds) {
+      // If maximized, unmaximize
+      mainWindow.setBounds(preMaximizeBounds);
+      preMaximizeBounds = null;
+      mainWindow.webContents.send('window:maximized-state-changed', false);
+    } else {
+      // If normal, minimize.
+      mainWindow.minimize();
     }
   });
 

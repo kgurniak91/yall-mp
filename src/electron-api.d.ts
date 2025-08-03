@@ -5,8 +5,11 @@ export interface IElectronAPI {
   // --- Window control
   windowMinimize: () => void;
   windowToggleMaximize: () => void;
+  windowToggleFullScreen: () => void;
+  windowEscape: () => void;
   windowClose: () => void;
   onWindowMaximizedStateChanged: (callback: (isMaximized: boolean) => void) => void;
+  onWindowFullScreenStateChanged: (callback: (isFullScreen: boolean) => void) => void;
   // --- Files
   openFileDialog: (options: any) => Promise<string[]>;
   parseSubtitleFile: (filePath: string) => Promise<SubtitleData[]>;
