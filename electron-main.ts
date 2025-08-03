@@ -13,6 +13,7 @@ import {MpvManager} from './mpv-manager';
 let mpvManager: MpvManager | null = null;
 let mainWindow: BrowserWindow | null = null;
 let videoWindow: BrowserWindow | null = null;
+let backgroundWindow: BrowserWindow | null = null;
 
 let isFFmpegAvailable = false;
 let ffmpegPath = '';
@@ -27,6 +28,17 @@ if (ffmpegStatic) {
 const FORCED_GAP_SECONDS = 0.05;
 
 function createWindow() {
+  backgroundWindow = new BrowserWindow({
+    width: 1920,
+    height: 1080,
+    transparent: false,
+    backgroundColor: '#000000',
+    frame: false,
+    show: false, // Start hidden
+    skipTaskbar: true,
+    focusable: false, // Never interactive
+  });
+
   mainWindow = new BrowserWindow({
     width: 1920,
     height: 1080,
@@ -39,25 +51,33 @@ function createWindow() {
     },
   });
 
-  // Sync main window and video window positions
-  const triggerResize = () => {
-    mainWindow?.webContents.send('mpv:mainWindowMovedOrResized');
+  // Sync positions of all windows
+  const syncWindowPositions = () => {
+    if (!mainWindow || !backgroundWindow) {
+      return;
+    }
+    const bounds = mainWindow.getBounds();
+    backgroundWindow.setBounds(bounds);
+    mainWindow.webContents.send('mpv:mainWindowMovedOrResized');
   };
-  mainWindow.on('resize', triggerResize);
-  mainWindow.on('move', triggerResize);
+  mainWindow.on('resize', syncWindowPositions);
+  mainWindow.on('move', syncWindowPositions);
 
-  // When the main window is focused, ensure the video window is stacked directly underneath it, and both are brought to the front
   mainWindow.on('focus', () => {
+    // Bring the windows to the front in the correct stacking order.
+    backgroundWindow?.moveTop();
     videoWindow?.moveTop();
     mainWindow?.moveTop();
   });
 
   mainWindow.on('minimize', () => {
     videoWindow?.hide();
+    backgroundWindow?.hide();
   });
 
   mainWindow.on('restore', () => {
-    // showInactive prevents the video window from stealing focus
+    // showInactive prevents the windows from stealing focus
+    backgroundWindow?.showInactive();
     videoWindow?.showInactive();
   });
 
@@ -65,12 +85,14 @@ function createWindow() {
   mainWindow.on('closed', () => {
     mpvManager?.stop();
     videoWindow?.close();
+    backgroundWindow?.close();
     mainWindow = null;
   });
 
   // Serve the Angular app
   const indexPath = path.join(__dirname, './dist/yall-mp/browser/index.html');
   mainWindow.loadFile(indexPath);
+  backgroundWindow.show();
 
   // Open DevTools for debugging in a separate window
   mainWindow.webContents.openDevTools({mode: 'detach'});
@@ -103,8 +125,11 @@ app.whenReady().then(() => {
       transparent: true,
     });
 
-    mpvManager = new MpvManager(videoWindow);
+    // Stacking order setup
+    videoWindow.setAlwaysOnTop(false);
+    mainWindow.moveTop();
 
+    mpvManager = new MpvManager(videoWindow);
     mpvManager.on('status', (status) => mainWindow?.webContents.send('mpv:event', status));
     mpvManager.on('error', (err) => console.error("MPV Error:", err));
     mpvManager.on('ready', () => {
@@ -114,13 +139,12 @@ app.whenReady().then(() => {
 
     // Start MPV inside the child window's handle
     await mpvManager.start(mediaPath);
-
     mpvManager.observeProperty('time-pos');
     mpvManager.observeProperty('duration');
     mpvManager.observeProperty('pause');
   });
 
-  ipcMain.handle('mpv:resizeViewport', (event, rect: {x: number, y: number, width: number, height: number}) => {
+  ipcMain.handle('mpv:resizeViewport', (event, rect: { x: number, y: number, width: number, height: number }) => {
     if (!videoWindow || !mainWindow) {
       console.error('[Main Process] Resize called but a window is missing!');
       return;
