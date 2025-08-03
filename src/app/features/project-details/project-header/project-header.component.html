@@ -9,14 +9,18 @@
                   (click)="projectMenu.toggle($event)"/>
       </div>
 
-      <div class="filename" [pTooltip]="mediaFileName() || ''" tooltipPosition="bottom">
+      <div class="filename">
         <i class="fa-solid fa-file-video"></i>
-        <span>{{ mediaFileName() || 'Loading media...' }}</span>
+        <span [pTooltip]="mediaFileName() || ''" tooltipPosition="bottom">
+          {{ mediaFileName() || 'Loading media...' }}
+        </span>
       </div>
 
-      <div class="filename" [pTooltip]="subtitleFileName() || ''" tooltipPosition="bottom">
+      <div class="filename">
         <i class="fa-solid fa-file-lines"></i>
-        <span>{{ subtitleFileName() || 'Loading subtitles...' }}</span>
+        <span [pTooltip]="subtitleFileName() || ''" tooltipPosition="bottom">
+          {{ subtitleFileName() || 'Loading subtitles...' }}
+        </span>
       </div>
     </div>
   </ng-template>

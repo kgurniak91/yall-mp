@@ -4,6 +4,14 @@
   height: 1.5rem !important;
 }
 
+p-toolbar {
+  -webkit-app-region: drag; // Make the window draggable
+}
+
+p-button {
+  -webkit-app-region: no-drag;
+}
+
 .header-wrapper {
   display: flex;
   align-items: center;
@@ -30,5 +38,6 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    -webkit-app-region: no-drag;
   }
 }
