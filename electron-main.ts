@@ -144,7 +144,11 @@ app.whenReady().then(() => {
     mpvManager.observeProperty('pause');
   });
 
-  ipcMain.handle('mpv:resizeViewport', async (_, containerRect: {
+  ipcMain.handle('mpv:hideVideoDuringResize', () => {
+    videoWindow?.hide();
+  });
+
+  ipcMain.handle('mpv:finishVideoResize', async (_, containerRect: {
     x: number,
     y: number,
     width: number,

@@ -14,7 +14,8 @@ export interface IElectronAPI {
   checkFFmpegAvailability: () => Promise<boolean>;
   // --- MPV
   mpvCreateViewport: (mediaPath: string) => Promise<void>;
-  mpvResizeViewport: (rect: {x: number, y: number, width: number, height: number}) => Promise<void>;
+  mpvHideVideoDuringResize: () => Promise<void>;
+  mpvFinishVideoResize: (rect: {x: number, y: number, width: number, height: number}) => Promise<void>;
   mpvCommand: (commandArray: any[]) => Promise<void>;
   mpvGetProperty: (property: string) => Promise<any>;
   mpvSetProperty: (property: string, value: any) => Promise<void>;
