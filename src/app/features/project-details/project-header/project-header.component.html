@@ -20,4 +20,23 @@
       </div>
     </div>
   </ng-template>
+
+  <ng-template pTemplate="end">
+    <div class="flex gap-2 align-items-center p-2">
+      <p-button (click)="onMinimizeClicked()"
+                icon="fa-solid fa-window-minimize"
+                severity="secondary"
+                size="small"
+                text/>
+      <p-button (click)="onToggleMaximizeClicked()"
+                icon="fa-solid {{isMaximized() ? 'fa-window-restore' : 'fa-window-maximize'}}"
+                severity="secondary"
+                size="small"
+                text/>
+      <p-button (click)="onCloseClicked()"
+                icon="fa-solid fa-xmark"
+                severity="danger"
+                text/>
+    </div>
+  </ng-template>
 </p-toolbar>

@@ -2,6 +2,12 @@ import {AnkiExportRequest} from './app/model/anki.types';
 import {SubtitleData} from '../shared/types/subtitle.type';
 
 export interface IElectronAPI {
+  // --- Window control
+  windowMinimize: () => void;
+  windowToggleMaximize: () => void;
+  windowClose: () => void;
+  onWindowMaximizedStateChanged: (callback: (isMaximized: boolean) => void) => void;
+  // --- Files
   openFileDialog: (options: any) => Promise<string[]>;
   parseSubtitleFile: (filePath: string) => Promise<SubtitleData[]>;
   // --- Anki

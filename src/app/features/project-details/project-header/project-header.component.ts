@@ -1,4 +1,4 @@
-import {Component, input, output} from '@angular/core';
+import {Component, input, OnInit, output, signal} from '@angular/core';
 import {MenuItem, PrimeTemplate} from 'primeng/api';
 import {Button} from 'primeng/button';
 import {Menu} from 'primeng/menu';
@@ -17,7 +17,7 @@ import {Toolbar} from 'primeng/toolbar';
   templateUrl: './project-header.component.html',
   styleUrl: './project-header.component.scss'
 })
-export class ProjectHeaderComponent {
+export class ProjectHeaderComponent implements OnInit {
   mediaFileName = input<string | null>(null);
   subtitleFileName = input<string | null>(null);
   newProjectClicked = output<void>();
@@ -26,8 +26,8 @@ export class ProjectHeaderComponent {
   deleteProjectClicked = output<void>();
   helpClicked = output<void>();
   globalSettingsClicked = output<void>();
-
-  readonly projectMenuItems: MenuItem[] = [
+  protected readonly isMaximized = signal(false);
+  protected readonly projectMenuItems: MenuItem[] = [
     {
       label: 'Create new project',
       icon: 'fa-solid fa-plus',
@@ -63,4 +63,20 @@ export class ProjectHeaderComponent {
       styleClass: 'p-menuitem-danger' // Custom class for styling
     }
   ];
+
+  ngOnInit() {
+    window.electronAPI.onWindowMaximizedStateChanged((isMaximized: boolean) => this.isMaximized.set(isMaximized));
+  }
+
+  protected onMinimizeClicked(): void {
+    window.electronAPI.windowMinimize();
+  }
+
+  protected onToggleMaximizeClicked(): void {
+    window.electronAPI.windowToggleMaximize();
+  }
+
+  protected onCloseClicked(): void {
+    window.electronAPI.windowClose();
+  }
 }

@@ -1,6 +1,12 @@
 const {contextBridge, ipcRenderer} = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  // --- Window control
+  windowMinimize: () => ipcRenderer.send('window:minimize'),
+  windowToggleMaximize: () => ipcRenderer.send('window:toggle-maximize'),
+  windowClose: () => ipcRenderer.send('window:close'),
+  onWindowMaximizedStateChanged: (callback) => ipcRenderer.on('window:maximized-state-changed', (_event, value) => callback(value)),
+  // --- Files
   openFileDialog: (options) => ipcRenderer.invoke('dialog:openFile', options),
   parseSubtitleFile: (filePath) => ipcRenderer.invoke('subtitle:parse', filePath),
   // --- Anki

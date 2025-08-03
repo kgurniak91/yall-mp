@@ -1,4 +1,4 @@
-import {app, BrowserWindow, dialog, ipcMain} from 'electron';
+import {app, BrowserWindow, dialog, ipcMain, screen} from 'electron';
 import path from 'path';
 import os from 'os';
 import {promises as fs} from 'fs';
@@ -14,6 +14,7 @@ let mpvManager: MpvManager | null = null;
 let mainWindow: BrowserWindow | null = null;
 let videoWindow: BrowserWindow | null = null;
 let backgroundWindow: BrowserWindow | null = null;
+let preMaximizeBounds: Electron.Rectangle | null = null;
 
 let isFFmpegAvailable = false;
 let ffmpegPath = '';
@@ -53,7 +54,7 @@ function createWindow() {
 
   // Sync positions of all windows
   const syncWindowPositions = () => {
-    if (!mainWindow || !backgroundWindow) {
+    if (!mainWindow || !backgroundWindow || mainWindow.isMinimized()) {
       return;
     }
     const bounds = mainWindow.getBounds();
@@ -79,6 +80,7 @@ function createWindow() {
     // showInactive prevents the windows from stealing focus
     backgroundWindow?.showInactive();
     videoWindow?.showInactive();
+    syncWindowPositions();
   });
 
   // When the main window is gone, ensure everything is cleaned up
@@ -87,6 +89,18 @@ function createWindow() {
     videoWindow?.close();
     backgroundWindow?.close();
     mainWindow = null;
+  });
+
+  mainWindow.on('ready-to-show', () => {
+    mainWindow?.webContents.send('window:maximized-state-changed', mainWindow.isMaximized());
+  });
+
+  mainWindow.on('maximize', () => {
+    mainWindow?.webContents.send('window:maximized-state-changed', true);
+  });
+
+  mainWindow.on('unmaximize', () => {
+    mainWindow?.webContents.send('window:maximized-state-changed', false);
   });
 
   // Serve the Angular app
@@ -107,6 +121,31 @@ app.whenReady().then(() => {
   ipcMain.handle('anki:getNoteTypeFieldNames', (_, modelName) => invokeAnkiConnect('modelFieldNames', {modelName}));
   ipcMain.handle('anki:exportAnkiCard', (_, exportRquest: AnkiExportRequest) => handleAnkiExport(exportRquest));
   ipcMain.handle('ffmpeg:check', () => isFFmpegAvailable);
+
+  ipcMain.on('window:minimize', () => {
+    mainWindow?.minimize();
+  });
+
+  ipcMain.on('window:toggle-maximize', () => {
+    if (!mainWindow) {
+      return;
+    }
+
+    if (preMaximizeBounds) {
+      mainWindow.setBounds(preMaximizeBounds);
+      preMaximizeBounds = null;
+      mainWindow.webContents.send('window:maximized-state-changed', false);
+    } else {
+      preMaximizeBounds = mainWindow.getBounds();
+      const display = screen.getPrimaryDisplay();
+      mainWindow.setBounds(display.workArea);
+      mainWindow.webContents.send('window:maximized-state-changed', true);
+    }
+  });
+
+  ipcMain.on('window:close', () => {
+    mainWindow?.close();
+  });
 
   ipcMain.handle('mpv:createViewport', async (_, mediaPath: string) => {
     if (!mainWindow) {
