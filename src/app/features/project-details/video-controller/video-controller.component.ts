@@ -147,6 +147,9 @@ export class VideoControllerComponent implements OnDestroy {
   }
 
   private handleSeek(request: { time: number; type: SeekType }): void {
+    // Set the manual seeking flag to prevent race conditions
+    this.clipsStateService.setManuallySeeking(true);
+
     
     const wasPlaying = this.clipsStateService.isPlaying();
     const originClipIndex = this.clipsStateService.currentClipIndex();
@@ -172,6 +175,7 @@ export class VideoControllerComponent implements OnDestroy {
     const targetClipIndex = clips.findIndex(c => targetTime >= c.startTime && targetTime < c.endTime);
     if (targetClipIndex === -1) {
       this.videoStateService.clearSeekRequest();
+      this.clipsStateService.setManuallySeeking(false);
       return;
     }
     this.clipsStateService.setCurrentClipByIndex(targetClipIndex);
@@ -200,6 +204,9 @@ export class VideoControllerComponent implements OnDestroy {
     }
 
     this.videoStateService.clearSeekRequest();
+
+    // Reset the flag after a short delay to allow MPV to settle
+    setTimeout(() => this.clipsStateService.setManuallySeeking(false), 100);
   }
 
   private playClip(clip: VideoClip, options?: { seekToTime?: number }): void {

@@ -75,6 +75,10 @@ export class ClipsStateService {
     this._playerState.set(playerState);
   }
 
+  public setManuallySeeking(isSeeking: boolean): void {
+    this._isManuallySeeking.set(isSeeking);
+  }
+
   public setSubtitles(subtitles: SubtitleData[]): void {
     this._subtitles.set(subtitles);
     this.isInitialized = true;
@@ -351,15 +355,15 @@ export class ClipsStateService {
   public goToAdjacentSubtitledClip(direction: SeekDirection): void {
     const adjacentClip = this.findAdjacentSubtitledClip(direction);
     if (adjacentClip) {
-      this._isManuallySeeking.set(true);
+      this.setManuallySeeking(true);
       this.videoStateService.seekAbsolute(adjacentClip.startTime);
-      setTimeout(() => this._isManuallySeeking.set(false), 100);
+      setTimeout(() => this.setManuallySeeking(false), 100);
     } else if (direction === SeekDirection.Previous) {
       const current = this.currentClip();
       if (current?.hasSubtitle) {
-        this._isManuallySeeking.set(true);
+        this.setManuallySeeking(true);
         this.videoStateService.seekAbsolute(current.startTime);
-        setTimeout(() => this._isManuallySeeking.set(false), 100);
+        setTimeout(() => this.setManuallySeeking(false), 100);
       }
     }
   }
