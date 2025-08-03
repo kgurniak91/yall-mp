@@ -127,13 +127,12 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
 
   private timelineRenderer = effect(() => {
     const clips = this.clipsStateService.clips();
-    const duration = this.videoStateService.duration();
-    const videoElement = this.videoStateService.videoElement();
+    const mediaPath = this.videoStateService.mediaPath();
     const container = this.timelineContainer()?.nativeElement;
     const clipsSignature = clips.map(c => `${c.id}@${c.startTime}:${c.endTime}`).join(',');
 
-    if (!this.wavesurfer && videoElement && container && duration > 0) {
-      this.initializeWaveSurfer(videoElement, container);
+    if (!this.wavesurfer && mediaPath && container) {
+      this.initializeWaveSurfer(mediaPath, container);
     }
 
     if (!this.wsRegions) return;
@@ -146,10 +145,21 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
     this.syncHighlight();
   });
 
-  private initializeWaveSurfer(videoElement: HTMLVideoElement, container: HTMLElement) {
+  private playbackTimeObserver = effect(() => {
+    if (!this.wavesurfer || !this.isWaveSurferReady()) return;
+
+    const currentTime = this.videoStateService.currentTime();
+    const duration = this.videoStateService.duration();
+
+    if (duration > 0 && !this.clipsStateService.isPlaying()) {
+      const progress = currentTime / duration;
+      this.wavesurfer.seekTo(progress);
+    }
+  });
+
+  private initializeWaveSurfer(mediaPath: string, container: HTMLElement) {
     this.wavesurfer = WaveSurfer.create({
       container,
-      media: videoElement,
       waveColor: '#ccc',
       progressColor: '#f55',
       barWidth: 2,
@@ -161,6 +171,7 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
     this.setupWsRegionsEventListeners();
     this.wavesurfer.on('scroll', this.handleWaveSurferScroll);
     this.wavesurfer.on('ready', this.handleWaveSurferReady);
+    this.wavesurfer.load(`file://${mediaPath}`);
   }
 
   private setupWsRegionsEventListeners() {

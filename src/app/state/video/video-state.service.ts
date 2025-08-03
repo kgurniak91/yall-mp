@@ -2,13 +2,13 @@ import {DestroyRef, inject, Injectable, Injector, OnDestroy, Signal, signal} fro
 import {SeekType} from '../../model/video.types';
 import {AppStateService} from '../app/app-state.service';
 import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
-import {auditTime, throttleTime} from 'rxjs';
+import {auditTime} from 'rxjs';
 
 @Injectable()
 export class VideoStateService implements OnDestroy {
   private readonly _currentTime = signal(0);
   private readonly _duration = signal(0);
-  private readonly _videoElement = signal<HTMLVideoElement | null>(null);
+  private readonly _mediaPath = signal<string | null>(null);
   private readonly _subtitlesVisible = signal(true);
   private readonly _seekRequest = signal<{ time: number; type: SeekType } | null>(null);
   private readonly _playPauseRequest = signal<number | null>(null);
@@ -24,7 +24,7 @@ export class VideoStateService implements OnDestroy {
   private readonly appStateService = inject(AppStateService);
   private _projectId: string | null = null;
 
-  public readonly videoElement: Signal<HTMLVideoElement | null> = this._videoElement.asReadonly();
+  public readonly mediaPath: Signal<string | null> = this._mediaPath.asReadonly();
   public readonly currentTime: Signal<number> = this._currentTime.asReadonly();
   public readonly duration: Signal<number> = this._duration.asReadonly();
   public readonly subtitlesVisible: Signal<boolean> = this._subtitlesVisible.asReadonly();
@@ -42,7 +42,7 @@ export class VideoStateService implements OnDestroy {
     window.electronAPI.onMpvEvent((status) => {
       console.log('mpv event', status);
       if (status.event === 'property-change') {
-        switch(status.name) {
+        switch (status.name) {
           case 'time-pos':
             this.setCurrentTime(status.data);
             break;
@@ -72,16 +72,16 @@ export class VideoStateService implements OnDestroy {
     this.setupPeriodicSaving();
   }
 
+  public setMediaPath(path: string): void {
+    this._mediaPath.set(path);
+  }
+
   public setCurrentTime(time: number): void {
     this._currentTime.set(time);
   }
 
   public setDuration(duration: number): void {
     this._duration.set(duration);
-  }
-
-  public setVideoElement(element: HTMLVideoElement | null): void {
-    this._videoElement.set(element);
   }
 
   public toggleSubtitlesVisible(): void {

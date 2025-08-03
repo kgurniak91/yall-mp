@@ -41,7 +41,6 @@
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "uuid": "^11.1.0",
-    "video.js": "^8.22.0",
     "wavesurfer.js": "^7.9.5",
     "zone.js": "~0.15.0"
   },
@@ -51,7 +50,6 @@
     "@angular/compiler-cli": "^19.2.0",
     "@types/jasmine": "~5.1.0",
     "@types/node": "^24.0.14",
-    "@types/video.js": "^7.3.58",
     "concurrently": "^9.2.0",
     "electron": "^37.2.1",
     "electron-builder": "^26.0.12",

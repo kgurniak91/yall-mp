@@ -191,6 +191,7 @@ export class ProjectDetailsComponent implements OnInit {
     this.appStateService.setCurrentProject(projectId);
     this.clipsStateService.setProjectId(projectId);
     this.videoStateService.setProjectId(projectId);
+    this.videoStateService.setMediaPath(foundProject.mediaPath);
 
     const hasExistingSubtitles = foundProject?.subtitles?.length > 0;
     const hasSubtitleFile = foundProject?.subtitlePath?.length > 0;

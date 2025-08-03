@@ -33,7 +33,6 @@
             ],
             "styles": [
               "node_modules/@fortawesome/fontawesome-free/css/all.min.css",
-              "node_modules/video.js/dist/video-js.css",
               "node_modules/media-captions/styles/captions.css",
               "node_modules/media-captions/styles/regions.css",
               "node_modules/primeflex/primeflex.css",
@@ -41,13 +40,8 @@
             ],
             "scripts": [],
             "allowedCommonJsDependencies": [
-              "video.js",
               "wavesurfer.js",
-              "mux.js",
-              "@xmldom/xmldom",
-              "videojs-vtt.js",
-              "@videojs/xhr",
-              "global"
+              "@xmldom/xmldom"
             ]
           },
           "configurations": {
