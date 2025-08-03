@@ -46,6 +46,21 @@ function createWindow() {
   mainWindow.on('resize', triggerResize);
   mainWindow.on('move', triggerResize);
 
+  // When the main window is focused, ensure the video window is stacked directly underneath it, and both are brought to the front
+  mainWindow.on('focus', () => {
+    videoWindow?.moveTop();
+    mainWindow?.moveTop();
+  });
+
+  mainWindow.on('minimize', () => {
+    videoWindow?.hide();
+  });
+
+  mainWindow.on('restore', () => {
+    // showInactive prevents the video window from stealing focus
+    videoWindow?.showInactive();
+  });
+
   // When the main window is gone, ensure everything is cleaned up
   mainWindow.on('closed', () => {
     mpvManager?.stop();
@@ -80,7 +95,7 @@ app.whenReady().then(() => {
     videoWindow?.close();
     mpvManager?.stop();
 
-    // Create the new, borderless child window. It starts hidden.
+    // Create a new, borderless, independent window.
     videoWindow = new BrowserWindow({
       frame: false,
       show: false,
