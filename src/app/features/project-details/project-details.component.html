@@ -10,7 +10,7 @@
                         (deleteProjectClicked)="onDeleteProjectClicked()"/>
   }
 
-  <div class="video-area">
+  <div class="video-area" (dblclick)="onVideoAreaDoubleClick()">
     <app-video-controller (ready)="onPlayerReady()"/>
   </div>
 

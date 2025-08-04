@@ -160,6 +160,18 @@ app.whenReady().then(() => {
     }
   });
 
+  ipcMain.on('window:handle-double-click', () => {
+    if (!mainWindow) {
+      return;
+    }
+
+    if (isFullScreen) {
+      mainWindow.setFullScreen(false);
+    } else {
+      mainWindow.setFullScreen(true);
+    }
+  });
+
   ipcMain.on('window:escape', () => {
     if (!mainWindow) {
       return;

@@ -7,6 +7,7 @@ export interface IElectronAPI {
   windowToggleMaximize: () => void;
   windowToggleFullScreen: () => void;
   windowEscape: () => void;
+  windowHandleDoubleClick: () => void;
   windowClose: () => void;
   onWindowMaximizedStateChanged: (callback: (isMaximized: boolean) => void) => void;
   onWindowFullScreenStateChanged: (callback: (isFullScreen: boolean) => void) => void;

@@ -397,6 +397,10 @@ export class ProjectDetailsComponent implements OnInit {
     }
   }
 
+  onVideoAreaDoubleClick(): void {
+    window.electronAPI.windowHandleDoubleClick();
+  }
+
   private toggleSettingsRequestListener = effect(() => {
     if (this.videoStateService.toggleSettingsRequest()) {
       this.toggleSettings();
