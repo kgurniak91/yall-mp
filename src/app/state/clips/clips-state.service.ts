@@ -54,17 +54,6 @@ export class ClipsStateService {
 
       this.appStateService.updateProject(projectId, {subtitles});
     });
-
-    effect(() => {
-      const isPaused = this.videoStateService.isPaused();
-      const currentState = this.playerState();
-
-      if (!isPaused && currentState !== PlayerState.Playing) {
-        this.setPlayerState(PlayerState.Playing);
-      } else if (isPaused && currentState === PlayerState.Playing) {
-        this.setPlayerState(PlayerState.PausedByUser);
-      }
-    });
   }
 
   public setProjectId(id: string): void {

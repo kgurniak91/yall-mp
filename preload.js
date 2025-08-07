@@ -26,6 +26,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   mpvHideVideoDuringResize: () => ipcRenderer.invoke('mpv:hideVideoDuringResize'),
   mpvFinishVideoResize: (rect) => ipcRenderer.invoke('mpv:finishVideoResize', rect),
   mpvCommand: (commandArray) => ipcRenderer.invoke('mpv:command', commandArray),
+  mpvPlayClip: (request) => ipcRenderer.invoke('mpv:playClip', request),
   mpvGetProperty: (property) => ipcRenderer.invoke('mpv:getProperty', property),
   mpvSetProperty: (property, value) => ipcRenderer.invoke('mpv:setProperty', property, value),
   onMpvEvent: (callback) => ipcRenderer.on('mpv:event', (_event, value) => callback(value)),

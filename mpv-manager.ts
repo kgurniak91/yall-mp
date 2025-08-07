@@ -6,12 +6,12 @@ import {app, type BrowserWindow} from 'electron';
 import path from 'path';
 
 export class MpvManager extends EventEmitter {
+  public mediaPath: string = '';
   private mpvProcess: ChildProcess | null = null;
   private client: Socket | null = null;
   private ipcPath: string;
   private requestId = 2;
   private readonly pendingRequests = new Map<number, (value: any) => void>();
-
 
   constructor(private win: BrowserWindow) {
     super();
@@ -21,6 +21,7 @@ export class MpvManager extends EventEmitter {
   }
 
   public async start(mediaPath: string): Promise<void> {
+    this.mediaPath = mediaPath;
     return new Promise((resolve, reject) => {
       const mpvExecutable = this.getMpvExecutablePath();
       const args = [

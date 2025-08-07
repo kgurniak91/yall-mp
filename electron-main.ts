@@ -9,6 +9,7 @@ import ffmpegStatic from 'ffmpeg-static';
 import {v4 as uuidv4} from 'uuid';
 import {spawn} from 'child_process';
 import {MpvManager} from './mpv-manager';
+import {MpvClipRequest} from './src/electron-api';
 
 let mpvManager: MpvManager | null = null;
 let mainWindow: BrowserWindow | null = null;
@@ -229,6 +230,24 @@ app.whenReady().then(() => {
     mpvManager.observeProperty('time-pos');
     mpvManager.observeProperty('duration');
     mpvManager.observeProperty('pause');
+  });
+
+  ipcMain.handle('mpv:playClip', (_, request: MpvClipRequest) => {
+    if (!mpvManager?.mediaPath) {
+      return;
+    }
+
+    const command = [
+      'loadfile',
+      mpvManager.mediaPath,
+      'replace', // play immediately
+      -1,
+      `start=${request.startTime},end=${request.endTime}`
+    ];
+
+    mpvManager.sendCommand(command);
+    mpvManager.setProperty('speed', request.playbackRate);
+    mpvManager.setProperty('pause', false);
   });
 
   ipcMain.handle('mpv:hideVideoDuringResize', () => {

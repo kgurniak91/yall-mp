@@ -5,6 +5,7 @@ import {ClipsStateService} from '../../../state/clips/clips-state.service';
 import {VideoPlayerComponent} from '../video-player/video-player.component';
 import {ProjectSettingsStateService} from '../../../state/project-settings/project-settings-state.service';
 import {SubtitleBehavior} from '../../../model/settings.types';
+import {MpvClipRequest} from '../../../../electron-api';
 
 @Component({
   selector: 'app-video-controller',
@@ -30,17 +31,19 @@ export class VideoControllerComponent implements OnDestroy {
     this.handleTogglePlayPause();
   }
 
-  private clipProgressionHandler = effect(() => {
-    const currentTime = this.videoStateService.currentTime();
+  // This handler fires when MPV becomes paused for any reason.
+  private autoAdvanceHandler = effect(() => {
+    const isPaused = this.videoStateService.isPaused();
+    const playerState = this.clipsStateService.playerState();
     const currentClip = this.clipsStateService.currentClip();
-    const isPlaying = this.clipsStateService.isPlaying();
-    const isManuallySeeking = this.clipsStateService.isManuallySeeking();
 
-    if (!currentClip || !isPlaying || currentTime === 0) {
+    if (!isPaused || playerState !== PlayerState.Playing || !currentClip) {
       return;
     }
 
-    if (currentTime >= currentClip.endTime && !isManuallySeeking) {
+    // Check if the pause happened at (or very near) the end of current clip.
+    const currentTime = this.videoStateService.currentTime();
+    if (Math.abs(currentTime - currentClip.endTime) < 0.1) {
       this.handleClipEnd(currentClip);
     }
   });
@@ -50,7 +53,6 @@ export class VideoControllerComponent implements OnDestroy {
 
     if (clipJustFinished.hasSubtitle && autoPauseAtEnd) {
       this.clipsStateService.setPlayerState(PlayerState.AutoPausedAtEnd);
-      window.electronAPI.mpvSetProperty('pause', true);
       return;
     }
 
@@ -62,7 +64,17 @@ export class VideoControllerComponent implements OnDestroy {
 
     this.clipsStateService.advanceToNextClip();
     const nextClip = this.clipsStateService.currentClip()!;
-    this.playClip(nextClip, {seekToTime: nextClip.startTime});
+    const autoPauseAtStart = this.projectSettingsStateService.autoPauseAtStart();
+
+    // Check if the auto-pause at the start of the NEW clip is needed
+    if (nextClip.hasSubtitle && autoPauseAtStart) {
+      this.clipsStateService.setPlayerState(PlayerState.AutoPausedAtStart);
+      window.electronAPI.mpvCommand(['seek', nextClip.startTime, 'absolute']);
+      window.electronAPI.mpvSetProperty('pause', true);
+    } else {
+      // Otherwise, play the next clip normally
+      this.playClip(nextClip);
+    }
   }
 
   private mpvSubtitleSync = effect(() => {
@@ -108,6 +120,7 @@ export class VideoControllerComponent implements OnDestroy {
     if (state === PlayerState.Playing) {
       console.log('[VideoController] handleTogglePlayPause -> pause');
       window.electronAPI.mpvSetProperty('pause', true);
+      this.clipsStateService.setPlayerState(PlayerState.PausedByUser);
     } else {
       console.log('[VideoController] handleTogglePlayPause -> resume');
       this.handleResume();
@@ -124,9 +137,17 @@ export class VideoControllerComponent implements OnDestroy {
       // Resume advances to and plays the next clip.
       this.clipsStateService.advanceToNextClip();
       const nextClip = this.clipsStateService.currentClip()!;
-      this.playClip(nextClip, {seekToTime: nextClip.startTime});
+      const autoPauseAtStart = this.projectSettingsStateService.autoPauseAtStart();
+
+      if (nextClip.hasSubtitle && autoPauseAtStart) {
+        this.clipsStateService.setPlayerState(PlayerState.AutoPausedAtStart);
+        window.electronAPI.mpvCommand(['seek', nextClip.startTime, 'absolute']);
+        window.electronAPI.mpvSetProperty('pause', true);
+      } else {
+        this.playClip(nextClip);
+      }
     } else {
-      // Resume plays the current clip.
+      // In these cases, "resume" means play the CURRENT clip from its beginning or current position.
       this.playClip(currentClip);
     }
   }
@@ -147,66 +168,46 @@ export class VideoControllerComponent implements OnDestroy {
   }
 
   private handleSeek(request: { time: number; type: SeekType }): void {
-    // Set the manual seeking flag to prevent race conditions
-    this.clipsStateService.setManuallySeeking(true);
-
-    
     const wasPlaying = this.clipsStateService.isPlaying();
-    const originClipIndex = this.clipsStateService.currentClipIndex();
 
-    // Calculate target time from the state service.
     let targetTime: number;
     if (request.type === SeekType.Relative) {
       const currentTime = this.videoStateService.currentTime();
-      const seekAmount = request.time;
-      if (currentTime + seekAmount < 0) {
-        targetTime = 0;
-      } else {
-        targetTime = currentTime + seekAmount;
-      }
+      targetTime = currentTime + request.time;
     } else { // Absolute
       targetTime = request.time;
     }
     const duration = this.videoStateService.duration();
     targetTime = Math.max(0, Math.min(targetTime, duration - 0.01));
 
-    // Find new clip and update the state.
+    // Optimistic UI update before MPV call
+    this.videoStateService.setSeeking(true);
+    this.videoStateService.setCurrentTime(targetTime);
+
     const clips = this.clipsStateService.clips();
     const targetClipIndex = clips.findIndex(c => targetTime >= c.startTime && targetTime < c.endTime);
     if (targetClipIndex === -1) {
+      this.videoStateService.setSeeking(false);
       this.videoStateService.clearSeekRequest();
-      this.clipsStateService.setManuallySeeking(false);
       return;
     }
     this.clipsStateService.setCurrentClipByIndex(targetClipIndex);
-
     const newClip = this.clipsStateService.currentClip()!;
-    const autoPauseAtStart = this.projectSettingsStateService.autoPauseAtStart();
-    const isLandingAtStartOfSubtitledClip = newClip.hasSubtitle && Math.abs(targetTime - newClip.startTime) < 0.1;
-    const isJumpingToNewClip = originClipIndex !== targetClipIndex;
 
-    if (autoPauseAtStart && isLandingAtStartOfSubtitledClip && isJumpingToNewClip) {
-      
-      this.clipsStateService.setPlayerState(PlayerState.AutoPausedAtStart);
-      window.electronAPI.mpvCommand(['seek', newClip.startTime, 'absolute']);
-      window.electronAPI.mpvSetProperty('pause', true);
+    if (wasPlaying) {
+      // If video was playing, continue playing, but with the rules of the NEW clip.
+      this.playClip(newClip, {seekToTime: targetTime});
     } else {
-      if (wasPlaying) {
-        // If playing, continue playing from the new position.
-        this.playClip(newClip, {seekToTime: targetTime});
-      } else {
-        
-        
-        this.clipsStateService.setPlayerState(PlayerState.PausedByUser);
-        window.electronAPI.mpvCommand(['seek', targetTime, 'absolute']);
-        window.electronAPI.mpvSetProperty('pause', true);
-      }
+      // If video was paused, tell MPV to go to the new time and remain paused.
+      window.electronAPI.mpvCommand(['seek', targetTime, 'absolute']);
+      window.electronAPI.mpvSetProperty('pause', true);
     }
 
-    this.videoStateService.clearSeekRequest();
+    setTimeout(() => {
+      this.videoStateService.setSeeking(false);
+    }, 250);
 
-    // Reset the flag after a short delay to allow MPV to settle
-    setTimeout(() => this.clipsStateService.setManuallySeeking(false), 100);
+    this.videoStateService.clearSeekRequest();
   }
 
   private playClip(clip: VideoClip, options?: { seekToTime?: number }): void {
@@ -216,12 +217,12 @@ export class VideoControllerComponent implements OnDestroy {
     const gapSpeed = this.projectSettingsStateService.gapSpeed();
     const playbackRate = clip.hasSubtitle ? subtitledSpeed : gapSpeed;
 
-    window.electronAPI.mpvSetProperty('speed', playbackRate);
+    const request: MpvClipRequest = {
+      startTime: options?.seekToTime ?? clip.startTime,
+      endTime: clip.endTime,
+      playbackRate: playbackRate,
+    };
 
-    if (options?.seekToTime != null) {
-      window.electronAPI.mpvCommand(['seek', options.seekToTime, 'absolute']);
-    }
-
-    window.electronAPI.mpvSetProperty('pause', false);
+    window.electronAPI.mpvPlayClip(request);
   }
 }

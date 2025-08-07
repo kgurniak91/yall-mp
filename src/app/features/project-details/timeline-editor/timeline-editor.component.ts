@@ -151,9 +151,12 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
     const currentTime = this.videoStateService.currentTime();
     const duration = this.videoStateService.duration();
 
-    if (duration > 0) {
+    if (duration > 0 && currentTime != null && isFinite(currentTime)) {
       const progress = currentTime / duration;
-      this.wavesurfer.seekTo(progress);
+
+      if (isFinite(progress)) {
+        this.wavesurfer.seekTo(progress);
+      }
     }
   });
 

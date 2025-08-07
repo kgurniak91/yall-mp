@@ -1,6 +1,12 @@
 import {AnkiExportRequest} from './app/model/anki.types';
 import {SubtitleData} from '../shared/types/subtitle.type';
 
+export interface MpvClipRequest {
+  startTime: number;
+  endTime: number;
+  playbackRate: number;
+}
+
 export interface IElectronAPI {
   // --- Window control
   windowMinimize: () => void;
@@ -27,6 +33,7 @@ export interface IElectronAPI {
   mpvHideVideoDuringResize: () => Promise<void>;
   mpvFinishVideoResize: (rect: {x: number, y: number, width: number, height: number}) => Promise<void>;
   mpvCommand: (commandArray: any[]) => Promise<void>;
+  mpvPlayClip: (request: MpvClipRequest) => Promise<void>;
   mpvGetProperty: (property: string) => Promise<any>;
   mpvSetProperty: (property: string, value: any) => Promise<void>;
   onMpvEvent: (callback: (status: any) => void) => void;
