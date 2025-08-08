@@ -23,7 +23,7 @@ export class VideoStateService implements OnDestroy {
   private readonly injector = inject(Injector);
   private readonly appStateService = inject(AppStateService);
   private _projectId: string | null = null;
-  private isSeeking = false;
+  private ignoreNextTimeUpdate = false;
 
   public readonly mediaPath: Signal<string | null> = this._mediaPath.asReadonly();
   public readonly currentTime: Signal<number> = this._currentTime.asReadonly();
@@ -42,16 +42,22 @@ export class VideoStateService implements OnDestroy {
   constructor() {
     window.electronAPI.onMpvEvent((status) => {
       console.log('mpv event', status);
-      if (status.event === 'playback-restart') {
+
+      // Set a flag when a seek or restart occurs, as the next time update may be inaccurate.
+      if (status.event === 'playback-restart' || status.event === 'seek') {
+        this.ignoreNextTimeUpdate = true;
         return;
       }
 
       if (status.event === 'property-change') {
         switch (status.name) {
           case 'time-pos':
-            if (!this.isSeeking) {
-              this.setCurrentTime(status.data);
+            if (this.ignoreNextTimeUpdate) {
+              this.ignoreNextTimeUpdate = false;
+              break;
             }
+
+            this.setCurrentTime(status.data);
             break;
           case 'duration':
             this.setDuration(status.data);
@@ -81,10 +87,6 @@ export class VideoStateService implements OnDestroy {
 
   public setMediaPath(path: string): void {
     this._mediaPath.set(path);
-  }
-
-  public setSeeking(isSeeking: boolean): void {
-    this.isSeeking = isSeeking;
   }
 
   public setCurrentTime(time: number): void {

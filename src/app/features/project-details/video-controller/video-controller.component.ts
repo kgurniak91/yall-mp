@@ -53,6 +53,7 @@ export class VideoControllerComponent implements OnDestroy {
 
     if (clipJustFinished.hasSubtitle && autoPauseAtEnd) {
       this.clipsStateService.setPlayerState(PlayerState.AutoPausedAtEnd);
+      this.videoStateService.setCurrentTime(clipJustFinished.endTime);
       return;
     }
 
@@ -71,6 +72,7 @@ export class VideoControllerComponent implements OnDestroy {
       this.clipsStateService.setPlayerState(PlayerState.AutoPausedAtStart);
       window.electronAPI.mpvCommand(['seek', nextClip.startTime, 'absolute']);
       window.electronAPI.mpvSetProperty('pause', true);
+      this.videoStateService.setCurrentTime(nextClip.startTime);
     } else {
       // Otherwise, play the next clip normally
       this.playClip(nextClip);
@@ -148,7 +150,8 @@ export class VideoControllerComponent implements OnDestroy {
       }
     } else {
       // In these cases, "resume" means play the CURRENT clip from its beginning or current position.
-      this.playClip(currentClip);
+      const resumeTime = this.videoStateService.currentTime();
+      this.playClip(currentClip, {seekToTime: resumeTime});
     }
   }
 
@@ -168,6 +171,11 @@ export class VideoControllerComponent implements OnDestroy {
   }
 
   private handleSeek(request: { time: number; type: SeekType }): void {
+    const playerState = this.clipsStateService.playerState();
+    if (playerState === PlayerState.AutoPausedAtEnd || playerState === PlayerState.AutoPausedAtStart) {
+      this.clipsStateService.setPlayerState(PlayerState.PausedByUser);
+    }
+
     const wasPlaying = this.clipsStateService.isPlaying();
 
     let targetTime: number;
@@ -181,13 +189,11 @@ export class VideoControllerComponent implements OnDestroy {
     targetTime = Math.max(0, Math.min(targetTime, duration - 0.01));
 
     // Optimistic UI update before MPV call
-    this.videoStateService.setSeeking(true);
     this.videoStateService.setCurrentTime(targetTime);
 
     const clips = this.clipsStateService.clips();
     const targetClipIndex = clips.findIndex(c => targetTime >= c.startTime && targetTime < c.endTime);
     if (targetClipIndex === -1) {
-      this.videoStateService.setSeeking(false);
       this.videoStateService.clearSeekRequest();
       return;
     }
@@ -202,10 +208,6 @@ export class VideoControllerComponent implements OnDestroy {
       window.electronAPI.mpvCommand(['seek', targetTime, 'absolute']);
       window.electronAPI.mpvSetProperty('pause', true);
     }
-
-    setTimeout(() => {
-      this.videoStateService.setSeeking(false);
-    }, 250);
 
     this.videoStateService.clearSeekRequest();
   }
