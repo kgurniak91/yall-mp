@@ -53,20 +53,5 @@ export enum PlayerState {
   AutoPausedAtEnd = 'AutoPausedAtEnd'
 }
 
-export interface PlayCommand {
-  action: VideoPlayerAction.Play;
-  clip: VideoClip;
-  seekToTime?: number;
-  playbackRate: number; // If present, seek to this time, otherwise resume from current.
-}
-
-export interface PauseCommand {
-  action: VideoPlayerAction.Pause;
-  clip: VideoClip;
-  seekToTime?: number; // Seek to a time, then pause.
-}
-
-export type VideoPlayerCommand = PlayCommand | PauseCommand;
-
 export const SUPPORTED_MEDIA_TYPES = ['mp4', 'mkv', 'webm', 'mov', 'avi'];
 export const SUPPORTED_SUBTITLE_TYPES = ['vtt', 'srt', 'ssa', 'ass'];

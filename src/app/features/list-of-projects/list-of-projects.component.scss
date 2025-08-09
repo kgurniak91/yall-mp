@@ -6,6 +6,7 @@
   padding: 2rem;
   box-sizing: border-box;
   overflow-y: auto;
+  background-color: var(--app-bg);
 
   ::ng-deep .p-dataview .p-dataview-content {
     background: none;
