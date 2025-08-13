@@ -8,7 +8,7 @@
   display: flex;
   height: 100%;
   border: 2px dashed var(--app-border);
-  border-radius: 12px;
+  border-radius: var(--app-border-radius);
   transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.2s;
   background-color: var(--app-surface);
 
@@ -40,11 +40,12 @@
     justify-content: center;
     align-items: center;
     gap: 1.5rem;
+    padding: 1rem;
     width: 100%;
     height: 100%;
     cursor: pointer;
     transition: background-color 0.2s;
-    border-radius: 12px;
+    border-radius: var(--app-border-radius);
 
     &:hover {
       background-color: var(--app-surface-hover);
@@ -61,7 +62,6 @@
     font-size: 1.1rem;
     color: var(--app-text-secondary);
     text-align: center;
-    padding: 0 1rem;
     word-break: break-all;
   }
 }

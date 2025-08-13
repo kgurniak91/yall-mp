@@ -187,6 +187,7 @@
     </div>
 
     <app-project-settings [settings]="projectSettingsStateService.settings()"
+                          [audioTracks]="project()?.audioTracks || []"
                           (settingsChange)="projectSettingsStateService.setSettings($event)"/>
   </p-drawer>
 </div>

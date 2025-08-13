@@ -11,6 +11,7 @@ export class ProjectSettingsStateService {
   public readonly subtitledClipSpeed = computed(() => this.settings().subtitledClipSpeed);
   public readonly gapSpeed = computed(() => this.settings().gapSpeed);
   public readonly subtitleBehavior = computed(() => this.settings().subtitleBehavior);
+  public readonly selectedAudioTrackIndex = computed(() => this.settings().selectedAudioTrackIndex);
 
   public setSettings(projectSettings: ProjectSettings | undefined): void {
     this._settings.set(projectSettings ? {...projectSettings} : DEFAULT_PROJECT_SETTINGS);

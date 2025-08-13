@@ -1,34 +1,87 @@
 <div class="new-project-container">
   <div class="header">
     <h1>{{ pageTitle() }}</h1>
-    <h2>Drag & drop your media and subtitle files into the boxes below, or click to select them.</h2>
   </div>
 
-  <div class="drop-zones-grid">
-    <!-- Video Drop Zone -->
-    <app-file-drop-zone label="Drop media file here or click to select"
-                        icon="fa-solid fa-file-video"
-                        [isRequired]="true"
-                        [accept]="SUPPORTED_MEDIA_TYPES"
-                        [existingFileName]="!mediaFileJustChanged() ? existingMediaFileName() : null"
-                        (filePathChange)="onMediaFilePathChange($event)"/>
+  <div class="content-grid">
+    <section class="form-panel">
+      <h2 class="m-0 mb-3">Media</h2>
+      <div class="panel-body">
+        <app-file-drop-zone label="Drag and drop a media file here"
+                            icon="fa-solid fa-file-video"
+                            [accept]="SUPPORTED_MEDIA_TYPES"
+                            [existingFileName]="existingMediaFileName()"
+                            (filePathChange)="onMediaFilePathChange($event)"/>
+      </div>
+    </section>
 
-    <!-- Subtitle Drop Zone -->
-    <app-file-drop-zone label="Drop subtitle file here or click to select"
-                        icon="fa-solid fa-file-lines"
-                        [isRequired]="false"
-                        [accept]="SUPPORTED_SUBTITLE_TYPES"
-                        [existingFileName]="!subtitleFileJustChanged() ? existingSubtitleFileName() : null"
-                        (filePathChange)="onSubtitleFilePathChange($event)"/>
+    <section class="form-panel">
+      <h2 class="m-0 mb-3">Subtitles</h2>
+      <div class="panel-body">
+        @if (isProcessingMedia()) {
+          <div class="flex justify-content-center align-items-center h-full">
+            <p-progress-spinner ariaLabel="loading"/>
+          </div>
+        } @else if (mediaFilePath()) {
+          <div class="radio-group">
+            @for (option of subtitleOptions; track option.value) {
+              <!-- Conditionally render the "embedded" option only if tracks exist -->
+              @if (option.value !== SubtitleOptionType.embedded || subtitleTracks().length > 0) {
+                @let isSelected = (selectedSubtitleOption() === option.value);
+                <div class="radio-option"
+                     [class.flex-1]="isSelected && option.value === SubtitleOptionType.external"
+                     [class.selected]="isSelected">
+                  <label>
+                    <input type="radio" name="sub-option" [value]="option.value" [(ngModel)]="selectedSubtitleOption">
+                    <span class="custom-radio"></span>
+                    {{ option.label }}
+                  </label>
+
+                  @if (isSelected) {
+                    <div class="radio-content">
+                      @switch (option.value) {
+                        @case (SubtitleOptionType.embedded) {
+                          <p-select [options]="subtitleTracks()"
+                                    [(ngModel)]="selectedEmbeddedSubtitleTrackIndex"
+                                    optionLabel="label"
+                                    optionValue="index"
+                                    placeholder="Select subtitle track"
+                                    styleClass="w-full">
+                          </p-select>
+                        }
+                        @case (SubtitleOptionType.external) {
+                          <app-file-drop-zone label="Drag and drop a subtitle file here"
+                                              icon="fa-solid fa-file-lines"
+                                              [accept]="SUPPORTED_SUBTITLE_TYPES"
+                                              [existingFileName]="existingSubtitleFileName()"
+                                              (filePathChange)="onSubtitleFilePathChange($event)"/>
+                        }
+                        @case (SubtitleOptionType.none) {
+                          <p>The timeline will start empty. You can manually create your own subtitled clips later.</p>
+                        }
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            }
+          </div>
+        } @else {
+          <div class="flex justify-content-center align-items-center h-full">
+            <span>Select a media file first to see available options</span>
+          </div>
+        }
+      </div>
+    </section>
   </div>
 
   <div class="actions">
-    <p-button label="Back"
+    <p-button label="Cancel"
               icon="fa-solid fa-arrow-left"
               severity="secondary"
               (onClick)="goBack()"/>
 
-    <p-button label="Save"
+    <p-button [label]="editMode() ? 'Save Changes' : 'Start Learning'"
               icon="fa-solid fa-check"
               severity="primary"
               (onClick)="submitProject()"/>

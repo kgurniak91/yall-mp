@@ -4,12 +4,18 @@ import os from 'os';
 import {promises as fs} from 'fs';
 import {CaptionsFileFormat, ParsedCaptionsResult, parseResponse, VTTCue} from 'media-captions';
 import type {SubtitleData} from './shared/types/subtitle.type';
+import type {MediaTrack} from './shared/types/media.type';
 import {AnkiCard, AnkiExportRequest} from './src/app/model/anki.types';
 import ffmpegStatic from 'ffmpeg-static';
 import {v4 as uuidv4} from 'uuid';
-import {spawn} from 'child_process';
+import {spawn, ChildProcess} from 'child_process';
 import {MpvManager} from './mpv-manager';
 import {MpvClipRequest} from './src/electron-api';
+import ffprobeStatic from 'ffprobe-static';
+import languages from '@cospired/i18n-iso-languages';
+import enLocale from '@cospired/i18n-iso-languages/langs/en.json';
+
+languages.registerLocale(enLocale);
 
 let mpvManager: MpvManager | null = null;
 let mainWindow: BrowserWindow | null = null;
@@ -20,10 +26,12 @@ let isFullScreen = false;
 
 let isFFmpegAvailable = false;
 let ffmpegPath = '';
+let ffprobePath = '';
 
 if (ffmpegStatic) {
   isFFmpegAvailable = true;
   ffmpegPath = ffmpegStatic.replace('app.asar', 'app.asar.unpacked');
+  ffprobePath = ffprobeStatic.path.replace('app.asar', 'app.asar.unpacked');
 } else {
   console.warn('ffmpeg-static binary not found. Anki export feature will be disabled.');
 }
@@ -127,6 +135,8 @@ function createWindow() {
 app.whenReady().then(() => {
   ipcMain.handle('dialog:openFile', (_, options) => handleFileOpen(options));
   ipcMain.handle('subtitle:parse', (_, filePath) => handleSubtitleParse(filePath));
+  ipcMain.handle('media:getMetadata', (_, filePath) => handleGetMediaMetadata(filePath));
+  ipcMain.handle('media:extractSubtitleTrack', (_, mediaPath, trackIndex) => handleExtractSubtitleTrack(mediaPath, trackIndex));
   ipcMain.handle('anki:check', () => invokeAnkiConnect('version'));
   ipcMain.handle('anki:getDeckNames', () => invokeAnkiConnect('deckNames'));
   ipcMain.handle('anki:getNoteTypes', () => invokeAnkiConnect('modelNames'));
@@ -196,7 +206,7 @@ app.whenReady().then(() => {
     mainWindow?.close();
   });
 
-  ipcMain.handle('mpv:createViewport', async (_, mediaPath: string) => {
+  ipcMain.handle('mpv:createViewport', async (_, mediaPath: string, audioTrackIndex: number | null) => {
     if (!mainWindow) {
       return;
     }
@@ -226,7 +236,7 @@ app.whenReady().then(() => {
     });
 
     // Start MPV inside the child window's handle
-    await mpvManager.start(mediaPath);
+    await mpvManager.start(mediaPath, audioTrackIndex);
     mpvManager.observeProperty('time-pos');
     mpvManager.observeProperty('duration');
     mpvManager.observeProperty('pause');
@@ -580,4 +590,165 @@ function runFFmpeg(args: string[]): Promise<void> {
       reject(err);
     });
   });
+}
+
+async function runFfprobe(args: string[]): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const process: ChildProcess = spawn(ffprobePath, args);
+    let stdout = '';
+    let stderr = '';
+
+    process.stdout?.on('data', (data) => {
+      stdout += data.toString();
+    });
+
+    process.stderr?.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    process.on('close', (code) => {
+      if (code === 0) {
+        try {
+          resolve(JSON.parse(stdout));
+        } catch (e) {
+          reject(new Error('Failed to parse ffprobe output.'));
+        }
+      } else {
+        reject(new Error(`ffprobe exited with code ${code}: ${stderr}`));
+      }
+    });
+
+    process.on('error', (err) => {
+      reject(err);
+    });
+  });
+}
+
+async function handleGetMediaMetadata(filePath: string) {
+  if (!isFFmpegAvailable) {
+    return { audioTracks: [], subtitleTracks: [] };
+  }
+  try {
+    const probeResult = await runFfprobe([
+      '-v', 'quiet',
+      '-print_format', 'json',
+      '-show_streams',
+      filePath
+    ]);
+
+    const audioTracks: MediaTrack[] = [];
+    const subtitleTracks: MediaTrack[] = [];
+
+    if (probeResult && probeResult.streams) {
+      for (const stream of probeResult.streams) {
+        const baseTrack = {
+          index: stream.index,
+          language: stream.tags?.language,
+          title: stream.tags?.title
+        };
+
+        const { label, code } = getLanguageInfo(baseTrack);
+
+        const finalTrack: MediaTrack = {
+          ...baseTrack,
+          label: label,
+          languageCode: code
+        };
+
+        if (stream.codec_type === 'audio') {
+          audioTracks.push(finalTrack);
+        } else if (stream.codec_type === 'subtitle') {
+          subtitleTracks.push(finalTrack);
+        }
+      }
+    }
+    return { audioTracks, subtitleTracks };
+  } catch (error) {
+    console.error('Error probing media file:', error);
+    return { audioTracks: [], subtitleTracks: [] };
+  }
+}
+
+async function handleExtractSubtitleTrack(mediaPath: string, trackIndex: number): Promise<SubtitleData[]> {
+  return new Promise((resolve, reject) => {
+    // ffmpeg -i "input.mkv" -map 0:s:0 -c:s srt -f srt -
+    // Note: ffmpeg's subtitle track index (-map 0:s:N) is 0-based relative to other subtitle tracks.
+    // ffprobe's track index is absolute, so the goal is to find the correct relative index.
+    // For now assume absolute index works with `-map 0:<index>`.
+    // The correct way is `ffmpeg -i file.mkv -map 0:2 output.srt` if `ffprobe` reports subtitle is at index 2.
+    const args = [
+      '-i', mediaPath,
+      '-map', `0:${trackIndex}`,
+      '-c:s', 'srt',
+      '-f', 'srt',
+      '-' // Output to stdout
+    ];
+    const ffmpegProcess = spawn(ffmpegPath, args);
+
+    let srtContent = '';
+    let errorOutput = '';
+    ffmpegProcess.stdout.on('data', (data) => {
+      srtContent += data.toString();
+    });
+    ffmpegProcess.stderr.on('data', (data) => {
+      errorOutput += data.toString();
+    });
+
+    ffmpegProcess.on('close', async (code) => {
+      if (code === 0) {
+        try {
+          const response = new Response(srtContent);
+          const result: ParsedCaptionsResult = await parseResponse(response, {type: 'srt'});
+          if (result.errors.length > 0) {
+            console.warn('Encountered errors parsing extracted subtitle stream:', result.errors);
+          }
+          const subtitles: SubtitleData[] = result.cues.map(cue => ({
+            id: cue.id,
+            startTime: cue.startTime,
+            endTime: cue.endTime,
+            text: cue.text
+          }));
+          resolve(preprocessSubtitles(subtitles));
+        } catch (e) {
+          reject(new Error(`Failed to parse extracted SRT: ${e}`));
+        }
+      } else {
+        reject(new Error(`ffmpeg failed to extract subtitle track with code ${code}: ${errorOutput}`));
+      }
+    });
+
+    ffmpegProcess.on('error', (err) => {
+      reject(err);
+    });
+  });
+}
+
+function getLanguageInfo(track: Omit<MediaTrack, 'label' | 'code'>): { label: string, code?: string } {
+  const originalCode = track.language;
+  let langName: string | undefined = '';
+  let standardCode: string | undefined;
+
+  if (originalCode) {
+    if (languages.isValid(originalCode)) {
+      langName = languages.getName(originalCode, 'en');
+      standardCode = languages.toAlpha2(originalCode);
+    }
+  }
+
+  const title = track.title;
+  let displayLabel: string;
+
+  if (langName && title) {
+    displayLabel = `${langName}, ${title}`;
+  } else if (langName) {
+    displayLabel = langName;
+  } else if (title) {
+    displayLabel = title;
+  } else if (originalCode) {
+    displayLabel = `Unknown Language (${originalCode.toUpperCase()})`;
+  } else {
+    displayLabel = `Track ${track.index}`;
+  }
+
+  return { label: displayLabel, code: standardCode };
 }

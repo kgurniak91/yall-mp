@@ -13,6 +13,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // --- Files
   openFileDialog: (options) => ipcRenderer.invoke('dialog:openFile', options),
   parseSubtitleFile: (filePath) => ipcRenderer.invoke('subtitle:parse', filePath),
+  getMediaMetadata: (filePath) => ipcRenderer.invoke('media:getMetadata', filePath),
+  extractSubtitleTrack: (mediaPath, trackIndex) => ipcRenderer.invoke('media:extractSubtitleTrack', mediaPath, trackIndex),
   // --- Anki
   checkAnkiConnection: () => ipcRenderer.invoke('anki:check'),
   getAnkiDeckNames: () => ipcRenderer.invoke('anki:getDeckNames'),
@@ -22,7 +24,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // --- FFmpeg
   checkFFmpegAvailability: () => ipcRenderer.invoke('ffmpeg:check'),
   // --- MPV
-  mpvCreateViewport: (mediaPath) => ipcRenderer.invoke('mpv:createViewport', mediaPath),
+  mpvCreateViewport: (mediaPath, audioTrackIndex) => ipcRenderer.invoke('mpv:createViewport', mediaPath, audioTrackIndex),
   mpvHideVideoDuringResize: () => ipcRenderer.invoke('mpv:hideVideoDuringResize'),
   mpvFinishVideoResize: (rect) => ipcRenderer.invoke('mpv:finishVideoResize', rect),
   mpvCommand: (commandArray) => ipcRenderer.invoke('mpv:command', commandArray),

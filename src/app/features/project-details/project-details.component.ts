@@ -195,19 +195,31 @@ export class ProjectDetailsComponent implements OnInit {
     this.videoStateService.setMediaPath(foundProject.mediaPath);
 
     const hasExistingSubtitles = foundProject?.subtitles?.length > 0;
-    const hasSubtitleFile = foundProject?.subtitlePath?.length > 0;
+    let subtitles: SubtitleData[] = [];
 
-    let subtitles: SubtitleData[];
     if (hasExistingSubtitles) {
       subtitles = foundProject.subtitles;
-    } else if (hasSubtitleFile) {
-      subtitles = await window.electronAPI.parseSubtitleFile(foundProject.subtitlePath);
     } else {
-      subtitles = [];
+      try {
+        switch (foundProject.subtitleSelection.type) {
+          case 'external':
+            subtitles = await window.electronAPI.parseSubtitleFile(foundProject.subtitleSelection.filePath);
+            break;
+          case 'embedded':
+            subtitles = await window.electronAPI.extractSubtitleTrack(foundProject.mediaPath, foundProject.subtitleSelection.trackIndex);
+            break;
+          case 'none':
+            subtitles = [];
+            break;
+        }
+      } catch (e: any) {
+        this.toastService.error(`Failed to load subtitles: ${e.message}`);
+        subtitles = [];
+      }
     }
 
     this.clipsStateService.setSubtitles(subtitles);
-    await window.electronAPI.mpvCreateViewport(foundProject.mediaPath);
+    await window.electronAPI.mpvCreateViewport(foundProject.mediaPath, foundProject.settings.selectedAudioTrackIndex);
   }
 
   onPlayerReady(): void {

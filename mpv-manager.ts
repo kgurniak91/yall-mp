@@ -20,7 +20,7 @@ export class MpvManager extends EventEmitter {
       : `/tmp/mpv-ipc-socket-${Date.now()}`;
   }
 
-  public async start(mediaPath: string): Promise<void> {
+  public async start(mediaPath: string, audioTrackIndex: number | null): Promise<void> {
     this.mediaPath = mediaPath;
     return new Promise((resolve, reject) => {
       const mpvExecutable = this.getMpvExecutablePath();
@@ -35,9 +35,13 @@ export class MpvManager extends EventEmitter {
         '--keep-open=always',
         '--idle=yes',
         '--pause',
-        "--sub-visibility=no",
+        '--sub-visibility=no',
         mediaPath
       ];
+
+      if (audioTrackIndex !== null) {
+        args.push(`--aid=${audioTrackIndex}`);
+      }
 
       this.mpvProcess = spawn(mpvExecutable, args);
 

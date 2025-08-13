@@ -1,5 +1,6 @@
 import {AnkiExportRequest} from './app/model/anki.types';
 import {SubtitleData} from '../shared/types/subtitle.type';
+import {MediaMetadata} from '../shared/types/media.type';
 
 export interface MpvClipRequest {
   startTime: number;
@@ -20,6 +21,8 @@ export interface IElectronAPI {
   // --- Files
   openFileDialog: (options: any) => Promise<string[]>;
   parseSubtitleFile: (filePath: string) => Promise<SubtitleData[]>;
+  getMediaMetadata: (filePath: string) => Promise<MediaMetadata>;
+  extractSubtitleTrack: (mediaPath: string, trackIndex: number) => Promise<SubtitleData[]>;
   // --- Anki
   checkAnkiConnection: () => Promise<any>;
   getAnkiDeckNames: () => Promise<any>;
@@ -29,7 +32,7 @@ export interface IElectronAPI {
   // --- FFmpeg
   checkFFmpegAvailability: () => Promise<boolean>;
   // --- MPV
-  mpvCreateViewport: (mediaPath: string) => Promise<void>;
+  mpvCreateViewport: (mediaPath: string, audioTrackIndex: number | null) => Promise<void>;
   mpvHideVideoDuringResize: () => Promise<void>;
   mpvFinishVideoResize: (rect: {x: number, y: number, width: number, height: number}) => Promise<void>;
   mpvCommand: (commandArray: any[]) => Promise<void>;

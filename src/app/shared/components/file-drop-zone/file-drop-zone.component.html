@@ -15,7 +15,15 @@
   <!-- Main content area that opens the file dialog on click -->
   <div class="clickable-area" (click)="onZoneClicked()">
     <i class="icon" [class]="icon()"></i>
-    <span class="label" [class.selected-label]="isFileSelected()">{{ displayLabel() }}</span>
-    <span class="label"><b>({{isRequired() ? 'required' : 'optional'}})</b></span>
+    <span class="label" [class.selected-label]="isFileSelected()">
+      {{ displayLabel() }}
+      @if (!isFileSelected()) {
+        <br>
+        <b>(or click to browse)</b>
+        <br>
+        <br>
+        <b>Supported formats:</b> {{accept().join(', ')}}
+      }
+    </span>
   </div>
 </div>

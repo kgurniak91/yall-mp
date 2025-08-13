@@ -1,7 +1,8 @@
+$desktop-breakpoint: 62rem;
+
 :host {
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
   width: 100%;
   height: 100vh;
@@ -9,6 +10,11 @@
   box-sizing: border-box;
   overflow: hidden;
   background-color: var(--app-bg);
+  overflow-y: auto;
+
+  @media (min-width: $desktop-breakpoint) {
+    justify-content: center;
+  }
 }
 
 .new-project-container {
@@ -16,7 +22,7 @@
   flex-direction: column;
   gap: 2rem;
   width: 100%;
-  max-width: 1200px;
+  max-width: 80rem;
 }
 
 .header {
@@ -30,24 +36,102 @@
   }
 }
 
-.drop-zones-grid {
+.content-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 2rem;
-  height: 350px;
+  gap: 1rem;
+  min-height: 50vh;
 
-  @media (min-width: 992px) {
+  @media (min-width: $desktop-breakpoint) {
     grid-template-columns: 1fr 1fr;
   }
 }
 
-.actions {
+.form-panel {
   display: flex;
+  flex-direction: column;
+  background-color: var(--app-surface-dark);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-border-radius);
+  padding: 1rem;
+}
+
+.panel-body {
+  flex: 1;
+}
+
+:host .actions {
+  display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   align-items: center;
   gap: 1rem;
 
   p-button ::ng-deep button {
-    width: 86px !important;
+    width: 10rem !important;
   }
+}
+
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  height: 100%;
+}
+
+.radio-option {
+  display: flex;
+  flex-direction: column;
+
+  label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 1rem;
+    color: var(--app-text);
+    user-select: none;
+    input[type="radio"]:disabled + .custom-radio + span {
+      opacity: 0.5;
+    }
+  }
+
+  input[type="radio"] {
+    display: none; // Hide original radio
+  }
+
+  .custom-radio {
+    display: inline-block;
+    width: 1.25rem;
+    height: 1.25rem;
+    min-width: 1.25rem;
+    min-height: 1.25rem;
+    border: 2px solid var(--app-border);
+    border-radius: 50%;
+    margin-right: 0.75rem;
+    position: relative;
+    transition: all 0.2s;
+  }
+
+  input[type="radio"]:checked + .custom-radio {
+    border-color: var(--app-primary);
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 0.625rem;
+      height: 0.625rem;
+      min-width: 0.625rem;
+      min-height: 0.625rem;
+      border-radius: 50%;
+      background-color: var(--app-primary);
+    }
+  }
+}
+
+.radio-content {
+  margin-top: 0.75rem;
+  padding-left: 2rem;
+  flex: 1;
 }

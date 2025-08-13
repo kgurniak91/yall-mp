@@ -15,6 +15,7 @@ export interface ProjectSettings {
   subtitledClipSpeed: number;
   gapSpeed: number;
   subtitleBehavior: SubtitleBehavior;
+  selectedAudioTrackIndex: number | null;
 }
 
 export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
@@ -22,7 +23,8 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
   autoPauseAtEnd: false,
   subtitledClipSpeed: 1.0,
   gapSpeed: 3.0,
-  subtitleBehavior: SubtitleBehavior.DoNothing
+  subtitleBehavior: SubtitleBehavior.DoNothing,
+  selectedAudioTrackIndex: null
 };
 
 export interface GlobalSettings {
