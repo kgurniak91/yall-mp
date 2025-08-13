@@ -5,7 +5,6 @@ import {TimelineEditorComponent} from './timeline-editor/timeline-editor.compone
 import {Button} from 'primeng/button';
 import {Tooltip} from 'primeng/tooltip';
 import {Drawer} from 'primeng/drawer';
-import {ProjectSettingsComponent} from '../../shared/components/project-settings/project-settings.component';
 import {KeyboardShortcutsService} from './keyboard-shortcuts/keyboard-shortcuts.service';
 import {SeekDirection} from '../../model/video.types';
 import {ClipsStateService} from '../../state/clips/clips-state.service';
@@ -28,11 +27,10 @@ import {GlobalSettingsStateService} from '../../state/global-settings/global-set
 import {GlobalSettingsDialogComponent} from '../global-settings-dialog/global-settings-dialog.component';
 import {DropdownModule} from 'primeng/dropdown';
 import {FormsModule} from '@angular/forms';
-import {Fieldset} from 'primeng/fieldset';
-import {Select} from 'primeng/select';
 import {AnkiStateService} from '../../state/anki/anki-state.service';
 import {ExportToAnkiDialogComponent} from './export-to-anki-dialog/export-to-anki-dialog.component';
 import {ExportToAnkiDialogData} from '../../model/anki.types';
+import {CurrentProjectSettingsComponent} from '../current-project-settings/current-project-settings.component';
 
 @Component({
   selector: 'app-project-details',
@@ -42,13 +40,11 @@ import {ExportToAnkiDialogData} from '../../model/anki.types';
     Button,
     Tooltip,
     Drawer,
-    ProjectSettingsComponent,
     Popover,
     ProjectHeaderComponent,
     DropdownModule,
     FormsModule,
-    Fieldset,
-    Select
+    CurrentProjectSettingsComponent
   ],
   templateUrl: './project-details.component.html',
   styleUrl: './project-details.component.scss',

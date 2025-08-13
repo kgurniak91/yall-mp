@@ -15,8 +15,8 @@
       <p>
         Settings that will be applied by default to all new projects.
       </p>
-      <app-project-settings [settings]="globalSettingsStateService.defaultProjectSettings()"
-                            (settingsChange)="onDefaultSettingsChange($event)"/>
+      <app-common-project-settings [settings]="globalSettingsStateService.defaultProjectSettings()"
+                                   (settingsChange)="onDefaultSettingsChange($event)"/>
     </p-tabpanel>
     <p-tabpanel [value]="2">
       <p>

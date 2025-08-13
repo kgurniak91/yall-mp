@@ -1,0 +1,35 @@
+<div class="settings-container">
+  <div class="settings-preset-fieldset">
+    <p-fieldset legend="Settings Preset" [toggleable]="false">
+      <div class="setting-item">
+        <p-select id="preset-selector"
+                  [options]="settingsPresets()"
+                  optionLabel="name"
+                  placeholder="Custom"
+                  [ngModel]="selectedSettingsPreset()"
+                  (ngModelChange)="onSettingsPresetChange($event)">
+        </p-select>
+      </div>
+    </p-fieldset>
+  </div>
+
+  @if (audioTracks().length > 1) {
+    <p-fieldset legend="Audio">
+      <div class="setting-item-column">
+        <label for="audio" class="font-semibold">
+          Audio Track
+        </label>
+        <p-select inputId="audio"
+                  [options]="audioTrackOptions()"
+                  [ngModel]="settings().selectedAudioTrackIndex"
+                  (ngModelChange)="onAudioTrackChange($event)"
+                  styleClass="w-full"
+                  optionLabel="label"
+                  optionValue="value"></p-select>
+      </div>
+    </p-fieldset>
+  }
+
+  <app-common-project-settings [settings]="settings()"
+                               (settingsChange)="settingsChange.emit($event)"/>
+</div>

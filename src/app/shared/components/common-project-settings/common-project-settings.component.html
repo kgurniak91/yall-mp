@@ -46,21 +46,4 @@
                 [min]="0.5" [max]="5" [step]="0.1"/>
     </div>
   </p-fieldset>
-
-  @if (audioTracks().length > 1) {
-    <p-fieldset legend="Audio">
-      <div class="setting-item-column">
-        <label for="audio" class="font-semibold">
-          Audio Track
-        </label>
-        <p-select inputId="audio"
-                  [options]="audioTrackOptions()"
-                  [ngModel]="settings().selectedAudioTrackIndex"
-                  (ngModelChange)="onAudioTrackChange($event)"
-                  styleClass="w-full"
-                  optionLabel="label"
-                  optionValue="value"></p-select>
-      </div>
-    </p-fieldset>
-  }
 </div>
