@@ -1,4 +1,4 @@
-const {contextBridge, ipcRenderer} = require('electron');
+const {contextBridge, ipcRenderer, webUtils} = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   // --- Window control
@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   parseSubtitleFile: (filePath) => ipcRenderer.invoke('subtitle:parse', filePath),
   getMediaMetadata: (filePath) => ipcRenderer.invoke('media:getMetadata', filePath),
   extractSubtitleTrack: (mediaPath, trackIndex) => ipcRenderer.invoke('media:extractSubtitleTrack', mediaPath, trackIndex),
+  getPathForFile: (file) => webUtils.getPathForFile(file),
   // --- Anki
   checkAnkiConnection: () => ipcRenderer.invoke('anki:check'),
   getAnkiDeckNames: () => ipcRenderer.invoke('anki:getDeckNames'),

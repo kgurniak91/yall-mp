@@ -23,6 +23,7 @@ export interface IElectronAPI {
   parseSubtitleFile: (filePath: string) => Promise<SubtitleData[]>;
   getMediaMetadata: (filePath: string) => Promise<MediaMetadata>;
   extractSubtitleTrack: (mediaPath: string, trackIndex: number) => Promise<SubtitleData[]>;
+  getPathForFile: (file: File) => string;
   // --- Anki
   checkAnkiConnection: () => Promise<any>;
   getAnkiDeckNames: () => Promise<any>;

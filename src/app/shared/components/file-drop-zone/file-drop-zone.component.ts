@@ -34,11 +34,15 @@ export class FileDropZoneComponent {
     event.stopPropagation();
     this.isDragging = false;
     const file = event.dataTransfer?.files[0];
+
     if (file) {
-      const filePath = (file as any).path;
+      const filePath = window.electronAPI.getPathForFile(file);
+
       if (filePath) {
         this.newFileName.set(file.name);
         this.filePathChange.emit(filePath);
+      } else {
+        console.error('Could not get path for the dropped file.');
       }
     }
   }
