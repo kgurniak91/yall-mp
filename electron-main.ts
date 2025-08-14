@@ -13,9 +13,6 @@ import {MpvManager} from './mpv-manager';
 import {MpvClipRequest} from './src/electron-api';
 import ffprobeStatic from 'ffprobe-static';
 import languages from '@cospired/i18n-iso-languages';
-import enLocale from '@cospired/i18n-iso-languages/langs/en.json';
-
-languages.registerLocale(enLocale);
 
 let mpvManager: MpvManager | null = null;
 let mainWindow: BrowserWindow | null = null;
