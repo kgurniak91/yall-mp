@@ -123,6 +123,7 @@ export class VideoControllerComponent implements OnDestroy {
       console.log('[VideoController] handleTogglePlayPause -> pause');
       window.electronAPI.mpvSetProperty('pause', true);
       this.clipsStateService.setPlayerState(PlayerState.PausedByUser);
+      this.videoStateService.saveCurrentPlaybackTime();
     } else {
       console.log('[VideoController] handleTogglePlayPause -> resume');
       this.handleResume();

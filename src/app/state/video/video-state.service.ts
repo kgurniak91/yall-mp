@@ -183,6 +183,12 @@ export class VideoStateService implements OnDestroy {
     this._forceResizeRequest.set(null);
   }
 
+  public saveCurrentPlaybackTime(): void {
+    if (this._projectId && this.duration() > 0) {
+      this.appStateService.updateProject(this._projectId, {lastPlaybackTime: this.currentTime()});
+    }
+  }
+
   private setupPeriodicSaving(): void {
     if (!this._projectId) {
       return;
@@ -191,10 +197,6 @@ export class VideoStateService implements OnDestroy {
     toObservable(this.currentTime, {injector: this.injector}).pipe(
       auditTime(5000),
       takeUntilDestroyed(this.destroyRef)
-    ).subscribe(currentTime => {
-      if (this._projectId && this.duration() > 0) {
-        this.appStateService.updateProject(this._projectId, {lastPlaybackTime: currentTime});
-      }
-    });
+    ).subscribe(currentTime => this.saveCurrentPlaybackTime());
   }
 }
