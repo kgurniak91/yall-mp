@@ -32,7 +32,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   mpvPlayClip: (request) => ipcRenderer.invoke('mpv:playClip', request),
   mpvGetProperty: (property) => ipcRenderer.invoke('mpv:getProperty', property),
   mpvSetProperty: (property, value) => ipcRenderer.invoke('mpv:setProperty', property, value),
-  onMpvEvent: (callback) => ipcRenderer.on('mpv:event', (_event, value) => callback(value)),
+  onMpvEvent: (callback) => {
+    const subscription = (_event, value) => callback(value);
+    ipcRenderer.on('mpv:event', subscription);
+    return () => ipcRenderer.removeListener('mpv:event', subscription); // return cleanup function
+  },
   onMainWindowMoved: (callback) => ipcRenderer.on('mpv:mainWindowMovedOrResized', callback),
   onMpvManagerReady: (callback) => ipcRenderer.on('mpv:managerReady', callback),
   // --- Storage

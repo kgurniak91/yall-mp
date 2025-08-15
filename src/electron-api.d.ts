@@ -41,7 +41,7 @@ export interface IElectronAPI {
   mpvPlayClip: (request: MpvClipRequest) => Promise<void>;
   mpvGetProperty: (property: string) => Promise<any>;
   mpvSetProperty: (property: string, value: any) => Promise<void>;
-  onMpvEvent: (callback: (status: any) => void) => void;
+  onMpvEvent: (callback: (status: any) => void) => (() => void);
   onMainWindowMoved: (callback: () => void) => void;
   onMpvManagerReady: (callback: () => void) => void;
   // --- Storage

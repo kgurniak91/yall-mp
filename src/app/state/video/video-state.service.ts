@@ -25,6 +25,7 @@ export class VideoStateService implements OnDestroy {
   private readonly appStateService = inject(AppStateService);
   private _projectId: string | null = null;
   private ignoreNextTimeUpdate = false;
+  private cleanupMpvListener: (() => void) | null = null;
 
   public readonly mediaPath: Signal<string | null> = this._mediaPath.asReadonly();
   public readonly currentTime: Signal<number> = this._currentTime.asReadonly();
@@ -42,7 +43,7 @@ export class VideoStateService implements OnDestroy {
   public readonly isPaused = this._isPaused.asReadonly();
 
   constructor() {
-    window.electronAPI.onMpvEvent((status) => {
+    this.cleanupMpvListener = window.electronAPI.onMpvEvent((status) => {
       console.log('mpv event', status);
 
       // Set a flag when a seek or restart occurs, as the next time update may be inaccurate.
@@ -73,6 +74,11 @@ export class VideoStateService implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.cleanupMpvListener) {
+      this.cleanupMpvListener();
+      this.cleanupMpvListener = null;
+    }
+
     if (!this._projectId) {
       return;
     }
