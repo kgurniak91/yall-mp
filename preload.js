@@ -35,4 +35,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onMpvEvent: (callback) => ipcRenderer.on('mpv:event', (_event, value) => callback(value)),
   onMainWindowMoved: (callback) => ipcRenderer.on('mpv:mainWindowMovedOrResized', callback),
   onMpvManagerReady: (callback) => ipcRenderer.on('mpv:managerReady', callback),
+  // --- Storage
+  getAppData: () => ipcRenderer.invoke('app:get-data'),
+  setAppData: (data) => ipcRenderer.invoke('app:set-data', data),
 });

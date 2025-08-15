@@ -1,10 +1,8 @@
 import {computed, inject, Injectable, signal} from '@angular/core';
 import {AppData, Project} from '../../model/project.types';
-import {LocalStorageService} from '../../core/services/local-storage/local-storage.service';
 import {DEFAULT_GLOBAL_SETTINGS, GlobalSettings} from '../../model/settings.types';
 import {AnkiSettings} from '../../model/anki.types';
-
-const APP_DATA_KEY = 'yall-mp-app-data';
+import {StorageService} from '../../core/services/storage/storage.service';
 
 const defaults: AppData = {
   projects: [],
@@ -19,7 +17,7 @@ const defaults: AppData = {
   providedIn: 'root'
 })
 export class AppStateService {
-  private readonly storageService = inject(LocalStorageService);
+  private readonly storageService = inject(StorageService);
   private readonly _appData = signal<AppData>(defaults);
 
   public readonly projects = computed(() => {
@@ -35,8 +33,11 @@ export class AppStateService {
   public readonly globalSettings = computed(() => this._appData().globalSettings);
   public readonly ankiSettings = computed(() => this._appData().ankiSettings);
 
-  constructor() {
-    this.loadAppDataFromStorage();
+  public async loadAppData(): Promise<void> {
+    const data = await this.storageService.get();
+    if (data) {
+      this._appData.set(data);
+    }
   }
 
   public getProjectById(projectId: string): Project | null {
@@ -56,7 +57,7 @@ export class AppStateService {
         projects: updatedProjects,
         lastOpenedProjectId: project.id // Make the new project the active one
       };
-      this.saveAppDataToStorage(newData);
+      this.storageService.set(newData);
       return newData;
     });
   }
@@ -80,7 +81,7 @@ export class AppStateService {
         ...currentData,
         projects: projectsCopy
       };
-      this.saveAppDataToStorage(newData);
+      this.storageService.set(newData);
       return newData;
     });
   }
@@ -104,7 +105,7 @@ export class AppStateService {
         projects: projectsCopy,
         lastOpenedProjectId: projectId
       };
-      this.saveAppDataToStorage(newData);
+      this.storageService.set(newData);
       return newData;
     });
   }
@@ -125,7 +126,7 @@ export class AppStateService {
         projects: updatedProjects,
         lastOpenedProjectId: newLastOpenedProjectId
       };
-      this.saveAppDataToStorage(newData);
+      this.storageService.set(newData);
       return newData;
     });
   }
@@ -134,7 +135,7 @@ export class AppStateService {
     this._appData.update(currentData => {
       const newGlobalSettings = {...currentData.globalSettings, ...updates};
       const newData = {...currentData, globalSettings: newGlobalSettings};
-      this.saveAppDataToStorage(newData);
+      this.storageService.set(newData);
       return newData;
     });
   }
@@ -143,19 +144,8 @@ export class AppStateService {
     this._appData.update(currentData => {
       const newAnkiSettings = {...currentData.ankiSettings, ...updates};
       const newData = {...currentData, ankiSettings: newAnkiSettings};
-      this.saveAppDataToStorage(newData);
+      this.storageService.set(newData);
       return newData;
     });
-  }
-
-  private saveAppDataToStorage(newData: AppData) {
-    this.storageService.setItem(APP_DATA_KEY, newData);
-  }
-
-  private loadAppDataFromStorage(): void {
-    const data = this.storageService.getItem<AppData>(APP_DATA_KEY);
-    if (data) {
-      this._appData.set(data);
-    }
   }
 }

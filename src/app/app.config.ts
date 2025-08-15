@@ -1,4 +1,4 @@
-import {ApplicationConfig, provideZoneChangeDetection} from '@angular/core';
+import {ApplicationConfig, inject, provideAppInitializer, provideZoneChangeDetection} from '@angular/core';
 import {provideRouter} from '@angular/router';
 
 import {routes} from './app.routes';
@@ -8,6 +8,7 @@ import Nora from '@primeng/themes/nora';
 import {ConfirmationService, MessageService} from 'primeng/api';
 import {DATE_PIPE_DEFAULT_OPTIONS} from '@angular/common';
 import {DialogService} from 'primeng/dynamicdialog';
+import {AppStateService} from './state/app/app-state.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -29,5 +30,6 @@ export const appConfig: ApplicationConfig = {
         dateFormat: 'yyyy-MM-dd HH:mm:ss'
       }
     },
+    provideAppInitializer(async () => inject(AppStateService).loadAppData())
   ]
 };

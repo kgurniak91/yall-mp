@@ -8,11 +8,14 @@ import type {MediaTrack} from './shared/types/media.type';
 import {AnkiCard, AnkiExportRequest} from './src/app/model/anki.types';
 import ffmpegStatic from 'ffmpeg-static';
 import {v4 as uuidv4} from 'uuid';
-import {spawn, ChildProcess} from 'child_process';
+import {ChildProcess, spawn} from 'child_process';
 import {MpvManager} from './mpv-manager';
 import {MpvClipRequest} from './src/electron-api';
 import ffprobeStatic from 'ffprobe-static';
 import languages from '@cospired/i18n-iso-languages';
+
+const APP_DATA_KEY = 'yall-mp-app-data';
+const appDataPath = path.join(app.getPath('userData'), `${APP_DATA_KEY}.json`);
 
 let mpvManager: MpvManager | null = null;
 let mainWindow: BrowserWindow | null = null;
@@ -140,6 +143,8 @@ app.whenReady().then(() => {
   ipcMain.handle('anki:getNoteTypeFieldNames', (_, modelName) => invokeAnkiConnect('modelFieldNames', {modelName}));
   ipcMain.handle('anki:exportAnkiCard', (_, exportRquest: AnkiExportRequest) => handleAnkiExport(exportRquest));
   ipcMain.handle('ffmpeg:check', () => isFFmpegAvailable);
+  ipcMain.handle('app:get-data', readAppData);
+  ipcMain.handle('app:set-data', saveAppData);
 
   ipcMain.on('window:minimize', () => {
     mainWindow?.minimize();
@@ -623,7 +628,7 @@ async function runFfprobe(args: string[]): Promise<any> {
 
 async function handleGetMediaMetadata(filePath: string) {
   if (!isFFmpegAvailable) {
-    return { audioTracks: [], subtitleTracks: [] };
+    return {audioTracks: [], subtitleTracks: []};
   }
   try {
     const probeResult = await runFfprobe([
@@ -644,7 +649,7 @@ async function handleGetMediaMetadata(filePath: string) {
           title: stream.tags?.title
         };
 
-        const { label, code } = getLanguageInfo(baseTrack);
+        const {label, code} = getLanguageInfo(baseTrack);
 
         const finalTrack: MediaTrack = {
           ...baseTrack,
@@ -659,10 +664,10 @@ async function handleGetMediaMetadata(filePath: string) {
         }
       }
     }
-    return { audioTracks, subtitleTracks };
+    return {audioTracks, subtitleTracks};
   } catch (error) {
     console.error('Error probing media file:', error);
-    return { audioTracks: [], subtitleTracks: [] };
+    return {audioTracks: [], subtitleTracks: []};
   }
 }
 
@@ -747,5 +752,23 @@ function getLanguageInfo(track: Omit<MediaTrack, 'label' | 'code'>): { label: st
     displayLabel = `Track ${track.index}`;
   }
 
-  return { label: displayLabel, code: standardCode };
+  return {label: displayLabel, code: standardCode};
+}
+
+async function readAppData() {
+  try {
+    const data = await fs.readFile(appDataPath, 'utf-8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.log('Could not read app data (file might not exist yet), returning null.');
+    return null;
+  }
+}
+
+async function saveAppData(_: any, data: any) {
+  try {
+    await fs.writeFile(appDataPath, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (error) {
+    console.error('Failed to save app data.', error);
+  }
 }

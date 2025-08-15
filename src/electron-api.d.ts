@@ -1,4 +1,5 @@
 import {AnkiExportRequest} from './app/model/anki.types';
+import {AppData} from './app/model/project.types';
 import {SubtitleData} from '../shared/types/subtitle.type';
 import {MediaMetadata} from '../shared/types/media.type';
 
@@ -43,6 +44,9 @@ export interface IElectronAPI {
   onMpvEvent: (callback: (status: any) => void) => void;
   onMainWindowMoved: (callback: () => void) => void;
   onMpvManagerReady: (callback: () => void) => void;
+  // --- Storage
+  getAppData: () => Promise<AppData | null>;
+  setAppData: (data: AppData) => Promise<void>;
 }
 
 declare global {

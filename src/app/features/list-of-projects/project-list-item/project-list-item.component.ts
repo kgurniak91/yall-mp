@@ -27,10 +27,8 @@ export class ProjectListItemComponent {
     const project = this.project();
     const subtitles = project.subtitles;
 
-    if (!subtitles) {
+    if (!subtitles || subtitles.length === 0) {
       return 0;
-    } else if (subtitles.length === 0) {
-      return 100;
     }
 
     const lastSubtitleEndTime = subtitles[subtitles.length - 1].endTime;
