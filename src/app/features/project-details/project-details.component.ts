@@ -153,6 +153,9 @@ export class ProjectDetailsComponent implements OnInit {
       const clips = this.clipsStateService.clips();
       // Wait until UI and MPV are ready, and clips have been generated from the video's duration.
       if (this.isUiReady() && this.isMpvReady() && clips.length > 0) {
+        console.log('[ProjectDetails] Both UI and MPV are ready. Requesting initial resize.');
+        this.videoStateService.requestForceResize();
+
         if (!this.hasStartedPlayback) {
           this.hasStartedPlayback = true;
           this.startPlaybackSequence();

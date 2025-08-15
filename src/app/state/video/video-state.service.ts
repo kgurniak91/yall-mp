@@ -18,6 +18,7 @@ export class VideoStateService implements OnDestroy {
   private readonly _editSubtitlesRequest = signal<number | null>(null);
   private readonly _syncTimelineRequest = signal<number | null>(null);
   private readonly _ankiExportRequest = signal<number | null>(null);
+  private readonly _forceResizeRequest = signal<number | null>(null);
   private readonly _isPaused = signal(true);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
@@ -37,6 +38,7 @@ export class VideoStateService implements OnDestroy {
   public readonly editSubtitlesRequest = this._editSubtitlesRequest.asReadonly();
   public readonly syncTimelineRequest = this._syncTimelineRequest.asReadonly();
   public readonly ankiExportRequest = this._ankiExportRequest.asReadonly();
+  public readonly forceResizeRequest = this._forceResizeRequest.asReadonly();
   public readonly isPaused = this._isPaused.asReadonly();
 
   constructor() {
@@ -127,6 +129,10 @@ export class VideoStateService implements OnDestroy {
     this._ankiExportRequest.set(Date.now());
   }
 
+  public requestForceResize(): void {
+    this._forceResizeRequest.set(Date.now());
+  }
+
   public repeatCurrentClip(): void {
     this._repeatRequest.set(Date.now());
   }
@@ -171,6 +177,10 @@ export class VideoStateService implements OnDestroy {
 
   public clearAnkiExportRequest(): void {
     this._ankiExportRequest.set(null);
+  }
+
+  public clearForceResizeRequest(): void {
+    this._forceResizeRequest.set(null);
   }
 
   private setupPeriodicSaving(): void {

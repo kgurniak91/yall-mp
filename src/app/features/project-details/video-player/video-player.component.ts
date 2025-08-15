@@ -1,4 +1,15 @@
-import {AfterViewInit, Component, ElementRef, OnDestroy, output, signal, viewChild} from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  effect,
+  ElementRef,
+  inject,
+  OnDestroy,
+  output,
+  signal,
+  viewChild
+} from '@angular/core';
+import {VideoStateService} from '../../../state/video/video-state.service';
 
 @Component({
   selector: 'app-video-player',
@@ -10,9 +21,20 @@ export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
   public readonly ready = output<void>();
   protected readonly isResizing = signal(false);
   private readonly mpvPlaceholderRef = viewChild.required<ElementRef<HTMLDivElement>>('mpvPlaceholder');
+  private readonly videoStateService = inject(VideoStateService);
   private resizeObserver: ResizeObserver | undefined;
   private isReadyEmitted = false;
   private resizeDebounceTimer: any;
+
+  constructor() {
+    effect(() => {
+      if (this.videoStateService.forceResizeRequest()) {
+        console.log('[VideoPlayer] Parent component requested a resize. Forcing redraw.');
+        this.handleResize();
+        this.videoStateService.clearForceResizeRequest();
+      }
+    });
+  }
 
   ngAfterViewInit() {
     this.resizeObserver = new ResizeObserver(() => this.handleResize());
@@ -21,8 +43,6 @@ export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
     window.electronAPI.onMainWindowMoved(() => {
       this.handleResize();
     });
-
-    setTimeout(() => this.handleResize(), 200);
   }
 
   ngOnDestroy() {
