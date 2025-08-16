@@ -1,15 +1,4 @@
 <div class="content-wrapper">
-  @if (project(); as project) {
-    <app-project-header [mediaFileName]="project.mediaFileName"
-                        [subtitleFileName]="project.subtitleFileName"
-                        (newProjectClicked)="onNewProjectClicked()"
-                        (editProjectClicked)="onEditProjectClicked()"
-                        (goToProjectsListClicked)="onGoToProjectsListClicked()"
-                        (helpClicked)="onHelpClicked()"
-                        (globalSettingsClicked)="onGlobalSettingsClicked()"
-                        (deleteProjectClicked)="onDeleteProjectClicked()"/>
-  }
-
   <div class="video-area" (dblclick)="onVideoAreaDoubleClick()">
     <app-video-controller (ready)="onPlayerReady()"/>
   </div>

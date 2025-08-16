@@ -27,9 +27,6 @@
   --p-button-text-primary-hover-background: var(--p-sky-100) !important;
   --p-button-text-primary-active-background: var(--p-sky-200) !important;
   --p-textarea-focus-ring-color: var(--p-sky-600) !important;
-  --p-toolbar-background: #222 !important;
-  --p-toolbar-border-color: #444 !important;
-  --p-toolbar-padding: 0 !important;
   --p-menu-item-focus-background: var(--p-sky-600) !important;
 }
 
@@ -48,31 +45,10 @@ video {
   }
 }
 
-.video-js {
-  &.vjs-paused {
-    .vjs-big-play-button {
-      display: none;
-    }
-
-    .vjs-control-bar {
-      display: flex;
-    }
-  }
-
-  .vjs-tech {
-    pointer-events: none !important;
-  }
-
-  .vjs-text-track-display {
-    pointer-events: initial !important;
-  }
-}
-
 .rotate-90 {
   display: inline-block;
   transform: rotate(90deg);
 }
-
 
 label {
   user-select: none;

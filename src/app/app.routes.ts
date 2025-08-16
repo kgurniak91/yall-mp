@@ -1,16 +1,10 @@
 import {Routes} from '@angular/router';
-import {inject} from '@angular/core';
-import {AppStateService} from './state/app/app-state.service';
 
 export const routes: Routes = [
   {
     path: '',
     pathMatch: 'full',
-    redirectTo: () => {
-      const appStateService = inject(AppStateService);
-      const lastProject = appStateService.lastOpenedProject();
-      return lastProject ? `/project/${lastProject.id}` : '/project/new';
-    }
+    loadComponent: () => import('./core/components/home-redirect/home-redirect.component').then(m => m.HomeRedirectComponent)
   },
   {
     path: 'projects',

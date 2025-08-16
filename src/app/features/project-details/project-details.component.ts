@@ -9,7 +9,6 @@ import {KeyboardShortcutsService} from './keyboard-shortcuts/keyboard-shortcuts.
 import {SeekDirection} from '../../model/video.types';
 import {ClipsStateService} from '../../state/clips/clips-state.service';
 import {Popover} from 'primeng/popover';
-import {ProjectHeaderComponent} from './project-header/project-header.component';
 import {ActivatedRoute, Router} from '@angular/router';
 import {ConfirmationService} from 'primeng/api';
 import {AppStateService} from '../../state/app/app-state.service';
@@ -24,7 +23,6 @@ import {take} from 'rxjs';
 import {ToastService} from '../../shared/services/toast/toast.service';
 import type {SubtitleData} from '../../../../shared/types/subtitle.type';
 import {GlobalSettingsStateService} from '../../state/global-settings/global-settings-state.service';
-import {GlobalSettingsDialogComponent} from '../global-settings-dialog/global-settings-dialog.component';
 import {DropdownModule} from 'primeng/dropdown';
 import {FormsModule} from '@angular/forms';
 import {AnkiStateService} from '../../state/anki/anki-state.service';
@@ -41,7 +39,6 @@ import {CurrentProjectSettingsComponent} from '../current-project-settings/curre
     Tooltip,
     Drawer,
     Popover,
-    ProjectHeaderComponent,
     DropdownModule,
     FormsModule,
     CurrentProjectSettingsComponent
@@ -354,25 +351,6 @@ export class ProjectDetailsComponent implements OnInit {
     this.commandHistoryStateService.redo();
   }
 
-  onNewProjectClicked() {
-    this.router.navigate(['/project/new']);
-  }
-
-  onEditProjectClicked() {
-    const project = this.project();
-    if (project) {
-      this.router.navigate(['/project/edit', project.id]);
-    }
-  }
-
-  onGoToProjectsListClicked() {
-    this.router.navigate(['/projects']);
-  }
-
-  onHelpClicked() {
-    // TODO
-  }
-
   onSettingsPresetChange(preset: SettingsPreset | null): void {
     this.selectedSettingsPreset.set(preset);
 
@@ -381,29 +359,6 @@ export class ProjectDetailsComponent implements OnInit {
       this.projectSettingsStateService.setSettings({
         ...currentProjectSettings,
         ...preset.settings
-      });
-    }
-  }
-
-  onGlobalSettingsClicked() {
-    this.dialogService.open(GlobalSettingsDialogComponent, {
-      header: 'Global settings',
-      width: 'clamp(20rem, 95vw, 60rem)',
-      focusOnShow: false,
-      closable: true,
-      modal: true
-    });
-  }
-
-  onDeleteProjectClicked() {
-    const project = this.project();
-    if (project) {
-      // TODO refactor duplicated code
-      this.confirmationService.confirm({
-        header: 'Confirm deletion',
-        message: `Are you sure you want to delete the project <b>${project.mediaFileName}</b>?<br>This action cannot be undone.`,
-        icon: 'fa-solid fa-circle-exclamation',
-        accept: () => this.appStateService.deleteProject(project.id)
       });
     }
   }
