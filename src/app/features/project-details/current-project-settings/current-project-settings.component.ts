@@ -1,11 +1,11 @@
 import {Component, computed, input, output} from '@angular/core';
-import {MediaTrack} from '../../../../shared/types/media.type';
-import {ProjectSettings, SettingsPreset} from '../../model/settings.types';
+import {MediaTrack} from '../../../../../shared/types/media.type';
+import {ProjectSettings, SettingsPreset} from '../../../model/settings.types';
 import {Fieldset} from 'primeng/fieldset';
 import {Select} from 'primeng/select';
 import {
   CommonProjectSettingsComponent
-} from '../../shared/components/common-project-settings/common-project-settings.component';
+} from '../../../shared/components/common-project-settings/common-project-settings.component';
 import {FormsModule} from '@angular/forms';
 
 @Component({

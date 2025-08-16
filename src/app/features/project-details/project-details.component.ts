@@ -28,7 +28,7 @@ import {FormsModule} from '@angular/forms';
 import {AnkiStateService} from '../../state/anki/anki-state.service';
 import {ExportToAnkiDialogComponent} from './export-to-anki-dialog/export-to-anki-dialog.component';
 import {ExportToAnkiDialogData} from '../../model/anki.types';
-import {CurrentProjectSettingsComponent} from '../current-project-settings/current-project-settings.component';
+import {CurrentProjectSettingsComponent} from './current-project-settings/current-project-settings.component';
 
 @Component({
   selector: 'app-project-details',
