@@ -135,7 +135,9 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
       this.initializeWaveSurfer(mediaPath, container);
     }
 
-    if (!this.wsRegions) return;
+    if (!this.isWaveSurferReady() || !this.wsRegions) {
+      return;
+    }
 
     if (clipsSignature !== this.lastDrawnClipsSignature) {
       this.drawRegions(clips);

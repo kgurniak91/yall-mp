@@ -1,0 +1,30 @@
+:host {
+  position: absolute;
+  bottom: 3%;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+}
+
+.subtitle-text {
+  max-width: 90%;
+  padding: 0.5rem 1.5rem;
+  background-color: rgba(0, 0, 0, 0.5);
+  border-radius: 8px;
+  color: white;
+  font-size: 1.8rem;
+  text-align: center;
+  line-height: 1.4;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  user-select: text; // Allows user to select text
+  pointer-events: all; // Makes the subtitle text itself clickable and selectable
+  transition: filter 0.2s ease-in-out;
+
+  &.blurred {
+    filter: blur(8px);
+    background-color: rgba(0, 0, 0, 0.3);
+  }
+}

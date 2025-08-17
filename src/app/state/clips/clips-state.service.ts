@@ -547,7 +547,10 @@ export class ClipsStateService {
   private generateClips(): VideoClip[] {
     const subtitles = this._subtitles();
     const duration = this.videoStateService.duration();
-    if (!duration) return [];
+
+    if (!duration || duration <= 0) {
+      return [];
+    }
 
     const generatedClips: VideoClip[] = [];
     let lastTime = 0;
@@ -568,7 +571,8 @@ export class ClipsStateService {
         endTime: subtitle.endTime,
         duration: subtitle.endTime - subtitle.startTime,
         text: subtitle.text,
-        hasSubtitle: true
+        hasSubtitle: true,
+        parts: subtitle.parts
       });
       lastTime = subtitle.endTime;
     });

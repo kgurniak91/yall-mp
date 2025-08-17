@@ -27,6 +27,7 @@ export class MpvManager extends EventEmitter {
       const args = [
         `--input-ipc-server=${this.ipcPath}`,
         `--wid=${this.win.getNativeWindowHandle().readInt32LE(0)}`,
+        '--no-config',
         '--vo=gpu',
         '--no-osc',
         '--no-osd-bar',

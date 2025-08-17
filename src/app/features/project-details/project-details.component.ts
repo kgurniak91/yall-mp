@@ -29,6 +29,7 @@ import {AnkiStateService} from '../../state/anki/anki-state.service';
 import {ExportToAnkiDialogComponent} from './export-to-anki-dialog/export-to-anki-dialog.component';
 import {ExportToAnkiDialogData} from '../../model/anki.types';
 import {CurrentProjectSettingsComponent} from './current-project-settings/current-project-settings.component';
+import {SubtitlesOverlayComponent} from './subtitles-overlay/subtitles-overlay.component';
 
 @Component({
   selector: 'app-project-details',
@@ -41,7 +42,8 @@ import {CurrentProjectSettingsComponent} from './current-project-settings/curren
     Popover,
     DropdownModule,
     FormsModule,
-    CurrentProjectSettingsComponent
+    CurrentProjectSettingsComponent,
+    SubtitlesOverlayComponent
   ],
   templateUrl: './project-details.component.html',
   styleUrl: './project-details.component.scss',

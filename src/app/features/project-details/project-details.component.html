@@ -1,23 +1,7 @@
 <div class="content-wrapper">
   <div class="video-area" (dblclick)="onVideoAreaDoubleClick()">
     <app-video-controller (ready)="onPlayerReady()"/>
-  </div>
-
-  <div class="subtitle-display">
-    @if (clipsStateService.currentClip(); as currentClip) {
-      @if (currentClip.hasSubtitle) {
-        @let hiddenSubtitleStyle = globalSettingsStateService.hiddenSubtitleStyle();
-        @let showBlurredSubtitles = !videoStateService.subtitlesVisible() && hiddenSubtitleStyle === HiddenSubtitleStyle.Blurred;
-        @let hideSubtitles = !videoStateService.subtitlesVisible() && hiddenSubtitleStyle === HiddenSubtitleStyle.Hidden;
-        <span [class.blurred-subtitles]="showBlurredSubtitles" [class.hidden-subtitles]="hideSubtitles">
-        {{ currentClip.text }}
-      </span>
-      } @else {
-        &nbsp;
-      }
-    } @else {
-      &nbsp;
-    }
+    <app-subtitles-overlay [currentClip]="clipsStateService.currentClip()"/>
   </div>
 
   <div class="toolbar">

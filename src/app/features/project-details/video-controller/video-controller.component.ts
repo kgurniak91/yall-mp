@@ -79,11 +79,6 @@ export class VideoControllerComponent implements OnDestroy {
     }
   }
 
-  private mpvSubtitleSync = effect(() => {
-    const subtitlesVisible = this.videoStateService.subtitlesVisible();
-    window.electronAPI.mpvSetProperty('sub-visibility', subtitlesVisible);
-  });
-
   private subtitleBehaviorEnforcer = effect(() => {
     const currentClip = this.clipsStateService.currentClip();
     const behavior = this.projectSettingsStateService.subtitleBehavior();

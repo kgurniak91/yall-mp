@@ -3,7 +3,7 @@ import path from 'path';
 import os from 'os';
 import {promises as fs} from 'fs';
 import {CaptionsFileFormat, ParsedCaptionsResult, parseResponse, VTTCue} from 'media-captions';
-import type {SubtitleData} from './shared/types/subtitle.type';
+import type {SubtitleData, SubtitlePart} from './shared/types/subtitle.type';
 import type {MediaTrack} from './shared/types/media.type';
 import {AnkiCard, AnkiExportRequest} from './src/app/model/anki.types';
 import ffmpegStatic from 'ffmpeg-static';
@@ -13,6 +13,7 @@ import {MpvManager} from './mpv-manager';
 import {MpvClipRequest} from './src/electron-api';
 import ffprobeStatic from 'ffprobe-static';
 import languages from '@cospired/i18n-iso-languages';
+import {compile, Dialogue} from 'ass-compiler';
 
 const APP_DATA_KEY = 'yall-mp-app-data';
 const appDataPath = path.join(app.getPath('userData'), `${APP_DATA_KEY}.json`);
@@ -363,22 +364,28 @@ async function handleFileOpen(options: Electron.OpenDialogOptions) {
 async function handleSubtitleParse(filePath: string): Promise<SubtitleData[]> {
   try {
     const content = await fs.readFile(filePath, 'utf-8');
-    const response = new Response(content);
-    const extension = path.extname(filePath).replace('.', ''); // .srt -> srt
-    const result: ParsedCaptionsResult = await parseResponse(response, {type: extension as CaptionsFileFormat});
+    const extension = path.extname(filePath).toLowerCase();
 
-    if (result.errors.length > 0) {
-      console.warn('Encountered errors parsing subtitle file:', result.errors);
+    if (extension === '.ass' || extension === '.ssa') {
+      const compiled = compile(content, {});
+      const timeline = buildSubtitleTimeline(compiled.dialogues);
+      return mergeIdenticalConsecutiveSubtitles(timeline);
+    } else {
+      const response = new Response(content);
+      const fileFormat = extension.replace('.', '');
+      const result: ParsedCaptionsResult = await parseResponse(response, {type: fileFormat as CaptionsFileFormat});
+      if (result.errors.length > 0) {
+        console.warn('Encountered errors parsing subtitle file:', result.errors);
+      }
+      const subtitles: SubtitleData[] = result.cues.map((cue: VTTCue) => ({
+        id: cue.id,
+        startTime: cue.startTime,
+        endTime: cue.endTime,
+        text: cue.text,
+        parts: [{ text: cue.text, style: 'Default' }]
+      }));
+      return preprocessSubtitles(subtitles);
     }
-
-    const subtitles: SubtitleData[] = result.cues.map((vttCue: VTTCue) => ({
-      id: vttCue.id,
-      startTime: vttCue.startTime,
-      endTime: vttCue.endTime,
-      text: vttCue.text
-    }));
-
-    return preprocessSubtitles(subtitles);
   } catch (error) {
     console.error(`Error reading or parsing subtitle file at ${filePath}:`, error);
     return [];
@@ -672,55 +679,51 @@ async function handleGetMediaMetadata(filePath: string) {
 }
 
 async function handleExtractSubtitleTrack(mediaPath: string, trackIndex: number): Promise<SubtitleData[]> {
-  return new Promise((resolve, reject) => {
-    // ffmpeg -i "input.mkv" -map 0:s:0 -c:s srt -f srt -
-    // Note: ffmpeg's subtitle track index (-map 0:s:N) is 0-based relative to other subtitle tracks.
-    // ffprobe's track index is absolute, so the goal is to find the correct relative index.
-    // For now assume absolute index works with `-map 0:<index>`.
-    // The correct way is `ffmpeg -i file.mkv -map 0:2 output.srt` if `ffprobe` reports subtitle is at index 2.
-    const args = [
-      '-i', mediaPath,
-      '-map', `0:${trackIndex}`,
-      '-c:s', 'srt',
-      '-f', 'srt',
-      '-' // Output to stdout
-    ];
+  return new Promise(async (resolve, reject) => {
+    const probeResult = await runFfprobe([ '-v', 'quiet', '-print_format', 'json', '-show_streams', mediaPath ]);
+    const subtitleStream = probeResult.streams.find((s: any) => s.index === trackIndex);
+    const codec = subtitleStream?.codec_name;
+    let outputFormat = 'srt';
+    if (codec === 'ass' || codec === 'ssa') {
+      outputFormat = 'ass';
+    }
+    const args = [ '-i', mediaPath, '-map', `0:${trackIndex}`, '-c:s', outputFormat, '-f', outputFormat, '-' ];
     const ffmpegProcess = spawn(ffmpegPath, args);
-
-    let srtContent = '';
+    let subtitleContent = '';
+    ffmpegProcess.stdout.on('data', (data) => { subtitleContent += data.toString(); });
     let errorOutput = '';
-    ffmpegProcess.stdout.on('data', (data) => {
-      srtContent += data.toString();
-    });
-    ffmpegProcess.stderr.on('data', (data) => {
-      errorOutput += data.toString();
-    });
+    ffmpegProcess.stderr.on('data', (data) => { errorOutput += data.toString(); });
+    ffmpegProcess.on('error', (err) => { reject(err); });
 
     ffmpegProcess.on('close', async (code) => {
       if (code === 0) {
         try {
-          const response = new Response(srtContent);
-          const result: ParsedCaptionsResult = await parseResponse(response, {type: 'srt'});
-          if (result.errors.length > 0) {
-            console.warn('Encountered errors parsing extracted subtitle stream:', result.errors);
+          if (outputFormat === 'ass') {
+            const compiled = compile(subtitleContent, {});
+            const timeline = buildSubtitleTimeline(compiled.dialogues);
+            const mergedTimeline = mergeIdenticalConsecutiveSubtitles(timeline);
+            resolve(mergedTimeline);
+          } else {
+            const response = new Response(subtitleContent);
+            const result: ParsedCaptionsResult = await parseResponse(response, {type: 'srt'});
+            if (result.errors.length > 0) {
+              console.warn('Encountered errors parsing extracted subtitle stream:', result.errors);
+            }
+            const subtitles: SubtitleData[] = result.cues.map((cue: VTTCue) => ({
+              id: cue.id,
+              startTime: cue.startTime,
+              endTime: cue.endTime,
+              text: cue.text,
+              parts: [{ text: cue.text, style: 'Default' }]
+            }));
+            resolve(preprocessSubtitles(subtitles));
           }
-          const subtitles: SubtitleData[] = result.cues.map(cue => ({
-            id: cue.id,
-            startTime: cue.startTime,
-            endTime: cue.endTime,
-            text: cue.text
-          }));
-          resolve(preprocessSubtitles(subtitles));
         } catch (e) {
-          reject(new Error(`Failed to parse extracted SRT: ${e}`));
+          reject(new Error(`Failed to parse extracted subtitle stream: ${e}`));
         }
       } else {
         reject(new Error(`ffmpeg failed to extract subtitle track with code ${code}: ${errorOutput}`));
       }
-    });
-
-    ffmpegProcess.on('error', (err) => {
-      reject(err);
     });
   });
 }
@@ -771,4 +774,103 @@ async function saveAppData(_: any, data: any) {
   } catch (error) {
     console.error('Failed to save app data.', error);
   }
+}
+
+function buildSubtitleTimeline(dialogues: Dialogue[]): SubtitleData[] {
+  if (dialogues.length === 0) {
+    return [];
+  }
+
+  const timestamps = new Set<number>();
+  dialogues.forEach(d => {
+    timestamps.add(d.start);
+    timestamps.add(d.end);
+  });
+  const sortedTimestamps = Array.from(timestamps).sort((a, b) => a - b);
+
+  const finalSubtitles: SubtitleData[] = [];
+
+  for (let i = 0; i < sortedTimestamps.length - 1; i++) {
+    const startTime = sortedTimestamps[i];
+    const endTime = sortedTimestamps[i + 1];
+    const midPoint = startTime + 0.01;
+
+    if (endTime <= startTime) continue;
+
+    const activeDialogues = dialogues.filter(d => midPoint >= d.start && midPoint < d.end);
+
+    if (activeDialogues.length > 0) {
+      const uniqueParts = new Map<string, SubtitlePart>();
+
+      activeDialogues.forEach(d => {
+        const text = d.slices
+          .flatMap(slice => slice.fragments)
+          .map(fragment => fragment.text.replace(/\\N/g, '\n'))
+          .join('');
+
+        // Create a unique key based on both style and text content.
+        const key = `${d.style}::${text}`;
+
+        if (!uniqueParts.has(key)) {
+          uniqueParts.set(key, { text, style: d.style });
+        }
+      });
+
+      const parts = Array.from(uniqueParts.values());
+      const combinedText = parts.map(p => p.text).join('\n');
+
+      finalSubtitles.push({
+        id: uuidv4(),
+        startTime,
+        endTime,
+        text: combinedText,
+        parts,
+      });
+    }
+  }
+
+  return finalSubtitles;
+}
+
+function arePartsEqual(partsA: SubtitlePart[], partsB: SubtitlePart[]): boolean {
+  if (partsA.length !== partsB.length) {
+    return false;
+  }
+  const sortedA = [...partsA].sort((a, b) => (a.style + a.text).localeCompare(b.style + b.text));
+  const sortedB = [...partsB].sort((a, b) => (a.style + a.text).localeCompare(b.style + b.text));
+
+  for (let i = 0; i < sortedA.length; i++) {
+    if (sortedA[i].text !== sortedB[i].text || sortedA[i].style !== sortedB[i].style) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function mergeIdenticalConsecutiveSubtitles(subtitles: SubtitleData[]): SubtitleData[] {
+  if (subtitles.length < 2) {
+    return subtitles;
+  }
+
+  const merged: SubtitleData[] = [];
+  let current = { ...subtitles[0] };
+
+  for (let i = 1; i < subtitles.length; i++) {
+    const next = subtitles[i];
+
+    // Check if the next subtitle is consecutive and has the exact same parts.
+    if (Math.abs(next.startTime - current.endTime) < 0.01 && arePartsEqual(current.parts || [], next.parts || [])) {
+      // If they are identical, just extend the end time of the current subtitle.
+      current.endTime = next.endTime;
+    } else {
+      // If they are different, push the completed current subtitle and start a new one.
+      merged.push(current);
+      current = { ...next };
+    }
+  }
+
+  // Push the very last subtitle after the loop finishes.
+  merged.push(current);
+
+  return merged;
 }

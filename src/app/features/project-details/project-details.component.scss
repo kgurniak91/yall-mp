@@ -32,18 +32,6 @@
   flex-shrink: 0; // Prevents the timeline from shrinking
 }
 
-.subtitle-display {
-  display: flex;
-  text-align: center;
-  justify-content: center;
-  align-items: center;
-  padding: 1rem;
-  font-size: 1.5rem;
-  background-color: #222;
-  border-top: 1px solid #444;
-  border-bottom: 1px solid #444;
-}
-
 .toolbar {
   display: flex;
   align-items: center;
@@ -81,13 +69,4 @@
 
 app-timeline-editor {
   flex-shrink: 0;
-}
-
-.blurred-subtitles {
-  filter: blur(12px);
-  overflow: hidden;
-}
-
-.hidden-subtitles {
-  visibility: hidden;
 }

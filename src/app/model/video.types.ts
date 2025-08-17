@@ -1,3 +1,5 @@
+import {SubtitlePart} from '../../../shared/types/subtitle.type';
+
 export interface VideoClip {
   id: string;
   startTime: number;
@@ -5,6 +7,7 @@ export interface VideoClip {
   duration: number;
   text?: string;
   hasSubtitle: boolean;
+  parts?: SubtitlePart[];
 }
 
 export enum KeyboardAction {
