@@ -1,8 +1,27 @@
 <div class="flex flex-column gap-4">
-  <div class="flex flex-column gap-2">
-    <label>Subtitle Text</label>
-    <span>{{this.data.subtitleData.text}}</span>
-  </div>
+  @if (assSubtitleData && assSubtitleData.parts && assSubtitleData.parts.length > 1) {
+    <div class="flex flex-column gap-2">
+      <label>Select subtitle parts to include:</label>
+      <div class="flex flex-column gap-2">
+        @for (part of assSubtitleData.parts; track $index) {
+          @let checkboxId = ('part-' + $index);
+          <div class="flex align-items-center">
+            <p-checkbox [(ngModel)]="selectedSubtitleParts"
+                        [value]="part"
+                        [inputId]="checkboxId"/>
+            <label [for]="checkboxId" class="ml-2 font-normal">
+              {{ part.text }}
+            </label>
+          </div>
+        }
+      </div>
+    </div>
+  } @else {
+    <div class="flex flex-column gap-2">
+      <label>Subtitle Text</label>
+      <span class="subtitle-full-text">{{ finalTextPreview() }}</span>
+    </div>
+  }
 
   <div class="flex flex-column gap-2">
     <label for="template-select">Export using template:</label>

@@ -11,6 +11,7 @@ import type {SubtitleData} from '../../../../shared/types/subtitle.type';
 import {DeleteSubtitledClipCommand} from '../../model/commands/delete-subtitled-clip.command';
 import {CreateSubtitledClipCommand} from '../../model/commands/create-subtitled-clip.command';
 import {GlobalSettingsStateService} from '../global-settings/global-settings-state.service';
+import {ClipContent} from '../../model/commands/update-clip-text.command';
 
 const MIN_CLIP_DURATION = 0.1;
 const ADJUST_DEBOUNCE_MS = 50;
@@ -254,6 +255,7 @@ export class ClipsStateService {
     }
 
     const newSubtitle: SubtitleData = {
+      type: 'srt',
       id: crypto.randomUUID(),
       startTime: newStartTime,
       endTime: newEndTime,
@@ -265,6 +267,14 @@ export class ClipsStateService {
 
     // Seek to the start of the new clip for immediate feedback
     this.videoStateService.seekAbsolute(newStartTime);
+  }
+
+  public getSubtitleDataByClipId(clipId: string): SubtitleData | null {
+    if (!clipId.startsWith('subtitle-')) {
+      return null;
+    }
+    const subtitleId = clipId.substring('subtitle-'.length);
+    return this._subtitles().find(s => s.id === subtitleId) || null;
   }
 
   public addSubtitle(subtitle: SubtitleData): void {
@@ -317,19 +327,23 @@ export class ClipsStateService {
     this._subtitles.set(newSubtitles);
   }
 
-  public updateClipText(clipId: string, newText: string): void {
-    const allClips = this.clips();
-    const targetClip = allClips.find(c => c.id === clipId);
+  public updateClipText(clipId: string, newContent: ClipContent): void {
+    const subtitleId = clipId.replace('subtitle-', '');
+    const subtitles = this._subtitles();
+    const subtitleIndex = subtitles.findIndex(s => s.id === subtitleId);
+    if (subtitleIndex === -1) return;
 
-    if (!targetClip || !targetClip.hasSubtitle) {
-      return;
+    const newSubtitles = [...subtitles];
+    const originalSubtitle = newSubtitles[subtitleIndex];
+
+    if (originalSubtitle.type === 'srt' && newContent.text !== undefined) {
+      newSubtitles[subtitleIndex] = {...originalSubtitle, text: newContent.text};
+    } else if (originalSubtitle.type === 'ass' && newContent.parts) {
+      const newText = newContent.parts.map(p => p.text).join('\n');
+      newSubtitles[subtitleIndex] = {...originalSubtitle, parts: newContent.parts, text: newText};
     }
 
-    const updatedClips = allClips.map(clip =>
-      clip.id === clipId ? {...clip, text: newText} : clip
-    );
-
-    this.updateSubtitlesFromClips(updatedClips);
+    this._subtitles.set(newSubtitles);
   }
 
   public advanceToNextClip(): void {
@@ -532,25 +546,37 @@ export class ClipsStateService {
   }
 
   private updateSubtitlesFromClips(updatedClips: VideoClip[]): void {
-    const newSubtitles: SubtitleData[] = updatedClips
+    const currentSubtitles = this._subtitles();
+    const clipMap = new Map<string, VideoClip>();
+
+    updatedClips
       .filter(clip => clip.hasSubtitle)
-      .map(clip => {
-        return {
-          ...clip,
-          text: clip.text || '',
-          id: clip.id.startsWith('subtitle-') ? clip.id.substring('subtitle-'.length) : clip.id
-        };
+      .forEach(clip => {
+        const subtitleId = clip.id.startsWith('subtitle-') ? clip.id.substring('subtitle-'.length) : clip.id;
+        clipMap.set(subtitleId, clip);
       });
+
+
+    const newSubtitles = currentSubtitles.map(subtitle => {
+      const updatedClip = clipMap.get(subtitle.id);
+      if (updatedClip) {
+        return {
+          ...subtitle,
+          startTime: updatedClip.startTime,
+          endTime: updatedClip.endTime,
+        };
+      } else {
+        return subtitle;
+      }
+    });
+
     this._subtitles.set(newSubtitles);
   }
 
   private generateClips(): VideoClip[] {
     const subtitles = this._subtitles();
     const duration = this.videoStateService.duration();
-
-    if (!duration || duration <= 0) {
-      return [];
-    }
+    if (!duration) return [];
 
     const generatedClips: VideoClip[] = [];
     let lastTime = 0;
@@ -562,17 +588,23 @@ export class ClipsStateService {
           startTime: lastTime,
           endTime: subtitle.startTime,
           duration: subtitle.startTime - lastTime,
-          hasSubtitle: false
+          hasSubtitle: false,
+          text: '',
+          parts: []
         });
       }
+
+      // If it's an SRT subtitle, it won't have a 'parts' array, so create one for consistency.
+      const parts = subtitle.type === 'ass' ? subtitle.parts : [{text: subtitle.text, style: 'Default'}];
+
       generatedClips.push({
         id: `subtitle-${subtitle.id}`,
         startTime: subtitle.startTime,
         endTime: subtitle.endTime,
         duration: subtitle.endTime - subtitle.startTime,
-        text: subtitle.text,
         hasSubtitle: true,
-        parts: subtitle.parts
+        text: subtitle.text,
+        parts: parts
       });
       lastTime = subtitle.endTime;
     });
@@ -583,7 +615,9 @@ export class ClipsStateService {
         startTime: lastTime,
         endTime: duration,
         duration: duration - lastTime,
-        hasSubtitle: false
+        hasSubtitle: false,
+        text: '',
+        parts: []
       });
     }
     return generatedClips;

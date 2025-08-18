@@ -3,7 +3,7 @@ import path from 'path';
 import os from 'os';
 import {promises as fs} from 'fs';
 import {CaptionsFileFormat, ParsedCaptionsResult, parseResponse, VTTCue} from 'media-captions';
-import type {SubtitleData, SubtitlePart} from './shared/types/subtitle.type';
+import type {AssSubtitleData, SrtSubtitleData, SubtitleData, SubtitlePart} from './shared/types/subtitle.type';
 import type {MediaTrack} from './shared/types/media.type';
 import {AnkiCard, AnkiExportRequest} from './src/app/model/anki.types';
 import ffmpegStatic from 'ffmpeg-static';
@@ -377,12 +377,12 @@ async function handleSubtitleParse(filePath: string): Promise<SubtitleData[]> {
       if (result.errors.length > 0) {
         console.warn('Encountered errors parsing subtitle file:', result.errors);
       }
-      const subtitles: SubtitleData[] = result.cues.map((cue: VTTCue) => ({
+      const subtitles: SrtSubtitleData[] = result.cues.map((cue: VTTCue) => ({
+        type: 'srt',
         id: cue.id,
         startTime: cue.startTime,
         endTime: cue.endTime,
         text: cue.text,
-        parts: [{ text: cue.text, style: 'Default' }]
       }));
       return preprocessSubtitles(subtitles);
     }
@@ -680,20 +680,26 @@ async function handleGetMediaMetadata(filePath: string) {
 
 async function handleExtractSubtitleTrack(mediaPath: string, trackIndex: number): Promise<SubtitleData[]> {
   return new Promise(async (resolve, reject) => {
-    const probeResult = await runFfprobe([ '-v', 'quiet', '-print_format', 'json', '-show_streams', mediaPath ]);
+    const probeResult = await runFfprobe(['-v', 'quiet', '-print_format', 'json', '-show_streams', mediaPath]);
     const subtitleStream = probeResult.streams.find((s: any) => s.index === trackIndex);
     const codec = subtitleStream?.codec_name;
     let outputFormat = 'srt';
     if (codec === 'ass' || codec === 'ssa') {
       outputFormat = 'ass';
     }
-    const args = [ '-i', mediaPath, '-map', `0:${trackIndex}`, '-c:s', outputFormat, '-f', outputFormat, '-' ];
+    const args = ['-i', mediaPath, '-map', `0:${trackIndex}`, '-c:s', outputFormat, '-f', outputFormat, '-'];
     const ffmpegProcess = spawn(ffmpegPath, args);
     let subtitleContent = '';
-    ffmpegProcess.stdout.on('data', (data) => { subtitleContent += data.toString(); });
+    ffmpegProcess.stdout.on('data', (data) => {
+      subtitleContent += data.toString();
+    });
     let errorOutput = '';
-    ffmpegProcess.stderr.on('data', (data) => { errorOutput += data.toString(); });
-    ffmpegProcess.on('error', (err) => { reject(err); });
+    ffmpegProcess.stderr.on('data', (data) => {
+      errorOutput += data.toString();
+    });
+    ffmpegProcess.on('error', (err) => {
+      reject(err);
+    });
 
     ffmpegProcess.on('close', async (code) => {
       if (code === 0) {
@@ -709,12 +715,12 @@ async function handleExtractSubtitleTrack(mediaPath: string, trackIndex: number)
             if (result.errors.length > 0) {
               console.warn('Encountered errors parsing extracted subtitle stream:', result.errors);
             }
-            const subtitles: SubtitleData[] = result.cues.map((cue: VTTCue) => ({
+            const subtitles: SrtSubtitleData[] = result.cues.map((cue: VTTCue) => ({
+              type: 'srt',
               id: cue.id,
               startTime: cue.startTime,
               endTime: cue.endTime,
-              text: cue.text,
-              parts: [{ text: cue.text, style: 'Default' }]
+              text: cue.text
             }));
             resolve(preprocessSubtitles(subtitles));
           }
@@ -776,7 +782,7 @@ async function saveAppData(_: any, data: any) {
   }
 }
 
-function buildSubtitleTimeline(dialogues: Dialogue[]): SubtitleData[] {
+function buildSubtitleTimeline(dialogues: Dialogue[]): AssSubtitleData[] {
   if (dialogues.length === 0) {
     return [];
   }
@@ -788,7 +794,7 @@ function buildSubtitleTimeline(dialogues: Dialogue[]): SubtitleData[] {
   });
   const sortedTimestamps = Array.from(timestamps).sort((a, b) => a - b);
 
-  const finalSubtitles: SubtitleData[] = [];
+  const finalSubtitles: AssSubtitleData[] = [];
 
   for (let i = 0; i < sortedTimestamps.length - 1; i++) {
     const startTime = sortedTimestamps[i];
@@ -801,50 +807,70 @@ function buildSubtitleTimeline(dialogues: Dialogue[]): SubtitleData[] {
 
     if (activeDialogues.length > 0) {
       const uniqueParts = new Map<string, SubtitlePart>();
-
       activeDialogues.forEach(d => {
         const text = d.slices
           .flatMap(slice => slice.fragments)
           .map(fragment => fragment.text.replace(/\\N/g, '\n'))
           .join('');
 
-        // Create a unique key based on both style and text content.
-        const key = `${d.style}::${text}`;
+        if (!text.trim()) return;
 
+        const key = `${d.style}::${text}`;
         if (!uniqueParts.has(key)) {
-          uniqueParts.set(key, { text, style: d.style });
+          uniqueParts.set(key, {text, style: d.style});
         }
       });
 
       const parts = Array.from(uniqueParts.values());
-      const combinedText = parts.map(p => p.text).join('\n');
+      if (parts.length > 0) {
+        const combinedText = parts.map(p => p.text).join('\n');
 
-      finalSubtitles.push({
-        id: uuidv4(),
-        startTime,
-        endTime,
-        text: combinedText,
-        parts,
-      });
+        finalSubtitles.push({
+          type: 'ass',
+          id: uuidv4(),
+          startTime,
+          endTime,
+          text: combinedText,
+          parts,
+        });
+      }
     }
   }
-
   return finalSubtitles;
 }
 
-function arePartsEqual(partsA: SubtitlePart[], partsB: SubtitlePart[]): boolean {
-  if (partsA.length !== partsB.length) {
+function arePartsEqual(a: SubtitleData, b: SubtitleData): boolean {
+  // If the types are different, they can't be equal.
+  if (a.type !== b.type) {
     return false;
   }
-  const sortedA = [...partsA].sort((a, b) => (a.style + a.text).localeCompare(b.style + b.text));
-  const sortedB = [...partsB].sort((a, b) => (a.style + a.text).localeCompare(b.style + b.text));
 
-  for (let i = 0; i < sortedA.length; i++) {
-    if (sortedA[i].text !== sortedB[i].text || sortedA[i].style !== sortedB[i].style) {
+  // If both are SRT, compare their text content.
+  if (a.type === 'srt' && b.type === 'srt') {
+    return a.text === b.text;
+  }
+
+  // If both are ASS, compare their parts arrays.
+  if (a.type === 'ass' && b.type === 'ass') {
+    const partsA = a.parts;
+    const partsB = b.parts;
+
+    if (partsA.length !== partsB.length) {
       return false;
     }
+    const sortedA = [...partsA].sort((x, y) => (x.style + x.text).localeCompare(y.style + y.text));
+    const sortedB = [...partsB].sort((x, y) => (x.style + x.text).localeCompare(y.style + y.text));
+
+    for (let i = 0; i < sortedA.length; i++) {
+      if (sortedA[i].text !== sortedB[i].text || sortedA[i].style !== sortedB[i].style) {
+        return false;
+      }
+    }
+    return true;
   }
-  return true;
+
+  // Fallback for any other case (should not be reached with current types).
+  return false;
 }
 
 function mergeIdenticalConsecutiveSubtitles(subtitles: SubtitleData[]): SubtitleData[] {
@@ -853,19 +879,19 @@ function mergeIdenticalConsecutiveSubtitles(subtitles: SubtitleData[]): Subtitle
   }
 
   const merged: SubtitleData[] = [];
-  let current = { ...subtitles[0] };
+  let current = {...subtitles[0]};
 
   for (let i = 1; i < subtitles.length; i++) {
     const next = subtitles[i];
 
-    // Check if the next subtitle is consecutive and has the exact same parts.
-    if (Math.abs(next.startTime - current.endTime) < 0.01 && arePartsEqual(current.parts || [], next.parts || [])) {
+    // Check if the next subtitle is consecutive and has the exact same content.
+    if (Math.abs(next.startTime - current.endTime) < 0.01 && arePartsEqual(current, next)) {
       // If they are identical, just extend the end time of the current subtitle.
       current.endTime = next.endTime;
     } else {
       // If they are different, push the completed current subtitle and start a new one.
       merged.push(current);
-      current = { ...next };
+      current = {...next};
     }
   }
 

@@ -1,15 +1,8 @@
 @if (currentClip(); as clip) {
   @if (clip.hasSubtitle && !shouldBeHidden()) {
-    <div class="subtitle-text"
-         [class.blurred]="shouldBeBlurred()"
-         (mouseup)="onWordSelect()"
-         (click)="onSubtitleClick($event)">
-      @if (clip.parts && clip.parts.length > 0) {
-        @for (part of clip.parts; track $index) {
-          <span>{{ part.text }}</span>
-        }
-      } @else {
-        {{ clip.text }}
+    <div class="subtitle-text" [class.blurred]="shouldBeBlurred()" (mouseup)="onWordSelect()" (click)="onSubtitleClick($event)">
+      @for (part of clip.parts; track $index) {
+        <span>{{ part.text }}</span>
       }
     </div>
   }

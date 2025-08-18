@@ -7,7 +7,7 @@ export interface VideoClip {
   duration: number;
   text?: string;
   hasSubtitle: boolean;
-  parts?: SubtitlePart[];
+  parts: SubtitlePart[];
 }
 
 export enum KeyboardAction {

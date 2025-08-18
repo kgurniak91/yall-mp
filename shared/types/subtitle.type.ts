@@ -3,10 +3,20 @@ export interface SubtitlePart {
   style: string;
 }
 
-export interface SubtitleData {
+interface BaseSubtitleData {
   id: string;
   startTime: number;
   endTime: number;
   text: string;
-  parts?: SubtitlePart[];
 }
+
+export interface SrtSubtitleData extends BaseSubtitleData {
+  type: 'srt';
+}
+
+export interface AssSubtitleData extends BaseSubtitleData {
+  type: 'ass';
+  parts: SubtitlePart[];
+}
+
+export type SubtitleData = SrtSubtitleData | AssSubtitleData;

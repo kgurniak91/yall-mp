@@ -1,4 +1,4 @@
-import {Component, computed, inject, signal} from '@angular/core';
+import {Component, computed, inject, OnInit, signal} from '@angular/core';
 import {AnkiCardTemplate, AnkiExportRequest, ExportToAnkiDialogData} from '../../../model/anki.types';
 import {AnkiStateService} from '../../../state/anki/anki-state.service';
 import {DynamicDialogConfig, DynamicDialogRef} from 'primeng/dynamicdialog';
@@ -6,18 +6,23 @@ import {ToastService} from '../../../shared/services/toast/toast.service';
 import {Select} from 'primeng/select';
 import {FormsModule} from '@angular/forms';
 import {Button} from 'primeng/button';
+import {AssSubtitleData, SubtitleData, SubtitlePart} from '../../../../../shared/types/subtitle.type';
+import {MultiSelect} from 'primeng/multiselect';
+import {Checkbox} from 'primeng/checkbox';
 
 @Component({
   selector: 'app-export-to-anki-dialog',
   imports: [
     Select,
     FormsModule,
-    Button
+    Button,
+    MultiSelect,
+    Checkbox
   ],
   templateUrl: './export-to-anki-dialog.component.html',
   styleUrl: './export-to-anki-dialog.component.scss'
 })
-export class ExportToAnkiDialogComponent {
+export class ExportToAnkiDialogComponent implements OnInit {
   private readonly ankiService = inject(AnkiStateService);
   private readonly ref = inject(DynamicDialogRef);
   private readonly config = inject(DynamicDialogConfig);
@@ -28,9 +33,25 @@ export class ExportToAnkiDialogComponent {
   );
   protected selectedTemplate = signal<AnkiCardTemplate | null>(null);
   protected isExporting = signal(false);
+  protected assSubtitleData: AssSubtitleData | null = null;
+  protected selectedSubtitleParts = signal<SubtitlePart[]>([]);
+  protected readonly finalTextPreview = computed(() => {
+    if (this.data.subtitleData.type === 'srt') {
+      return this.data.subtitleData.text;
+    }
+    return this.selectedSubtitleParts().map(p => p.text).join('\n');
+  });
 
   constructor() {
     this.data = this.config.data as ExportToAnkiDialogData;
+  }
+
+  ngOnInit() {
+    if (this.data.subtitleData.type === 'ass') {
+      this.assSubtitleData = this.data.subtitleData;
+      // Pre-select all parts by default for convenience
+      this.selectedSubtitleParts.set([...this.assSubtitleData.parts]);
+    }
   }
 
   onCancel(): void {
@@ -43,13 +64,23 @@ export class ExportToAnkiDialogComponent {
       return;
     }
 
-    const {project, subtitleData, exportTime} = this.data;
+    if (!this.finalTextPreview().trim()) {
+      this.toastService.warn('Please select at least one subtitle part to export.');
+      return;
+    }
+
+    const {project, exportTime} = this.data;
+
+    const subtitleForExport: SubtitleData = {
+      ...this.data.subtitleData,
+      text: this.finalTextPreview()
+    };
 
     this.isExporting.set(true);
 
     const request: AnkiExportRequest = {
       template: template,
-      subtitleData: subtitleData,
+      subtitleData: subtitleForExport,
       mediaPath: project.mediaPath,
       exportTime
     };

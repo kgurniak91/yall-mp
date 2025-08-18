@@ -1,5 +1,15 @@
 <div class="dialog-content">
-  <textarea pTextarea [(ngModel)]="text" [autoResize]="true" rows="5"></textarea>
+  @if (data.type === 'srt') {
+    <textarea pTextarea [(ngModel)]="text" [autoResize]="true" rows="3"></textarea>
+  } @else {
+    @for (part of editableParts; track $index) {
+      <div class="flex flex-column gap-2" [class.mb-3]="!$last">
+        <label>{{ part.style }}</label>
+        <textarea pTextarea [rows]="3" [(ngModel)]="part.text"></textarea>
+      </div>
+    }
+  }
+
   <div class="dialog-actions">
     <p-button label="Cancel"
               icon="fa-solid fa-xmark"

@@ -18,7 +18,7 @@ import {BuiltInSettingsPresets, HiddenSubtitleStyle, ProjectSettings, SettingsPr
 import {DialogService, DynamicDialogRef} from 'primeng/dynamicdialog';
 import {CommandHistoryStateService} from '../../state/command-history/command-history-state.service';
 import {EditSubtitlesDialogComponent} from './edit-subtitles-dialog/edit-subtitles-dialog.component';
-import {UpdateClipTextCommand} from '../../model/commands/update-clip-text.command';
+import {ClipContent, UpdateClipTextCommand} from '../../model/commands/update-clip-text.command';
 import {take} from 'rxjs';
 import {ToastService} from '../../shared/services/toast/toast.service';
 import type {SubtitleData} from '../../../../shared/types/subtitle.type';
@@ -293,6 +293,13 @@ export class ProjectDetailsComponent implements OnInit {
       return;
     }
 
+    const originalSubtitleData = this.clipsStateService.getSubtitleDataByClipId(currentClip.id);
+
+    if (!originalSubtitleData) {
+      this.toastService.error('Could not find the source subtitle data for export.');
+      return;
+    }
+
     const hasValidTemplates = this.ankiStateService.ankiCardTemplates().some(t => t.isValid);
     if (!hasValidTemplates) {
       this.toastService.warn('Please configure at least one valid Anki template in the global settings.');
@@ -300,7 +307,7 @@ export class ProjectDetailsComponent implements OnInit {
     }
 
     const data: ExportToAnkiDialogData = {
-      subtitleData: currentClip as SubtitleData,
+      subtitleData: originalSubtitleData,
       project: this.project()!,
       exportTime: this.videoStateService.currentTime()
     }
@@ -321,27 +328,42 @@ export class ProjectDetailsComponent implements OnInit {
       return;
     }
 
+    const originalSubtitle = this.clipsStateService.getSubtitleDataByClipId(currentClip.id);
+    if (!originalSubtitle) {
+      this.toastService.error('Could not find original subtitle data to edit.');
+      return;
+    }
+
     this.dialogRef = this.dialogService.open(EditSubtitlesDialogComponent, {
       header: 'Edit Subtitles',
       width: '50vw',
       modal: true,
-      data: {
-        text: currentClip.text || ''
-      }
+      data: originalSubtitle
     });
 
     this.dialogRef.onClose.pipe(
       take(1)
-    ).subscribe((newText: string | undefined) => {
-      if (newText !== undefined && newText !== currentClip.text) {
-        const command = new UpdateClipTextCommand(
-          this.clipsStateService,
-          currentClip.id,
-          currentClip.text || '',
-          newText
-        );
-        this.commandHistoryStateService.execute(command);
-      }
+    ).subscribe((result: ClipContent | undefined) => {
+      if (!result) return; // Closed without saving or no changes were made
+
+      const oldContent: ClipContent = {
+        text: originalSubtitle.text,
+        parts: originalSubtitle.type === 'ass' ? originalSubtitle.parts : undefined
+      };
+
+      const newContent: ClipContent = {
+        text: result.text !== undefined ? result.text : result.parts!.map(p => p.text).join('\n'),
+        parts: result.parts
+      };
+
+      const command = new UpdateClipTextCommand(
+        this.clipsStateService,
+        currentClip.id,
+        oldContent,
+        newContent
+      );
+
+      this.commandHistoryStateService.execute(command);
     });
   }
 
