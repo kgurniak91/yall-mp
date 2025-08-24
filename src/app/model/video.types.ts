@@ -1,4 +1,4 @@
-import {SubtitlePart} from '../../../shared/types/subtitle.type';
+import {SubtitleData, SubtitlePart} from '../../../shared/types/subtitle.type';
 
 export interface VideoClip {
   id: string;
@@ -7,7 +7,8 @@ export interface VideoClip {
   duration: number;
   text?: string;
   hasSubtitle: boolean;
-  parts: SubtitlePart[];
+  parts: SubtitlePart[]; // array of all merged parts for simple text rendering
+  sourceSubtitles: SubtitleData[]; // The original, un-merged subtitles this clip contains
 }
 
 export enum KeyboardAction {

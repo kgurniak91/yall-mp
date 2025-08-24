@@ -3,9 +3,8 @@ import {ClipsStateService} from '../../state/clips/clips-state.service';
 import type {SubtitleData} from '../../../../shared/types/subtitle.type';
 
 export class MergeSubtitledClipsCommand implements Command {
+  private originalFirstSubtitle: SubtitleData | undefined;
   private originalSecondSubtitle: SubtitleData | undefined;
-  private originalFirstSubtitleEndTime: number | undefined;
-  private originalFirstSubtitleText: string | undefined;
 
   constructor(
     private clipsStateService: ClipsStateService,
@@ -19,23 +18,20 @@ export class MergeSubtitledClipsCommand implements Command {
       this.firstClipId,
       this.secondClipId,
       (originalFirstSubtitle, deletedSecondSubtitle) => {
-        this.originalFirstSubtitleEndTime = originalFirstSubtitle.endTime;
-        this.originalFirstSubtitleText = originalFirstSubtitle.text;
-        this.originalSecondSubtitle = {...deletedSecondSubtitle};
+        this.originalFirstSubtitle = JSON.parse(JSON.stringify(originalFirstSubtitle));
+        this.originalSecondSubtitle = JSON.parse(JSON.stringify(deletedSecondSubtitle));
       }
     );
   }
 
   undo(): void {
-    if (!this.originalSecondSubtitle || this.originalFirstSubtitleEndTime === undefined || this.originalFirstSubtitleText === undefined) {
+    if (!this.originalFirstSubtitle || !this.originalSecondSubtitle) {
       console.error("Cannot undo merge: original subtitle data was not captured.");
       return;
     }
 
     this.clipsStateService.unmergeClips(
-      this.firstClipId,
-      this.originalFirstSubtitleEndTime,
-      this.originalFirstSubtitleText,
+      this.originalFirstSubtitle,
       this.originalSecondSubtitle
     );
   }

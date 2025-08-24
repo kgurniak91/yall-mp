@@ -7,7 +7,6 @@ import {Select} from 'primeng/select';
 import {FormsModule} from '@angular/forms';
 import {Button} from 'primeng/button';
 import {AssSubtitleData, SubtitleData, SubtitlePart} from '../../../../../shared/types/subtitle.type';
-import {MultiSelect} from 'primeng/multiselect';
 import {Checkbox} from 'primeng/checkbox';
 
 @Component({
@@ -16,7 +15,6 @@ import {Checkbox} from 'primeng/checkbox';
     Select,
     FormsModule,
     Button,
-    MultiSelect,
     Checkbox
   ],
   templateUrl: './export-to-anki-dialog.component.html',
@@ -38,8 +36,9 @@ export class ExportToAnkiDialogComponent implements OnInit {
   protected readonly finalTextPreview = computed(() => {
     if (this.data.subtitleData.type === 'srt') {
       return this.data.subtitleData.text;
+    } else {
+      return this.selectedSubtitleParts().map(p => p.text).join('\n');
     }
-    return this.selectedSubtitleParts().map(p => p.text).join('\n');
   });
 
   constructor() {
@@ -70,11 +69,19 @@ export class ExportToAnkiDialogComponent implements OnInit {
     }
 
     const {project, exportTime} = this.data;
+    let subtitleForExport: SubtitleData;
 
-    const subtitleForExport: SubtitleData = {
-      ...this.data.subtitleData,
-      text: this.finalTextPreview()
-    };
+    if (this.data.subtitleData.type === 'srt') {
+      subtitleForExport = {
+        ...this.data.subtitleData,
+        text: this.finalTextPreview()
+      };
+    } else { // 'ass'
+      subtitleForExport = {
+        ...this.data.subtitleData,
+        parts: this.selectedSubtitleParts()
+      };
+    }
 
     this.isExporting.set(true);
 

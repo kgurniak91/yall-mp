@@ -7,7 +7,12 @@ import {ToastService} from '../../shared/services/toast/toast.service';
 import {SplitSubtitledClipCommand} from '../../model/commands/split-subtitled-clip.command';
 import {MergeSubtitledClipsCommand} from '../../model/commands/merge-subtitled-clips.command';
 import {AppStateService} from '../app/app-state.service';
-import type {SubtitleData} from '../../../../shared/types/subtitle.type';
+import type {
+  AssSubtitleData,
+  SrtSubtitleData,
+  SubtitleData,
+  SubtitlePart
+} from '../../../../shared/types/subtitle.type';
 import {DeleteSubtitledClipCommand} from '../../model/commands/delete-subtitled-clip.command';
 import {CreateSubtitledClipCommand} from '../../model/commands/create-subtitled-clip.command';
 import {GlobalSettingsStateService} from '../global-settings/global-settings-state.service';
@@ -96,29 +101,65 @@ export class ClipsStateService {
     this.commandHistoryStateService.execute(command);
   }
 
-  public splitSubtitledClip(clipId: string, onSplitCallback?: (originalText: string, newSubtitleId: string) => void): void {
+  public splitSubtitledClip(clipId: string, onSplitCallback?: (originalSubtitle: SubtitleData, newSubtitleId: string) => void): void {
     const originalSubtitleId = clipId.replace('subtitle-', '');
     const subtitles = this._subtitles();
     const subtitleIndex = subtitles.findIndex(c => c.id === originalSubtitleId);
-    if (subtitleIndex === -1) {
-      return;
-    }
+    if (subtitleIndex === -1) return;
 
     const originalSubtitle = subtitles[subtitleIndex];
+
+    const newId = crypto.randomUUID();
+    onSplitCallback?.(JSON.parse(JSON.stringify(originalSubtitle)), newId);
+
     const splitPoint = originalSubtitle.startTime + ((originalSubtitle.endTime - originalSubtitle.startTime) / 2);
     const newSubtitles = [...subtitles];
 
-    const secondPartSubtitle: SubtitleData = {
-      ...originalSubtitle,
-      id: crypto.randomUUID(),
-      startTime: splitPoint + NEW_GAP_DURATION
+    let secondPartSubtitle: SubtitleData;
+
+    if (originalSubtitle.type === 'ass') {
+      secondPartSubtitle = {
+        type: 'ass',
+        id: newId,
+        startTime: splitPoint + NEW_GAP_DURATION,
+        endTime: originalSubtitle.endTime,
+        parts: JSON.parse(JSON.stringify(originalSubtitle.parts))
+      };
+    } else { // 'srt'
+      secondPartSubtitle = {
+        type: 'srt',
+        id: newId,
+        startTime: splitPoint + NEW_GAP_DURATION,
+        endTime: originalSubtitle.endTime,
+        text: originalSubtitle.text
+      };
     }
 
-    onSplitCallback?.(originalSubtitle.text, secondPartSubtitle.id);
-
     originalSubtitle.endTime = splitPoint;
+
     newSubtitles.splice(subtitleIndex + 1, 0, secondPartSubtitle);
     this._subtitles.set(newSubtitles);
+  }
+
+  public unsplitClip(originalSubtitle: SubtitleData, secondSubtitleId: string): void {
+    const subtitles = this._subtitles();
+
+    // Find the index of the first part of the split.
+    const firstPartIndex = subtitles.findIndex(s => s.id === originalSubtitle.id);
+    if (firstPartIndex === -1) {
+      console.error("Cannot undo split: first part of the clip not found.");
+      return;
+    }
+
+    const newSubtitles = [...subtitles];
+
+    // Replace the modified first part with the saved original state.
+    newSubtitles[firstPartIndex] = originalSubtitle;
+
+    // Filter out the second part that was created during the split.
+    const restoredSubtitles = newSubtitles.filter(s => s.id !== secondSubtitleId);
+
+    this._subtitles.set(restoredSubtitles);
   }
 
   public deleteCurrentClip(): void {
@@ -172,10 +213,22 @@ export class ClipsStateService {
     // Perform the merge
     firstSubtitle.endTime = secondSubtitle.endTime;
 
-    if (newText !== undefined) {
-      firstSubtitle.text = newText;
-    } else {
-      firstSubtitle.text += `\n${secondSubtitle.text}`;
+    if (firstSubtitle.type === 'srt' && secondSubtitle.type === 'srt') {
+      if (newText !== undefined) {
+        firstSubtitle.text = newText;
+      } else {
+        firstSubtitle.text += `\n${secondSubtitle.text}`;
+      }
+    } else if (firstSubtitle.type === 'ass' && secondSubtitle.type === 'ass') {
+      const combinedParts = [...firstSubtitle.parts, ...secondSubtitle.parts];
+
+      const uniquePartsMap = new Map<string, SubtitlePart>();
+      for (const part of combinedParts) {
+        const key = `${part.style}::${part.text}`;
+        uniquePartsMap.set(key, part);
+      }
+
+      firstSubtitle.parts = Array.from(uniquePartsMap.values());
     }
 
     newSubtitles.splice(secondSubtitleIndex, 1);
@@ -194,25 +247,16 @@ export class ClipsStateService {
   }
 
   public unmergeClips(
-    firstClipId: string,
-    originalEndTime: number,
-    originalText: string,
+    originalFirstSubtitle: SubtitleData,
     secondSubtitleToRestore: SubtitleData
   ): void {
-    const firstSubtitleId = firstClipId.replace('subtitle-', '');
     const subtitles = this._subtitles();
-    const firstSubtitleIndex = subtitles.findIndex(c => c.id === firstSubtitleId);
-    if (firstSubtitleIndex === -1) {
-      return;
-    }
+    const firstSubtitleIndex = subtitles.findIndex(c => c.id === originalFirstSubtitle.id);
+    if (firstSubtitleIndex === -1) return;
 
     const newSubtitles = [...subtitles];
 
-    // Restore the first subtitle to its original state
-    newSubtitles[firstSubtitleIndex].endTime = originalEndTime;
-    newSubtitles[firstSubtitleIndex].text = originalText;
-
-    // Re-insert the second subtitle
+    newSubtitles[firstSubtitleIndex] = originalFirstSubtitle;
     newSubtitles.splice(firstSubtitleIndex + 1, 0, secondSubtitleToRestore);
 
     this._subtitles.set(newSubtitles);
@@ -340,7 +384,7 @@ export class ClipsStateService {
       newSubtitles[subtitleIndex] = {...originalSubtitle, text: newContent.text};
     } else if (originalSubtitle.type === 'ass' && newContent.parts) {
       const newText = newContent.parts.map(p => p.text).join('\n');
-      newSubtitles[subtitleIndex] = {...originalSubtitle, parts: newContent.parts, text: newText};
+      newSubtitles[subtitleIndex] = {...originalSubtitle, parts: newContent.parts};
     }
 
     this._subtitles.set(newSubtitles);
@@ -580,44 +624,64 @@ export class ClipsStateService {
 
     const generatedClips: VideoClip[] = [];
     let lastTime = 0;
+    let i = 0;
 
-    subtitles.forEach((subtitle, index) => {
-      if (subtitle.startTime > lastTime) {
+    while (i < subtitles.length) {
+      const firstSubtitleInGroup = subtitles[i];
+
+      if (firstSubtitleInGroup.startTime > lastTime) {
         generatedClips.push({
-          id: `gap-${index}`,
-          startTime: lastTime,
-          endTime: subtitle.startTime,
-          duration: subtitle.startTime - lastTime,
-          hasSubtitle: false,
-          text: '',
-          parts: []
+          id: `gap-${i}`, startTime: lastTime, endTime: firstSubtitleInGroup.startTime,
+          duration: firstSubtitleInGroup.startTime - lastTime, hasSubtitle: false,
+          parts: [], sourceSubtitles: []
         });
       }
 
-      // If it's an SRT subtitle, it won't have a 'parts' array, so create one for consistency.
-      const parts = subtitle.type === 'ass' ? subtitle.parts : [{text: subtitle.text, style: 'Default'}];
+      const container: VideoClip = {
+        id: `subtitle-${firstSubtitleInGroup.id}`, startTime: firstSubtitleInGroup.startTime,
+        endTime: firstSubtitleInGroup.endTime, duration: 0, hasSubtitle: true,
+        parts: [], sourceSubtitles: [firstSubtitleInGroup]
+      };
 
-      generatedClips.push({
-        id: `subtitle-${subtitle.id}`,
-        startTime: subtitle.startTime,
-        endTime: subtitle.endTime,
-        duration: subtitle.endTime - subtitle.startTime,
-        hasSubtitle: true,
-        text: subtitle.text,
-        parts: parts
-      });
-      lastTime = subtitle.endTime;
-    });
+      let j = i + 1;
+      while (j < subtitles.length) {
+        const nextSubtitle = subtitles[j];
+        if (nextSubtitle.startTime < container.endTime) {
+          container.sourceSubtitles.push(nextSubtitle);
+          container.endTime = Math.max(container.endTime, nextSubtitle.endTime);
+          j++;
+        } else {
+          break;
+        }
+      }
+
+      container.duration = container.endTime - container.startTime;
+
+      const firstSource = container.sourceSubtitles[0];
+
+      if (firstSource.type === 'ass') {
+        const allParts = container.sourceSubtitles.flatMap(s => (s as AssSubtitleData).parts);
+        const uniquePartsMap = new Map<string, SubtitlePart>();
+        for (const part of allParts) {
+          const key = `${part.style}::${part.text}`;
+          uniquePartsMap.set(key, part);
+        }
+        container.parts = Array.from(uniquePartsMap.values());
+
+      } else { // 'srt'
+        container.text = container.sourceSubtitles.map(s => (s as SrtSubtitleData).text).join('\n');
+        container.sourceSubtitles = [];
+      }
+
+      generatedClips.push(container);
+      lastTime = container.endTime;
+      i = j;
+    }
 
     if (lastTime < duration) {
       generatedClips.push({
-        id: `gap-final`,
-        startTime: lastTime,
-        endTime: duration,
-        duration: duration - lastTime,
-        hasSubtitle: false,
-        text: '',
-        parts: []
+        id: `gap-final`, startTime: lastTime, endTime: duration,
+        duration: duration - lastTime, hasSubtitle: false, parts: [], sourceSubtitles: []
       });
     }
     return generatedClips;

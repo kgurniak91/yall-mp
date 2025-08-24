@@ -1,4 +1,4 @@
-import {Component, computed, effect, inject, OnInit, signal} from '@angular/core';
+import {Component, computed, effect, inject, OnInit, signal, untracked} from '@angular/core';
 import {VideoControllerComponent} from './video-controller/video-controller.component';
 import {VideoStateService} from '../../state/video/video-state.service';
 import {TimelineEditorComponent} from './timeline-editor/timeline-editor.component';
@@ -30,6 +30,7 @@ import {ExportToAnkiDialogComponent} from './export-to-anki-dialog/export-to-ank
 import {ExportToAnkiDialogData} from '../../model/anki.types';
 import {CurrentProjectSettingsComponent} from './current-project-settings/current-project-settings.component';
 import {SubtitlesOverlayComponent} from './subtitles-overlay/subtitles-overlay.component';
+import {ParsedSubtitlesData} from '../../../electron-api';
 
 @Component({
   selector: 'app-project-details',
@@ -113,7 +114,13 @@ export class ProjectDetailsComponent implements OnInit {
   protected readonly projectSettingsStateService = inject(ProjectSettingsStateService);
   protected readonly globalSettingsStateService = inject(GlobalSettingsStateService);
   protected readonly HiddenSubtitleStyle = HiddenSubtitleStyle;
-  protected readonly project = signal<Project | null>(null);
+  protected readonly project = computed(() => {
+    const projectId = this.route.snapshot.paramMap.get('id');
+    if (!projectId) {
+      return null;
+    }
+    return this.appStateService.projects().find(p => p.id === projectId) ?? null;
+  });
   protected readonly settingsPresets = signal<SettingsPreset[]>(BuiltInSettingsPresets);
   protected readonly selectedSettingsPreset = signal<SettingsPreset | null>(null);
   private wasPlayingBeforeSettingsOpened = false;
@@ -133,7 +140,7 @@ export class ProjectDetailsComponent implements OnInit {
 
     effect(() => {
       const currentSettings = this.projectSettingsStateService.settings();
-      const currentProject = this.project();
+      const currentProject = untracked(this.project);
       if (currentProject) {
         this.appStateService.updateProject(currentProject.id, {settings: currentSettings});
       }
@@ -141,7 +148,7 @@ export class ProjectDetailsComponent implements OnInit {
 
     effect(() => {
       const duration = this.videoStateService.duration();
-      const project = this.project();
+      const project = untracked(this.project);
 
       if (project && duration > 0 && project.duration !== duration) {
         this.appStateService.updateProject(project.id, {duration: duration});
@@ -185,7 +192,6 @@ export class ProjectDetailsComponent implements OnInit {
       return;
     }
 
-    this.project.set(foundProject);
     this.projectSettingsStateService.setSettings(foundProject.settings);
     this.appStateService.setCurrentProject(projectId);
     this.clipsStateService.setProjectId(projectId);
@@ -193,23 +199,33 @@ export class ProjectDetailsComponent implements OnInit {
     this.videoStateService.setMediaPath(foundProject.mediaPath);
 
     const hasExistingSubtitles = foundProject?.subtitles?.length > 0;
-    let subtitles: SubtitleData[] = [];
+    let subtitles: SubtitleData[];
+    let rawAssContent: string | undefined = foundProject.rawAssContent;
+    let styles: any = foundProject.styles;
 
     if (hasExistingSubtitles) {
       subtitles = foundProject.subtitles;
     } else {
       try {
+        let subtitleResult: ParsedSubtitlesData;
+
         switch (foundProject.subtitleSelection.type) {
           case 'external':
-            subtitles = await window.electronAPI.parseSubtitleFile(foundProject.subtitleSelection.filePath);
+            subtitleResult = await window.electronAPI.parseSubtitleFile(foundProject.subtitleSelection.filePath);
             break;
           case 'embedded':
-            subtitles = await window.electronAPI.extractSubtitleTrack(foundProject.mediaPath, foundProject.subtitleSelection.trackIndex);
+            subtitleResult = await window.electronAPI.extractSubtitleTrack(foundProject.mediaPath, foundProject.subtitleSelection.trackIndex);
             break;
           case 'none':
-            subtitles = [];
+            subtitleResult = {
+              subtitles: []
+            };
             break;
         }
+
+        subtitles = subtitleResult.subtitles;
+        rawAssContent = subtitleResult.rawAssContent;
+        styles = subtitleResult.styles;
       } catch (e: any) {
         this.toastService.error(`Failed to load subtitles: ${e.message}`);
         subtitles = [];
@@ -217,6 +233,12 @@ export class ProjectDetailsComponent implements OnInit {
     }
 
     this.clipsStateService.setSubtitles(subtitles);
+
+    // Save new ASS content to project state
+    if ((rawAssContent && !foundProject.rawAssContent) || (styles && !foundProject.styles)) {
+      this.appStateService.updateProject(projectId, {rawAssContent, styles});
+    }
+
     await window.electronAPI.mpvCreateViewport(foundProject.mediaPath, foundProject.settings.selectedAudioTrackIndex);
   }
 
@@ -347,12 +369,12 @@ export class ProjectDetailsComponent implements OnInit {
       if (!result) return; // Closed without saving or no changes were made
 
       const oldContent: ClipContent = {
-        text: originalSubtitle.text,
+        text: originalSubtitle.type === 'srt' ? originalSubtitle.text : undefined,
         parts: originalSubtitle.type === 'ass' ? originalSubtitle.parts : undefined
       };
 
       const newContent: ClipContent = {
-        text: result.text !== undefined ? result.text : result.parts!.map(p => p.text).join('\n'),
+        text: result.text,
         parts: result.parts
       };
 

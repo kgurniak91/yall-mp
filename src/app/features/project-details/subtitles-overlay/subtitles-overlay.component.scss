@@ -1,16 +1,18 @@
 :host {
   position: absolute;
-  bottom: 3%;
+  top: 0;
   left: 0;
-  right: 0;
+  width: 100%;
+  height: 100%;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-end;
   pointer-events: none;
 }
 
-.subtitle-text {
-  max-width: 90%;
+.srt-text {
+  margin-bottom: 0.25rem;
+  white-space: pre-wrap;
   padding: 0.5rem 1.5rem;
   background-color: rgba(0, 0, 0, 0.5);
   border-radius: 8px;
@@ -19,12 +21,20 @@
   text-align: center;
   line-height: 1.4;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-  user-select: text; // Allows user to select text
-  pointer-events: all; // Makes the subtitle text itself clickable and selectable
+  user-select: text;
   transition: filter 0.2s ease-in-out;
+  pointer-events: all;
+  cursor: text;
+}
 
-  &.blurred {
-    filter: blur(8px);
-    background-color: rgba(0, 0, 0, 0.3);
-  }
+.ass-part {
+  user-select: text;
+  pointer-events: all;
+  cursor: text;
+  white-space: pre-wrap;
+}
+
+.blurred {
+  filter: blur(0.75rem);
+  background-color: rgba(0, 0, 0, 0.3);
 }

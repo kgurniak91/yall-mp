@@ -1,7 +1,10 @@
 <div class="content-wrapper">
   <div class="video-area" (dblclick)="onVideoAreaDoubleClick()">
     <app-video-controller (ready)="onPlayerReady()"/>
-    <app-subtitles-overlay [currentClip]="clipsStateService.currentClip()"/>
+    @if (project(); as project) {
+      <app-subtitles-overlay [currentClip]="clipsStateService.currentClip()"
+                             [styles]="project.styles"/>
+    }
   </div>
 
   <div class="toolbar">

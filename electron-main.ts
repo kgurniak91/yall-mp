@@ -10,7 +10,7 @@ import ffmpegStatic from 'ffmpeg-static';
 import {v4 as uuidv4} from 'uuid';
 import {ChildProcess, spawn} from 'child_process';
 import {MpvManager} from './mpv-manager';
-import {MpvClipRequest} from './src/electron-api';
+import {MpvClipRequest, ParsedSubtitlesData} from './src/electron-api';
 import ffprobeStatic from 'ffprobe-static';
 import languages from '@cospired/i18n-iso-languages';
 import {compile, Dialogue} from 'ass-compiler';
@@ -361,7 +361,7 @@ async function handleFileOpen(options: Electron.OpenDialogOptions) {
   return [];
 }
 
-async function handleSubtitleParse(filePath: string): Promise<SubtitleData[]> {
+async function handleSubtitleParse(filePath: string): Promise<ParsedSubtitlesData> {
   try {
     const content = await fs.readFile(filePath, 'utf-8');
     const extension = path.extname(filePath).toLowerCase();
@@ -369,7 +369,12 @@ async function handleSubtitleParse(filePath: string): Promise<SubtitleData[]> {
     if (extension === '.ass' || extension === '.ssa') {
       const compiled = compile(content, {});
       const timeline = buildSubtitleTimeline(compiled.dialogues);
-      return mergeIdenticalConsecutiveSubtitles(timeline);
+      const mergedTimeline = mergeIdenticalConsecutiveSubtitles(timeline);
+      return {
+        subtitles: mergedTimeline,
+        rawAssContent: content,
+        styles: compiled.styles
+      };
     } else {
       const response = new Response(content);
       const fileFormat = extension.replace('.', '');
@@ -384,11 +389,15 @@ async function handleSubtitleParse(filePath: string): Promise<SubtitleData[]> {
         endTime: cue.endTime,
         text: cue.text,
       }));
-      return preprocessSubtitles(subtitles);
+      return {
+        subtitles: preprocessSubtitles(subtitles)
+      };
     }
   } catch (error) {
     console.error(`Error reading or parsing subtitle file at ${filePath}:`, error);
-    return [];
+    return {
+      subtitles: []
+    };
   }
 }
 
@@ -464,7 +473,11 @@ async function handleAnkiExport(exportRequest: AnkiExportRequest) {
           break;
 
         case 'text':
-          finalFields[mapping.destination] = subtitleData.text;
+          if (subtitleData.type === 'srt') {
+            finalFields[mapping.destination] = subtitleData.text;
+          } else { // 'ass'
+            finalFields[mapping.destination] = subtitleData.parts.map(p => p.text).join('\n');
+          }
           break;
 
         case 'audio':
@@ -678,7 +691,7 @@ async function handleGetMediaMetadata(filePath: string) {
   }
 }
 
-async function handleExtractSubtitleTrack(mediaPath: string, trackIndex: number): Promise<SubtitleData[]> {
+async function handleExtractSubtitleTrack(mediaPath: string, trackIndex: number): Promise<ParsedSubtitlesData> {
   return new Promise(async (resolve, reject) => {
     const probeResult = await runFfprobe(['-v', 'quiet', '-print_format', 'json', '-show_streams', mediaPath]);
     const subtitleStream = probeResult.streams.find((s: any) => s.index === trackIndex);
@@ -708,7 +721,11 @@ async function handleExtractSubtitleTrack(mediaPath: string, trackIndex: number)
             const compiled = compile(subtitleContent, {});
             const timeline = buildSubtitleTimeline(compiled.dialogues);
             const mergedTimeline = mergeIdenticalConsecutiveSubtitles(timeline);
-            resolve(mergedTimeline);
+            resolve({
+              subtitles: mergedTimeline,
+              rawAssContent: subtitleContent,
+              styles: compiled.styles
+            });
           } else {
             const response = new Response(subtitleContent);
             const result: ParsedCaptionsResult = await parseResponse(response, {type: 'srt'});
@@ -722,7 +739,9 @@ async function handleExtractSubtitleTrack(mediaPath: string, trackIndex: number)
               endTime: cue.endTime,
               text: cue.text
             }));
-            resolve(preprocessSubtitles(subtitles));
+            resolve({
+              subtitles: preprocessSubtitles(subtitles)
+            });
           }
         } catch (e) {
           reject(new Error(`Failed to parse extracted subtitle stream: ${e}`));
@@ -823,19 +842,17 @@ function buildSubtitleTimeline(dialogues: Dialogue[]): AssSubtitleData[] {
 
       const parts = Array.from(uniqueParts.values());
       if (parts.length > 0) {
-        const combinedText = parts.map(p => p.text).join('\n');
-
         finalSubtitles.push({
           type: 'ass',
           id: uuidv4(),
           startTime,
           endTime,
-          text: combinedText,
-          parts,
+          parts
         });
       }
     }
   }
+
   return finalSubtitles;
 }
 

@@ -7,11 +7,11 @@ interface BaseSubtitleData {
   id: string;
   startTime: number;
   endTime: number;
-  text: string;
 }
 
 export interface SrtSubtitleData extends BaseSubtitleData {
   type: 'srt';
+  text: string;
 }
 
 export interface AssSubtitleData extends BaseSubtitleData {

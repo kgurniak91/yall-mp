@@ -22,6 +22,8 @@ export interface Project {
   subtitles: SubtitleData[];
   audioTracks: MediaTrack[];
   subtitleTracks: MediaTrack[];
+  rawAssContent?: string;
+  styles?: any;
 }
 
 export interface AppData {

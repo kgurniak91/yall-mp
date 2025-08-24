@@ -9,6 +9,12 @@ export interface MpvClipRequest {
   playbackRate: number;
 }
 
+export interface ParsedSubtitlesData {
+  subtitles: SubtitleData[],
+  rawAssContent?: string,
+  styles?: any
+}
+
 export interface IElectronAPI {
   // --- Window control
   windowMinimize: () => void;
@@ -21,9 +27,9 @@ export interface IElectronAPI {
   onWindowFullScreenStateChanged: (callback: (isFullScreen: boolean) => void) => void;
   // --- Files
   openFileDialog: (options: any) => Promise<string[]>;
-  parseSubtitleFile: (filePath: string) => Promise<SubtitleData[]>;
+  parseSubtitleFile: (filePath: string) => Promise<ParsedSubtitlesData>;
   getMediaMetadata: (filePath: string) => Promise<MediaMetadata>;
-  extractSubtitleTrack: (mediaPath: string, trackIndex: number) => Promise<SubtitleData[]>;
+  extractSubtitleTrack: (mediaPath: string, trackIndex: number) => Promise<ParsedSubtitlesData>;
   getPathForFile: (file: File) => string;
   // --- Anki
   checkAnkiConnection: () => Promise<any>;
@@ -36,7 +42,7 @@ export interface IElectronAPI {
   // --- MPV
   mpvCreateViewport: (mediaPath: string, audioTrackIndex: number | null) => Promise<void>;
   mpvHideVideoDuringResize: () => Promise<void>;
-  mpvFinishVideoResize: (rect: {x: number, y: number, width: number, height: number}) => Promise<void>;
+  mpvFinishVideoResize: (rect: { x: number, y: number, width: number, height: number }) => Promise<void>;
   mpvCommand: (commandArray: any[]) => Promise<void>;
   mpvPlayClip: (request: MpvClipRequest) => Promise<void>;
   mpvGetProperty: (property: string) => Promise<any>;

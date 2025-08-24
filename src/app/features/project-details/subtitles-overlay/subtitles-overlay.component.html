@@ -1,8 +1,19 @@
 @if (currentClip(); as clip) {
   @if (clip.hasSubtitle && !shouldBeHidden()) {
-    <div class="subtitle-text" [class.blurred]="shouldBeBlurred()" (mouseup)="onWordSelect()" (click)="onSubtitleClick($event)">
-      @for (part of clip.parts; track $index) {
-        <span>{{ part.text }}</span>
+    <div [class.blurred]="shouldBeBlurred()"
+         (mouseup)="onWordSelect()"
+         (click)="onSubtitleClick($event)"
+         (dblclick)="$event.stopPropagation()">
+      @if (clip.parts.length > 0 && !clip.text) {
+        <div class="ass-part">
+          @for (part of clip.parts; track $index) {
+            <span [style]="getPartStyle(part.style)">{{ part.text }}</span>
+          }
+        </div>
+      } @else {
+        <div class="srt-text">
+          <span>{{ clip.text }}</span>
+        </div>
       }
     </div>
   }
