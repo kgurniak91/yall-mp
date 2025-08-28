@@ -47,8 +47,8 @@ export class SubtitlesOverlayComponent implements OnDestroy {
     return this.wrapWordsInSpans(text);
   });
 
+  protected readonly videoStateService = inject(VideoStateService);
   private readonly subtitleContainer = viewChild.required<ElementRef<HTMLDivElement>>('subtitleContainer');
-  private readonly videoStateService = inject(VideoStateService);
   private readonly globalSettingsStateService = inject(GlobalSettingsStateService);
   private readonly subtitlesHighlighterService = inject(SubtitlesHighlighterService);
   private assInstance: ASS | null = null;
@@ -101,18 +101,6 @@ export class SubtitlesOverlayComponent implements OnDestroy {
         onCleanup(() => {
           container.removeEventListener('mouseup', handleInteraction);
         });
-      }
-    });
-
-    effect(() => {
-      if (!this.rawAssContent() || !this.assInstance) {
-        return;
-      }
-
-      if (this.shouldBeHidden()) {
-        this.assInstance.hide();
-      } else {
-        this.assInstance.show();
       }
     });
 

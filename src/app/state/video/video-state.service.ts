@@ -21,6 +21,7 @@ export class VideoStateService implements OnDestroy {
   private readonly _ankiExportRequest = signal<number | null>(null);
   private readonly _forceResizeRequest = signal<number | null>(null);
   private readonly _isPaused = signal(true);
+  private readonly _isResizing = signal(false);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly appStateService = inject(AppStateService);
@@ -43,6 +44,7 @@ export class VideoStateService implements OnDestroy {
   public readonly ankiExportRequest = this._ankiExportRequest.asReadonly();
   public readonly forceResizeRequest = this._forceResizeRequest.asReadonly();
   public readonly isPaused = this._isPaused.asReadonly();
+  public readonly isResizing = this._isResizing.asReadonly();
 
   constructor() {
     this.cleanupMpvListener = window.electronAPI.onMpvEvent((status) => {
@@ -111,6 +113,10 @@ export class VideoStateService implements OnDestroy {
       return;
     }
     this._duration.set(duration);
+  }
+
+  public setIsResizing(isResizing: boolean): void {
+    this._isResizing.set(isResizing);
   }
 
   public toggleSubtitlesVisible(): void {

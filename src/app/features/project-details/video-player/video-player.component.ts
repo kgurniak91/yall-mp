@@ -19,9 +19,8 @@ import {VideoStateService} from '../../../state/video/video-state.service';
 })
 export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
   public readonly ready = output<void>();
-  protected readonly isResizing = signal(false);
   public readonly mpvPlaceholderRef = viewChild.required<ElementRef<HTMLDivElement>>('mpvPlaceholder');
-  private readonly videoStateService = inject(VideoStateService);
+  protected readonly videoStateService = inject(VideoStateService);
   private resizeObserver: ResizeObserver | undefined;
   private isReadyEmitted = false;
   private resizeDebounceTimer: any;
@@ -51,8 +50,8 @@ export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
   }
 
   private handleResize(): void {
-    if (!this.isResizing()) {
-      this.isResizing.set(true);
+    if (!this.videoStateService.isResizing()) {
+      this.videoStateService.setIsResizing(true);
       window.electronAPI.mpvHideVideoDuringResize();
     }
 
@@ -79,7 +78,7 @@ export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
           height: rect.height,
         });
 
-        this.isResizing.set(false);
+        this.videoStateService.setIsResizing(false);
       }
     }, 50);
   }

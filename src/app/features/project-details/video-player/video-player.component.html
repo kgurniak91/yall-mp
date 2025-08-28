@@ -1,5 +1,5 @@
 <div #mpvPlaceholder id="mpv-placeholder">
-  @if (isResizing()) {
+  @if (videoStateService.isResizing()) {
     <div class="resizing-overlay">
       <span>Resizing...</span>
     </div>

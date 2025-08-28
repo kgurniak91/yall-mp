@@ -1,11 +1,12 @@
 <div #subtitleContainer
      class="subtitle-render-container"
-     [class.blurred]="shouldBeBlurred() && currentClip()?.hasSubtitle"
+     [class.subtitles-blurred]="shouldBeBlurred() && currentClip()?.hasSubtitle"
+     [class.subtitles-hidden]="shouldBeHidden() || videoStateService.isResizing()"
      (dblclick)="onDoubleClick($event)">
 
   @if (!rawAssContent()) {
     @if (currentClip(); as clip) {
-      @if (clip.hasSubtitle && !shouldBeHidden()) {
+      @if (clip.hasSubtitle) {
         <div class="srt-container" [innerHTML]="wrappedSrtText()"></div>
       }
     }
