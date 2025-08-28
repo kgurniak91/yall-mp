@@ -5,14 +5,13 @@ import {TimelineEditorComponent} from './timeline-editor/timeline-editor.compone
 import {Button} from 'primeng/button';
 import {Tooltip} from 'primeng/tooltip';
 import {Drawer} from 'primeng/drawer';
-import {KeyboardShortcutsService} from './keyboard-shortcuts/keyboard-shortcuts.service';
+import {KeyboardShortcutsService} from './services/keyboard-shortcuts/keyboard-shortcuts.service';
 import {SeekDirection} from '../../model/video.types';
 import {ClipsStateService} from '../../state/clips/clips-state.service';
 import {Popover} from 'primeng/popover';
 import {ActivatedRoute, Router} from '@angular/router';
 import {ConfirmationService} from 'primeng/api';
 import {AppStateService} from '../../state/app/app-state.service';
-import {Project} from '../../model/project.types';
 import {ProjectSettingsStateService} from '../../state/project-settings/project-settings-state.service';
 import {BuiltInSettingsPresets, HiddenSubtitleStyle, ProjectSettings, SettingsPreset} from '../../model/settings.types';
 import {DialogService, DynamicDialogRef} from 'primeng/dynamicdialog';
@@ -31,6 +30,8 @@ import {ExportToAnkiDialogData} from '../../model/anki.types';
 import {CurrentProjectSettingsComponent} from './current-project-settings/current-project-settings.component';
 import {SubtitlesOverlayComponent} from './subtitles-overlay/subtitles-overlay.component';
 import {ParsedSubtitlesData} from '../../../electron-api';
+import {SubtitlesHighlighterService} from './services/subtitles-highlighter/subtitles-highlighter.service';
+import {SubtitlesHighlighterComponent} from './subtitles-highlighter/subtitles-highlighter.component';
 
 @Component({
   selector: 'app-project-details',
@@ -44,12 +45,14 @@ import {ParsedSubtitlesData} from '../../../electron-api';
     DropdownModule,
     FormsModule,
     CurrentProjectSettingsComponent,
-    SubtitlesOverlayComponent
+    SubtitlesOverlayComponent,
+    SubtitlesHighlighterComponent
   ],
   templateUrl: './project-details.component.html',
   styleUrl: './project-details.component.scss',
   providers: [
     KeyboardShortcutsService,
+    SubtitlesHighlighterService,
     ClipsStateService,
     CommandHistoryStateService,
     ProjectSettingsStateService,
@@ -137,6 +140,7 @@ export class ProjectDetailsComponent implements OnInit {
 
   constructor() {
     inject(KeyboardShortcutsService); // start listening
+    inject(SubtitlesHighlighterService); // start listening
 
     effect(() => {
       const currentSettings = this.projectSettingsStateService.settings();

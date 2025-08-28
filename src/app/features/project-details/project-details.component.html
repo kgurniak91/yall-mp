@@ -1,9 +1,10 @@
 <div class="content-wrapper">
   <div class="video-area" (dblclick)="onVideoAreaDoubleClick()">
-    <app-video-controller (ready)="onPlayerReady()"/>
+    <app-video-controller #videoController (ready)="onPlayerReady()"/>
     @if (project(); as project) {
       <app-subtitles-overlay [currentClip]="clipsStateService.currentClip()"
-                             [styles]="project.styles"/>
+                             [rawAssContent]="project.rawAssContent"
+                             [videoContainerElement]="videoController.videoContainerElement()"/>
     }
   </div>
 
@@ -155,3 +156,5 @@
                                   (selectedSettingsPresetChange)="onSettingsPresetChange($event)"/>
   </p-drawer>
 </div>
+
+<app-subtitles-highlighter/>

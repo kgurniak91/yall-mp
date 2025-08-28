@@ -1,9 +1,9 @@
 import {inject, Injectable, OnDestroy} from '@angular/core';
-import {VideoStateService} from '../../../state/video/video-state.service';
-import {KeyboardAction, SeekDirection} from '../../../model/video.types';
-import {ClipsStateService} from '../../../state/clips/clips-state.service';
-import {CommandHistoryStateService} from '../../../state/command-history/command-history-state.service';
-import {GlobalSettingsStateService} from '../../../state/global-settings/global-settings-state.service';
+import {VideoStateService} from '../../../../state/video/video-state.service';
+import {KeyboardAction, SeekDirection} from '../../../../model/video.types';
+import {ClipsStateService} from '../../../../state/clips/clips-state.service';
+import {CommandHistoryStateService} from '../../../../state/command-history/command-history-state.service';
+import {GlobalSettingsStateService} from '../../../../state/global-settings/global-settings-state.service';
 
 @Injectable()
 export class KeyboardShortcutsService implements OnDestroy {

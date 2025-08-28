@@ -20,7 +20,7 @@ import {VideoStateService} from '../../../state/video/video-state.service';
 export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
   public readonly ready = output<void>();
   protected readonly isResizing = signal(false);
-  private readonly mpvPlaceholderRef = viewChild.required<ElementRef<HTMLDivElement>>('mpvPlaceholder');
+  public readonly mpvPlaceholderRef = viewChild.required<ElementRef<HTMLDivElement>>('mpvPlaceholder');
   private readonly videoStateService = inject(VideoStateService);
   private resizeObserver: ResizeObserver | undefined;
   private isReadyEmitted = false;

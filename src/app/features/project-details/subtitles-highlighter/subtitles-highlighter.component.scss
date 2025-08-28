@@ -1,0 +1,14 @@
+:host {
+  // This component itself should not affect layout.
+  display: contents;
+}
+
+.highlighter-box {
+  position: fixed;
+  z-index: 9999999;
+  background-color: rgba(255, 65, 54, 0.2);
+  border: 1px solid #ff4136;
+  border-radius: 3px;
+  pointer-events: none;
+  cursor: pointer;
+}

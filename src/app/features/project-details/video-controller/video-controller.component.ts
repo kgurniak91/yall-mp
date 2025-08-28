@@ -1,4 +1,4 @@
-import {Component, effect, inject, OnDestroy, output, ViewEncapsulation} from '@angular/core';
+import {Component, computed, effect, inject, OnDestroy, output, viewChild, ViewEncapsulation} from '@angular/core';
 import {VideoStateService} from '../../../state/video/video-state.service';
 import {PlayerState, SeekType, VideoClip} from '../../../model/video.types';
 import {ClipsStateService} from '../../../state/clips/clips-state.service';
@@ -18,10 +18,12 @@ import {MpvClipRequest} from '../../../../electron-api';
 })
 export class VideoControllerComponent implements OnDestroy {
   public readonly ready = output<void>();
+  public readonly videoContainerElement = computed(() => this.videoPlayer().mpvPlaceholderRef()?.nativeElement);
   protected readonly clipsStateService = inject(ClipsStateService);
   protected readonly PlayerState = PlayerState;
   private readonly videoStateService = inject(VideoStateService);
   private readonly projectSettingsStateService = inject(ProjectSettingsStateService);
+  private readonly videoPlayer = viewChild.required(VideoPlayerComponent);
 
   ngOnDestroy() {
     window.electronAPI.mpvCommand(['stop']);

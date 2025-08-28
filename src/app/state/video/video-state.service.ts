@@ -11,6 +11,7 @@ export class VideoStateService implements OnDestroy {
   private readonly _mediaPath = signal<string | null>(null);
   private readonly _subtitlesVisible = signal(true);
   private readonly _seekRequest = signal<{ time: number; type: SeekType } | null>(null);
+  private readonly _seekCompleted = signal<number | null>(null);
   private readonly _playPauseRequest = signal<number | null>(null);
   private readonly _repeatRequest = signal<number | null>(null);
   private readonly _forceContinueRequest = signal<number | null>(null);
@@ -32,6 +33,7 @@ export class VideoStateService implements OnDestroy {
   public readonly duration: Signal<number> = this._duration.asReadonly();
   public readonly subtitlesVisible: Signal<boolean> = this._subtitlesVisible.asReadonly();
   public readonly seekRequest = this._seekRequest.asReadonly();
+  public readonly seekCompleted = this._seekCompleted.asReadonly();
   public readonly playPauseRequest = this._playPauseRequest.asReadonly();
   public readonly repeatRequest = this._repeatRequest.asReadonly();
   public readonly forceContinueRequest = this._forceContinueRequest.asReadonly();
@@ -158,7 +160,16 @@ export class VideoStateService implements OnDestroy {
   }
 
   public clearSeekRequest(): void {
-    this._seekRequest.set(null);
+    if (this._seekRequest() !== null) {
+      this._seekRequest.set(null);
+      this._seekCompleted.set(Date.now());
+    }
+  }
+
+  public clearSeekCompleted(): void {
+    if (this._seekCompleted() !== null) {
+      this._seekCompleted.set(null);
+    }
   }
 
   public clearRepeatRequest(): void {
