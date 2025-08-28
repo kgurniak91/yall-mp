@@ -224,6 +224,7 @@ app.whenReady().then(() => {
       show: false,
       skipTaskbar: true, // Don't show a separate icon on the taskbar
       transparent: true,
+      resizable: false
     });
 
     // Stacking order setup
