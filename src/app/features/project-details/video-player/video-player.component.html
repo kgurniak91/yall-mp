@@ -1,7 +1,7 @@
 <div #mpvPlaceholder id="mpv-placeholder">
   @if (videoStateService.isResizing()) {
     <div class="resizing-overlay">
-      <span>Resizing...</span>
+      <app-spinner/>
     </div>
   }
 </div>

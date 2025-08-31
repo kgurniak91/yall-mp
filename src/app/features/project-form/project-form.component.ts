@@ -14,8 +14,8 @@ import {Select} from 'primeng/select';
 import {FormsModule} from '@angular/forms';
 import {MediaTrack} from '../../../../shared/types/media.type';
 import {finalize, forkJoin, from, timer} from 'rxjs';
-import {ProgressSpinner} from 'primeng/progressspinner';
 import {SUBTITLE_OPTIONS, SubtitleOptionType} from './project-form.type';
+import {SpinnerComponent} from '../../shared/components/spinner/spinner.component';
 
 const EDIT_CONFIRMATION_MESSAGE = `
 Are you sure you want to edit this project?
@@ -36,7 +36,7 @@ This action cannot be undone.
     FileDropZoneComponent,
     Select,
     FormsModule,
-    ProgressSpinner
+    SpinnerComponent
   ],
   templateUrl: './project-form.component.html',
   styleUrl: './project-form.component.scss'

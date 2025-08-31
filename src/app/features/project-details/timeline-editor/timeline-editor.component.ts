@@ -6,7 +6,8 @@ import {
   HostListener,
   inject,
   OnDestroy,
-  signal, untracked,
+  signal,
+  untracked,
   viewChild
 } from '@angular/core';
 import WaveSurfer from 'wavesurfer.js';
@@ -14,7 +15,7 @@ import RegionsPlugin, {Region} from 'wavesurfer.js/dist/plugins/regions.js';
 import {VideoStateService} from '../../../state/video/video-state.service';
 import {VideoClip} from '../../../model/video.types';
 import {ClipsStateService} from '../../../state/clips/clips-state.service';
-import {ProgressSpinner} from 'primeng/progressspinner';
+import {SpinnerComponent} from '../../../shared/components/spinner/spinner.component';
 
 const INITIAL_ZOOM = 100;
 const MIN_ZOOM = 20;
@@ -24,7 +25,7 @@ const ZOOM_FACTOR = 1.2;
 @Component({
   selector: 'app-timeline-editor',
   imports: [
-    ProgressSpinner
+    SpinnerComponent
   ],
   templateUrl: './timeline-editor.component.html',
   styleUrl: './timeline-editor.component.scss'

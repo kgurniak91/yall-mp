@@ -1,19 +1,12 @@
-import {
-  AfterViewInit,
-  Component,
-  effect,
-  ElementRef,
-  inject,
-  OnDestroy,
-  output,
-  signal,
-  viewChild
-} from '@angular/core';
+import {AfterViewInit, Component, effect, ElementRef, inject, OnDestroy, output, viewChild} from '@angular/core';
 import {VideoStateService} from '../../../state/video/video-state.service';
+import {SpinnerComponent} from '../../../shared/components/spinner/spinner.component';
 
 @Component({
   selector: 'app-video-player',
-  imports: [],
+  imports: [
+    SpinnerComponent
+  ],
   templateUrl: './video-player.component.html',
   styleUrl: './video-player.component.scss'
 })

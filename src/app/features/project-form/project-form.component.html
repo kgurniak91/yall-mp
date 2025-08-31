@@ -20,7 +20,7 @@
       <div class="panel-body">
         @if (isProcessingMedia()) {
           <div class="flex justify-content-center align-items-center h-full">
-            <p-progress-spinner ariaLabel="loading"/>
+            <app-spinner/>
           </div>
         } @else if (mediaFilePath()) {
           <div class="radio-group">

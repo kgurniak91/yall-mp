@@ -12,22 +12,26 @@
       <div class="filename">
         <i class="fa-solid fa-file-video"></i>
         <span [pTooltip]="mediaFileName() || ''" tooltipPosition="bottom">
-            {{ mediaFileName() || 'Loading media...' }}
-          </span>
+          {{ mediaFileName() || 'Loading media...' }}
+        </span>
       </div>
 
-      <div class="filename">
+      <div class="filename border-right-none">
         <i class="fa-solid fa-file-lines"></i>
         <span [pTooltip]="subtitleFileName() || ''" tooltipPosition="bottom">
-            {{ subtitleFileName() || 'Loading subtitles...' }}
-          </span>
+          {{ subtitleFileName() || 'Loading subtitles...' }}
+        </span>
       </div>
     } @else {
-      <div class="filename">
+      <div class="filename border-right-none">
         <i class="fa-solid fa-file-video"></i>
         <span><b>Y</b>et <b>A</b>nother <b>L</b>anguage <b>L</b>earning <b>M</b>edia <b>P</b>layer</span>
       </div>
     }
+  </div>
+
+  <div class="drag-handle">
+    <i class="fa-solid fa-up-down-left-right"></i>
   </div>
 
   <div class="window-controls-wrapper">
