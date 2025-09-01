@@ -25,6 +25,7 @@ export interface IElectronAPI {
   windowClose: () => void;
   onWindowMaximizedStateChanged: (callback: (isMaximized: boolean) => void) => void;
   onWindowFullScreenStateChanged: (callback: (isFullScreen: boolean) => void) => void;
+  focusApp: () => void;
   // --- Files
   openFileDialog: (options: any) => Promise<string[]>;
   parseSubtitleFile: (filePath: string) => Promise<ParsedSubtitlesData>;

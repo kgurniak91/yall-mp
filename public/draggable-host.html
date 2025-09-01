@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Y'ALL Media Player</title>
+  <style>
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background-color: black;
+      -webkit-app-region: drag;
+    }
+
+    .skeleton-wrapper {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .skeleton-header {
+      height: 38px;
+      background-color: #1e1e1e;
+      position: relative;
+
+      .icon-wrapper {
+        position: absolute;
+        right: 138px;
+        top: 3px;
+      }
+    }
+
+    .skeleton-video {
+      background-color: black;
+      flex: 1;
+    }
+
+    .skeleton-controls {
+      height: 70px;
+      background-color: #2A2A2A;
+    }
+
+    .skeleton-timeline {
+      height: 125px;
+      display: flex;
+
+      .gap:not(:last-of-type),
+      .subtitle:not(:last-of-type) {
+        border-right: 5px solid #1e1e1e;
+      }
+
+      .gap {
+        flex: 1;
+        background-color: #252525;
+      }
+
+      .subtitle {
+        flex: 2;
+        background-color: #4B3918;
+      }
+    }
+
+    .skeleton-bottom-horizontal-scrollbar {
+      height: 15px;
+      background-color: #FCFCFC;
+    }
+  </style>
+</head>
+<body>
+<div class="skeleton-wrapper">
+  <div class="skeleton-header">
+    <div class="icon-wrapper">
+      <svg width="32px" height="32px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+        <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+        <g id="SVGRepo_iconCarrier">
+          <path d="M12 5L12 19" stroke="#ceced1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M9 17L12 20L15 17" stroke="#ceced1" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round"></path>
+          <path d="M15 7L12 4L9 7" stroke="#ceced1" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round"></path>
+          <path d="M5 12L19 12" stroke="#ceced1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M17 15L20 12L17 9" stroke="#ceced1" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round"></path>
+          <path d="M7 9L4 12L7 15" stroke="#ceced1" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round"></path>
+        </g>
+      </svg>
+    </div>
+  </div>
+  <div class="skeleton-video"></div>
+  <div class="skeleton-controls"></div>
+  <div class="skeleton-timeline">
+    <div class="gap"></div>
+    <div class="subtitle"></div>
+    <div class="gap"></div>
+    <div class="subtitle"></div>
+    <div class="gap"></div>
+    <div class="subtitle"></div>
+    <div class="gap"></div>
+    <div class="subtitle"></div>
+    <div class="gap"></div>
+    <div class="subtitle"></div>
+    <div class="gap"></div>
+    <div class="subtitle"></div>
+  </div>
+  <div class="skeleton-bottom-horizontal-scrollbar"></div>
+</div>
+</body>
+</html>

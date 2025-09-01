@@ -162,20 +162,18 @@ export class ProjectDetailsComponent implements OnInit {
     effect(() => {
       const clips = this.clipsStateService.clips();
       // Wait until UI and MPV are ready, and clips have been generated from the video's duration.
-      if (this.isUiReady() && this.isMpvReady() && clips.length > 0) {
+      if (this.isUiReady() && this.isMpvReady() && clips.length > 0 && !this.hasStartedPlayback) {
+        this.hasStartedPlayback = true;
         console.log('[ProjectDetails] Both UI and MPV are ready. Requesting initial resize.');
         this.videoStateService.requestForceResize();
-
-        if (!this.hasStartedPlayback) {
-          this.hasStartedPlayback = true;
-          this.startPlaybackSequence();
-        }
+        this.startPlaybackSequence();
       }
     });
 
     window.electronAPI.onMpvManagerReady(() => {
       console.log('[ProjectDetails] Received mpv:managerReady signal!');
       this.isMpvReady.set(true);
+      setTimeout(() => window.electronAPI.focusApp());
     });
   }
 

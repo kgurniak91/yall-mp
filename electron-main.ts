@@ -1,4 +1,4 @@
-import {app, BrowserWindow, dialog, ipcMain, screen} from 'electron';
+import {app, BrowserWindow, dialog, ipcMain, Rectangle, screen} from 'electron';
 import path from 'path';
 import os from 'os';
 import {promises as fs} from 'fs';
@@ -20,10 +20,13 @@ const appDataPath = path.join(app.getPath('userData'), `${APP_DATA_KEY}.json`);
 
 let mpvManager: MpvManager | null = null;
 let mainWindow: BrowserWindow | null = null;
+let uiWindow: BrowserWindow | null = null;
 let videoWindow: BrowserWindow | null = null;
-let backgroundWindow: BrowserWindow | null = null;
 let preMaximizeBounds: Electron.Rectangle | null = null;
+const initialBounds = {width: 1920, height: 1080};
 let isFullScreen = false;
+let isFixingMaximize = false;
+let isProgrammaticResize = false;
 
 let isFFmpegAvailable = false;
 let ffmpegPath = '';
@@ -39,23 +42,49 @@ if (ffmpegStatic) {
 
 const FORCED_GAP_SECONDS = 0.05;
 
+function updateUiWindowShape() {
+  if (!uiWindow || !mainWindow || isFullScreen) {
+    uiWindow?.setShape([]);
+    return;
+  }
+
+  const {width, height} = mainWindow.getBounds();
+  if (width === 0 || height === 0) return;
+
+  const holeWidth = 30;
+  const holeHeight = 30;
+  const holeX = width - 170;
+  const holeY = 5;
+
+  const shapes: Rectangle[] = [
+    {x: 0, y: holeY + holeHeight, width, height: height - (holeY + holeHeight)},
+    {x: 0, y: holeY, width: holeX, height: holeHeight},
+    {x: holeX + holeWidth, y: holeY, width: width - (holeX + holeWidth), height: holeHeight},
+    {x: 0, y: 0, width, height: holeY}
+  ];
+
+  const validShapes = shapes.filter(rect => rect.width > 0 && rect.height > 0);
+
+  // Cuts hole inside the uiWindow so that the mainWindow underneath can be clicked and dragged:
+  uiWindow.setShape(validShapes);
+}
+
 function createWindow() {
-  backgroundWindow = new BrowserWindow({
-    width: 1920,
-    height: 1080,
+  mainWindow = new BrowserWindow({
+    width: initialBounds.width,
+    height: initialBounds.height,
     transparent: false,
     backgroundColor: '#000000',
     frame: false,
-    show: false, // Start hidden
-    skipTaskbar: true,
-    focusable: false, // Never interactive
+    show: false,
   });
 
-  mainWindow = new BrowserWindow({
-    width: 1920,
-    height: 1080,
+  uiWindow = new BrowserWindow({
+    width: initialBounds.width,
+    height: initialBounds.height,
     transparent: true,
     frame: false,
+    parent: mainWindow,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -63,74 +92,146 @@ function createWindow() {
     },
   });
 
-  // Sync positions of all windows
-  const syncWindowPositions = () => {
-    if (!mainWindow || !backgroundWindow || mainWindow.isMinimized()) {
+  const syncWindowGeometry = () => {
+    if (!mainWindow || !uiWindow || (videoWindow && videoWindow.isDestroyed()) || mainWindow.isMinimized()) {
       return;
     }
     const bounds = mainWindow.getBounds();
-    backgroundWindow.setBounds(bounds);
-    mainWindow.webContents.send('mpv:mainWindowMovedOrResized');
-  };
-  mainWindow.on('resize', syncWindowPositions);
-  mainWindow.on('move', syncWindowPositions);
 
-  mainWindow.on('focus', () => {
-    // Bring the windows to the front in the correct stacking order.
-    backgroundWindow?.moveTop();
-    videoWindow?.moveTop();
-    mainWindow?.moveTop();
+    isProgrammaticResize = true;
+
+    // Enforce integer values to avoid sub-pixel errors:
+    const sanitizedBounds = {
+      x: Math.round(bounds.x),
+      y: Math.round(bounds.y),
+      width: Math.round(bounds.width),
+      height: Math.round(bounds.height)
+    };
+
+    uiWindow.setBounds(sanitizedBounds);
+    if (videoWindow && !videoWindow.isDestroyed()) {
+      videoWindow.setBounds(sanitizedBounds);
+    }
+
+    isProgrammaticResize = false;
+
+    if (uiWindow) {
+      uiWindow.webContents.send('mpv:mainWindowMovedOrResized');
+    }
+    updateUiWindowShape();
+  };
+
+  mainWindow.on('resize', syncWindowGeometry);
+  mainWindow.on('move', syncWindowGeometry);
+
+  uiWindow.on('resize', () => {
+    // If this resize was caused by code, ignore it to prevent a loop.
+    if (isProgrammaticResize || !mainWindow || !uiWindow) {
+      return;
+    }
+    // Otherwise, a user resized the UI window. Force the main window to match it.
+    mainWindow.setBounds(uiWindow.getBounds());
+  });
+
+  // Dragging maximized window should unmaximize it automatically:
+  mainWindow.on('will-move', (event) => {
+    if (preMaximizeBounds && !isFixingMaximize && mainWindow) {
+      event.preventDefault();
+      const restoreBounds = preMaximizeBounds;
+      preMaximizeBounds = null;
+      if (uiWindow) {
+        uiWindow.webContents.send('window:maximized-state-changed', false);
+      }
+      const cursorPos = screen.getCursorScreenPoint();
+      const newX = Math.floor(cursorPos.x - (restoreBounds.width * (cursorPos.x / screen.getPrimaryDisplay().bounds.width)));
+      const newY = cursorPos.y;
+      mainWindow.setBounds({...restoreBounds, x: newX, y: newY});
+    }
+  });
+
+  // Handle OS-level maximization when dropping window on screen edges, like Aero Snap on Windows:
+  mainWindow.on('maximize', () => {
+    if (!preMaximizeBounds) {
+      preMaximizeBounds = {...initialBounds, x: 50, y: 50};
+    }
+    isFixingMaximize = true;
+    setTimeout(() => {
+      if (mainWindow) {
+        mainWindow.unmaximize();
+        const display = screen.getDisplayMatching(mainWindow.getBounds());
+        mainWindow.setBounds(display.workArea);
+        syncWindowGeometry();
+      }
+      isFixingMaximize = false;
+    }, 50);
+    if (uiWindow) {
+      uiWindow.webContents.send('window:maximized-state-changed', true);
+    }
+  });
+
+  mainWindow.on('unmaximize', () => {
+    if (isFixingMaximize) {
+      return;
+    }
+    preMaximizeBounds = null;
+    if (uiWindow) {
+      uiWindow.webContents.send('window:maximized-state-changed', false);
+    }
   });
 
   mainWindow.on('minimize', () => {
     videoWindow?.hide();
-    backgroundWindow?.hide();
+    uiWindow?.hide();
   });
 
   mainWindow.on('restore', () => {
-    // showInactive prevents the windows from stealing focus
-    backgroundWindow?.showInactive();
     videoWindow?.showInactive();
-    syncWindowPositions();
+    uiWindow?.showInactive();
+    syncWindowGeometry();
   });
 
-  // When the main window is gone, ensure everything is cleaned up
   mainWindow.on('closed', () => {
     mpvManager?.stop();
-    videoWindow?.close();
-    backgroundWindow?.close();
+    // Child windows are destroyed automatically when the parent is closed, no need to close them explicitly.
+    videoWindow = null;
+    uiWindow = null;
     mainWindow = null;
   });
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow?.webContents.send('window:maximized-state-changed', mainWindow.isMaximized());
-  });
-
-  mainWindow.on('maximize', () => {
-    mainWindow?.webContents.send('window:maximized-state-changed', true);
-  });
-
-  mainWindow.on('unmaximize', () => {
-    mainWindow?.webContents.send('window:maximized-state-changed', false);
+    if (uiWindow && mainWindow) {
+      mainWindow.show();
+      uiWindow.showInactive();
+      updateUiWindowShape();
+      uiWindow.hide();
+      uiWindow.showInactive();
+      uiWindow.webContents.send('window:maximized-state-changed', mainWindow.isMaximizable());
+    }
   });
 
   mainWindow.on('enter-full-screen', () => {
     isFullScreen = true;
-    mainWindow?.webContents.send('window:fullscreen-state-changed', true);
+    if (uiWindow) {
+      uiWindow.webContents.send('window:fullscreen-state-changed', true);
+    }
+    updateUiWindowShape();
   });
 
   mainWindow.on('leave-full-screen', () => {
     isFullScreen = false;
-    mainWindow?.webContents.send('window:fullscreen-state-changed', false);
+    if (uiWindow) {
+      uiWindow.webContents.send('window:fullscreen-state-changed', false);
+    }
+    updateUiWindowShape();
   });
 
-  // Serve the Angular app
-  const indexPath = path.join(__dirname, './dist/yall-mp/browser/index.html');
-  mainWindow.loadFile(indexPath);
-  backgroundWindow.show();
+  const draggableHostPath = path.join(__dirname, './dist/yall-mp/browser/draggable-host.html');
+  mainWindow.loadFile(draggableHostPath);
 
-  // Open DevTools for debugging in a separate window
-  mainWindow.webContents.openDevTools({mode: 'detach'});
+  const indexPath = path.join(__dirname, './dist/yall-mp/browser/index.html');
+  uiWindow.loadFile(indexPath);
+
+  uiWindow.webContents.openDevTools({mode: 'detach'});
 }
 
 app.whenReady().then(() => {
@@ -159,12 +260,16 @@ app.whenReady().then(() => {
     if (preMaximizeBounds) {
       mainWindow.setBounds(preMaximizeBounds);
       preMaximizeBounds = null;
-      mainWindow.webContents.send('window:maximized-state-changed', false);
+      if (uiWindow) {
+        uiWindow.webContents.send('window:maximized-state-changed', false);
+      }
     } else {
       preMaximizeBounds = mainWindow.getBounds();
       const display = screen.getPrimaryDisplay();
       mainWindow.setBounds(display.workArea);
-      mainWindow.webContents.send('window:maximized-state-changed', true);
+      if (uiWindow) {
+        uiWindow.webContents.send('window:maximized-state-changed', true);
+      }
     }
   });
 
@@ -198,7 +303,9 @@ app.whenReady().then(() => {
       // If maximized, unmaximize
       mainWindow.setBounds(preMaximizeBounds);
       preMaximizeBounds = null;
-      mainWindow.webContents.send('window:maximized-state-changed', false);
+      if (uiWindow) {
+        uiWindow.webContents.send('window:maximized-state-changed', false);
+      }
     } else {
       // If normal, minimize.
       mainWindow.minimize();
@@ -209,8 +316,15 @@ app.whenReady().then(() => {
     mainWindow?.close();
   });
 
+  ipcMain.on('window:focus-app', () => {
+    console.log('[Main Process] UI is ready, focusing main window.');
+    if (mainWindow) {
+      mainWindow.focus();
+    }
+  });
+
   ipcMain.handle('mpv:createViewport', async (_, mediaPath: string, audioTrackIndex: number | null) => {
-    if (!mainWindow) {
+    if (!uiWindow || !mainWindow) {
       return;
     }
 
@@ -222,21 +336,30 @@ app.whenReady().then(() => {
     videoWindow = new BrowserWindow({
       frame: false,
       show: false,
-      skipTaskbar: true, // Don't show a separate icon on the taskbar
+      skipTaskbar: true,
       transparent: true,
-      resizable: false
+      resizable: false,
+      focusable: false,
+      parent: mainWindow,
     });
 
-    // Stacking order setup
-    videoWindow.setAlwaysOnTop(false);
-    mainWindow.moveTop();
+    videoWindow.setIgnoreMouseEvents(true);
+
+    // uiWindow is the child of videoWindow to always be on top and prevent stacking order issues:
+    uiWindow.setParentWindow(videoWindow);
 
     mpvManager = new MpvManager(videoWindow);
-    mpvManager.on('status', (status) => mainWindow?.webContents.send('mpv:event', status));
+    mpvManager.on('status', (status) => {
+      if (uiWindow) {
+        uiWindow.webContents.send('mpv:event', status)
+      }
+    });
     mpvManager.on('error', (err) => console.error("MPV Error:", err));
     mpvManager.on('ready', () => {
       console.log('[Main Process] MpvManager is ready. Notifying renderer.');
-      mainWindow?.webContents.send('mpv:managerReady');
+      if (uiWindow) {
+        uiWindow.webContents.send('mpv:managerReady');
+      }
     });
 
     // Start MPV inside the child window's handle
