@@ -10,10 +10,29 @@ import ffmpegStatic from 'ffmpeg-static';
 import {v4 as uuidv4} from 'uuid';
 import {ChildProcess, spawn} from 'child_process';
 import {MpvManager} from './mpv-manager';
-import {MpvClipRequest, ParsedSubtitlesData} from './src/electron-api';
+import {FontData, MpvClipRequest, ParsedSubtitlesData} from './src/electron-api';
 import ffprobeStatic from 'ffprobe-static';
 import languages from '@cospired/i18n-iso-languages';
 import {compile, Dialogue} from 'ass-compiler';
+import fontScanner from 'font-scanner';
+import {Decoder} from 'ts-ebml';
+import fontkit from 'fontkit';
+import Levenshtein from 'fast-levenshtein';
+
+interface AvailableFont {
+  family: string;
+  style: string;
+  isBold: boolean;
+  isItalic: boolean;
+  dataUri: string;
+  source: 'mkv' | 'local' | 'system'; // Track where the font was found
+}
+
+interface RequiredFont {
+  family: string;
+  bold: boolean;
+  italic: boolean;
+}
 
 const APP_DATA_KEY = 'yall-mp-app-data';
 const appDataPath = path.join(app.getPath('userData'), `${APP_DATA_KEY}.json`);
@@ -23,14 +42,14 @@ let mainWindow: BrowserWindow | null = null;
 let uiWindow: BrowserWindow | null = null;
 let videoWindow: BrowserWindow | null = null;
 let preMaximizeBounds: Electron.Rectangle | null = null;
-const initialBounds = {width: 1920, height: 1080};
 let isFullScreen = false;
 let isFixingMaximize = false;
 let isProgrammaticResize = false;
-
 let isFFmpegAvailable = false;
 let ffmpegPath = '';
 let ffprobePath = '';
+const initialBounds = {width: 1920, height: 1080};
+const FORCED_GAP_SECONDS = 0.05;
 
 if (ffmpegStatic) {
   isFFmpegAvailable = true;
@@ -39,8 +58,6 @@ if (ffmpegStatic) {
 } else {
   console.warn('ffmpeg-static binary not found. Anki export feature will be disabled.');
 }
-
-const FORCED_GAP_SECONDS = 0.05;
 
 function updateUiWindowShape() {
   if (!uiWindow || !mainWindow || isFullScreen) {
@@ -494,10 +511,14 @@ async function handleSubtitleParse(filePath: string): Promise<ParsedSubtitlesDat
       const compiled = compile(content, {});
       const timeline = buildSubtitleTimeline(compiled.dialogues);
       const mergedTimeline = mergeIdenticalConsecutiveSubtitles(timeline);
+      const requiredFonts = getRequiredFontsFromAss(content);
+      const fonts = await loadFontData(requiredFonts, undefined, filePath);
+
       return {
         subtitles: mergedTimeline,
         rawAssContent: content,
-        styles: compiled.styles
+        styles: compiled.styles,
+        fonts: fonts
       };
     } else {
       const response = new Response(content);
@@ -845,10 +866,14 @@ async function handleExtractSubtitleTrack(mediaPath: string, trackIndex: number)
             const compiled = compile(subtitleContent, {});
             const timeline = buildSubtitleTimeline(compiled.dialogues);
             const mergedTimeline = mergeIdenticalConsecutiveSubtitles(timeline);
+            const requiredFonts = getRequiredFontsFromAss(subtitleContent);
+            const fonts = await loadFontData(requiredFonts, mediaPath, undefined);
+
             resolve({
               subtitles: mergedTimeline,
               rawAssContent: subtitleContent,
-              styles: compiled.styles
+              styles: compiled.styles,
+              fonts: fonts
             });
           } else {
             const response = new Response(subtitleContent);
@@ -1040,4 +1065,262 @@ function mergeIdenticalConsecutiveSubtitles(subtitles: SubtitleData[]): Subtitle
   merged.push(current);
 
   return merged;
+}
+
+function getRequiredFontsFromAss(assContent: string): RequiredFont[] {
+  const requiredFonts = new Map<string, RequiredFont>(); // Use a map to store unique font styles
+
+  const addFont = (family: string, bold: boolean, italic: boolean) => {
+    const key = `${family}-${bold}-${italic}`;
+    if (!requiredFonts.has(key)) {
+      requiredFonts.set(key, { family, bold, italic });
+    }
+  };
+
+  const stylesSection = assContent.match(/\[V4\+ Styles\]\s*([\s\S]*?)(?=\s*\[|$)/i);
+  if (stylesSection) {
+    // Format: Name, Fontname, Fontsize, ..., Bold, Italic, ...
+    const styleLines = stylesSection[1].split('\n').filter(line => line.toLowerCase().startsWith('style:'));
+    styleLines.forEach(line => {
+      const parts = line.split(',');
+      if (parts.length > 8) {
+        const family = parts[1].trim();
+        const bold = parts[7].trim() === '-1';
+        const italic = parts[8].trim() === '-1';
+        addFont(family, bold, italic);
+      }
+    });
+  }
+
+  const eventsSection = assContent.match(/\[Events\]\s*([\s\S]*?)(?=\s*\[|$)/i);
+  if (eventsSection) {
+    const fnTagRegex = /\\fn([^\\}]+)/g;
+    let match;
+    while ((match = fnTagRegex.exec(eventsSection[1])) !== null) {
+      // For \fn overrides, assume a non-bold, non-italic style unless other tags are present
+      // Handles common use cases without full tag parsing
+      addFont(match[1].trim(), false, false);
+    }
+  }
+
+  return Array.from(requiredFonts.values());
+}
+
+const normalizeFontName = (name: string) => {
+  return path.parse(name).name.toLowerCase().replace(/[^a-z0-9]/g, '');
+};
+
+async function extractAttachmentsWithEbml(mediaPath: string): Promise<Map<string, { fileName: string, fileData: Buffer }>> {
+  console.log('[Fonts] Parsing MKV with ts-ebml to find attachments...');
+  const fileBuffer = await fs.readFile(mediaPath);
+  const decoder = new Decoder();
+  const ebmlElements = decoder.decode(fileBuffer);
+
+  const attachmentMap = new Map<string, { fileName: string, fileData: Buffer }>();
+  const fontExtensions = ['.ttf', '.otf', '.ttc', '.woff', '.woff2'];
+
+  let inAttachments = false;
+  let inAttachedFile = false;
+  let wasAttachmentsSectionFound = false;
+  let currentAttachment: {
+    fileName?: string;
+    fileData?: Buffer;
+    fileMediaType?: string;
+  } = {};
+
+  for (const el of ebmlElements) {
+    if (el.name === 'Attachments') {
+      wasAttachmentsSectionFound = true;
+      if (el.type === 'm' && !el.isEnd) {
+        inAttachments = true;
+      } else if (el.type === 'm' && el.isEnd) {
+        inAttachments = false;
+      }
+      continue;
+    }
+
+    if (inAttachments) {
+      if (el.name === 'AttachedFile') {
+        if (el.type === 'm' && !el.isEnd) {
+          inAttachedFile = true;
+          currentAttachment = {}; // Reset for the new attachment
+        } else if (el.type === 'm' && el.isEnd) {
+          const { fileName, fileData, fileMediaType } = currentAttachment;
+          const mimeType = fileMediaType?.toLowerCase() || '';
+
+          const isFontMime = mimeType.includes('font') || mimeType.includes('opentype');
+          const isFontExtension = fileName ? fontExtensions.includes(path.extname(fileName).toLowerCase()) : false;
+          const isGenericMime = mimeType.includes('application/octet-stream');
+
+          if (fileName && fileData && (isFontMime || (isGenericMime && isFontExtension))) {
+            const normalized = normalizeFontName(fileName);
+            attachmentMap.set(normalized, { fileName, fileData });
+            console.log(`[Fonts] Found font attachment in MKV: ${fileName} (${(fileData.length / 1024).toFixed(2)} KB)`);
+          }
+          inAttachedFile = false;
+        }
+      } else if (inAttachedFile) {
+        // Accept both 's' (ASCII) and '8' (UTF-8) for string types.
+        if (el.name === 'FileName' && (el.type === 's' || el.type === '8')) {
+          currentAttachment.fileName = el.value;
+        } else if (el.name === 'FileMediaType' && (el.type === 's' || el.type === '8')) {
+          currentAttachment.fileMediaType = el.value;
+        } else if (el.name === 'FileData' && el.type === 'b') {
+          currentAttachment.fileData = el.value;
+        }
+      }
+    }
+  }
+
+  if (!wasAttachmentsSectionFound) {
+    console.log('[Fonts] No "Attachments" section found in the MKV file.');
+  } else if (attachmentMap.size === 0) {
+    console.log('[Fonts] "Attachments" section was found, but it appears to contain no valid font files.');
+  } else {
+    console.log(`[Fonts] Successfully extracted ${attachmentMap.size} font files.`);
+  }
+
+  return attachmentMap;
+}
+
+async function loadFontData(
+  requiredFonts: RequiredFont[],
+  mediaPath?: string,
+  assFilePath?: string
+): Promise<FontData[]> {
+  console.log(`[Fonts] Starting search for ${requiredFonts.length} required font styles.`);
+  const foundFonts = new Map<string, string>();
+  const availableFonts: AvailableFont[] = [];
+  const fontExtensions = ['.ttf', '.otf', '.ttc', '.woff', '.woff2'];
+
+  const convertBufferToDataUri = (buffer: Buffer, extension: string): string | null => {
+    let mimeType = '';
+    const ext = extension.toLowerCase();
+    if (['.ttf', '.ttf-t', '.t', '.ttc'].includes(ext)) mimeType = 'font/truetype';
+    else if (['.otf'].includes(ext)) mimeType = 'font/opentype';
+    else if (['.woff'].includes(ext)) mimeType = 'font/woff';
+    else if (['.woff2'].includes(ext)) mimeType = 'font/woff2';
+    else return null;
+    const base64 = buffer.toString('base64');
+    return `data:${mimeType};base64,${base64}`;
+  };
+
+  const addFontToDatabase = (fontBuffer: Buffer, fileName: string, source: 'mkv' | 'local' | 'system') => {
+    try {
+      const createdFont = fontkit.create(fontBuffer);
+      const fontsToProcess: fontkit.Font[] = 'fonts' in createdFont ? createdFont.fonts : [createdFont];
+      for (const font of fontsToProcess) {
+        const dataUri = convertBufferToDataUri(fontBuffer, path.extname(fileName));
+        if (dataUri) {
+          availableFonts.push({
+            family: font.familyName,
+            style: font.subfamilyName,
+            isBold: font['OS/2'].fsSelection.bold,
+            isItalic: font['OS/2'].fsSelection.italic,
+            dataUri: dataUri,
+            source: source,
+          });
+        }
+      }
+    } catch (e) {
+      console.warn(`[Fonts] Failed to parse font file "${fileName}" from ${source}:`, e);
+    }
+  };
+
+  // Gather candidates from all sources
+
+  // From MKV attachments
+  if (mediaPath && path.extname(mediaPath).toLowerCase() === '.mkv') {
+    const attachmentMap = await extractAttachmentsWithEbml(mediaPath);
+    for (const attachment of Array.from(attachmentMap.values())) {
+      addFontToDatabase(attachment.fileData, attachment.fileName, 'mkv');
+    }
+  }
+
+  // From local files (if external .ass)
+  if (assFilePath) {
+    const subDir = path.dirname(assFilePath);
+    try {
+      const files = await fs.readdir(subDir);
+      for (const file of files) {
+        if (fontExtensions.includes(path.extname(file).toLowerCase())) {
+          const fontPath = path.join(subDir, file);
+          const fontBuffer = await fs.readFile(fontPath);
+          addFontToDatabase(fontBuffer, file, 'local');
+        }
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  // From system fonts (only search for needed fonts)
+  console.log(`[Fonts] Pre-caching potential system font matches...`);
+  for (const req of requiredFonts) {
+    try {
+      const font = await fontScanner.findFont({ family: req.family, italic: req.italic, weight: req.bold ? 700 : 400 });
+      if (font) {
+        const fontBuffer = await fs.readFile(font.path);
+        addFontToDatabase(fontBuffer, path.basename(font.path), 'system');
+      }
+    } catch (e) { /* Not found, that's fine */ }
+  }
+
+  // Score and decide for each requirement
+  const requirementsMet = new Set<RequiredFont>();
+  for (const req of requiredFonts) {
+    let bestMatch: { font: AvailableFont | null; score: number } = { font: null, score: Infinity };
+
+    for (const available of availableFonts) {
+      const familyDistance = Levenshtein.get(req.family, available.family);
+
+      // Give a large penalty if the font is a known bad fuzzy match (e.g. Arial for Kozuka)
+      const isUnrelated = familyDistance > (req.family.length / 2);
+      const unrelatedPenalty = isUnrelated ? 100 : 0;
+
+      let stylePenalty = 0;
+      if (req.bold !== available.isBold) stylePenalty += 2;
+      if (req.italic !== available.isItalic) stylePenalty += 2;
+
+      // Prioritize sources: MKV/Local > System
+      const sourcePenalty = available.source === 'system' ? 1 : 0;
+
+      const totalScore = familyDistance + stylePenalty + sourcePenalty + unrelatedPenalty;
+
+      if (totalScore < bestMatch.score) {
+        bestMatch = { font: available, score: totalScore };
+      }
+    }
+
+    // A reasonable score means it's a good match.
+    if (bestMatch.font && bestMatch.score < 10) {
+      const matchType = bestMatch.font.family === req.family ? "Found" : `Fuzzy matched "${req.family}" to`;
+      console.log(`[Fonts] ${matchType} "${bestMatch.font.family}" (Style: ${bestMatch.font.style}) from ${bestMatch.font.source}. Score: ${bestMatch.score}`);
+      foundFonts.set(req.family, bestMatch.font.dataUri);
+      requirementsMet.add(req);
+    }
+  }
+
+  // Final fallback
+  const remainingForFallback = requiredFonts.filter(r => !foundFonts.has(r.family));
+  if (remainingForFallback.length > 0) {
+    const arial = availableFonts.find(f => f.family === 'Arial' && !f.isBold && !f.isItalic);
+    if (arial) {
+      for (const req of remainingForFallback) {
+        console.warn(`[Fonts] Could not find a good match for "${req.family}". Defaulting to Arial.`);
+        foundFonts.set(req.family, arial.dataUri);
+      }
+    }
+  }
+
+  const fontData: FontData[] = [];
+  for (const [fontFamily, dataUri] of foundFonts.entries()) {
+    fontData.push({ fontFamily, dataUri });
+  }
+
+  const finalNotFound = requiredFonts.filter(req => !foundFonts.has(req.family));
+  if (finalNotFound.length > 0) {
+    console.error(`[Fonts] CRITICAL: Could not find any font source for: ${finalNotFound.map(f => f.family).join(', ')}`);
+  }
+
+  console.log(`[Fonts] Search finished. Required: ${requiredFonts.length}. Found: ${fontData.length}.`);
+  return fontData;
 }

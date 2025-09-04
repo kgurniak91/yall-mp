@@ -10,7 +10,8 @@
   },
   "include": [
     "electron-main.ts",
-    "mpv-manager.ts"
+    "mpv-manager.ts",
+    "src/custom-typings.d.ts"
   ],
   "exclude": []
 }

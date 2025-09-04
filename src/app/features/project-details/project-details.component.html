@@ -1,9 +1,9 @@
 <div class="content-wrapper">
   <div class="video-area" (dblclick)="onVideoAreaDoubleClick()">
     <app-video-controller #videoController (ready)="onPlayerReady()"/>
-    @if (project(); as project) {
+    @if (parsedSubtitleData(); as data) {
       <app-subtitles-overlay [currentClip]="clipsStateService.currentClip()"
-                             [rawAssContent]="project.rawAssContent"
+                             [rawAssContent]="data.rawAssContent"
                              [videoContainerElement]="videoController.videoContainerElement()"/>
     }
   </div>

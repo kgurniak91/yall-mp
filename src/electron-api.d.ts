@@ -9,10 +9,16 @@ export interface MpvClipRequest {
   playbackRate: number;
 }
 
+export interface FontData {
+  fontFamily: string;
+  dataUri: string;
+}
+
 export interface ParsedSubtitlesData {
-  subtitles: SubtitleData[],
-  rawAssContent?: string,
-  styles?: any
+  subtitles: SubtitleData[];
+  rawAssContent?: string;
+  styles?: any;
+  fonts?: FontData[];
 }
 
 export interface IElectronAPI {

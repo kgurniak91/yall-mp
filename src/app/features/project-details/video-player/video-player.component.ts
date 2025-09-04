@@ -1,4 +1,14 @@
-import {AfterViewInit, Component, effect, ElementRef, inject, OnDestroy, output, viewChild} from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  effect,
+  ElementRef,
+  inject,
+  OnDestroy,
+  output,
+  signal,
+  viewChild
+} from '@angular/core';
 import {VideoStateService} from '../../../state/video/video-state.service';
 import {SpinnerComponent} from '../../../shared/components/spinner/spinner.component';
 
@@ -17,6 +27,7 @@ export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
   private resizeObserver: ResizeObserver | undefined;
   private isReadyEmitted = false;
   private resizeDebounceTimer: any;
+  private isMpvReady = signal(false);
 
   constructor() {
     effect(() => {
@@ -25,6 +36,12 @@ export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
         this.handleResize();
         this.videoStateService.clearForceResizeRequest();
       }
+    });
+
+    window.electronAPI.onMpvManagerReady(() => {
+      console.log('[VideoPlayer] Received mpv:managerReady, enabling resize handler.');
+      this.isMpvReady.set(true);
+      this.handleResize();
     });
   }
 
@@ -43,6 +60,11 @@ export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
   }
 
   private handleResize(): void {
+    if (!this.isMpvReady()) {
+      console.log('[VideoPlayer] handleResize called, but MPV manager is not ready yet. Ignoring.');
+      return;
+    }
+
     if (!this.videoStateService.isResizing()) {
       this.videoStateService.setIsResizing(true);
       window.electronAPI.mpvHideVideoDuringResize();

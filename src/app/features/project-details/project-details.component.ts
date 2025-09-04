@@ -1,4 +1,4 @@
-import {Component, computed, effect, inject, OnInit, signal, untracked} from '@angular/core';
+import {Component, computed, effect, inject, OnDestroy, OnInit, signal, untracked} from '@angular/core';
 import {VideoControllerComponent} from './video-controller/video-controller.component';
 import {VideoStateService} from '../../state/video/video-state.service';
 import {TimelineEditorComponent} from './timeline-editor/timeline-editor.component';
@@ -10,7 +10,6 @@ import {SeekDirection} from '../../model/video.types';
 import {ClipsStateService} from '../../state/clips/clips-state.service';
 import {Popover} from 'primeng/popover';
 import {ActivatedRoute, Router} from '@angular/router';
-import {ConfirmationService} from 'primeng/api';
 import {AppStateService} from '../../state/app/app-state.service';
 import {ProjectSettingsStateService} from '../../state/project-settings/project-settings-state.service';
 import {BuiltInSettingsPresets, HiddenSubtitleStyle, ProjectSettings, SettingsPreset} from '../../model/settings.types';
@@ -32,6 +31,7 @@ import {SubtitlesOverlayComponent} from './subtitles-overlay/subtitles-overlay.c
 import {ParsedSubtitlesData} from '../../../electron-api';
 import {SubtitlesHighlighterService} from './services/subtitles-highlighter/subtitles-highlighter.service';
 import {SubtitlesHighlighterComponent} from './subtitles-highlighter/subtitles-highlighter.component';
+import {FontInjectionService} from './services/font-injection/font-injection.service';
 
 @Component({
   selector: 'app-project-details',
@@ -49,17 +49,9 @@ import {SubtitlesHighlighterComponent} from './subtitles-highlighter/subtitles-h
     SubtitlesHighlighterComponent
   ],
   templateUrl: './project-details.component.html',
-  styleUrl: './project-details.component.scss',
-  providers: [
-    KeyboardShortcutsService,
-    SubtitlesHighlighterService,
-    ClipsStateService,
-    CommandHistoryStateService,
-    ProjectSettingsStateService,
-    VideoStateService
-  ]
+  styleUrl: './project-details.component.scss'
 })
-export class ProjectDetailsComponent implements OnInit {
+export class ProjectDetailsComponent implements OnInit, OnDestroy {
   protected currentClipHasSubtitles = computed(() => !!this.clipsStateService.currentClip()?.hasSubtitle);
 
   protected isFirstClip = computed(() => {
@@ -126,11 +118,12 @@ export class ProjectDetailsComponent implements OnInit {
   });
   protected readonly settingsPresets = signal<SettingsPreset[]>(BuiltInSettingsPresets);
   protected readonly selectedSettingsPreset = signal<SettingsPreset | null>(null);
+  protected parsedSubtitleData = signal<ParsedSubtitlesData | null>(null);
   private wasPlayingBeforeSettingsOpened = false;
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly appStateService = inject(AppStateService);
-  private readonly confirmationService = inject(ConfirmationService);
+  private readonly fontInjectionService = inject(FontInjectionService);
   private readonly dialogService = inject(DialogService);
   private readonly toastService = inject(ToastService);
   private dialogRef: DynamicDialogRef | undefined;
@@ -170,6 +163,13 @@ export class ProjectDetailsComponent implements OnInit {
       }
     });
 
+    effect(() => {
+      const fonts = this.parsedSubtitleData()?.fonts;
+      if (fonts && fonts.length > 0) {
+        this.fontInjectionService.injectFontsIntoDOM(fonts);
+      }
+    });
+
     window.electronAPI.onMpvManagerReady(() => {
       console.log('[ProjectDetails] Received mpv:managerReady signal!');
       this.isMpvReady.set(true);
@@ -202,10 +202,14 @@ export class ProjectDetailsComponent implements OnInit {
 
     const hasExistingSubtitles = foundProject?.subtitles?.length > 0;
     let subtitles: SubtitleData[];
-    let rawAssContent: string | undefined = foundProject.rawAssContent;
-    let styles: any = foundProject.styles;
 
     if (hasExistingSubtitles) {
+      this.parsedSubtitleData.set({
+        subtitles: foundProject.subtitles,
+        rawAssContent: foundProject.rawAssContent,
+        styles: foundProject.styles,
+        fonts: foundProject.fonts,
+      });
       subtitles = foundProject.subtitles;
     } else {
       try {
@@ -225,9 +229,15 @@ export class ProjectDetailsComponent implements OnInit {
             break;
         }
 
+        this.parsedSubtitleData.set(subtitleResult);
+
+        this.appStateService.updateProject(projectId, {
+          rawAssContent: subtitleResult.rawAssContent,
+          styles: subtitleResult.styles,
+          fonts: subtitleResult.fonts,
+        });
+
         subtitles = subtitleResult.subtitles;
-        rawAssContent = subtitleResult.rawAssContent;
-        styles = subtitleResult.styles;
       } catch (e: any) {
         this.toastService.error(`Failed to load subtitles: ${e.message}`);
         subtitles = [];
@@ -235,13 +245,11 @@ export class ProjectDetailsComponent implements OnInit {
     }
 
     this.clipsStateService.setSubtitles(subtitles);
-
-    // Save new ASS content to project state
-    if ((rawAssContent && !foundProject.rawAssContent) || (styles && !foundProject.styles)) {
-      this.appStateService.updateProject(projectId, {rawAssContent, styles});
-    }
-
     await window.electronAPI.mpvCreateViewport(foundProject.mediaPath, foundProject.settings.selectedAudioTrackIndex);
+  }
+
+  ngOnDestroy(): void {
+    this.fontInjectionService.clearFonts();
   }
 
   onPlayerReady(): void {
