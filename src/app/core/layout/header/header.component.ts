@@ -1,4 +1,14 @@
-import {Component, computed, inject, OnInit, signal} from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  OnDestroy,
+  OnInit,
+  signal,
+  viewChild
+} from '@angular/core';
 import {ConfirmationService, MenuItem} from 'primeng/api';
 import {ActivatedRoute, NavigationEnd, Router} from '@angular/router';
 import {AppStateService} from '../../../state/app/app-state.service';
@@ -20,7 +30,7 @@ import {Tooltip} from 'primeng/tooltip';
   templateUrl: './header.component.html',
   styleUrl: './header.component.scss'
 })
-export class HeaderComponent implements OnInit {
+export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
   protected readonly isProjectDetailsView = signal(false);
   protected readonly isMaximized = signal(false);
   protected readonly isFullScreen = signal(false);
@@ -28,11 +38,16 @@ export class HeaderComponent implements OnInit {
   protected readonly mediaFileName = computed(() => this.currentProject()?.mediaFileName || 'Loading media...');
   protected readonly subtitleFileName = computed(() => this.currentProject()?.subtitleFileName || 'Loading subtitles...');
   protected readonly menuItems = computed<MenuItem[]>(() => this.computeMenuItems());
+  protected readonly lastFilename = viewChild<ElementRef<HTMLDivElement>>('lastFilename');
+  protected readonly menuWrapper = viewChild.required<ElementRef<HTMLDivElement>>('menuWrapper');
+  protected readonly dragHandle = viewChild.required<ElementRef<HTMLDivElement>>('dragHandle');
   private readonly router = inject(Router);
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly appStateService = inject(AppStateService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly dialogService = inject(DialogService);
+  private resizeObserver: ResizeObserver | undefined;
+  private resizeDebounceTimer: any;
 
   ngOnInit() {
     window.electronAPI.onWindowMaximizedStateChanged((isMaximized: boolean) => this.isMaximized.set(isMaximized));
@@ -48,6 +63,18 @@ export class HeaderComponent implements OnInit {
       const isDetailsView = route.snapshot.routeConfig?.path === 'project/:id';
       this.isProjectDetailsView.set(isDetailsView);
     });
+  }
+
+  ngAfterViewInit() {
+    this.resizeObserver = new ResizeObserver(() => {
+      this.updateDraggableShapes();
+    });
+    this.resizeObserver.observe(this.menuWrapper().nativeElement);
+  }
+
+  ngOnDestroy() {
+    this.resizeObserver?.disconnect();
+    clearTimeout(this.resizeDebounceTimer);
   }
 
   private deleteProject(): void {
@@ -150,4 +177,57 @@ export class HeaderComponent implements OnInit {
 
     return menu;
   }
+
+  private updateDraggableShapes() {
+    clearTimeout(this.resizeDebounceTimer);
+    this.resizeDebounceTimer = setTimeout(() => {
+      const lastFilenameEl = this.lastFilename()?.nativeElement;
+      const dragHandleEl = this.dragHandle().nativeElement;
+
+      // If the last filename div isn't rendered yet, only send the permanent drag handle's shape.
+      if (!lastFilenameEl) {
+        const dragHandleRect = dragHandleEl.getBoundingClientRect();
+        window.electronAPI.windowUpdateDraggableZones([
+          {
+            x: Math.round(dragHandleRect.x),
+            y: Math.round(dragHandleRect.y),
+            width: Math.round(dragHandleRect.width),
+            height: Math.round(dragHandleRect.height),
+          }
+        ]);
+        return;
+      }
+
+      
+      const lastFilenameRect = lastFilenameEl.getBoundingClientRect();
+      const dragHandleRect = dragHandleEl.getBoundingClientRect();
+
+      // Calculate the dimensions of the empty space
+      const emptySpaceX = lastFilenameRect.right;
+      const emptySpaceWidth = dragHandleRect.left - emptySpaceX;
+
+      const shapes = [];
+
+      // Shape 1: The permanent, last-resort drag handle
+      shapes.push({
+        x: Math.round(dragHandleRect.x),
+        y: Math.round(dragHandleRect.y),
+        width: Math.round(dragHandleRect.width),
+        height: Math.round(dragHandleRect.height),
+      });
+
+      // Shape 2: The dynamic empty space (only if it's wide enough to be useful)
+      if (emptySpaceWidth > 0) {
+        shapes.push({
+          x: Math.round(emptySpaceX),
+          y: Math.round(dragHandleRect.y),
+          width: Math.round(emptySpaceWidth),
+          height: Math.round(dragHandleRect.height),
+        });
+      }
+
+      window.electronAPI.windowUpdateDraggableZones(shapes);
+    }, 50);
+  }
+
 }

@@ -48,8 +48,10 @@ let isProgrammaticResize = false;
 let isFFmpegAvailable = false;
 let ffmpegPath = '';
 let ffprobePath = '';
+let draggableHeaderZones: Rectangle[] = [];
 const initialBounds = {width: 1920, height: 1080};
 const FORCED_GAP_SECONDS = 0.05;
+const DRAGGABLE_ZONE_PADDING = 3; // 3px on all sides
 
 if (ffmpegStatic) {
   isFFmpegAvailable = true;
@@ -57,6 +59,52 @@ if (ffmpegStatic) {
   ffprobePath = ffprobeStatic.path.replace('app.asar', 'app.asar.unpacked');
 } else {
   console.warn('ffmpeg-static binary not found. Anki export feature will be disabled.');
+}
+
+function subtractRect(rect: Rectangle, hole: Rectangle): Rectangle[] {
+  const result: Rectangle[] = [];
+
+  // Check for intersection
+  const intersects = rect.x < hole.x + hole.width &&
+    rect.x + rect.width > hole.x &&
+    rect.y < hole.y + hole.height &&
+    rect.y + rect.height > hole.y;
+
+  if (!intersects) {
+    return [rect]; // No intersection, return original rectangle
+  }
+
+  // Top part
+  if (rect.y < hole.y) {
+    result.push({x: rect.x, y: rect.y, width: rect.width, height: hole.y - rect.y});
+  }
+
+  // Bottom part
+  if (rect.y + rect.height > hole.y + hole.height) {
+    result.push({
+      x: rect.x,
+      y: hole.y + hole.height,
+      width: rect.width,
+      height: (rect.y + rect.height) - (hole.y + hole.height)
+    });
+  }
+
+  // Left part
+  if (rect.x < hole.x) {
+    result.push({x: rect.x, y: hole.y, width: hole.x - rect.x, height: hole.height});
+  }
+
+  // Right part
+  if (rect.x + rect.width > hole.x + hole.width) {
+    result.push({
+      x: hole.x + hole.width,
+      y: hole.y,
+      width: (rect.x + rect.width) - (hole.x + hole.width),
+      height: hole.height
+    });
+  }
+
+  return result.filter(r => r.width > 0 && r.height > 0);
 }
 
 function updateUiWindowShape() {
@@ -68,22 +116,41 @@ function updateUiWindowShape() {
   const {width, height} = mainWindow.getBounds();
   if (width === 0 || height === 0) return;
 
-  const holeWidth = 30;
-  const holeHeight = 30;
-  const holeX = width - 170;
-  const holeY = 5;
-
-  const shapes: Rectangle[] = [
-    {x: 0, y: holeY + holeHeight, width, height: height - (holeY + holeHeight)},
-    {x: 0, y: holeY, width: holeX, height: holeHeight},
-    {x: holeX + holeWidth, y: holeY, width: width - (holeX + holeWidth), height: holeHeight},
-    {x: 0, y: 0, width, height: holeY}
+  // Define all the logical holes without padding
+  const unpaddedHoles: Rectangle[] = [
+    {
+      x: width - 170,
+      y: 5,
+      width: 165,
+      height: 30
+    }
   ];
 
-  const validShapes = shapes.filter(rect => rect.width > 0 && rect.height > 0);
+  if (draggableHeaderZones && draggableHeaderZones.length > 0) {
+    unpaddedHoles.push(...draggableHeaderZones);
+  }
 
-  // Cuts hole inside the uiWindow so that the mainWindow underneath can be clicked and dragged:
-  uiWindow.setShape(validShapes);
+  // Create a new array of 'padded' holes
+  const holes = unpaddedHoles.map(hole => ({
+    x: hole.x + DRAGGABLE_ZONE_PADDING,
+    y: hole.y + DRAGGABLE_ZONE_PADDING,
+    width: hole.width - (DRAGGABLE_ZONE_PADDING * 2),
+    height: hole.height - (DRAGGABLE_ZONE_PADDING * 2)
+  })).filter(hole => hole.width > 0 && hole.height > 0); // Important: filter out any holes that become invalid after padding
+
+  // Start with the entire window as one visible shape
+  let visibleShapes: Rectangle[] = [{x: 0, y: 0, width, height}];
+
+  // Iteratively subtract each PADDED hole
+  for (const hole of holes) {
+    let nextVisibleShapes: Rectangle[] = [];
+    for (const shape of visibleShapes) {
+      nextVisibleShapes.push(...subtractRect(shape, hole));
+    }
+    visibleShapes = nextVisibleShapes;
+  }
+
+  uiWindow.setShape(visibleShapes);
 }
 
 function createWindow() {
@@ -338,6 +405,11 @@ app.whenReady().then(() => {
     if (mainWindow) {
       mainWindow.focus();
     }
+  });
+
+  ipcMain.on('window:update-draggable-zones', (_, rects: Rectangle[]) => {
+    draggableHeaderZones = rects;
+    updateUiWindowShape();
   });
 
   ipcMain.handle('mpv:createViewport', async (_, mediaPath: string, audioTrackIndex: number | null) => {
@@ -1073,7 +1145,7 @@ function getRequiredFontsFromAss(assContent: string): RequiredFont[] {
   const addFont = (family: string, bold: boolean, italic: boolean) => {
     const key = `${family}-${bold}-${italic}`;
     if (!requiredFonts.has(key)) {
-      requiredFonts.set(key, { family, bold, italic });
+      requiredFonts.set(key, {family, bold, italic});
     }
   };
 
@@ -1110,7 +1182,10 @@ const normalizeFontName = (name: string) => {
   return path.parse(name).name.toLowerCase().replace(/[^a-z0-9]/g, '');
 };
 
-async function extractAttachmentsWithEbml(mediaPath: string): Promise<Map<string, { fileName: string, fileData: Buffer }>> {
+async function extractAttachmentsWithEbml(mediaPath: string): Promise<Map<string, {
+  fileName: string,
+  fileData: Buffer
+}>> {
   console.log('[Fonts] Parsing MKV with ts-ebml to find attachments...');
   const fileBuffer = await fs.readFile(mediaPath);
   const decoder = new Decoder();
@@ -1145,7 +1220,7 @@ async function extractAttachmentsWithEbml(mediaPath: string): Promise<Map<string
           inAttachedFile = true;
           currentAttachment = {}; // Reset for the new attachment
         } else if (el.type === 'm' && el.isEnd) {
-          const { fileName, fileData, fileMediaType } = currentAttachment;
+          const {fileName, fileData, fileMediaType} = currentAttachment;
           const mimeType = fileMediaType?.toLowerCase() || '';
 
           const isFontMime = mimeType.includes('font') || mimeType.includes('opentype');
@@ -1154,7 +1229,7 @@ async function extractAttachmentsWithEbml(mediaPath: string): Promise<Map<string
 
           if (fileName && fileData && (isFontMime || (isGenericMime && isFontExtension))) {
             const normalized = normalizeFontName(fileName);
-            attachmentMap.set(normalized, { fileName, fileData });
+            attachmentMap.set(normalized, {fileName, fileData});
             console.log(`[Fonts] Found font attachment in MKV: ${fileName} (${(fileData.length / 1024).toFixed(2)} KB)`);
           }
           inAttachedFile = false;
@@ -1249,25 +1324,29 @@ async function loadFontData(
           addFontToDatabase(fontBuffer, file, 'local');
         }
       }
-    } catch (e) { /* ignore */ }
+    } catch (e) {
+      /* ignore */
+    }
   }
 
   // From system fonts (only search for needed fonts)
   console.log(`[Fonts] Pre-caching potential system font matches...`);
   for (const req of requiredFonts) {
     try {
-      const font = await fontScanner.findFont({ family: req.family, italic: req.italic, weight: req.bold ? 700 : 400 });
+      const font = await fontScanner.findFont({family: req.family, italic: req.italic, weight: req.bold ? 700 : 400});
       if (font) {
         const fontBuffer = await fs.readFile(font.path);
         addFontToDatabase(fontBuffer, path.basename(font.path), 'system');
       }
-    } catch (e) { /* Not found, that's fine */ }
+    } catch (e) {
+      /* Not found, that's fine */
+    }
   }
 
   // Score and decide for each requirement
   const requirementsMet = new Set<RequiredFont>();
   for (const req of requiredFonts) {
-    let bestMatch: { font: AvailableFont | null; score: number } = { font: null, score: Infinity };
+    let bestMatch: { font: AvailableFont | null; score: number } = {font: null, score: Infinity};
 
     for (const available of availableFonts) {
       const familyDistance = Levenshtein.get(req.family, available.family);
@@ -1286,7 +1365,7 @@ async function loadFontData(
       const totalScore = familyDistance + stylePenalty + sourcePenalty + unrelatedPenalty;
 
       if (totalScore < bestMatch.score) {
-        bestMatch = { font: available, score: totalScore };
+        bestMatch = {font: available, score: totalScore};
       }
     }
 
@@ -1313,7 +1392,7 @@ async function loadFontData(
 
   const fontData: FontData[] = [];
   for (const [fontFamily, dataUri] of foundFonts.entries()) {
-    fontData.push({ fontFamily, dataUri });
+    fontData.push({fontFamily, dataUri});
   }
 
   const finalNotFound = requiredFonts.filter(req => !foundFonts.has(req.family));
