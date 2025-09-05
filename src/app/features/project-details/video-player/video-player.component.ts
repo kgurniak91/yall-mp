@@ -67,7 +67,6 @@ export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
 
     if (!this.videoStateService.isResizing()) {
       this.videoStateService.setIsResizing(true);
-      window.electronAPI.mpvHideVideoDuringResize();
     }
 
     clearTimeout(this.resizeDebounceTimer);

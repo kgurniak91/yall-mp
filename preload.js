@@ -28,7 +28,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   checkFFmpegAvailability: () => ipcRenderer.invoke('ffmpeg:check'),
   // --- MPV
   mpvCreateViewport: (mediaPath, audioTrackIndex) => ipcRenderer.invoke('mpv:createViewport', mediaPath, audioTrackIndex),
-  mpvHideVideoDuringResize: () => ipcRenderer.invoke('mpv:hideVideoDuringResize'),
   mpvFinishVideoResize: (rect) => ipcRenderer.invoke('mpv:finishVideoResize', rect),
   mpvCommand: (commandArray) => ipcRenderer.invoke('mpv:command', commandArray),
   mpvPlayClip: (request) => ipcRenderer.invoke('mpv:playClip', request),

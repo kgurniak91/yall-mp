@@ -180,6 +180,8 @@ function createWindow() {
     if (!mainWindow || !uiWindow || (videoWindow && videoWindow.isDestroyed()) || mainWindow.isMinimized()) {
       return;
     }
+
+    videoWindow?.hide();
     const bounds = mainWindow.getBounds();
 
     isProgrammaticResize = true;
@@ -477,10 +479,6 @@ app.whenReady().then(() => {
     mpvManager.sendCommand(command);
     mpvManager.setProperty('speed', request.playbackRate);
     mpvManager.setProperty('pause', false);
-  });
-
-  ipcMain.handle('mpv:hideVideoDuringResize', () => {
-    videoWindow?.hide();
   });
 
   ipcMain.handle('mpv:finishVideoResize', async (_, containerRect: {
