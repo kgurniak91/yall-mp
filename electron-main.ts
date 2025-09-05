@@ -408,6 +408,9 @@ app.whenReady().then(() => {
   });
 
   ipcMain.on('window:update-draggable-zones', (_, rects: Rectangle[]) => {
+    if (areRectsSimilar(draggableHeaderZones, rects)) {
+      return;
+    }
     draggableHeaderZones = rects;
     updateUiWindowShape();
   });
@@ -1402,4 +1405,33 @@ async function loadFontData(
 
   console.log(`[Fonts] Search finished. Required: ${requiredFonts.length}. Found: ${fontData.length}.`);
   return fontData;
+}
+
+function areRectsSimilar(rectsA: Rectangle[], rectsB: Rectangle[], tolerance: number = 5): boolean {
+  if (rectsA.length !== rectsB.length) {
+    return false;
+  }
+
+  if (rectsA.length === 0) {
+    return true;
+  }
+
+  const sortedA = [...rectsA].sort((a, b) => a.x - b.x);
+  const sortedB = [...rectsB].sort((a, b) => a.x - b.x);
+
+  for (let i = 0; i < sortedA.length; i++) {
+    const rectA = sortedA[i];
+    const rectB = sortedB[i];
+
+    if (
+      Math.abs(rectA.x - rectB.x) > tolerance ||
+      Math.abs(rectA.y - rectB.y) > tolerance ||
+      Math.abs(rectA.width - rectB.width) > tolerance ||
+      Math.abs(rectA.height - rectB.height) > tolerance
+    ) {
+      return false;
+    }
+  }
+
+  return true;
 }
