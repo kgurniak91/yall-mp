@@ -1,13 +1,17 @@
 :host {
-  // This component itself should not affect layout.
-  display: contents;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999999;
 }
 
-.highlighter-box {
-  position: fixed;
-  z-index: 9999999;
-  background-color: rgba(255, 65, 54, 0.2);
-  border: 1px solid #ff4136;
+.highlight-rect {
+  position: absolute;
+  background-color: rgba(255, 0, 0, 0.3);
+  border: 1px solid rgba(255, 0, 0, 0.7);
   border-radius: 3px;
-  pointer-events: none;
+  box-sizing: border-box;
 }

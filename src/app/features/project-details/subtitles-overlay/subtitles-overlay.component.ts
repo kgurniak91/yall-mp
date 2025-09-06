@@ -5,7 +5,7 @@ import {GlobalSettingsStateService} from '../../../state/global-settings/global-
 import {HiddenSubtitleStyle} from '../../../model/settings.types';
 import ASS from 'assjs';
 import {SubtitlesHighlighterService} from '../services/subtitles-highlighter/subtitles-highlighter.service';
-import {distinctUntilChanged, fromEvent, map, merge, throttleTime} from 'rxjs';
+import {distinctUntilChanged, filter, fromEvent, map, merge, throttleTime} from 'rxjs';
 
 @Component({
   selector: 'app-subtitles-overlay',
@@ -36,6 +36,10 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   private assInstance: ASS | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private fakeVideo: any = null;
+  private readonly isSelecting = signal(false);
+  private selectionAnchor: { node: Node, start: number, end: number } | null = null;
+  private selectionFocus: { node: Node, start: number, end: number } | null = null;
+  private interactiveTextNodes: Node[] = [];
 
   constructor() {
     effect((onCleanup) => {
@@ -79,6 +83,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       if (!container) return;
 
       const mouseMove$ = fromEvent<MouseEvent>(container, 'mousemove').pipe(
+        filter(() => !this.isSelecting()),
         throttleTime(50, undefined, {leading: true, trailing: true}),
         map(event => this.getWordRectFromEvent(event)),
         distinctUntilChanged((prev, curr) => prev?.left === curr?.left && prev?.top === curr?.top)
@@ -98,12 +103,19 @@ export class SubtitlesOverlayComponent implements OnDestroy {
         }
       });
 
-      const handleInteraction = (event: MouseEvent) => this.handleSubtitleInteraction(event);
-      container.addEventListener('mouseup', handleInteraction);
+      const handleMouseDown = (event: MouseEvent) => this.handleMouseDown(event);
+      const handleMouseMove = (event: MouseEvent) => this.handleMouseMove(event);
+      const handleMouseUp = (event: MouseEvent) => this.handleMouseUp(event);
+
+      container.addEventListener('mousedown', handleMouseDown);
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
 
       onCleanup(() => {
         hoverSubscription.unsubscribe();
-        container.removeEventListener('mouseup', handleInteraction);
+        container.removeEventListener('mousedown', handleMouseDown);
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
       });
     });
   }
@@ -141,7 +153,8 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       }
     };
 
-    this.fakeVideo.removeEventListener = () => {};
+    this.fakeVideo.removeEventListener = () => {
+    };
 
     const containerAspectRatio = width / height;
     const videoAspectRatio = 16 / 9; // A common default for video content
@@ -154,6 +167,8 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       resampling: resamplingMode
     });
 
+    this.updateInteractiveTextNodes();
+
     setTimeout(() => {
       this.fakeVideo?.dispatchEvent(new Event('playing'));
     }, 0);
@@ -165,55 +180,15 @@ export class SubtitlesOverlayComponent implements OnDestroy {
     this.fakeVideo = null;
   }
 
-  private handleSubtitleInteraction(event: MouseEvent): void {
-    const selection = window.getSelection();
-    const container = this.subtitleContainer().nativeElement;
-
-    // Case 1: The user has selected a phrase.
-    if (selection && selection.toString().trim().length > 0) {
-      if (selection.anchorNode && container.contains(selection.anchorNode)) {
-        console.log(`User selected phrase: "${selection.toString().trim()}"`);
-        // TODO handle dictionary lookup
-      }
-      return;
-    }
-
-    // Case 2: The user performed a simple click (no selection).
-    const range = document.caretRangeFromPoint(event.clientX, event.clientY);
-    if (range && container.contains(range.startContainer)) {
-      const word = this.getWordFromRange(range);
-      if (word) {
-        console.log(`User clicked word: "${word}"`);
-        // TODO handle dictionary lookup
-      }
-    }
-  }
-
-  private getWordFromRange(range: Range): string | null {
-    const boundaries = this.getWordBoundaries(range.startContainer, range.startOffset);
-    if (!boundaries || !range.startContainer.textContent) {
-      return null;
-    }
-    return range.startContainer.textContent.substring(boundaries.start, boundaries.end);
-  }
-
   private getWordRectFromEvent(event: MouseEvent): DOMRect | null {
-    const range = document.caretRangeFromPoint(event.clientX, event.clientY);
-    const textNode = range?.startContainer;
-    const container = this.subtitleContainer()?.nativeElement;
-
-    if (!range || !textNode || !container || !container.contains(textNode)) {
-      return null;
-    }
-
-    const boundaries = this.getWordBoundaries(textNode, range.startOffset);
-    if (!boundaries) {
+    const wordInfo = this.getWordInfoFromEvent(event);
+    if (!wordInfo) {
       return null;
     }
 
     const wordRange = document.createRange();
-    wordRange.setStart(textNode, boundaries.start);
-    wordRange.setEnd(textNode, boundaries.end);
+    wordRange.setStart(wordInfo.node, wordInfo.start);
+    wordRange.setEnd(wordInfo.node, wordInfo.end);
 
     const candidateRect = wordRange.getBoundingClientRect();
 
@@ -251,5 +226,218 @@ export class SubtitlesOverlayComponent implements OnDestroy {
     }
 
     return {start, end};
+  }
+
+  private handleMouseDown(event: MouseEvent): void {
+    if (event.button !== 0) {
+      return;
+    }
+
+    const wordInfo = this.getWordInfoFromEvent(event);
+    const container = this.subtitleContainer().nativeElement;
+
+    if (wordInfo && container.contains(wordInfo.node)) {
+      event.preventDefault();
+      this.isSelecting.set(true);
+      this.selectionAnchor = wordInfo;
+      this.selectionFocus = wordInfo;
+      this.updateSelectionHighlight();
+    }
+  }
+
+  private handleMouseMove(event: MouseEvent): void {
+    if (!this.isSelecting()) {
+      return;
+    }
+    event.preventDefault();
+
+    const wordInfo = this.getWordInfoFromEvent(event);
+    if (wordInfo) {
+      if (wordInfo.node !== this.selectionFocus?.node || wordInfo.start !== this.selectionFocus?.start) {
+        this.selectionFocus = wordInfo;
+        this.updateSelectionHighlight();
+      }
+    }
+  }
+
+  private handleMouseUp(event: MouseEvent): void {
+    if (!this.isSelecting()) {
+      return;
+    }
+    event.preventDefault();
+
+    const selectedText = this.getSelectedText().trim();
+    const wasSimpleClick = this.selectionAnchor?.node === this.selectionFocus?.node &&
+      this.selectionAnchor?.start === this.selectionFocus?.start;
+
+    if (wasSimpleClick && selectedText) {
+      console.log(`User clicked word: "${selectedText}"`);
+    } else if (selectedText) {
+      console.log(`User selected phrase: "${selectedText}"`);
+    }
+
+    this.isSelecting.set(false);
+    this.selectionAnchor = null;
+    this.selectionFocus = null;
+
+    const rect = this.getWordRectFromEvent(event);
+    if (rect) {
+      this.subtitlesHighlighterService.show(rect);
+    } else {
+      this.subtitlesHighlighterService.hide();
+    }
+  }
+
+  private getWordInfoFromEvent(event: MouseEvent): { node: Node, start: number, end: number } | null {
+    for (const node of this.interactiveTextNodes) {
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      const rects = Array.from(range.getClientRects());
+      const isWithinNode = rects.some(r =>
+        event.clientX >= r.left &&
+        event.clientX <= r.right &&
+        event.clientY >= r.top &&
+        event.clientY <= r.bottom
+      );
+
+      if (isWithinNode) {
+        const tempRange = document.caretRangeFromPoint(event.clientX, event.clientY);
+        if (tempRange) {
+          const boundaries = this.getWordBoundaries(node, tempRange.startOffset);
+          if (boundaries) {
+            return {node, ...boundaries};
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
+  private updateSelectionHighlight(): void {
+    const selection = this.getOrderedSelection();
+    if (!selection) {
+      this.subtitlesHighlighterService.hide();
+      return;
+    }
+
+    const {start, end, startIndex, endIndex} = selection;
+
+    const rects: DOMRect[] = [];
+    for (let i = startIndex; i <= endIndex; i++) {
+      const currentNode = this.interactiveTextNodes[i];
+      const range = document.createRange();
+
+      const startOffset = (i === startIndex) ? start.offset : 0;
+      const endOffset = (i === endIndex) ? end.offset : (currentNode.textContent?.length || 0);
+
+      if (startOffset < endOffset) {
+        range.setStart(currentNode, startOffset);
+        range.setEnd(currentNode, endOffset);
+        Array.from(range.getClientRects()).forEach(rect => rects.push(rect));
+      }
+    }
+    this.subtitlesHighlighterService.show(rects);
+  }
+
+  private getSelectedText(): string {
+    const selection = this.getOrderedSelection();
+    if (!selection) {
+      return '';
+    }
+
+    // Manual string construction to avoid traversing the DOM with all its layers.
+    const {start, end, startIndex, endIndex} = selection;
+    const selectedParts: string[] = [];
+
+    for (let i = startIndex; i <= endIndex; i++) {
+      const currentNode = this.interactiveTextNodes[i];
+      const textContent = currentNode.textContent || '';
+
+      if (startIndex === endIndex) {
+        // Selection is within a single node.
+        selectedParts.push(textContent.substring(start.offset, end.offset));
+      } else if (i === startIndex) {
+        // First node in a multi-node selection.
+        selectedParts.push(textContent.substring(start.offset));
+      } else if (i === endIndex) {
+        // Last node in a multi-node selection.
+        selectedParts.push(textContent.substring(0, end.offset));
+      } else {
+        // A full node in the middle of the selection.
+        selectedParts.push(textContent);
+      }
+    }
+
+    return selectedParts.join(' ');
+  }
+
+  private getAllTextNodes(root: HTMLElement): Node[] {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const nodes: Node[] = [];
+    let node;
+    while ((node = walker.nextNode())) {
+      if (node.textContent?.trim()) {
+        nodes.push(node);
+      }
+    }
+    return nodes;
+  }
+
+  private getUniqueVisibleTextNodes(root: HTMLElement): Node[] {
+    const allNodes = this.getAllTextNodes(root);
+    const nodeMap = new Map<string, Node>();
+
+    for (const node of allNodes) {
+      const range = document.createRange();
+      range.selectNode(node);
+      const rect = range.getBoundingClientRect();
+
+      if (rect.width === 0 || rect.height === 0) continue;
+
+      const key = `${rect.top.toFixed(0)},${rect.left.toFixed(0)},${rect.width.toFixed(0)},${rect.height.toFixed(0)},${node.textContent}`;
+      nodeMap.set(key, node);
+    }
+    return Array.from(nodeMap.values());
+  }
+
+  private getOrderedSelection() {
+    if (!this.selectionAnchor || !this.selectionFocus) {
+      return null;
+    }
+
+    const anchorIndex = this.interactiveTextNodes.indexOf(this.selectionAnchor.node);
+    const focusIndex = this.interactiveTextNodes.indexOf(this.selectionFocus.node);
+
+    if (anchorIndex === -1 || focusIndex === -1) {
+      return null;
+    }
+
+    const anchorIsBeforeFocus = anchorIndex < focusIndex ||
+      (anchorIndex === focusIndex && this.selectionAnchor.start <= this.selectionFocus.start);
+
+    const start = anchorIsBeforeFocus
+      ? {node: this.selectionAnchor.node, offset: this.selectionAnchor.start}
+      : {node: this.selectionFocus.node, offset: this.selectionFocus.start};
+
+    const end = anchorIsBeforeFocus
+      ? {node: this.selectionFocus.node, offset: this.selectionFocus.end}
+      : {node: this.selectionAnchor.node, offset: this.selectionAnchor.end};
+
+    return {
+      start,
+      end,
+      startIndex: Math.min(anchorIndex, focusIndex),
+      endIndex: Math.max(anchorIndex, focusIndex)
+    };
+  }
+
+  private updateInteractiveTextNodes(): void {
+    const container = this.subtitleContainer()?.nativeElement;
+    if (container) {
+      setTimeout(() => {
+        this.interactiveTextNodes = this.getUniqueVisibleTextNodes(container);
+      });
+    }
   }
 }

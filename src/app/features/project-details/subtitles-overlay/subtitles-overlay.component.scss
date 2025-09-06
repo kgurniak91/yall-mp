@@ -8,8 +8,6 @@
   overflow: hidden;
 
   & ::ng-deep .ASS-box {
-    user-select: text;
-    -webkit-user-select: text;
     pointer-events: all;
   }
 }
@@ -45,14 +43,20 @@
   border-radius: var(--app-border-radius);
   text-align: center;
   font-size: 1.5rem;
-  cursor: text;
+  cursor: default;
   white-space: pre-wrap;
   width: max-content;
 }
 
 :host ::ng-deep {
+  * {
+    // Disable default text highlighting, it will be handled programatically:
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
   .subtitle-render-container:not(.word-hover) .ASS-dialogue span {
-    cursor: text;
+    cursor: default;
   }
 
   .subtitle-render-container.word-hover * {

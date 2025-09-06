@@ -11,20 +11,5 @@ import {AsyncPipe} from '@angular/common';
   styleUrl: './subtitles-highlighter.component.scss'
 })
 export class SubtitlesHighlighterComponent {
-  protected readonly rect$ = inject(SubtitlesHighlighterService).highlightRect$;
-
-  protected getStyle(rect: DOMRect) {
-    if (!rect) {
-      return {
-        display: 'none'
-      };
-    }
-
-    return {
-      left: `${rect.left}px`,
-      top: `${rect.top}px`,
-      width: `${rect.width}px`,
-      height: `${rect.height}px`,
-    };
-  }
+  protected readonly rects$ = inject(SubtitlesHighlighterService).highlightRects$;
 }

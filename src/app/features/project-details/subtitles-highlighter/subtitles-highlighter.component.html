@@ -1,3 +1,9 @@
-@if (rect$ | async; as rect) {
-  <div class="highlighter-box" [style]="getStyle(rect)"></div>
+@if (rects$ | async; as rects) {
+  @for (rect of rects; track $index) {
+    <div class="highlight-rect"
+         [style.left.px]="rect.left"
+         [style.top.px]="rect.top"
+         [style.width.px]="rect.width"
+         [style.height.px]="rect.height"></div>
+  }
 }

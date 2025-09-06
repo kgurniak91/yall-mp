@@ -3,14 +3,15 @@ import {BehaviorSubject} from 'rxjs';
 
 @Injectable()
 export class SubtitlesHighlighterService {
-  private highlightRectSubject = new BehaviorSubject<DOMRect | null>(null);
-  public highlightRect$ = this.highlightRectSubject.asObservable();
+  private highlightRectsSubject = new BehaviorSubject<DOMRect[]>([]);
+  public highlightRects$ = this.highlightRectsSubject.asObservable();
 
-  public show(rect: DOMRect): void {
-    this.highlightRectSubject.next(rect);
+  public show(rects: DOMRect | DOMRect[]): void {
+    const rectArray = Array.isArray(rects) ? rects : [rects];
+    this.highlightRectsSubject.next(rectArray);
   }
 
   public hide(): void {
-    this.highlightRectSubject.next(null);
+    this.highlightRectsSubject.next([]);
   }
 }

@@ -8,7 +8,6 @@ export class FontInjectionService {
   private styleTag: HTMLStyleElement | null = null;
 
   public injectFontsIntoDOM(fonts: FontData[]): void {
-    
     this.clearFonts();
 
     if (!fonts || fonts.length === 0) {
