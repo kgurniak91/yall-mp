@@ -51,11 +51,11 @@
 }
 
 :host ::ng-deep {
-  .ASS-dialogue span {
+  .subtitle-render-container:not(.word-hover) .ASS-dialogue span {
     cursor: text;
   }
 
-  .word {
-    cursor: pointer !important;
+  .subtitle-render-container.word-hover * {
+    cursor: pointer;
   }
 }

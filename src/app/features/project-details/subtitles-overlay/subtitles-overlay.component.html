@@ -2,12 +2,15 @@
      class="subtitle-render-container"
      [class.subtitles-blurred]="shouldBeBlurred() && currentClip()?.hasSubtitle"
      [class.subtitles-hidden]="shouldBeHidden() || videoStateService.isResizing()"
+     [class.word-hover]="isWordHovered()"
      (dblclick)="onDoubleClick($event)">
 
   @if (!rawAssContent()) {
     @if (currentClip(); as clip) {
       @if (clip.hasSubtitle) {
-        <div class="srt-container" [innerHTML]="wrappedSrtText()"></div>
+        <div class="srt-container">
+          {{ clip.text }}
+        </div>
       }
     }
   }
