@@ -4,6 +4,8 @@
     @if (parsedSubtitleData(); as data) {
       <app-subtitles-overlay [currentClip]="clipsStateService.currentClip()"
                              [rawAssContent]="data.rawAssContent"
+                             [videoWidth]="project()?.videoWidth"
+                             [videoHeight]="project()?.videoHeight"
                              [videoContainerElement]="videoController.videoContainerElement()"/>
     }
   </div>

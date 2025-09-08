@@ -74,6 +74,8 @@ export class ProjectFormComponent implements OnInit {
   });
   protected readonly subtitleOptions = SUBTITLE_OPTIONS;
   protected readonly SubtitleOptionType = SubtitleOptionType;
+  private readonly videoWidth = signal<number | undefined>(undefined);
+  private readonly videoHeight = signal<number | undefined>(undefined);
   private readonly externalSubtitlePath = signal<string | null>(null);
   private readonly editingProjectId = signal<string | null>(null);
   private readonly router = inject(Router);
@@ -108,6 +110,8 @@ export class ProjectFormComponent implements OnInit {
         this.existingMediaFileName.set(project.mediaFileName);
         this.audioTracks.set(project.audioTracks);
         this.subtitleTracks.set(project.subtitleTracks);
+        this.videoWidth.set(project.videoWidth);
+        this.videoHeight.set(project.videoHeight);
         this.selectedSubtitleOption.set(project.subtitleSelection.type);
 
         switch (project.subtitleSelection.type) {
@@ -133,6 +137,8 @@ export class ProjectFormComponent implements OnInit {
       this.existingMediaFileName.set(null);
       this.audioTracks.set([]);
       this.subtitleTracks.set([]);
+      this.videoWidth.set(undefined);
+      this.videoHeight.set(undefined);
       return;
     }
 
@@ -147,6 +153,8 @@ export class ProjectFormComponent implements OnInit {
       next: ([metadata]) => {
         this.audioTracks.set(metadata.audioTracks);
         this.subtitleTracks.set(metadata.subtitleTracks);
+        this.videoWidth.set(metadata.videoWidth);
+        this.videoHeight.set(metadata.videoHeight);
         if (metadata.subtitleTracks.length > 0) {
           this.selectedSubtitleOption.set('embedded');
           this.selectedEmbeddedSubtitleTrackIndex.set(null);
@@ -158,6 +166,8 @@ export class ProjectFormComponent implements OnInit {
         this.toastService.error(`Failed to read media metadata: ${e.message}`);
         this.audioTracks.set([]);
         this.subtitleTracks.set([]);
+        this.videoWidth.set(undefined);
+        this.videoHeight.set(undefined);
       }
     });
   }
@@ -216,7 +226,9 @@ export class ProjectFormComponent implements OnInit {
       },
       subtitles: [],
       audioTracks: this.audioTracks(),
-      subtitleTracks: this.subtitleTracks()
+      subtitleTracks: this.subtitleTracks(),
+      videoWidth: this.videoWidth(),
+      videoHeight: this.videoHeight()
     };
     this.appStateService.createProject(newProject);
     this.router.navigate(['/project', newProject.id]);
@@ -246,7 +258,9 @@ export class ProjectFormComponent implements OnInit {
         selectedAudioTrackIndex: firstAudioTrack ? firstAudioTrack.index : null
       },
       audioTracks: this.audioTracks(),
-      subtitleTracks: this.subtitleTracks()
+      subtitleTracks: this.subtitleTracks(),
+      videoWidth: this.videoWidth(),
+      videoHeight: this.videoHeight()
     };
     this.appStateService.updateProject(projectId, updates);
     this.toastService.success('Project updated successfully');

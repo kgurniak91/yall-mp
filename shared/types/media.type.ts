@@ -9,4 +9,6 @@ export interface MediaTrack {
 export interface MediaMetadata {
   audioTracks: MediaTrack[];
   subtitleTracks: MediaTrack[];
+  videoWidth?: number;
+  videoHeight?: number;
 }

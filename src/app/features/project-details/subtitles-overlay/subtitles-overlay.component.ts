@@ -7,6 +7,8 @@ import ASS from 'assjs';
 import {SubtitlesHighlighterService} from '../services/subtitles-highlighter/subtitles-highlighter.service';
 import {distinctUntilChanged, filter, fromEvent, map, merge, throttleTime} from 'rxjs';
 
+const FALLBACK_VIDEO_ASPECT_RATIO = 16 / 9;
+
 @Component({
   selector: 'app-subtitles-overlay',
   imports: [],
@@ -17,6 +19,8 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   public readonly currentClip = input<VideoClip | undefined>();
   public readonly rawAssContent = input<string | undefined>();
   public readonly videoContainerElement = input<HTMLDivElement | undefined>();
+  public readonly videoWidth = input<number | undefined>();
+  public readonly videoHeight = input<number | undefined>();
 
   protected readonly shouldBeHidden = computed(() => {
     const style = this.globalSettingsStateService.hiddenSubtitleStyle();
@@ -157,8 +161,10 @@ export class SubtitlesOverlayComponent implements OnDestroy {
     };
 
     const containerAspectRatio = width / height;
-    const videoAspectRatio = 16 / 9; // A common default for video content
-    const resamplingMode = containerAspectRatio > videoAspectRatio
+    const videoWidth = this.videoWidth();
+    const videoHeight = this.videoHeight();
+    const videoAspectRatio = (videoWidth && videoHeight && (videoHeight > 0)) ? (videoWidth / videoHeight) : FALLBACK_VIDEO_ASPECT_RATIO;
+    const resamplingMode = (containerAspectRatio > videoAspectRatio)
       ? 'script_height' // The container is wider: scale by height and center.
       : 'script_width'; // The container is taller: scale by width and center.
 

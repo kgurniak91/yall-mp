@@ -24,6 +24,8 @@ export interface Project {
   audioTracks: MediaTrack[];
   subtitleTracks: MediaTrack[];
   rawAssContent?: string;
+  videoWidth?: number;
+  videoHeight?: number;
   styles?: any;
   fonts?: FontData[];
 }

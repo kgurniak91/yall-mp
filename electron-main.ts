@@ -878,6 +878,8 @@ async function handleGetMediaMetadata(filePath: string) {
 
     const audioTracks: MediaTrack[] = [];
     const subtitleTracks: MediaTrack[] = [];
+    let videoWidth: number | undefined;
+    let videoHeight: number | undefined;
 
     if (probeResult && probeResult.streams) {
       for (const stream of probeResult.streams) {
@@ -895,17 +897,20 @@ async function handleGetMediaMetadata(filePath: string) {
           languageCode: code
         };
 
-        if (stream.codec_type === 'audio') {
+        if (stream.codec_type === 'video') {
+          videoWidth = stream.width;
+          videoHeight = stream.height;
+        } else if (stream.codec_type === 'audio') {
           audioTracks.push(finalTrack);
         } else if (stream.codec_type === 'subtitle') {
           subtitleTracks.push(finalTrack);
         }
       }
     }
-    return {audioTracks, subtitleTracks};
+    return {audioTracks, subtitleTracks, videoWidth, videoHeight};
   } catch (error) {
     console.error('Error probing media file:', error);
-    return {audioTracks: [], subtitleTracks: []};
+    return {audioTracks: [], subtitleTracks: [], videoWidth: undefined, videoHeight: undefined};
   }
 }
 
