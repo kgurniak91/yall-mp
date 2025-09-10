@@ -3,6 +3,7 @@ import {VideoStateService} from '../../../state/video/video-state.service';
 import {VideoClip} from '../../../model/video.types';
 import {GlobalSettingsStateService} from '../../../state/global-settings/global-settings-state.service';
 import {HiddenSubtitleStyle} from '../../../model/settings.types';
+import {ProjectSettingsStateService} from '../../../state/project-settings/project-settings-state.service';
 import ASS from 'assjs';
 import {SubtitlesHighlighterService} from '../services/subtitles-highlighter/subtitles-highlighter.service';
 import {distinctUntilChanged, filter, fromEvent, map, merge, throttleTime} from 'rxjs';
@@ -23,8 +24,20 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   public readonly videoHeight = input<number | undefined>();
 
   protected readonly shouldBeHidden = computed(() => {
-    const style = this.globalSettingsStateService.hiddenSubtitleStyle();
-    return !this.videoStateService.subtitlesVisible() && style === HiddenSubtitleStyle.Hidden;
+    if (this.projectSettingsStateService.useMpvSubtitles()) {
+      // User switched to native MPV subtitles, hide interactive subtitles layer
+      return true;
+    }
+
+    if (this.rawAssContent() && !this.isScaleApplied()) {
+      // Interactive subtitles not initialized yet, they need to be scaled first
+      return true;
+    }
+
+    const shouldBeHidden = !this.videoStateService.subtitlesVisible()
+      && (this.globalSettingsStateService.hiddenSubtitleStyle() === HiddenSubtitleStyle.Hidden);
+
+    return shouldBeHidden || this.videoStateService.isBusy();
   });
 
   protected readonly shouldBeBlurred = computed(() => {
@@ -34,9 +47,11 @@ export class SubtitlesOverlayComponent implements OnDestroy {
 
   protected readonly isWordHovered = signal(false);
   protected readonly videoStateService = inject(VideoStateService);
+  private readonly projectSettingsStateService = inject(ProjectSettingsStateService);
   private readonly subtitleContainer = viewChild.required<ElementRef<HTMLDivElement>>('subtitleContainer');
   private readonly globalSettingsStateService = inject(GlobalSettingsStateService);
   private readonly subtitlesHighlighterService = inject(SubtitlesHighlighterService);
+  private readonly isScaleApplied = signal(false);
   private assInstance: ASS | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private fakeVideo: any = null;
@@ -44,8 +59,52 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   private selectionAnchor: { node: Node, start: number, end: number } | null = null;
   private selectionFocus: { node: Node, start: number, end: number } | null = null;
   private interactiveTextNodes: Node[] = [];
+  private readonly baseAssScale = signal(1.0, {
+    equal: () => false // Always update, even if the same value is provided twice in a row
+  });
 
   constructor() {
+    effect(() => {
+      const baseScale = this.baseAssScale();
+      const settings = this.projectSettingsStateService.settings();
+
+      if (settings.useMpvSubtitles) {
+        if (!this.rawAssContent()) {
+          this.isScaleApplied.set(true); // SRT has always the correct scale applied
+        }
+        return;
+      }
+
+      const percentage = settings.assScalePercentage;
+      if (typeof percentage !== 'number') {
+        // Exhaustive check just in case
+        return;
+      }
+
+      const multiplier = percentage / 100;
+      const finalScale = baseScale * multiplier;
+
+      const container = this.subtitleContainer()?.nativeElement;
+      const assBox = container?.querySelector('.ASS-box') as HTMLElement | null;
+
+      if (assBox) {
+        assBox.style.setProperty('--ass-scale', finalScale.toString(), 'important');
+        assBox.style.setProperty('--ass-scale-stroke', finalScale.toString(), 'important');
+      }
+
+      this.isScaleApplied.set(true);
+      this.subtitleContainer().nativeElement.classList.remove('subtitles-initializing');
+    });
+
+    effect(() => {
+      const useMpv = this.projectSettingsStateService.useMpvSubtitles();
+
+      if (!useMpv && this.fakeVideo) {
+        console.log('[SubtitlesOverlay] Switched to ASS.js renderer. Forcing re-initialization.');
+        this.initializeOrUpdateAssRenderer(this.fakeVideo.videoWidth, this.fakeVideo.videoHeight);
+      }
+    });
+
     effect((onCleanup) => {
       const videoContainer = this.videoContainerElement();
       if (!videoContainer) return;
@@ -133,14 +192,19 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   }
 
   private initializeOrUpdateAssRenderer(width: number, height: number): void {
+    this.subtitleContainer().nativeElement.classList.add('subtitles-initializing');
     const assContent = this.rawAssContent();
     const renderContainer = this.subtitleContainer()?.nativeElement;
     const videoContainer = this.videoContainerElement();
 
     if (!assContent || !renderContainer || !videoContainer) {
+      if (!assContent) {
+        this.isScaleApplied.set(true); // SRT has always the correct scale applied
+      }
       return;
     }
 
+    this.isScaleApplied.set(false);
     this.destroyAssRenderer();
 
     this.fakeVideo = videoContainer;
@@ -177,6 +241,17 @@ export class SubtitlesOverlayComponent implements OnDestroy {
 
     setTimeout(() => {
       this.fakeVideo?.dispatchEvent(new Event('playing'));
+
+      // Give ass.js enough time to finish its own internal async CSS variables updates:
+      requestAnimationFrame(() => {
+        const assBox = renderContainer.querySelector('.ASS-box');
+        if (assBox) {
+          const newBaseScale = parseFloat(getComputedStyle(assBox).getPropertyValue('--ass-scale'));
+          if (!isNaN(newBaseScale) && newBaseScale > 0) {
+            this.baseAssScale.set(newBaseScale);
+          }
+        }
+      });
     }, 0);
   }
 

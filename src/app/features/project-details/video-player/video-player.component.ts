@@ -65,8 +65,8 @@ export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    if (!this.videoStateService.isResizing()) {
-      this.videoStateService.setIsResizing(true);
+    if (!this.videoStateService.isBusy()) {
+      this.videoStateService.setIsBusy(true);
     }
 
     clearTimeout(this.resizeDebounceTimer);
@@ -91,8 +91,6 @@ export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
           width: rect.width,
           height: rect.height,
         });
-
-        this.videoStateService.setIsResizing(false);
       }
     }, 50);
   }

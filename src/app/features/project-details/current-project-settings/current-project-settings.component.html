@@ -14,7 +14,7 @@
   </div>
 
   @if (audioTracks().length > 1) {
-    <p-fieldset legend="Audio">
+    <p-fieldset legend="Audio" [toggleable]="false">
       <div class="setting-item-column">
         <label for="audio" class="font-semibold">
           Audio Track
@@ -27,6 +27,62 @@
                   optionLabel="label"
                   optionValue="value"></p-select>
       </div>
+    </p-fieldset>
+  }
+
+  @if (isAssProject()) {
+    <p-fieldset legend="Subtitles Renderer" [toggleable]="false">
+      <div class="setting-item-column gap-4">
+        <div class="flex items-start">
+          <p-radioButton name="subtitleRenderer"
+                         [value]="false"
+                         inputId="renderer-interactive"
+                         [ngModel]="settings().useMpvSubtitles"
+                         (ngModelChange)="onSettingChange('useMpvSubtitles', $event)"/>
+          <label for="renderer-interactive" class="ml-2 cursor-pointer">
+            <span class="font-bold block">Interactive (ASS.js)</span>
+            <span class="text-sm">Allows word selection but may have rendering issues with complex styles.</span>
+          </label>
+        </div>
+
+        <div class="flex items-start">
+          <p-radioButton name="subtitleRenderer"
+                         [value]="true"
+                         inputId="renderer-mpv"
+                         [ngModel]="settings().useMpvSubtitles"
+                         (ngModelChange)="onSettingChange('useMpvSubtitles', $event)"/>
+          <label for="renderer-mpv" class="ml-2 cursor-pointer">
+            <span class="font-bold block">Pixel-Perfect (MPV)</span>
+            <span class="text-sm">Provides highly accurate rendering but subtitles are not interactive.</span>
+          </label>
+        </div>
+      </div>
+
+      @if (!settings().useMpvSubtitles) {
+        <p-divider/>
+        <div class="setting-item-column">
+          <label for="ass-scale-percentage" class="font-bold">Rendering Scale</label>
+          <div class="flex align-items-center gap-2">
+            <p-inputNumber inputId="ass-scale-percentage"
+                           [ngModel]="settings().assScalePercentage"
+                           (ngModelChange)="onSettingChange('assScalePercentage', $event)"
+                           suffix=" %"
+                           mode="decimal"
+                           [minFractionDigits]="2"
+                           [maxFractionDigits]="2"
+                           [step]="1.00"
+                           [showButtons]="true"/>
+            <p-button icon="fa-solid fa-rotate-left"
+                      (click)="onSettingChange('assScalePercentage', 100.00)"
+                      [disabled]="settings().assScalePercentage === 100.00"
+                      pTooltip="Reset to default (100%)"
+                      styleClass="p-button-secondary"/>
+          </div>
+          <small class="block">
+            Adjust if subtitles are the wrong size or are cut off.
+          </small>
+        </div>
+      }
     </p-fieldset>
   }
 

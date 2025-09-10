@@ -119,6 +119,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   protected readonly settingsPresets = signal<SettingsPreset[]>(BuiltInSettingsPresets);
   protected readonly selectedSettingsPreset = signal<SettingsPreset | null>(null);
   protected parsedSubtitleData = signal<ParsedSubtitlesData | null>(null);
+  protected readonly isAssProject = computed(() => Boolean(this.parsedSubtitleData()?.rawAssContent));
   private wasPlayingBeforeSettingsOpened = false;
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -129,7 +130,8 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   private dialogRef: DynamicDialogRef | undefined;
   private isMpvReady = signal(false);
   private isUiReady = signal(false);
-  private hasStartedPlayback = false;
+  private hasFiredStartupSequence = false;
+  private cleanupInitialSeekListener: (() => void) | null = null;
 
   constructor() {
     inject(KeyboardShortcutsService); // start listening
@@ -155,11 +157,18 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     effect(() => {
       const clips = this.clipsStateService.clips();
       // Wait until UI and MPV are ready, and clips have been generated from the video's duration.
-      if (this.isUiReady() && this.isMpvReady() && clips.length > 0 && !this.hasStartedPlayback) {
-        this.hasStartedPlayback = true;
-        console.log('[ProjectDetails] Both UI and MPV are ready. Requesting initial resize.');
-        this.videoStateService.requestForceResize();
+      if (this.isUiReady() && this.isMpvReady() && clips.length > 0 && !this.hasFiredStartupSequence) {
+        this.hasFiredStartupSequence = true;
         this.startPlaybackSequence();
+      }
+    });
+
+    effect(() => {
+      const useMpv = this.projectSettingsStateService.useMpvSubtitles();
+
+      if (untracked(this.isMpvReady)) {
+        console.log(`[ProjectDetails] Setting MPV sub-visibility to: ${useMpv}`);
+        window.electronAPI.mpvSetProperty('sub-visibility', useMpv);
       }
     });
 
@@ -178,6 +187,13 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   }
 
   async ngOnInit() {
+    this.videoStateService.setIsBusy(true);
+
+    this.cleanupInitialSeekListener = window.electronAPI.onMpvInitialSeekComplete(() => {
+      console.log('[ProjectDetails] Received initial-seek-complete. Hiding spinner.');
+      this.videoStateService.setIsBusy(false);
+    });
+
     const projectId = this.route.snapshot.paramMap.get('id');
 
     if (!projectId) {
@@ -245,11 +261,20 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     }
 
     this.clipsStateService.setSubtitles(subtitles);
-    await window.electronAPI.mpvCreateViewport(foundProject.mediaPath, foundProject.settings.selectedAudioTrackIndex);
+    await window.electronAPI.mpvCreateViewport(
+      foundProject.mediaPath,
+      foundProject.settings.selectedAudioTrackIndex,
+      foundProject.subtitleSelection,
+      foundProject.settings.useMpvSubtitles
+    );
   }
 
   ngOnDestroy(): void {
+    if (this.cleanupInitialSeekListener) {
+      this.cleanupInitialSeekListener();
+    }
     this.fontInjectionService.clearFonts();
+    window.electronAPI.mpvSetProperty('sub-visibility', false);
   }
 
   onPlayerReady(): void {
@@ -459,18 +484,27 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   private startPlaybackSequence(): void {
     const project = this.project();
     if (!project) {
+      this.videoStateService.setIsBusy(false);
       return;
     }
 
-    if (this.videoStateService.duration() <= 0) {
+    const duration = this.videoStateService.duration();
+    if (duration <= 0) {
+      this.videoStateService.setIsBusy(false);
       return;
     }
 
     const seekTime = project.lastPlaybackTime;
     console.log(`[ProjectDetails] Startup sequence. Seeking to last known time: ${seekTime}`);
 
-    if (seekTime > 0) {
-      this.videoStateService.seekAbsolute(seekTime);
+    const clips = this.clipsStateService.clips();
+    const targetClipIndex = clips.findIndex(c => seekTime >= c.startTime && seekTime < c.endTime);
+    if (targetClipIndex !== -1) {
+      this.clipsStateService.setCurrentClipByIndex(targetClipIndex);
+      console.log(`[ProjectDetails] Synchronized active clip to index: ${targetClipIndex} `);
     }
+
+    this.videoStateService.setCurrentTime(seekTime);
+    window.electronAPI.mpvSeekAndPause(seekTime);
   }
 }

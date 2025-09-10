@@ -1,5 +1,5 @@
 import {AnkiExportRequest} from './app/model/anki.types';
-import {AppData} from './app/model/project.types';
+import {AppData, SubtitleSelection} from './app/model/project.types';
 import {SubtitleData} from '../shared/types/subtitle.type';
 import {MediaMetadata} from '../shared/types/media.type';
 
@@ -48,15 +48,19 @@ export interface IElectronAPI {
   // --- FFmpeg
   checkFFmpegAvailability: () => Promise<boolean>;
   // --- MPV
-  mpvCreateViewport: (mediaPath: string, audioTrackIndex: number | null) => Promise<void>;
+  mpvCreateViewport: (
+    mediaPath: string, audioTrackIndex: number | null, subtitleSelection: SubtitleSelection, useMpvSubtitles: boolean
+  ) => Promise<void>;
   mpvFinishVideoResize: (rect: { x: number, y: number, width: number, height: number }) => Promise<void>;
   mpvCommand: (commandArray: any[]) => Promise<void>;
   mpvPlayClip: (request: MpvClipRequest) => Promise<void>;
   mpvGetProperty: (property: string) => Promise<any>;
   mpvSetProperty: (property: string, value: any) => Promise<void>;
+  mpvSeekAndPause: (seekTime: number) => Promise<void>;
   onMpvEvent: (callback: (status: any) => void) => (() => void);
   onMainWindowMoved: (callback: () => void) => void;
   onMpvManagerReady: (callback: () => void) => void;
+  onMpvInitialSeekComplete: (callback: () => void) => (() => void);
   // --- Storage
   getAppData: () => Promise<AppData | null>;
   setAppData: (data: AppData) => Promise<void>;

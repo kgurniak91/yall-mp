@@ -1,7 +1,7 @@
 <div #subtitleContainer
      class="subtitle-render-container"
      [class.subtitles-blurred]="shouldBeBlurred() && currentClip()?.hasSubtitle"
-     [class.subtitles-hidden]="shouldBeHidden() || videoStateService.isResizing()"
+     [class.subtitles-hidden]="shouldBeHidden() || videoStateService.isBusy()"
      [class.word-hover]="isWordHovered()"
      (dblclick)="onDoubleClick($event)">
 

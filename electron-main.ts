@@ -18,6 +18,7 @@ import fontScanner from 'font-scanner';
 import {Decoder} from 'ts-ebml';
 import fontkit from 'fontkit';
 import Levenshtein from 'fast-levenshtein';
+import {SubtitleSelection} from './src/app/model/project.types';
 
 interface AvailableFont {
   family: string;
@@ -49,6 +50,8 @@ let isFFmpegAvailable = false;
 let ffmpegPath = '';
 let ffprobePath = '';
 let draggableHeaderZones: Rectangle[] = [];
+let isInitialResizeComplete = false;
+let hasRequestedInitialSeek = false;
 const initialBounds = {width: 1920, height: 1080};
 const FORCED_GAP_SECONDS = 0.05;
 const DRAGGABLE_ZONE_PADDING = 3; // 3px on all sides
@@ -151,6 +154,19 @@ function updateUiWindowShape() {
   }
 
   uiWindow.setShape(visibleShapes);
+}
+
+function tryShowVideoWindowAndNotifyUI() {
+  if (isInitialResizeComplete && hasRequestedInitialSeek && videoWindow && !videoWindow.isDestroyed() && uiWindow) {
+    console.log('[Main Process] All startup conditions met. Showing video window and notifying UI.');
+
+    videoWindow.showInactive();
+    uiWindow.webContents.send('mpv:initial-seek-complete');
+
+    // Reset flags to prevent this from ever running again for this project instance.
+    isInitialResizeComplete = false;
+    hasRequestedInitialSeek = false;
+  }
 }
 
 function createWindow() {
@@ -417,10 +433,19 @@ app.whenReady().then(() => {
     updateUiWindowShape();
   });
 
-  ipcMain.handle('mpv:createViewport', async (_, mediaPath: string, audioTrackIndex: number | null) => {
+  ipcMain.handle('mpv:createViewport', async (
+    _,
+    mediaPath: string,
+    audioTrackIndex: number | null,
+    subtitleSelection: SubtitleSelection,
+    useMpvSubtitles: boolean
+  ) => {
     if (!uiWindow || !mainWindow) {
       return;
     }
+
+    isInitialResizeComplete = false;
+    hasRequestedInitialSeek = false;
 
     // Clean up any old instances
     videoWindow?.close();
@@ -443,11 +468,25 @@ app.whenReady().then(() => {
     uiWindow.setParentWindow(videoWindow);
 
     mpvManager = new MpvManager(videoWindow);
+
     mpvManager.on('status', (status) => {
       if (uiWindow) {
         uiWindow.webContents.send('mpv:event', status)
       }
     });
+
+    const onMpvStatus = (status: any) => {
+      // Listen for confirmation only if seek requested
+      // This ignores the premature playback-restart at t=0.
+      if (status.event === 'playback-restart' && hasRequestedInitialSeek) {
+        console.log('[Main Process] Confirmed playback-restart AFTER seek request.');
+        tryShowVideoWindowAndNotifyUI();
+        // This is only needed once:
+        mpvManager?.removeListener('status', onMpvStatus);
+      }
+    };
+    mpvManager.on('status', onMpvStatus);
+
     mpvManager.on('error', (err) => console.error("MPV Error:", err));
     mpvManager.on('ready', () => {
       console.log('[Main Process] MpvManager is ready. Notifying renderer.');
@@ -457,7 +496,7 @@ app.whenReady().then(() => {
     });
 
     // Start MPV inside the child window's handle
-    await mpvManager.start(mediaPath, audioTrackIndex);
+    await mpvManager.start(mediaPath, audioTrackIndex, subtitleSelection, useMpvSubtitles);
     mpvManager.observeProperty('time-pos');
     mpvManager.observeProperty('duration');
     mpvManager.observeProperty('pause');
@@ -528,8 +567,10 @@ app.whenReady().then(() => {
       // Set the final bounds on the video window.
       videoWindow.setBounds(finalBounds);
 
-      if (!videoWindow.isVisible()) {
-        videoWindow.showInactive();
+      if (!isInitialResizeComplete) {
+        console.log('[Main Process] Initial resize is complete.');
+        isInitialResizeComplete = true;
+        tryShowVideoWindowAndNotifyUI();
       }
     } catch (e) {
       console.error("Error during viewport resize:", e);
@@ -550,6 +591,27 @@ app.whenReady().then(() => {
   ipcMain.handle('mpv:setProperty', (_, property, value) => {
     console.log(`[Main Process] Received mpv:setProperty: ${property}=${value}`);
     mpvManager?.setProperty(property, value);
+  });
+
+  ipcMain.handle('mpv:seekAndPause', (_, seekTime: number) => {
+    if (!mpvManager?.mediaPath) {
+      return;
+    }
+
+    console.log(`[Main Process] Received mpv:seekAndPause at ${seekTime}s`);
+    hasRequestedInitialSeek = true;
+
+    const command = [
+      'loadfile',
+      mpvManager.mediaPath,
+      'replace', // play immediately
+      -1,
+      `start=${seekTime},end=${seekTime}` // Play for 1 frame and stop to force native subtitles rendering
+    ];
+    mpvManager.sendCommand(command);
+
+    // Explicitly ensure MPV remains paused after this operation
+    mpvManager.setProperty('pause', true);
   });
 
   createWindow();

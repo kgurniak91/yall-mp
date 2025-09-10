@@ -3,6 +3,7 @@ import {ChildProcess, spawn} from 'child_process';
 import type {Socket} from 'net';
 import net from 'net';
 import {app, type BrowserWindow} from 'electron';
+import {SubtitleSelection} from './src/app/model/project.types';
 import path from 'path';
 
 export class MpvManager extends EventEmitter {
@@ -20,7 +21,13 @@ export class MpvManager extends EventEmitter {
       : `/tmp/mpv-ipc-socket-${Date.now()}`;
   }
 
-  public async start(mediaPath: string, audioTrackIndex: number | null): Promise<void> {
+  public async start(
+    mediaPath: string,
+    audioTrackIndex: number | null,
+    subtitleSelection: SubtitleSelection,
+    useMpvSubtitles: boolean
+  ): Promise<void> {
+    
     this.mediaPath = mediaPath;
     return new Promise((resolve, reject) => {
       const mpvExecutable = this.getMpvExecutablePath();
@@ -36,12 +43,24 @@ export class MpvManager extends EventEmitter {
         '--keep-open=always',
         '--idle=yes',
         '--pause',
-        '--sub-visibility=no',
+        `--sub-visibility=${useMpvSubtitles ? 'yes' : 'no'}`,
         mediaPath
       ];
 
       if (audioTrackIndex !== null) {
         args.push(`--aid=${audioTrackIndex}`);
+      }
+
+      switch (subtitleSelection.type) {
+        case 'embedded':
+          args.push(`--sid=${subtitleSelection.trackIndex}`);
+          break;
+        case 'external':
+          args.push(`--sub-file=${subtitleSelection.filePath}`);
+          break;
+        case 'none':
+          // do nothing
+          break;
       }
 
       this.mpvProcess = spawn(mpvExecutable, args);

@@ -27,12 +27,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // --- FFmpeg
   checkFFmpegAvailability: () => ipcRenderer.invoke('ffmpeg:check'),
   // --- MPV
-  mpvCreateViewport: (mediaPath, audioTrackIndex) => ipcRenderer.invoke('mpv:createViewport', mediaPath, audioTrackIndex),
+  mpvCreateViewport: (mediaPath, audioTrackIndex, subtitleSelection, useMpvSubtitles) => ipcRenderer.invoke(
+    'mpv:createViewport', mediaPath, audioTrackIndex, subtitleSelection, useMpvSubtitles
+  ),
   mpvFinishVideoResize: (rect) => ipcRenderer.invoke('mpv:finishVideoResize', rect),
   mpvCommand: (commandArray) => ipcRenderer.invoke('mpv:command', commandArray),
   mpvPlayClip: (request) => ipcRenderer.invoke('mpv:playClip', request),
   mpvGetProperty: (property) => ipcRenderer.invoke('mpv:getProperty', property),
   mpvSetProperty: (property, value) => ipcRenderer.invoke('mpv:setProperty', property, value),
+  mpvSeekAndPause: (seekTime) => ipcRenderer.invoke('mpv:seekAndPause', seekTime),
   onMpvEvent: (callback) => {
     const subscription = (_event, value) => callback(value);
     ipcRenderer.on('mpv:event', subscription);
@@ -40,6 +43,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   onMainWindowMoved: (callback) => ipcRenderer.on('mpv:mainWindowMovedOrResized', callback),
   onMpvManagerReady: (callback) => ipcRenderer.on('mpv:managerReady', callback),
+  onMpvInitialSeekComplete: (callback) => {
+    const subscription = () => callback();
+    ipcRenderer.on('mpv:initial-seek-complete', subscription);
+    return () => ipcRenderer.removeListener('mpv:initial-seek-complete', subscription); // return cleanup function
+  },
   // --- Storage
   getAppData: () => ipcRenderer.invoke('app:get-data'),
   setAppData: (data) => ipcRenderer.invoke('app:set-data', data),

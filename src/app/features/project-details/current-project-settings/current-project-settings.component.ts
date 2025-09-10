@@ -7,6 +7,11 @@ import {
   CommonProjectSettingsComponent
 } from '../../../shared/components/common-project-settings/common-project-settings.component';
 import {FormsModule} from '@angular/forms';
+import {InputNumber} from "primeng/inputnumber";
+import {Button} from "primeng/button";
+import {Tooltip} from "primeng/tooltip";
+import {RadioButton} from 'primeng/radiobutton';
+import {Divider} from 'primeng/divider';
 
 @Component({
   selector: 'app-current-project-settings',
@@ -14,7 +19,12 @@ import {FormsModule} from '@angular/forms';
     Fieldset,
     Select,
     CommonProjectSettingsComponent,
-    FormsModule
+    FormsModule,
+    InputNumber,
+    Button,
+    Tooltip,
+    RadioButton,
+    Divider
   ],
   templateUrl: './current-project-settings.component.html',
   styleUrl: './current-project-settings.component.scss'
@@ -23,6 +33,7 @@ export class CurrentProjectSettingsComponent {
   public readonly settings = input.required<ProjectSettings>();
   public readonly audioTracks = input<MediaTrack[]>([]);
   public readonly settingsPresets = input.required<SettingsPreset[]>();
+  public readonly isAssProject = input(false);
   public readonly selectedSettingsPreset = input.required<SettingsPreset | null>();
   public readonly settingsChange = output<ProjectSettings>();
   public readonly selectedSettingsPresetChange = output<SettingsPreset | null>();

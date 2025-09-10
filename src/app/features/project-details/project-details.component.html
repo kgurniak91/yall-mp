@@ -153,6 +153,7 @@
     <app-current-project-settings [settings]="projectSettingsStateService.settings()"
                                   [audioTracks]="project()?.audioTracks || []"
                                   [settingsPresets]="settingsPresets()"
+                                  [isAssProject]="isAssProject()"
                                   [selectedSettingsPreset]="selectedSettingsPreset()"
                                   (settingsChange)="projectSettingsStateService.setSettings($event)"
                                   (selectedSettingsPresetChange)="onSettingsPresetChange($event)"/>

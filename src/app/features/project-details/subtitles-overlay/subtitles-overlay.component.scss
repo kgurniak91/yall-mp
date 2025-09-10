@@ -26,8 +26,8 @@
   &.subtitles-hidden {
     & > .srt-container,
     & ::ng-deep .ASS-box {
-      visibility: hidden;
-      opacity: 0;
+      visibility: hidden !important;
+      opacity: 0 !important;
     }
   }
 }
@@ -61,5 +61,9 @@
 
   .subtitle-render-container.word-hover * {
     cursor: pointer;
+  }
+
+  .subtitle-render-container.subtitles-initializing .ASS-box {
+    opacity: 0 !important;
   }
 }
