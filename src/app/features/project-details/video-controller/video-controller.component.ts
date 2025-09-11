@@ -203,8 +203,7 @@ export class VideoControllerComponent implements OnDestroy {
       this.playClip(newClip, {seekToTime: targetTime});
     } else {
       // If video was paused, tell MPV to go to the new time and remain paused.
-      window.electronAPI.mpvCommand(['seek', targetTime, 'absolute']);
-      window.electronAPI.mpvSetProperty('pause', true);
+      window.electronAPI.mpvSeekAndPause(targetTime);
     }
 
     this.videoStateService.clearSeekRequest();

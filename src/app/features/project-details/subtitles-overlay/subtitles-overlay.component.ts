@@ -1,4 +1,15 @@
-import {Component, computed, effect, ElementRef, inject, input, OnDestroy, signal, viewChild} from '@angular/core';
+import {
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  ElementRef,
+  inject,
+  input,
+  OnDestroy,
+  signal,
+  viewChild
+} from '@angular/core';
 import {VideoStateService} from '../../../state/video/video-state.service';
 import {VideoClip} from '../../../model/video.types';
 import {GlobalSettingsStateService} from '../../../state/global-settings/global-settings-state.service';
@@ -6,7 +17,8 @@ import {HiddenSubtitleStyle} from '../../../model/settings.types';
 import {ProjectSettingsStateService} from '../../../state/project-settings/project-settings-state.service';
 import ASS from 'assjs';
 import {SubtitlesHighlighterService} from '../services/subtitles-highlighter/subtitles-highlighter.service';
-import {distinctUntilChanged, filter, fromEvent, map, merge, throttleTime} from 'rxjs';
+import {distinctUntilChanged, filter, fromEvent, map, merge, pairwise, throttleTime} from 'rxjs';
+import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
 
 const FALLBACK_VIDEO_ASPECT_RATIO = 16 / 9;
 
@@ -51,6 +63,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   private readonly subtitleContainer = viewChild.required<ElementRef<HTMLDivElement>>('subtitleContainer');
   private readonly globalSettingsStateService = inject(GlobalSettingsStateService);
   private readonly subtitlesHighlighterService = inject(SubtitlesHighlighterService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly isScaleApplied = signal(false);
   private assInstance: ASS | null = null;
   private resizeObserver: ResizeObserver | null = null;
@@ -96,10 +109,12 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       this.subtitleContainer().nativeElement.classList.remove('subtitles-initializing');
     });
 
-    effect(() => {
-      const useMpv = this.projectSettingsStateService.useMpvSubtitles();
-
-      if (!useMpv && this.fakeVideo) {
+    toObservable(this.projectSettingsStateService.useMpvSubtitles).pipe(
+      pairwise(), // Emits [previousValue, currentValue]
+      filter(([prev, curr]) => prev === true && curr === false), // Trigger only when switching MPV -> ASS.js
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(() => {
+      if (this.fakeVideo) {
         console.log('[SubtitlesOverlay] Switched to ASS.js renderer. Forcing re-initialization.');
         this.initializeOrUpdateAssRenderer(this.fakeVideo.videoWidth, this.fakeVideo.videoHeight);
       }
@@ -135,9 +150,11 @@ export class SubtitlesOverlayComponent implements OnDestroy {
 
     effect(() => {
       const seekCompleted = this.videoStateService.seekCompleted();
-      if (seekCompleted && this.assInstance && this.fakeVideo) {
+      if (seekCompleted) {
         this.videoStateService.clearSeekCompleted();
-        this.initializeOrUpdateAssRenderer(this.fakeVideo.videoWidth, this.fakeVideo.videoHeight);
+        if (!this.projectSettingsStateService.useMpvSubtitles() && this.assInstance && this.fakeVideo) {
+          this.initializeOrUpdateAssRenderer(this.fakeVideo.videoWidth, this.fakeVideo.videoHeight);
+        }
       }
     });
 

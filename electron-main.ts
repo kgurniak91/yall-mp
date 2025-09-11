@@ -52,6 +52,7 @@ let ffprobePath = '';
 let draggableHeaderZones: Rectangle[] = [];
 let isInitialResizeComplete = false;
 let hasRequestedInitialSeek = false;
+let activeVisibilityListener: ((status: any) => void) | null = null;
 const initialBounds = {width: 1920, height: 1080};
 const FORCED_GAP_SECONDS = 0.05;
 const DRAGGABLE_ZONE_PADDING = 3; // 3px on all sides
@@ -502,20 +503,13 @@ app.whenReady().then(() => {
     mpvManager.observeProperty('pause');
   });
 
-  ipcMain.handle('mpv:playClip', (_, request: MpvClipRequest) => {
+  ipcMain.handle('mpv:playClip', async (_, request: MpvClipRequest) => {
     if (!mpvManager?.mediaPath) {
       return;
     }
 
-    const command = [
-      'loadfile',
-      mpvManager.mediaPath,
-      'replace', // play immediately
-      -1,
-      `start=${request.startTime},end=${request.endTime}`
-    ];
+    await executeMpvLoadCommand(mpvManager, request.startTime, request.endTime);
 
-    mpvManager.sendCommand(command);
     mpvManager.setProperty('speed', request.playbackRate);
     mpvManager.setProperty('pause', false);
   });
@@ -593,7 +587,7 @@ app.whenReady().then(() => {
     mpvManager?.setProperty(property, value);
   });
 
-  ipcMain.handle('mpv:seekAndPause', (_, seekTime: number) => {
+  ipcMain.handle('mpv:seekAndPause', async (_, seekTime: number) => {
     if (!mpvManager?.mediaPath) {
       return;
     }
@@ -601,16 +595,10 @@ app.whenReady().then(() => {
     console.log(`[Main Process] Received mpv:seekAndPause at ${seekTime}s`);
     hasRequestedInitialSeek = true;
 
-    const command = [
-      'loadfile',
-      mpvManager.mediaPath,
-      'replace', // play immediately
-      -1,
-      `start=${seekTime},end=${seekTime}` // Play for 1 frame and stop to force native subtitles rendering
-    ];
-    mpvManager.sendCommand(command);
+    // Play for 1 frame and stop to force native subtitles rendering:
+    await executeMpvLoadCommand(mpvManager, seekTime, seekTime);
 
-    // Explicitly ensure MPV remains paused after this operation
+    // Explicitly ensure MPV remains paused after this operation:
     mpvManager.setProperty('pause', true);
   });
 
@@ -1499,4 +1487,44 @@ function areRectsSimilar(rectsA: Rectangle[], rectsB: Rectangle[], tolerance: nu
   }
 
   return true;
+}
+
+async function executeMpvLoadCommand(
+  mpvManager: MpvManager,
+  startTime: number,
+  endTime: number
+) {
+  // If a previous visibility listener is still waiting, cancel it.
+  if (activeVisibilityListener) {
+    mpvManager.removeListener('status', activeVisibilityListener);
+    activeVisibilityListener = null;
+  }
+
+  const previousVisibility = await mpvManager.getProperty('sub-visibility');
+
+  // Hide the subtitles before changing clips and restore them after playback to prevent flickering:
+  if (previousVisibility === true) {
+    mpvManager.setProperty('sub-visibility', false);
+
+    activeVisibilityListener = (status) => {
+      if (status.event === 'playback-restart') {
+        mpvManager.setProperty('sub-visibility', true);
+        if (activeVisibilityListener) {
+          mpvManager.removeListener('status', activeVisibilityListener);
+          activeVisibilityListener = null;
+        }
+      }
+    };
+
+    mpvManager.on('status', activeVisibilityListener);
+  }
+
+  const command = [
+    'loadfile',
+    mpvManager.mediaPath,
+    'replace', -1,
+    `start=${startTime},end=${endTime}`
+  ];
+
+  mpvManager.sendCommand(command);
 }

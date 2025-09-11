@@ -27,7 +27,6 @@ export class MpvManager extends EventEmitter {
     subtitleSelection: SubtitleSelection,
     useMpvSubtitles: boolean
   ): Promise<void> {
-    
     this.mediaPath = mediaPath;
     return new Promise((resolve, reject) => {
       const mpvExecutable = this.getMpvExecutablePath();
