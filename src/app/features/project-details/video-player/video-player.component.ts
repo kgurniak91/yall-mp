@@ -71,26 +71,28 @@ export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
 
     clearTimeout(this.resizeDebounceTimer);
 
-    this.resizeDebounceTimer = setTimeout(() => {
-      const videoContainer = this.mpvPlaceholderRef()?.nativeElement;
-      if (!videoContainer) {
-        return;
-      }
+    this.resizeDebounceTimer = setTimeout(async () => {
+      try {
+        const videoContainer = this.mpvPlaceholderRef()?.nativeElement;
+        if (!videoContainer) return;
 
-      const rect = videoContainer.getBoundingClientRect();
+        const rect = videoContainer.getBoundingClientRect();
 
-      if (rect.width > 0 && rect.height > 0) {
-        if (!this.isReadyEmitted) {
-          this.isReadyEmitted = true;
-          this.ready.emit();
+        if (rect.width > 0 && rect.height > 0) {
+          if (!this.isReadyEmitted) {
+            this.isReadyEmitted = true;
+            this.ready.emit();
+          }
+
+          await window.electronAPI.mpvFinishVideoResize({
+            x: rect.left,
+            y: rect.top,
+            width: rect.width,
+            height: rect.height,
+          });
         }
-
-        window.electronAPI.mpvFinishVideoResize({
-          x: rect.left,
-          y: rect.top,
-          width: rect.width,
-          height: rect.height,
-        });
+      } finally {
+        this.videoStateService.setIsBusy(false);
       }
     }, 50);
   }

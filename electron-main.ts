@@ -565,6 +565,8 @@ app.whenReady().then(() => {
         console.log('[Main Process] Initial resize is complete.');
         isInitialResizeComplete = true;
         tryShowVideoWindowAndNotifyUI();
+      } else {
+        videoWindow.showInactive();
       }
     } catch (e) {
       console.error("Error during viewport resize:", e);
