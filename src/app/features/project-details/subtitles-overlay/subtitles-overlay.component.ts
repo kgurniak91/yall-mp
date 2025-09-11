@@ -163,6 +163,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       if (!container) return;
 
       const mouseMove$ = fromEvent<MouseEvent>(container, 'mousemove').pipe(
+        filter(() => !this.projectSettingsStateService.useMpvSubtitles()),
         filter(() => !this.isSelecting()),
         throttleTime(50, undefined, {leading: true, trailing: true}),
         map(event => this.getWordRectFromEvent(event)),
@@ -197,6 +198,12 @@ export class SubtitlesOverlayComponent implements OnDestroy {
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
       });
+    });
+
+    effect(() => {
+      if (this.projectSettingsStateService.useMpvSubtitles()) {
+        this.subtitlesHighlighterService.hide();
+      }
     });
   }
 
@@ -327,7 +334,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   }
 
   private handleMouseDown(event: MouseEvent): void {
-    if (event.button !== 0) {
+    if (this.projectSettingsStateService.useMpvSubtitles() || event.button !== 0) {
       return;
     }
 
