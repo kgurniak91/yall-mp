@@ -31,7 +31,6 @@ export interface IElectronAPI {
   windowClose: () => void;
   onWindowMaximizedStateChanged: (callback: (isMaximized: boolean) => void) => void;
   onWindowFullScreenStateChanged: (callback: (isFullScreen: boolean) => void) => void;
-  focusApp: () => void;
   windowUpdateDraggableZones: (shapes: { x: number, y: number, width: number, height: number }[]) => Promise<void>;
   // --- Files
   openFileDialog: (options: any) => Promise<string[]>;

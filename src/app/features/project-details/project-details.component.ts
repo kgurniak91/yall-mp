@@ -182,7 +182,6 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     window.electronAPI.onMpvManagerReady(() => {
       console.log('[ProjectDetails] Received mpv:managerReady signal!');
       this.isMpvReady.set(true);
-      setTimeout(() => window.electronAPI.focusApp());
     });
   }
 

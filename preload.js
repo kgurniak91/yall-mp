@@ -10,7 +10,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   windowClose: () => ipcRenderer.send('window:close'),
   onWindowMaximizedStateChanged: (callback) => ipcRenderer.on('window:maximized-state-changed', (_event, value) => callback(value)),
   onWindowFullScreenStateChanged: (callback) => ipcRenderer.on('window:fullscreen-state-changed', (_event, value) => callback(value)),
-  focusApp: () => ipcRenderer.send('window:focus-app'),
   windowUpdateDraggableZones: (shapes) => ipcRenderer.send('window:update-draggable-zones', shapes),
   // --- Files
   openFileDialog: (options) => ipcRenderer.invoke('dialog:openFile', options),

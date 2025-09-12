@@ -158,10 +158,12 @@ function updateUiWindowShape() {
 }
 
 function tryShowVideoWindowAndNotifyUI() {
-  if (isInitialResizeComplete && hasRequestedInitialSeek && videoWindow && !videoWindow.isDestroyed() && uiWindow) {
+  if (isInitialResizeComplete && hasRequestedInitialSeek && videoWindow && !videoWindow.isDestroyed() && uiWindow && mainWindow) {
     console.log('[Main Process] All startup conditions met. Showing video window and notifying UI.');
 
     videoWindow.showInactive();
+    uiWindow.showInactive();
+    uiWindow.focus();
     uiWindow.webContents.send('mpv:initial-seek-complete');
 
     // Reset flags to prevent this from ever running again for this project instance.
@@ -417,13 +419,6 @@ app.whenReady().then(() => {
 
   ipcMain.on('window:close', () => {
     mainWindow?.close();
-  });
-
-  ipcMain.on('window:focus-app', () => {
-    console.log('[Main Process] UI is ready, focusing main window.');
-    if (mainWindow) {
-      mainWindow.focus();
-    }
   });
 
   ipcMain.on('window:update-draggable-zones', (_, rects: Rectangle[]) => {
