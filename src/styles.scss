@@ -2,6 +2,7 @@
 @use "@fontsource-variable/inter";
 
 :root {
+  --app-header-height: 2.5rem;
   --app-bg: #1e1e1e;
   --app-surface-dark: #242424;
   --app-surface: #2a2a2a;
@@ -96,4 +97,17 @@ label {
 
 p-accordion-panel:not(.p-accordionpanel-active) p-accordion-content {
   display: none !important;
+}
+
+.p-drawer {
+  top: var(--app-header-height) !important;
+  height: calc(100% - var(--app-header-height)) !important;
+}
+
+p-toast {
+  .p-toast-top-right,
+  .p-toast-top-left,
+  .p-toast-top-center {
+    top: calc(var(--app-header-height) + 1.25rem) !important; // 1.25rem is the default PrimeNG offset
+  }
 }

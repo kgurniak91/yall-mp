@@ -1,3 +1,7 @@
+:host {
+  height: var(--app-header-height);
+}
+
 .header-wrapper {
   display: flex;
   flex-wrap: nowrap;
@@ -6,6 +10,7 @@
   justify-content: space-between;
   background-color: var(--app-bg);
   border-bottom: 1px solid var(--app-border);
+  height: 100%;
 }
 
 .menu-wrapper {
@@ -66,8 +71,8 @@ p-button.window-control:hover ::ng-deep button .p-button-icon {
 }
 
 .drag-handle {
-  width: 2.5rem;
-  height: 2.5rem;
+  width: var(--app-header-height);
+  height: var(--app-header-height);
   border-left: 1px solid #444;
   display: flex;
   justify-content: center;
