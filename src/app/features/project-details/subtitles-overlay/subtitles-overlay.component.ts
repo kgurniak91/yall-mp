@@ -67,6 +67,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   private readonly isScaleApplied = signal(false);
   private assInstance: ASS | null = null;
   private resizeObserver: ResizeObserver | null = null;
+  private mutationObserver: MutationObserver | null = null;
   private fakeVideo: any = null;
   private readonly isSelecting = signal(false);
   private selectionAnchor: { node: Node, start: number, end: number } | null = null;
@@ -192,11 +193,22 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
 
+      this.mutationObserver?.disconnect();
+      this.mutationObserver = new MutationObserver(() => {
+        this.updateInteractiveTextNodes();
+      });
+      this.mutationObserver.observe(container, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+
       onCleanup(() => {
         hoverSubscription.unsubscribe();
         container.removeEventListener('mousedown', handleMouseDown);
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
+        this.mutationObserver?.disconnect();
       });
     });
 
@@ -209,6 +221,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     this.destroyAssRenderer();
+    this.mutationObserver?.disconnect();
   }
 
   protected onDoubleClick(event: MouseEvent): void {
@@ -260,8 +273,6 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       container: renderContainer,
       resampling: resamplingMode
     });
-
-    this.updateInteractiveTextNodes();
 
     setTimeout(() => {
       this.fakeVideo?.dispatchEvent(new Event('playing'));
@@ -540,9 +551,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   private updateInteractiveTextNodes(): void {
     const container = this.subtitleContainer()?.nativeElement;
     if (container) {
-      setTimeout(() => {
-        this.interactiveTextNodes = this.getUniqueVisibleTextNodes(container);
-      });
+      this.interactiveTextNodes = this.getUniqueVisibleTextNodes(container);
     }
   }
 }
