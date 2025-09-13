@@ -172,13 +172,6 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       }
     });
 
-    effect(() => {
-      const fonts = this.parsedSubtitleData()?.fonts;
-      if (fonts && fonts.length > 0) {
-        this.fontInjectionService.injectFontsIntoDOM(fonts);
-      }
-    });
-
     window.electronAPI.onMpvManagerReady(() => {
       console.log('[ProjectDetails] Received mpv:managerReady signal!');
       this.isMpvReady.set(true);
@@ -209,6 +202,11 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Logic for re-entering the project - the rawAssContent should already exist in this case:
+    if (foundProject.rawAssContent) {
+      this.loadAndInjectFonts(projectId);
+    }
+
     this.projectSettingsStateService.setSettings(foundProject.settings);
     this.appStateService.setCurrentProject(projectId);
     this.clipsStateService.setProjectId(projectId);
@@ -222,8 +220,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       this.parsedSubtitleData.set({
         subtitles: foundProject.subtitles,
         rawAssContent: foundProject.rawAssContent,
-        styles: foundProject.styles,
-        fonts: foundProject.fonts,
+        styles: foundProject.styles
       });
       subtitles = foundProject.subtitles;
     } else {
@@ -232,10 +229,10 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
         switch (foundProject.subtitleSelection.type) {
           case 'external':
-            subtitleResult = await window.electronAPI.parseSubtitleFile(foundProject.subtitleSelection.filePath);
+            subtitleResult = await window.electronAPI.parseSubtitleFile(projectId, foundProject.subtitleSelection.filePath);
             break;
           case 'embedded':
-            subtitleResult = await window.electronAPI.extractSubtitleTrack(foundProject.mediaPath, foundProject.subtitleSelection.trackIndex);
+            subtitleResult = await window.electronAPI.extractSubtitleTrack(projectId, foundProject.mediaPath, foundProject.subtitleSelection.trackIndex);
             break;
           case 'none':
             subtitleResult = {
@@ -248,9 +245,12 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
         this.appStateService.updateProject(projectId, {
           rawAssContent: subtitleResult.rawAssContent,
-          styles: subtitleResult.styles,
-          fonts: subtitleResult.fonts,
+          styles: subtitleResult.styles
         });
+
+        if (subtitleResult.rawAssContent) {
+          this.loadAndInjectFonts(projectId);
+        }
 
         subtitles = subtitleResult.subtitles;
       } catch (e: any) {
@@ -505,5 +505,13 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
     this.videoStateService.setCurrentTime(seekTime);
     window.electronAPI.mpvSeekAndPause(seekTime);
+  }
+
+  private loadAndInjectFonts(projectId: string): void {
+    window.electronAPI.getProjectFonts(projectId).then(fonts => {
+      if (fonts && fonts.length > 0) {
+        this.fontInjectionService.injectFontsIntoDOM(fonts);
+      }
+    });
   }
 }

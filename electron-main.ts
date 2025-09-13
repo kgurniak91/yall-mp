@@ -36,7 +36,8 @@ interface RequiredFont {
 }
 
 const APP_DATA_KEY = 'yall-mp-app-data';
-const appDataPath = path.join(app.getPath('userData'), `${APP_DATA_KEY}.json`);
+const APP_DATA_PATH = path.join(app.getPath('userData'), `${APP_DATA_KEY}.json`);
+const FONT_CACHE_DIR = path.join(app.getPath('userData'), 'font-cache');
 
 let mpvManager: MpvManager | null = null;
 let mainWindow: BrowserWindow | null = null;
@@ -341,9 +342,9 @@ function createWindow() {
 
 app.whenReady().then(() => {
   ipcMain.handle('dialog:openFile', (_, options) => handleFileOpen(options));
-  ipcMain.handle('subtitle:parse', (_, filePath) => handleSubtitleParse(filePath));
+  ipcMain.handle('subtitle:parse', (_, projectId, filePath) => handleSubtitleParse(projectId, filePath));
   ipcMain.handle('media:getMetadata', (_, filePath) => handleGetMediaMetadata(filePath));
-  ipcMain.handle('media:extractSubtitleTrack', (_, mediaPath, trackIndex) => handleExtractSubtitleTrack(mediaPath, trackIndex));
+  ipcMain.handle('media:extractSubtitleTrack', (_, projectId, mediaPath, trackIndex) => handleExtractSubtitleTrack(projectId, mediaPath, trackIndex));
   ipcMain.handle('anki:check', () => invokeAnkiConnect('version'));
   ipcMain.handle('anki:getDeckNames', () => invokeAnkiConnect('deckNames'));
   ipcMain.handle('anki:getNoteTypes', () => invokeAnkiConnect('modelNames'));
@@ -599,6 +600,26 @@ app.whenReady().then(() => {
     mpvManager.setProperty('pause', true);
   });
 
+  ipcMain.handle('fonts:get-fonts', async (_, projectId: string) => {
+    try {
+      const fontFilePath = path.join(FONT_CACHE_DIR, `${projectId}.json`);
+      const data = await fs.readFile(fontFilePath, 'utf-8');
+      return JSON.parse(data);
+    } catch (error) {
+      // It's normal for a file not to exist if a project has no ASS subtitles
+      return [];
+    }
+  });
+
+  ipcMain.on('fonts:delete-fonts', async (_, projectId: string) => {
+    try {
+      const fontFilePath = path.join(FONT_CACHE_DIR, `${projectId}.json`);
+      await fs.unlink(fontFilePath);
+    } catch (error) {
+      // Ignore errors if the file doesn't exist
+    }
+  });
+
   createWindow();
 
   app.on('activate', () => {
@@ -622,23 +643,27 @@ async function handleFileOpen(options: Electron.OpenDialogOptions) {
   return [];
 }
 
-async function handleSubtitleParse(filePath: string): Promise<ParsedSubtitlesData> {
+async function handleSubtitleParse(projectId: string, filePath: string): Promise<ParsedSubtitlesData> {
   try {
     const content = await fs.readFile(filePath, 'utf-8');
     const extension = path.extname(filePath).toLowerCase();
 
     if (extension === '.ass' || extension === '.ssa') {
+      // Ensure the font cache directory exists
+      await fs.mkdir(FONT_CACHE_DIR, {recursive: true});
+
       const compiled = compile(content, {});
       const timeline = buildSubtitleTimeline(compiled.dialogues);
       const mergedTimeline = mergeIdenticalConsecutiveSubtitles(timeline);
       const requiredFonts = getRequiredFontsFromAss(content);
       const fonts = await loadFontData(requiredFonts, undefined, filePath);
 
+      await fs.writeFile(path.join(FONT_CACHE_DIR, `${projectId}.json`), JSON.stringify(fonts));
+
       return {
         subtitles: mergedTimeline,
         rawAssContent: content,
-        styles: compiled.styles,
-        fonts: fonts
+        styles: compiled.styles
       };
     } else {
       const response = new Response(content);
@@ -961,7 +986,7 @@ async function handleGetMediaMetadata(filePath: string) {
   }
 }
 
-async function handleExtractSubtitleTrack(mediaPath: string, trackIndex: number): Promise<ParsedSubtitlesData> {
+async function handleExtractSubtitleTrack(projectId: string, mediaPath: string, trackIndex: number): Promise<ParsedSubtitlesData> {
   return new Promise(async (resolve, reject) => {
     const probeResult = await runFfprobe(['-v', 'quiet', '-print_format', 'json', '-show_streams', mediaPath]);
     const subtitleStream = probeResult.streams.find((s: any) => s.index === trackIndex);
@@ -988,17 +1013,21 @@ async function handleExtractSubtitleTrack(mediaPath: string, trackIndex: number)
       if (code === 0) {
         try {
           if (outputFormat === 'ass') {
+            // Ensure the font cache directory exists
+            await fs.mkdir(FONT_CACHE_DIR, {recursive: true});
+
             const compiled = compile(subtitleContent, {});
             const timeline = buildSubtitleTimeline(compiled.dialogues);
             const mergedTimeline = mergeIdenticalConsecutiveSubtitles(timeline);
             const requiredFonts = getRequiredFontsFromAss(subtitleContent);
             const fonts = await loadFontData(requiredFonts, mediaPath, undefined);
 
+            await fs.writeFile(path.join(FONT_CACHE_DIR, `${projectId}.json`), JSON.stringify(fonts));
+
             resolve({
               subtitles: mergedTimeline,
               rawAssContent: subtitleContent,
-              styles: compiled.styles,
-              fonts: fonts
+              styles: compiled.styles
             });
           } else {
             const response = new Response(subtitleContent);
@@ -1059,7 +1088,7 @@ function getLanguageInfo(track: Omit<MediaTrack, 'label' | 'code'>): { label: st
 
 async function readAppData() {
   try {
-    const data = await fs.readFile(appDataPath, 'utf-8');
+    const data = await fs.readFile(APP_DATA_PATH, 'utf-8');
     return JSON.parse(data);
   } catch (error) {
     console.log('Could not read app data (file might not exist yet), returning null.');
@@ -1069,7 +1098,7 @@ async function readAppData() {
 
 async function saveAppData(_: any, data: any) {
   try {
-    await fs.writeFile(appDataPath, JSON.stringify(data, null, 2), 'utf-8');
+    await fs.writeFile(APP_DATA_PATH, JSON.stringify(data, null, 2), 'utf-8');
   } catch (error) {
     console.error('Failed to save app data.', error);
   }

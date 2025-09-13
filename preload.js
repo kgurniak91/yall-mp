@@ -13,10 +13,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   windowUpdateDraggableZones: (shapes) => ipcRenderer.send('window:update-draggable-zones', shapes),
   // --- Files
   openFileDialog: (options) => ipcRenderer.invoke('dialog:openFile', options),
-  parseSubtitleFile: (filePath) => ipcRenderer.invoke('subtitle:parse', filePath),
+  parseSubtitleFile: (projectId, filePath) => ipcRenderer.invoke('subtitle:parse', projectId, filePath),
   getMediaMetadata: (filePath) => ipcRenderer.invoke('media:getMetadata', filePath),
-  extractSubtitleTrack: (mediaPath, trackIndex) => ipcRenderer.invoke('media:extractSubtitleTrack', mediaPath, trackIndex),
+  extractSubtitleTrack: (projectId, mediaPath, trackIndex) => ipcRenderer.invoke('media:extractSubtitleTrack', projectId, mediaPath, trackIndex),
   getPathForFile: (file) => webUtils.getPathForFile(file),
+  getProjectFonts: (projectId) => ipcRenderer.invoke('fonts:get-fonts', projectId),
+  deleteProjectFonts: (projectId) => ipcRenderer.send('fonts:delete-fonts', projectId),
   // --- Anki
   checkAnkiConnection: () => ipcRenderer.invoke('anki:check'),
   getAnkiDeckNames: () => ipcRenderer.invoke('anki:getDeckNames'),

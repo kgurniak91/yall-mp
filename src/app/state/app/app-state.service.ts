@@ -111,6 +111,8 @@ export class AppStateService {
   }
 
   public deleteProject(projectId: string): void {
+    window.electronAPI.deleteProjectFonts(projectId);
+
     this._appData.update(data => {
       const updatedProjects = data.projects.filter(p => p.id !== projectId);
       let newLastOpenedProjectId = data.lastOpenedProjectId;
@@ -127,6 +129,7 @@ export class AppStateService {
         lastOpenedProjectId: newLastOpenedProjectId
       };
       this.storageService.set(newData);
+
       return newData;
     });
   }

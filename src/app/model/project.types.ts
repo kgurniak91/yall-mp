@@ -27,7 +27,6 @@ export interface Project {
   videoWidth?: number;
   videoHeight?: number;
   styles?: any;
-  fonts?: FontData[];
 }
 
 export interface AppData {

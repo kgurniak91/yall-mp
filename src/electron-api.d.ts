@@ -18,7 +18,6 @@ export interface ParsedSubtitlesData {
   subtitles: SubtitleData[];
   rawAssContent?: string;
   styles?: any;
-  fonts?: FontData[];
 }
 
 export interface IElectronAPI {
@@ -34,10 +33,12 @@ export interface IElectronAPI {
   windowUpdateDraggableZones: (shapes: { x: number, y: number, width: number, height: number }[]) => Promise<void>;
   // --- Files
   openFileDialog: (options: any) => Promise<string[]>;
-  parseSubtitleFile: (filePath: string) => Promise<ParsedSubtitlesData>;
+  parseSubtitleFile: (projectId: string, filePath: string) => Promise<ParsedSubtitlesData>;
   getMediaMetadata: (filePath: string) => Promise<MediaMetadata>;
-  extractSubtitleTrack: (mediaPath: string, trackIndex: number) => Promise<ParsedSubtitlesData>;
+  extractSubtitleTrack: (projectId: string, mediaPath: string, trackIndex: number) => Promise<ParsedSubtitlesData>;
   getPathForFile: (file: File) => string;
+  getProjectFonts: (projectId: string) => Promise<FontData[]>;
+  deleteProjectFonts: (projectId: string) => void;
   // --- Anki
   checkAnkiConnection: () => Promise<any>;
   getAnkiDeckNames: () => Promise<any>;
