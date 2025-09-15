@@ -124,7 +124,12 @@ export class SubtitlesOverlayComponent implements OnDestroy {
 
     effect((onCleanup) => {
       const videoContainer = this.videoContainerElement();
-      if (!videoContainer) return;
+      const subtitleContainer = this.subtitleContainer();
+      const rawAssContent = this.rawAssContent();
+
+      if (!videoContainer || !subtitleContainer || !rawAssContent) {
+        return;
+      }
 
       this.resizeObserver = new ResizeObserver(entries => {
         const entry = entries[0];
