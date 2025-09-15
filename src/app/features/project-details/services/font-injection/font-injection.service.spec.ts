@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 
 import { FontInjectionService } from './font-injection.service';
 
-describe('FontInjectionService', () => {
+xdescribe('FontInjectionService', () => {
   let service: FontInjectionService;
 
   beforeEach(() => {

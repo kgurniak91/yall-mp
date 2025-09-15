@@ -10,6 +10,7 @@ import {CommandHistoryStateService} from './state/command-history/command-histor
 import {ProjectSettingsStateService} from './state/project-settings/project-settings-state.service';
 import {VideoStateService} from './state/video/video-state.service';
 import {FontInjectionService} from './features/project-details/services/font-injection/font-injection.service';
+import {AssEditService} from './features/project-details/services/ass-edit/ass-edit.service';
 
 export const routes: Routes = [
   {
@@ -39,7 +40,8 @@ export const routes: Routes = [
       CommandHistoryStateService,
       ProjectSettingsStateService,
       VideoStateService,
-      FontInjectionService
+      FontInjectionService,
+      AssEditService
     ]
   }
 ];

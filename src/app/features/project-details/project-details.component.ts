@@ -6,7 +6,7 @@ import {Button} from 'primeng/button';
 import {Tooltip} from 'primeng/tooltip';
 import {Drawer} from 'primeng/drawer';
 import {KeyboardShortcutsService} from './services/keyboard-shortcuts/keyboard-shortcuts.service';
-import {SeekDirection} from '../../model/video.types';
+import {SeekDirection, VideoClip} from '../../model/video.types';
 import {ClipsStateService} from '../../state/clips/clips-state.service';
 import {Popover} from 'primeng/popover';
 import {ActivatedRoute, Router} from '@angular/router';
@@ -118,7 +118,20 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   });
   protected readonly settingsPresets = signal<SettingsPreset[]>(BuiltInSettingsPresets);
   protected readonly selectedSettingsPreset = signal<SettingsPreset | null>(null);
-  protected parsedSubtitleData = signal<ParsedSubtitlesData | null>(null);
+
+  protected readonly parsedSubtitleData = computed<ParsedSubtitlesData | null>(() => {
+    const project = this.project();
+    if (!project) {
+      return null;
+    }
+
+    return {
+      subtitles: project.subtitles,
+      rawAssContent: project.rawAssContent,
+      styles: project.styles
+    };
+  });
+
   protected readonly isAssProject = computed(() => Boolean(this.parsedSubtitleData()?.rawAssContent));
   private wasPlayingBeforeSettingsOpened = false;
   private readonly route = inject(ActivatedRoute);
@@ -217,11 +230,6 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     let subtitles: SubtitleData[];
 
     if (hasExistingSubtitles) {
-      this.parsedSubtitleData.set({
-        subtitles: foundProject.subtitles,
-        rawAssContent: foundProject.rawAssContent,
-        styles: foundProject.styles
-      });
       subtitles = foundProject.subtitles;
     } else {
       try {
@@ -241,11 +249,10 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
             break;
         }
 
-        this.parsedSubtitleData.set(subtitleResult);
-
         this.appStateService.updateProject(projectId, {
           rawAssContent: subtitleResult.rawAssContent,
-          styles: subtitleResult.styles
+          styles: subtitleResult.styles,
+          subtitles: subtitleResult.subtitles,
         });
 
         if (subtitleResult.rawAssContent) {
@@ -343,18 +350,12 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     }
 
     const currentClip = this.clipsStateService.currentClip();
-
     if (!currentClip || !currentClip.hasSubtitle) {
       this.toastService.info('Anki export is only available for subtitled clips.');
       return;
     }
 
-    const originalSubtitleData = this.clipsStateService.getSubtitleDataByClipId(currentClip.id);
-
-    if (!originalSubtitleData) {
-      this.toastService.error('Could not find the source subtitle data for export.');
-      return;
-    }
+    const subtitleForExport: SubtitleData = this.createSubtitleDataFromVideoClip(currentClip);
 
     const hasValidTemplates = this.ankiStateService.ankiCardTemplates().some(t => t.isValid);
     if (!hasValidTemplates) {
@@ -363,10 +364,10 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     }
 
     const data: ExportToAnkiDialogData = {
-      subtitleData: originalSubtitleData,
+      subtitleData: subtitleForExport,
       project: this.project()!,
       exportTime: this.videoStateService.currentTime()
-    }
+    };
 
     this.dialogService.open(ExportToAnkiDialogComponent, {
       header: 'Export to Anki',
@@ -384,17 +385,13 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const originalSubtitle = this.clipsStateService.getSubtitleDataByClipId(currentClip.id);
-    if (!originalSubtitle) {
-      this.toastService.error('Could not find original subtitle data to edit.');
-      return;
-    }
+    const dataForDialog: SubtitleData = this.createSubtitleDataFromVideoClip(currentClip);
 
     this.dialogRef = this.dialogService.open(EditSubtitlesDialogComponent, {
       header: 'Edit Subtitles',
       width: '50vw',
       modal: true,
-      data: originalSubtitle
+      data: dataForDialog
     });
 
     this.dialogRef.onClose.pipe(
@@ -403,8 +400,8 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       if (!result) return; // Closed without saving or no changes were made
 
       const oldContent: ClipContent = {
-        text: originalSubtitle.type === 'srt' ? originalSubtitle.text : undefined,
-        parts: originalSubtitle.type === 'ass' ? originalSubtitle.parts : undefined
+        text: currentClip.text,
+        parts: currentClip.parts
       };
 
       const newContent: ClipContent = {
@@ -414,7 +411,8 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
       const command = new UpdateClipTextCommand(
         this.clipsStateService,
-        currentClip.id,
+        this.project()!.id,
+        currentClip,
         oldContent,
         newContent
       );
@@ -513,5 +511,25 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
         this.fontInjectionService.injectFontsIntoDOM(fonts);
       }
     });
+  }
+
+  private createSubtitleDataFromVideoClip(clip: VideoClip): SubtitleData {
+    if (this.isAssProject()) {
+      return {
+        type: 'ass',
+        id: clip.id,
+        startTime: clip.startTime,
+        endTime: clip.endTime,
+        parts: clip.parts
+      };
+    } else { // srt
+      return {
+        type: 'srt',
+        id: clip.id,
+        startTime: clip.startTime,
+        endTime: clip.endTime,
+        text: clip.text || ''
+      };
+    }
   }
 }

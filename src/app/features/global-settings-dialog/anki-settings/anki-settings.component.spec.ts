@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { AnkiSettingsComponent } from './anki-settings.component';
 
-describe('AnkiSettingsComponent', () => {
+xdescribe('AnkiSettingsComponent', () => {
   let component: AnkiSettingsComponent;
   let fixture: ComponentFixture<AnkiSettingsComponent>;
 

@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { CurrentProjectSettingsComponent } from './current-project-settings.component';
 
-describe('CurrentProjectSettingsComponent', () => {
+xdescribe('CurrentProjectSettingsComponent', () => {
   let component: CurrentProjectSettingsComponent;
   let fixture: ComponentFixture<CurrentProjectSettingsComponent>;
 

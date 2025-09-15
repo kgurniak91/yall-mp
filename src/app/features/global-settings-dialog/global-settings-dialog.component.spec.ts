@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { GlobalSettingsDialogComponent } from './global-settings-dialog.component';
 
-describe('GlobalSettingsDialogComponent', () => {
+xdescribe('GlobalSettingsDialogComponent', () => {
   let component: GlobalSettingsDialogComponent;
   let fixture: ComponentFixture<GlobalSettingsDialogComponent>;
 

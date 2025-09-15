@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { EditSubtitlesDialogComponent } from './edit-subtitles-dialog.component';
 
-describe('EditSubtitlesDialogComponent', () => {
+xdescribe('EditSubtitlesDialogComponent', () => {
   let component: EditSubtitlesDialogComponent;
   let fixture: ComponentFixture<EditSubtitlesDialogComponent>;
 

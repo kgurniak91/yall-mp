@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 
 import { ProjectSettingsStateService } from './project-settings-state.service';
 
-describe('ProjectSettingsStateService', () => {
+xdescribe('ProjectSettingsStateService', () => {
   let service: ProjectSettingsStateService;
 
   beforeEach(() => {

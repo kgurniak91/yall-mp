@@ -3,7 +3,7 @@ import path from 'path';
 import os from 'os';
 import {promises as fs} from 'fs';
 import {CaptionsFileFormat, ParsedCaptionsResult, parseResponse, VTTCue} from 'media-captions';
-import type {AssSubtitleData, SrtSubtitleData, SubtitleData, SubtitlePart} from './shared/types/subtitle.type';
+import type {SrtSubtitleData, SubtitleData} from './shared/types/subtitle.type';
 import type {MediaTrack} from './shared/types/media.type';
 import {AnkiCard, AnkiExportRequest} from './src/app/model/anki.types';
 import ffmpegStatic from 'ffmpeg-static';
@@ -13,12 +13,13 @@ import {MpvManager} from './mpv-manager';
 import {FontData, MpvClipRequest, ParsedSubtitlesData} from './src/electron-api';
 import ffprobeStatic from 'ffprobe-static';
 import languages from '@cospired/i18n-iso-languages';
-import {compile, Dialogue} from 'ass-compiler';
+import {compile} from 'ass-compiler';
 import fontScanner from 'font-scanner';
 import {Decoder} from 'ts-ebml';
 import fontkit from 'fontkit';
 import Levenshtein from 'fast-levenshtein';
 import {SubtitleSelection} from './src/app/model/project.types';
+import {dialoguesToAssSubtitleData, mergeIdenticalConsecutiveSubtitles} from './shared/utils/subtitle-parsing';
 
 interface AvailableFont {
   family: string;
@@ -653,15 +654,15 @@ async function handleSubtitleParse(projectId: string, filePath: string): Promise
       await fs.mkdir(FONT_CACHE_DIR, {recursive: true});
 
       const compiled = compile(content, {});
-      const timeline = buildSubtitleTimeline(compiled.dialogues);
-      const mergedTimeline = mergeIdenticalConsecutiveSubtitles(timeline);
+      const granularTimeline = dialoguesToAssSubtitleData(compiled.dialogues);
+      const finalTimeline = mergeIdenticalConsecutiveSubtitles(granularTimeline);
       const requiredFonts = getRequiredFontsFromAss(content);
       const fonts = await loadFontData(requiredFonts, undefined, filePath);
 
       await fs.writeFile(path.join(FONT_CACHE_DIR, `${projectId}.json`), JSON.stringify(fonts));
 
       return {
-        subtitles: mergedTimeline,
+        subtitles: finalTimeline,
         rawAssContent: content,
         styles: compiled.styles
       };
@@ -1017,15 +1018,15 @@ async function handleExtractSubtitleTrack(projectId: string, mediaPath: string, 
             await fs.mkdir(FONT_CACHE_DIR, {recursive: true});
 
             const compiled = compile(subtitleContent, {});
-            const timeline = buildSubtitleTimeline(compiled.dialogues);
-            const mergedTimeline = mergeIdenticalConsecutiveSubtitles(timeline);
+            const granularTimeline = dialoguesToAssSubtitleData(compiled.dialogues);
+            const finalTimeline = mergeIdenticalConsecutiveSubtitles(granularTimeline);
             const requiredFonts = getRequiredFontsFromAss(subtitleContent);
             const fonts = await loadFontData(requiredFonts, mediaPath, undefined);
 
             await fs.writeFile(path.join(FONT_CACHE_DIR, `${projectId}.json`), JSON.stringify(fonts));
 
             resolve({
-              subtitles: mergedTimeline,
+              subtitles: finalTimeline,
               rawAssContent: subtitleContent,
               styles: compiled.styles
             });
@@ -1102,123 +1103,6 @@ async function saveAppData(_: any, data: any) {
   } catch (error) {
     console.error('Failed to save app data.', error);
   }
-}
-
-function buildSubtitleTimeline(dialogues: Dialogue[]): AssSubtitleData[] {
-  if (dialogues.length === 0) {
-    return [];
-  }
-
-  const timestamps = new Set<number>();
-  dialogues.forEach(d => {
-    timestamps.add(d.start);
-    timestamps.add(d.end);
-  });
-  const sortedTimestamps = Array.from(timestamps).sort((a, b) => a - b);
-
-  const finalSubtitles: AssSubtitleData[] = [];
-
-  for (let i = 0; i < sortedTimestamps.length - 1; i++) {
-    const startTime = sortedTimestamps[i];
-    const endTime = sortedTimestamps[i + 1];
-    const midPoint = startTime + 0.01;
-
-    if (endTime <= startTime) continue;
-
-    const activeDialogues = dialogues.filter(d => midPoint >= d.start && midPoint < d.end);
-
-    if (activeDialogues.length > 0) {
-      const uniqueParts = new Map<string, SubtitlePart>();
-      activeDialogues.forEach(d => {
-        const text = d.slices
-          .flatMap(slice => slice.fragments)
-          .map(fragment => fragment.text.replace(/\\N/g, '\n'))
-          .join('');
-
-        if (!text.trim()) return;
-
-        const key = `${d.style}::${text}`;
-        if (!uniqueParts.has(key)) {
-          uniqueParts.set(key, {text, style: d.style});
-        }
-      });
-
-      const parts = Array.from(uniqueParts.values());
-      if (parts.length > 0) {
-        finalSubtitles.push({
-          type: 'ass',
-          id: uuidv4(),
-          startTime,
-          endTime,
-          parts
-        });
-      }
-    }
-  }
-
-  return finalSubtitles;
-}
-
-function arePartsEqual(a: SubtitleData, b: SubtitleData): boolean {
-  // If the types are different, they can't be equal.
-  if (a.type !== b.type) {
-    return false;
-  }
-
-  // If both are SRT, compare their text content.
-  if (a.type === 'srt' && b.type === 'srt') {
-    return a.text === b.text;
-  }
-
-  // If both are ASS, compare their parts arrays.
-  if (a.type === 'ass' && b.type === 'ass') {
-    const partsA = a.parts;
-    const partsB = b.parts;
-
-    if (partsA.length !== partsB.length) {
-      return false;
-    }
-    const sortedA = [...partsA].sort((x, y) => (x.style + x.text).localeCompare(y.style + y.text));
-    const sortedB = [...partsB].sort((x, y) => (x.style + x.text).localeCompare(y.style + y.text));
-
-    for (let i = 0; i < sortedA.length; i++) {
-      if (sortedA[i].text !== sortedB[i].text || sortedA[i].style !== sortedB[i].style) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  // Fallback for any other case (should not be reached with current types).
-  return false;
-}
-
-function mergeIdenticalConsecutiveSubtitles(subtitles: SubtitleData[]): SubtitleData[] {
-  if (subtitles.length < 2) {
-    return subtitles;
-  }
-
-  const merged: SubtitleData[] = [];
-  let current = {...subtitles[0]};
-
-  for (let i = 1; i < subtitles.length; i++) {
-    const next = subtitles[i];
-
-    // Check if the next subtitle is consecutive and has the exact same content.
-    if (Math.abs(next.startTime - current.endTime) < 0.01 && arePartsEqual(current, next)) {
-      // If they are identical, just extend the end time of the current subtitle.
-      current.endTime = next.endTime;
-    } else {
-      // If they are different, push the completed current subtitle and start a new one.
-      merged.push(current);
-      current = {...next};
-    }
-  }
-
-  // Push the very last subtitle after the loop finishes.
-  merged.push(current);
-
-  return merged;
 }
 
 function getRequiredFontsFromAss(assContent: string): RequiredFont[] {

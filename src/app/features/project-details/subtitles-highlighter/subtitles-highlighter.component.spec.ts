@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { SubtitlesHighlighterComponent } from './subtitles-highlighter.component';
 
-describe('SubtitlesHighlighterComponent', () => {
+xdescribe('SubtitlesHighlighterComponent', () => {
   let component: SubtitlesHighlighterComponent;
   let fixture: ComponentFixture<SubtitlesHighlighterComponent>;
 

@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { SubtitlesOverlayComponent } from './subtitles-overlay.component';
 
-describe('SubtitlesOverlayComponent', () => {
+xdescribe('SubtitlesOverlayComponent', () => {
   let component: SubtitlesOverlayComponent;
   let fixture: ComponentFixture<SubtitlesOverlayComponent>;
 

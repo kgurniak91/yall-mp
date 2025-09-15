@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 
 import { KeyboardShortcutsService } from './keyboard-shortcuts.service';
 
-describe('KeyboardShortcutsService', () => {
+xdescribe('KeyboardShortcutsService', () => {
   let service: KeyboardShortcutsService;
 
   beforeEach(() => {

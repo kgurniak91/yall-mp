@@ -8,6 +8,7 @@ import {
   input,
   OnDestroy,
   signal,
+  untracked,
   viewChild
 } from '@angular/core';
 import {VideoStateService} from '../../../state/video/video-state.service';
@@ -216,6 +217,17 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       if (this.projectSettingsStateService.useMpvSubtitles()) {
         this.subtitlesHighlighterService.hide();
       }
+    });
+
+    effect(() => {
+      this.rawAssContent();
+
+      untracked(() => {
+        if (this.assInstance && this.videoContainerElement() && this.fakeVideo) {
+          console.log('[SubtitlesOverlay] rawAssContent has changed. Forcing re-initialization of ass.js renderer.');
+          this.initializeOrUpdateAssRenderer(this.fakeVideo.videoWidth, this.fakeVideo.videoHeight);
+        }
+      });
     });
   }
 

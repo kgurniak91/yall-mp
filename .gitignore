@@ -50,6 +50,8 @@ mpv-manager.js
 mpv-manager.js.map
 /shared/types/*.js
 /shared/types/*.js.map
+/shared/utils/*.js
+/shared/utils/*.js.map
 /src/app/model/*.js
 /src/app/model/*.js.map
 /electron-resources

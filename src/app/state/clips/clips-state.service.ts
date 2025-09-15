@@ -17,6 +17,7 @@ import {DeleteSubtitledClipCommand} from '../../model/commands/delete-subtitled-
 import {CreateSubtitledClipCommand} from '../../model/commands/create-subtitled-clip.command';
 import {GlobalSettingsStateService} from '../global-settings/global-settings-state.service';
 import {ClipContent} from '../../model/commands/update-clip-text.command';
+import {AssEditService} from '../../features/project-details/services/ass-edit/ass-edit.service';
 
 const MIN_CLIP_DURATION = 0.1;
 const ADJUST_DEBOUNCE_MS = 50;
@@ -32,6 +33,7 @@ export class ClipsStateService {
   private readonly commandHistoryStateService = inject(CommandHistoryStateService);
   private readonly appStateService = inject(AppStateService);
   private readonly toastService = inject(ToastService);
+  private readonly assEditService = inject(AssEditService);
   private readonly _subtitles = signal<SubtitleData[]>([]);
   private readonly _currentClipIndex = signal(0);
   private readonly _playerState = signal<PlayerState>(PlayerState.Idle);
@@ -313,14 +315,6 @@ export class ClipsStateService {
     this.videoStateService.seekAbsolute(newStartTime);
   }
 
-  public getSubtitleDataByClipId(clipId: string): SubtitleData | null {
-    if (!clipId.startsWith('subtitle-')) {
-      return null;
-    }
-    const subtitleId = clipId.substring('subtitle-'.length);
-    return this._subtitles().find(s => s.id === subtitleId) || null;
-  }
-
   public addSubtitle(subtitle: SubtitleData): void {
     const currentSubtitles = this._subtitles();
 
@@ -371,23 +365,52 @@ export class ClipsStateService {
     this._subtitles.set(newSubtitles);
   }
 
-  public updateClipText(clipId: string, newContent: ClipContent): void {
-    const subtitleId = clipId.replace('subtitle-', '');
-    const subtitles = this._subtitles();
-    const subtitleIndex = subtitles.findIndex(s => s.id === subtitleId);
-    if (subtitleIndex === -1) return;
+  public updateClipText(projectId: string, clip: VideoClip, newContent: ClipContent): void {
+    const project = this.appStateService.getProjectById(projectId);
 
-    const newSubtitles = [...subtitles];
-    const originalSubtitle = newSubtitles[subtitleIndex];
+    if (project?.rawAssContent && newContent.parts) {
+      const newRawAssContent = this.assEditService.updateClipText(
+        clip,
+        newContent,
+        project.rawAssContent
+      );
+      this.appStateService.updateProject(projectId, {rawAssContent: newRawAssContent});
 
-    if (originalSubtitle.type === 'srt' && newContent.text !== undefined) {
-      newSubtitles[subtitleIndex] = {...originalSubtitle, text: newContent.text};
-    } else if (originalSubtitle.type === 'ass' && newContent.parts) {
-      const newText = newContent.parts.map(p => p.text).join('\n');
-      newSubtitles[subtitleIndex] = {...originalSubtitle, parts: newContent.parts};
+      const newSubtitles = [...this._subtitles()];
+
+      // For each part that was edited in the UI...
+      for (let i = 0; i < clip.parts.length; i++) {
+        const oldPart = clip.parts[i];
+        const newPart = newContent.parts[i];
+
+        if (oldPart.text !== newPart.text) {
+          // ...find EVERY subtitle object in the entire project that contains the old part...
+          for (let j = 0; j < newSubtitles.length; j++) {
+            const subtitle = newSubtitles[j];
+            if (subtitle.type === 'ass') {
+              const partIndex = subtitle.parts.findIndex(p => p.style === oldPart.style && p.text === oldPart.text);
+              if (partIndex !== -1) {
+                // ...and update it with the new part:
+                const updatedParts = [...subtitle.parts];
+                updatedParts[partIndex] = newPart;
+                (newSubtitles[j] as AssSubtitleData).parts = updatedParts;
+              }
+            }
+          }
+        }
+      }
+      this._subtitles.set(newSubtitles);
+    } else if (newContent.text !== undefined) {
+      const newSubtitles = [...this._subtitles()];
+      const sourceSub = clip.sourceSubtitles[0];
+      if (sourceSub) {
+        const subIndex = newSubtitles.findIndex(s => s.id === sourceSub.id);
+        if (subIndex !== -1) {
+          (newSubtitles[subIndex] as SrtSubtitleData).text = newContent.text;
+          this._subtitles.set(newSubtitles);
+        }
+      }
     }
-
-    this._subtitles.set(newSubtitles);
   }
 
   public advanceToNextClip(): void {
@@ -417,6 +440,24 @@ export class ClipsStateService {
 
   public updateClipTimes(clipId: string, newStartTime: number, newEndTime: number): void {
     const allClips = this.clips();
+    const clipToUpdate = allClips.find(c => c.id === clipId);
+    const project = this.appStateService.getProjectById(this._projectId!);
+
+    if (!clipToUpdate || !project) {
+      console.error('Cannot update clip times: Clip or Project not found.');
+      return;
+    }
+
+    if (clipToUpdate.hasSubtitle && clipToUpdate.sourceSubtitles[0]?.type === 'ass' && project.rawAssContent) {
+      const newRawAssContent = this.assEditService.stretchClipTimings(
+        clipToUpdate,
+        newStartTime,
+        newEndTime,
+        project.rawAssContent
+      );
+      this.appStateService.updateProject(project.id, {rawAssContent: newRawAssContent});
+    }
+
     const currentActiveIndex = this.currentClipIndex();
     const activeClipBeforeUpdate = allClips[currentActiveIndex];
 
@@ -622,69 +663,122 @@ export class ClipsStateService {
     const duration = this.videoStateService.duration();
     if (!duration) return [];
 
-    const generatedClips: VideoClip[] = [];
-    let lastTime = 0;
-    let i = 0;
-
-    while (i < subtitles.length) {
-      const firstSubtitleInGroup = subtitles[i];
-
-      if (firstSubtitleInGroup.startTime > lastTime) {
-        generatedClips.push({
-          id: `gap-${i}`, startTime: lastTime, endTime: firstSubtitleInGroup.startTime,
-          duration: firstSubtitleInGroup.startTime - lastTime, hasSubtitle: false,
-          parts: [], sourceSubtitles: []
-        });
-      }
-
-      const container: VideoClip = {
-        id: `subtitle-${firstSubtitleInGroup.id}`, startTime: firstSubtitleInGroup.startTime,
-        endTime: firstSubtitleInGroup.endTime, duration: 0, hasSubtitle: true,
-        parts: [], sourceSubtitles: [firstSubtitleInGroup]
-      };
-
-      let j = i + 1;
-      while (j < subtitles.length) {
-        const nextSubtitle = subtitles[j];
-        if (nextSubtitle.startTime < container.endTime) {
-          container.sourceSubtitles.push(nextSubtitle);
-          container.endTime = Math.max(container.endTime, nextSubtitle.endTime);
-          j++;
-        } else {
-          break;
-        }
-      }
-
-      container.duration = container.endTime - container.startTime;
-
-      const firstSource = container.sourceSubtitles[0];
-
-      if (firstSource.type === 'ass') {
-        const allParts = container.sourceSubtitles.flatMap(s => (s as AssSubtitleData).parts);
-        const uniquePartsMap = new Map<string, SubtitlePart>();
-        for (const part of allParts) {
-          const key = `${part.style}::${part.text}`;
-          uniquePartsMap.set(key, part);
-        }
-        container.parts = Array.from(uniquePartsMap.values());
-
-      } else { // 'srt'
-        container.text = container.sourceSubtitles.map(s => (s as SrtSubtitleData).text).join('\n');
-        container.sourceSubtitles = [];
-      }
-
-      generatedClips.push(container);
-      lastTime = container.endTime;
-      i = j;
+    if (subtitles.length === 0) {
+      return [{
+        id: 'gap-only', startTime: 0, endTime: duration, duration, hasSubtitle: false,
+        parts: [], sourceSubtitles: []
+      }];
     }
 
-    if (lastTime < duration) {
-      generatedClips.push({
-        id: `gap-final`, startTime: lastTime, endTime: duration,
-        duration: duration - lastTime, hasSubtitle: false, parts: [], sourceSubtitles: []
+    // Get all unique timestamps that define segment boundaries
+    const timestamps = new Set<number>([0]);
+    subtitles.forEach(s => {
+      timestamps.add(s.startTime);
+      timestamps.add(s.endTime);
+    });
+    timestamps.add(duration);
+    const sortedTimestamps = Array.from(timestamps).sort((a, b) => a - b).filter(t => t <= duration);
+
+    const segments: Partial<VideoClip>[] = [];
+
+    // Create a raw segment for each time slice
+    for (let i = 0; i < sortedTimestamps.length - 1; i++) {
+      const startTime = sortedTimestamps[i];
+      const endTime = sortedTimestamps[i + 1];
+
+      if (endTime <= startTime) continue;
+
+      const midPoint = startTime + 0.001;
+      const activeSubtitles = subtitles.filter(s => midPoint >= s.startTime && midPoint < s.endTime);
+
+      segments.push({
+        startTime,
+        endTime,
+        hasSubtitle: activeSubtitles.length > 0,
+        sourceSubtitles: activeSubtitles
       });
     }
-    return generatedClips;
+
+    // Merge adjacent segments that have the exact same set of active subtitles
+    const mergedSegments: VideoClip[] = [];
+    if (segments.length > 0) {
+      let currentSegment = {...segments[0]};
+
+      for (let i = 1; i < segments.length; i++) {
+        const nextSegment = segments[i];
+
+        const getCurrentKey = (seg: Partial<VideoClip>): string => {
+          if (!seg.hasSubtitle || !seg.sourceSubtitles || seg.sourceSubtitles.length === 0) return 'gap';
+          const uniqueParts = new Map<string, SubtitlePart>();
+          seg.sourceSubtitles.forEach(s => {
+            if (s.type === 'ass') s.parts.forEach(p => uniqueParts.set(`${p.style}::${p.text}`, p));
+          });
+          const sortedParts = Array.from(uniqueParts.values()).sort((a, b) => a.style.localeCompare(b.style) || a.text.localeCompare(b.text));
+          return JSON.stringify(sortedParts);
+        };
+
+        const currentKey = getCurrentKey(currentSegment);
+        const nextKey = getCurrentKey(nextSegment);
+
+        if (currentKey === nextKey) {
+          // If visual content is identical, extend current segment
+          currentSegment.endTime = nextSegment.endTime;
+
+          // Create Set of existing IDs to avoid duplicates
+          const existingIds = new Set(currentSegment.sourceSubtitles!.map(s => s.id));
+          // Add new source subtitles from next segment
+          nextSegment.sourceSubtitles!.forEach(sub => {
+            if (!existingIds.has(sub.id)) {
+              currentSegment.sourceSubtitles!.push(sub);
+            }
+          });
+
+        } else {
+          // If content changes, push completed segment and start new one
+          mergedSegments.push(currentSegment as VideoClip);
+          currentSegment = {...nextSegment};
+        }
+      }
+      mergedSegments.push(currentSegment as VideoClip);
+    }
+
+    // Finalize all clips, including gaps
+    const finalClips = mergedSegments.map(clip => {
+      // Finalize a subtitle clip
+      if (clip.hasSubtitle) {
+        const uniquePartsMap = new Map<string, SubtitlePart>();
+        clip.sourceSubtitles!.forEach(s => {
+          if (s.type === 'ass') {
+            s.parts.forEach(part => {
+              const key = `${part.style}::${part.text}`;
+              uniquePartsMap.set(key, part);
+            });
+          }
+        });
+
+        return {
+          ...clip,
+          id: `subtitle-${clip.startTime}`,
+          duration: clip.endTime! - clip.startTime!,
+          parts: Array.from(uniquePartsMap.values()),
+          text: clip.sourceSubtitles!
+            .filter(s => s.type === 'srt')
+            .map(s => (s as SrtSubtitleData).text).join('\n')
+        } as VideoClip;
+      }
+
+      // Finalize a gap clip
+      return {
+        ...clip,
+        id: `gap-${clip.startTime}`,
+        duration: clip.endTime! - clip.startTime!,
+        parts: [],
+        sourceSubtitles: []
+      } as VideoClip;
+    });
+
+    // Filter out any zero-duration clips that might have been created
+    return finalClips.filter(c => c.duration > 0.01);
   }
 
   private calculateUpdatedClips(

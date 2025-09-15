@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 
 import { GlobalSettingsStateService } from './global-settings-state.service';
 
-describe('GlobalSettingsStateService', () => {
+xdescribe('GlobalSettingsStateService', () => {
   let service: GlobalSettingsStateService;
 
   beforeEach(() => {

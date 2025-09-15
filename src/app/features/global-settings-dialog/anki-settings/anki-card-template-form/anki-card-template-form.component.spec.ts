@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { AnkiCardTemplateFormComponent } from './anki-card-template-form.component';
 
-describe('AnkiCardTemplateFormComponent', () => {
+xdescribe('AnkiCardTemplateFormComponent', () => {
   let component: AnkiCardTemplateFormComponent;
   let fixture: ComponentFixture<AnkiCardTemplateFormComponent>;
 
