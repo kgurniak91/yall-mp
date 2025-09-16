@@ -37,6 +37,10 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   public readonly videoHeight = input<number | undefined>();
 
   protected readonly shouldBeHidden = computed(() => {
+    if (!this.currentClip()?.hasSubtitle) {
+      return true;
+    }
+
     if (this.projectSettingsStateService.useMpvSubtitles()) {
       // User switched to native MPV subtitles, hide interactive subtitles layer
       return true;
@@ -65,6 +69,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   private readonly globalSettingsStateService = inject(GlobalSettingsStateService);
   private readonly subtitlesHighlighterService = inject(SubtitlesHighlighterService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly isInitialized = signal(false);
   private readonly isScaleApplied = signal(false);
   private assInstance: ASS | null = null;
   private resizeObserver: ResizeObserver | null = null;
@@ -137,11 +142,13 @@ export class SubtitlesOverlayComponent implements OnDestroy {
 
         if (width > 0 && height > 0) {
           this.initializeOrUpdateAssRenderer(width, height);
+          this.isInitialized.set(true);
         }
       });
       this.resizeObserver.observe(videoContainer);
 
       onCleanup(() => {
+        this.isInitialized.set(false);
         this.resizeObserver?.disconnect();
         this.destroyAssRenderer();
       });
@@ -234,6 +241,26 @@ export class SubtitlesOverlayComponent implements OnDestroy {
         }
       });
     });
+
+    effect(() => {
+      const clip = this.currentClip();
+      const container = this.subtitleContainer()?.nativeElement;
+
+      if (!container) {
+        return;
+      }
+
+      // Remove any stale DOM nodes from the previous clip or project.
+      container.innerHTML = '';
+
+      if (clip?.hasSubtitle && this.rawAssContent()) {
+        untracked(() => {
+          if (this.isInitialized() && this.fakeVideo) {
+            this.initializeOrUpdateAssRenderer(this.fakeVideo.videoWidth, this.fakeVideo.videoHeight);
+          }
+        });
+      }
+    });
   }
 
   ngOnDestroy(): void {
@@ -246,9 +273,13 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   }
 
   private initializeOrUpdateAssRenderer(width: number, height: number): void {
+    const renderContainer = this.subtitleContainer()?.nativeElement;
+    if (renderContainer) {
+      renderContainer.innerHTML = ''; // Clean-up just in case
+    }
+
     this.subtitleContainer().nativeElement.classList.add('subtitles-initializing');
     const assContent = this.rawAssContent();
-    const renderContainer = this.subtitleContainer()?.nativeElement;
     const videoContainer = this.videoContainerElement();
 
     if (!assContent || !renderContainer || !videoContainer) {
@@ -311,6 +342,11 @@ export class SubtitlesOverlayComponent implements OnDestroy {
     this.assInstance?.destroy();
     this.assInstance = null;
     this.fakeVideo = null;
+
+    const container = this.subtitleContainer()?.nativeElement;
+    if (container) {
+      container.innerHTML = '';
+    }
   }
 
   private getWordRectFromEvent(event: MouseEvent): DOMRect | null {

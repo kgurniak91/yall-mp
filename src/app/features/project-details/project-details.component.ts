@@ -281,6 +281,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     }
     this.fontInjectionService.clearFonts();
     window.electronAPI.mpvSetProperty('sub-visibility', false);
+    window.electronAPI.mpvDestroyViewport();
   }
 
   onPlayerReady(): void {

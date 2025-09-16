@@ -198,7 +198,7 @@ function createWindow() {
   });
 
   const syncWindowGeometry = () => {
-    if (!mainWindow || !uiWindow || (videoWindow && videoWindow.isDestroyed()) || mainWindow.isMinimized()) {
+    if (!mainWindow || !uiWindow || uiWindow.isDestroyed() || (videoWindow && videoWindow.isDestroyed()) || mainWindow.isMinimized()) {
       return;
     }
 
@@ -599,6 +599,27 @@ app.whenReady().then(() => {
 
     // Explicitly ensure MPV remains paused after this operation:
     mpvManager.setProperty('pause', true);
+  });
+
+  ipcMain.on('mpv:destroyViewport', () => {
+    console.log('[Main Process] Received mpv:destroyViewport. Cleaning up.');
+
+    mpvManager?.stop();
+    mpvManager = null;
+
+    if (uiWindow && !uiWindow.isDestroyed() && mainWindow && !mainWindow.isDestroyed()) {
+      uiWindow.setParentWindow(mainWindow);
+    }
+
+    // Defer the destruction of the videoWindow to the NEXT macrotask.
+    // This guarantees that the re-parenting command above has been fully processed by Electron.
+    setTimeout(() => {
+      if (videoWindow && !videoWindow.isDestroyed()) {
+        videoWindow.close();
+      }
+      videoWindow = null;
+      console.log('[Main Process] Deferred videoWindow cleanup complete.');
+    }, 0);
   });
 
   ipcMain.handle('fonts:get-fonts', async (_, projectId: string) => {

@@ -37,6 +37,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   mpvGetProperty: (property) => ipcRenderer.invoke('mpv:getProperty', property),
   mpvSetProperty: (property, value) => ipcRenderer.invoke('mpv:setProperty', property, value),
   mpvSeekAndPause: (seekTime) => ipcRenderer.invoke('mpv:seekAndPause', seekTime),
+  mpvDestroyViewport: () => ipcRenderer.send('mpv:destroyViewport'),
   onMpvEvent: (callback) => {
     const subscription = (_event, value) => callback(value);
     ipcRenderer.on('mpv:event', subscription);

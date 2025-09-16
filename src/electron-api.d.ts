@@ -57,6 +57,7 @@ export interface IElectronAPI {
   mpvGetProperty: (property: string) => Promise<any>;
   mpvSetProperty: (property: string, value: any) => Promise<void>;
   mpvSeekAndPause: (seekTime: number) => Promise<void>;
+  mpvDestroyViewport: () => void;
   onMpvEvent: (callback: (status: any) => void) => (() => void);
   onMainWindowMoved: (callback: () => void) => void;
   onMpvManagerReady: (callback: () => void) => void;
