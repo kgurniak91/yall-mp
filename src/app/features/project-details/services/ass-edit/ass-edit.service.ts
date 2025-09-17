@@ -1,6 +1,7 @@
 import {Injectable} from '@angular/core';
 import {VideoClip} from '../../../../model/video.types';
 import {ClipContent} from '../../../../model/commands/update-clip-text.command';
+import {AssSubtitlesUtils} from '../../../../shared/utils/ass-subtitles/ass-subtitles.utils';
 
 @Injectable()
 export class AssEditService {
@@ -15,7 +16,13 @@ export class AssEditService {
       return rawAssContent;
     }
 
-    const formatSpec = this.parseFormatLine(rawAssContent);
+    const parsedEvents = AssSubtitlesUtils.parseEvents(rawAssContent);
+    if (!parsedEvents) {
+      console.error('Failed to parse ASS [Events] in stretchClipTimings.');
+      return rawAssContent;
+    }
+    const {formatSpec} = parsedEvents;
+
     if (!formatSpec.has('Start') || !formatSpec.has('End')) {
       return rawAssContent;
     }
@@ -63,8 +70,8 @@ export class AssEditService {
 
           const originalLine = lines[lineIndex];
           const lineParts = originalLine.split(',');
-          lineParts[formatSpec.get('Start')!] = this.formatTime(newSubStartTime);
-          lineParts[formatSpec.get('End')!] = this.formatTime(newSubEndTime);
+          lineParts[formatSpec.get('Start')!] = AssSubtitlesUtils.formatTime(newSubStartTime);
+          lineParts[formatSpec.get('End')!] = AssSubtitlesUtils.formatTime(newSubEndTime);
           lines[lineIndex] = lineParts.join(',');
 
           updatedLineIndexes.add(lineIndex);
@@ -83,7 +90,13 @@ export class AssEditService {
       return rawAssContent;
     }
 
-    const formatSpec = this.parseFormatLine(rawAssContent);
+    const parsedEvents = AssSubtitlesUtils.parseEvents(rawAssContent);
+    if (!parsedEvents) {
+      console.error('Failed to parse ASS [Events] in updateClipText.');
+      return rawAssContent;
+    }
+    const {formatSpec} = parsedEvents;
+
     if (!formatSpec.has('Style') || !formatSpec.has('Text')) {
       return rawAssContent;
     }
@@ -162,8 +175,8 @@ export class AssEditService {
 
       if (
         style === criteria.style &&
-        start === this.formatTime(criteria.startTime) &&
-        end === this.formatTime(criteria.endTime) &&
+        start === AssSubtitlesUtils.formatTime(criteria.startTime) &&
+        end === AssSubtitlesUtils.formatTime(criteria.endTime) &&
         cleanTextFromFile === criteria.text
       ) {
         return i;
@@ -202,28 +215,5 @@ export class AssEditService {
     const rawOldText = oldCleanText.replace(/\n/g, '\\N');
     const rawNewText = newCleanText.replace(/\n/g, '\\N');
     return rawText.replace(rawOldText, rawNewText);
-  }
-
-  private parseFormatLine(rawAssContent: string): Map<string, number> {
-    const eventsMatch = rawAssContent.match(/\[Events\]\s*([\s\S]*?)(?=\s*\[|$)/i);
-    if (!eventsMatch) return new Map();
-
-    const formatLine = eventsMatch[1].split(/\r?\n/).find(line => line.toLowerCase().startsWith('format:'));
-    if (!formatLine) return new Map();
-
-    const parts = formatLine.substring('format:'.length).trim().split(',').map(p => p.trim());
-    const spec = new Map<string, number>();
-    parts.forEach((part, index) => {
-      spec.set(part, index);
-    });
-    return spec;
-  }
-
-  private formatTime(seconds: number): string {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = Math.floor(seconds % 60);
-    const cs = Math.round((seconds - Math.floor(seconds)) * 100);
-    return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(cs).padStart(2, '0')}`;
   }
 }

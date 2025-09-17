@@ -1,13 +1,11 @@
 <div class="content-wrapper">
   <div class="video-area" (dblclick)="onVideoAreaDoubleClick()">
     <app-video-controller #videoController (ready)="onPlayerReady()"/>
-    @if (parsedSubtitleData(); as data) {
-      <app-subtitles-overlay [currentClip]="clipsStateService.currentClip()"
-                             [rawAssContent]="data.rawAssContent"
-                             [videoWidth]="project()?.videoWidth"
-                             [videoHeight]="project()?.videoHeight"
-                             [videoContainerElement]="videoController.videoContainerElement()"/>
-    }
+    <app-subtitles-overlay [currentClip]="clipsStateService.currentClip()"
+                           [rawAssContent]="scopedAssContent()"
+                           [videoWidth]="project()?.videoWidth"
+                           [videoHeight]="project()?.videoHeight"
+                           [videoContainerElement]="videoController.videoContainerElement()"/>
   </div>
 
   <div class="toolbar">
@@ -117,7 +115,7 @@
                 pTooltip="Edit subtitles (S)"
                 tooltipPosition="left"
                 severity="secondary"
-                [disabled]="!currentClipHasSubtitles()"/>
+                [disabled]="!canEditSubtitles()"/>
 
       <p-button icon="fa-solid fa-e"
                 (click)="openAnkiExportDialog()"

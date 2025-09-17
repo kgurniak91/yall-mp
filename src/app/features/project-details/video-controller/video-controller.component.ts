@@ -59,26 +59,13 @@ export class VideoControllerComponent implements OnDestroy {
       return;
     }
 
-    const isLastClip = this.clipsStateService.currentClipIndex() === this.clipsStateService.clips().length - 1;
+    const isLastClip = this.clipsStateService.currentClipIndex() === (this.clipsStateService.clips().length - 1);
     if (isLastClip) {
       this.clipsStateService.setPlayerState(PlayerState.Idle);
       return;
     }
 
-    this.clipsStateService.advanceToNextClip();
-    const nextClip = this.clipsStateService.currentClip()!;
-    const autoPauseAtStart = this.projectSettingsStateService.autoPauseAtStart();
-
-    // Check if the auto-pause at the start of the NEW clip is needed
-    if (nextClip.hasSubtitle && autoPauseAtStart) {
-      this.clipsStateService.setPlayerState(PlayerState.AutoPausedAtStart);
-      window.electronAPI.mpvCommand(['seek', nextClip.startTime, 'absolute']);
-      window.electronAPI.mpvSetProperty('pause', true);
-      this.videoStateService.setCurrentTime(nextClip.startTime);
-    } else {
-      // Otherwise, play the next clip normally
-      this.playClip(nextClip);
-    }
+    this.startNextClip();
   }
 
   private subtitleBehaviorEnforcer = effect(() => {
@@ -135,17 +122,7 @@ export class VideoControllerComponent implements OnDestroy {
 
     if (playerState === PlayerState.AutoPausedAtEnd) {
       // Resume advances to and plays the next clip.
-      this.clipsStateService.advanceToNextClip();
-      const nextClip = this.clipsStateService.currentClip()!;
-      const autoPauseAtStart = this.projectSettingsStateService.autoPauseAtStart();
-
-      if (nextClip.hasSubtitle && autoPauseAtStart) {
-        this.clipsStateService.setPlayerState(PlayerState.AutoPausedAtStart);
-        window.electronAPI.mpvCommand(['seek', nextClip.startTime, 'absolute']);
-        window.electronAPI.mpvSetProperty('pause', true);
-      } else {
-        this.playClip(nextClip);
-      }
+      this.startNextClip();
     } else {
       // In these cases, "resume" means play the CURRENT clip from its beginning or current position.
       const resumeTime = this.videoStateService.currentTime();
@@ -223,5 +200,26 @@ export class VideoControllerComponent implements OnDestroy {
     };
 
     window.electronAPI.mpvPlayClip(request);
+  }
+
+  private startNextClip(): void {
+    this.clipsStateService.advanceToNextClip();
+    const nextClip = this.clipsStateService.currentClip();
+
+    // Safety check in case of the very last clip
+    if (!nextClip) {
+      this.clipsStateService.setPlayerState(PlayerState.Idle);
+      return;
+    }
+
+    this.videoStateService.setCurrentTime(nextClip.startTime);
+    const autoPauseAtStart = this.projectSettingsStateService.autoPauseAtStart();
+
+    if (nextClip.hasSubtitle && autoPauseAtStart) {
+      this.clipsStateService.setPlayerState(PlayerState.AutoPausedAtStart);
+      window.electronAPI.mpvSeekAndPause(nextClip.startTime);
+    } else {
+      this.playClip(nextClip);
+    }
   }
 }

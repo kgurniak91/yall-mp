@@ -32,6 +32,7 @@ import {ParsedSubtitlesData} from '../../../electron-api';
 import {SubtitlesHighlighterService} from './services/subtitles-highlighter/subtitles-highlighter.service';
 import {SubtitlesHighlighterComponent} from './subtitles-highlighter/subtitles-highlighter.component';
 import {FontInjectionService} from './services/font-injection/font-injection.service';
+import {AssSubtitlesUtils} from '../../shared/utils/ass-subtitles/ass-subtitles.utils';
 
 @Component({
   selector: 'app-project-details',
@@ -53,6 +54,20 @@ import {FontInjectionService} from './services/font-injection/font-injection.ser
 })
 export class ProjectDetailsComponent implements OnInit, OnDestroy {
   protected currentClipHasSubtitles = computed(() => !!this.clipsStateService.currentClip()?.hasSubtitle);
+
+  protected readonly canEditSubtitles = computed(() => {
+    const clip = this.clipsStateService.currentClip();
+    if (!clip || !clip.hasSubtitle) {
+      return false;
+    }
+
+    if (!this.isAssProject()) {
+      return true; // For SRT always allow editing subtitles
+    }
+
+    // For ASS allow editing only when ASS.js renderer is selected:
+    return !this.projectSettingsStateService.useMpvSubtitles();
+  });
 
   protected isFirstClip = computed(() => {
     const clips = this.clipsStateService.clips();
@@ -133,6 +148,22 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   });
 
   protected readonly isAssProject = computed(() => Boolean(this.parsedSubtitleData()?.rawAssContent));
+
+  protected readonly scopedAssContent = computed<string | undefined>(() => {
+    const project = this.project();
+    const currentClip = this.clipsStateService.currentClip();
+
+    if (!project?.rawAssContent || !currentClip?.hasSubtitle) {
+      return undefined;
+    }
+
+    return AssSubtitlesUtils.scopeAssContent(
+      project.rawAssContent,
+      currentClip.startTime,
+      currentClip.endTime
+    ) ?? project.rawAssContent;
+  });
+
   private wasPlayingBeforeSettingsOpened = false;
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -381,6 +412,11 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   }
 
   openEditSubtitlesDialog(): void {
+    if (!this.canEditSubtitles()) {
+      this.toastService.info('Subtitle editing is only available in the "Interactive (ASS.js)" renderer mode.');
+      return;
+    }
+
     const currentClip = this.clipsStateService.currentClip();
     if (!currentClip || !currentClip.hasSubtitle) {
       return;
@@ -413,7 +449,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       const command = new UpdateClipTextCommand(
         this.clipsStateService,
         this.project()!.id,
-        currentClip,
+        currentClip.id,
         oldContent,
         newContent
       );
