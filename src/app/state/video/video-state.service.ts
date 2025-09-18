@@ -1,8 +1,8 @@
 import {DestroyRef, inject, Injectable, Injector, OnDestroy, Signal, signal} from '@angular/core';
 import {SeekType} from '../../model/video.types';
 import {AppStateService} from '../app/app-state.service';
+import {auditTime, filter} from 'rxjs';
 import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
-import {auditTime} from 'rxjs';
 
 @Injectable()
 export class VideoStateService implements OnDestroy {
@@ -26,6 +26,7 @@ export class VideoStateService implements OnDestroy {
   private readonly injector = inject(Injector);
   private readonly appStateService = inject(AppStateService);
   private _projectId: string | null = null;
+  private isInitializing = true;
   private ignoreNextTimeUpdate = false;
   private cleanupMpvListener: (() => void) | null = null;
 
@@ -59,6 +60,9 @@ export class VideoStateService implements OnDestroy {
       if (status.event === 'property-change') {
         switch (status.name) {
           case 'time-pos':
+            if (this.isInitializing) {
+              break;
+            }
             if (this.ignoreNextTimeUpdate) {
               this.ignoreNextTimeUpdate = false;
               break;
@@ -71,6 +75,9 @@ export class VideoStateService implements OnDestroy {
             break;
           case 'pause':
             this._isPaused.set(status.data);
+            if (status.data === true && !this.isInitializing) {
+              this.saveCurrentPlaybackTime();
+            }
             break;
         }
       }
@@ -82,19 +89,17 @@ export class VideoStateService implements OnDestroy {
       this.cleanupMpvListener();
       this.cleanupMpvListener = null;
     }
-
-    if (!this._projectId) {
-      return;
-    }
-
-    this.appStateService.updateProject(this._projectId, {
-      lastPlaybackTime: this.currentTime()
-    });
+    this.saveCurrentPlaybackTime();
   }
 
   public setProjectId(id: string): void {
     this._projectId = id;
+    this.isInitializing = true;
     this.setupPeriodicSaving();
+  }
+
+  public finishInitialization(): void {
+    this.isInitializing = false;
   }
 
   public setMediaPath(path: string): void {
@@ -158,11 +163,13 @@ export class VideoStateService implements OnDestroy {
   public seekRelative(time: number): void {
     this._seekRequest.set({time, type: SeekType.Relative});
     this._syncTimelineRequest.set(Date.now());
+    this.saveCurrentPlaybackTime();
   }
 
   public seekAbsolute(time: number): void {
     this._seekRequest.set({time, type: SeekType.Absolute});
     this._syncTimelineRequest.set(Date.now());
+    this.saveCurrentPlaybackTime();
   }
 
   public clearSeekRequest(): void {
@@ -208,7 +215,7 @@ export class VideoStateService implements OnDestroy {
 
   public saveCurrentPlaybackTime(): void {
     if (this._projectId && this.duration() > 0) {
-      this.appStateService.updateProject(this._projectId, {lastPlaybackTime: this.currentTime()});
+      this.appStateService.updateProject(this._projectId, {lastPlaybackTime: this._currentTime()});
     }
   }
 
@@ -218,8 +225,11 @@ export class VideoStateService implements OnDestroy {
     }
 
     toObservable(this.currentTime, {injector: this.injector}).pipe(
+      filter(() => !this.isPaused() && !this.isInitializing),
       auditTime(5000),
       takeUntilDestroyed(this.destroyRef)
-    ).subscribe(currentTime => this.saveCurrentPlaybackTime());
+    ).subscribe(() => {
+      this.saveCurrentPlaybackTime();
+    });
   }
 }

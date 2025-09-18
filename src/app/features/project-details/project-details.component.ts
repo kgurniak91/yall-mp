@@ -33,6 +33,7 @@ import {SubtitlesHighlighterService} from './services/subtitles-highlighter/subt
 import {SubtitlesHighlighterComponent} from './subtitles-highlighter/subtitles-highlighter.component';
 import {FontInjectionService} from './services/font-injection/font-injection.service';
 import {AssSubtitlesUtils} from '../../shared/utils/ass-subtitles/ass-subtitles.utils';
+import {AssEditService} from './services/ass-edit/ass-edit.service';
 
 @Component({
   selector: 'app-project-details',
@@ -50,7 +51,17 @@ import {AssSubtitlesUtils} from '../../shared/utils/ass-subtitles/ass-subtitles.
     SubtitlesHighlighterComponent
   ],
   templateUrl: './project-details.component.html',
-  styleUrl: './project-details.component.scss'
+  styleUrl: './project-details.component.scss',
+  providers: [
+    KeyboardShortcutsService,
+    SubtitlesHighlighterService,
+    ClipsStateService,
+    CommandHistoryStateService,
+    ProjectSettingsStateService,
+    VideoStateService,
+    FontInjectionService,
+    AssEditService
+  ]
 })
 export class ProjectDetailsComponent implements OnInit, OnDestroy {
   protected currentClipHasSubtitles = computed(() => !!this.clipsStateService.currentClip()?.hasSubtitle);
@@ -227,7 +238,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
     this.cleanupInitialSeekListener = window.electronAPI.onMpvInitialSeekComplete(() => {
       console.log('[ProjectDetails] Received initial-seek-complete. Hiding spinner.');
-      this.videoStateService.setIsBusy(false);
+      setTimeout(() => this.videoStateService.setIsBusy(false), 25);
     });
 
     const projectId = this.route.snapshot.paramMap.get('id');
@@ -540,6 +551,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
     this.videoStateService.setCurrentTime(seekTime);
     window.electronAPI.mpvSeekAndPause(seekTime);
+    this.videoStateService.finishInitialization();
   }
 
   private loadAndInjectFonts(projectId: string): void {
