@@ -1,21 +1,66 @@
 import type {Dialogue, DialogueSlice} from 'ass-compiler';
-import type {AssSubtitleData, SubtitleData} from '../types/subtitle.type';
+import type {AssSubtitleData, SubtitleData, SubtitleFragment} from '../types/subtitle.type';
 import {v4 as uuidv4} from 'uuid';
+import {CompiledTag} from 'ass-compiler/types/tags';
 
-export function getCleanTextFromDialogueSlice(slice: DialogueSlice): string {
-  return slice.fragments
-    .map(fragment => fragment.text.replace(/\\N/g, '\n'))
-    .join('');
+function stringifyTagObject(tag: CompiledTag): string {
+  const parts = Object.entries(tag).map(([key, value]) => {
+    if (value === null || value === undefined) return '';
+
+    // Handle color and alpha tags which have special syntax
+    if (key === 'c1' || key === 'c') return `\\c&H${value}&`;
+    if (key === 'c2') return `\\2c&H${value}&`;
+    if (key === 'c3') return `\\3c&H${value}&`;
+    if (key === 'c4') return `\\4c&H${value}&`;
+    if (key === 'a1') return `\\1a&H${value}&`;
+    if (key === 'a2') return `\\2a&H${value}&`;
+    if (key === 'a3') return `\\3a&H${value}&`;
+    if (key === 'a4') return `\\4a&H${value}&`;
+
+    // Handle other simple tags like \i1, \b0, \fnArial
+    return `\\${key}${value}`;
+  });
+
+  if (parts.every(p => p === '')) return '';
+  return `{${parts.join('')}}`;
+}
+
+export function parseDialogueSlice(slice: DialogueSlice): { cleanText: string, fragments: SubtitleFragment[] } {
+  const fragments: SubtitleFragment[] = [];
+  const cleanTextParts: string[] = [];
+
+  for (const fragment of slice.fragments) {
+    const tagString = stringifyTagObject(fragment.tag);
+
+    if (tagString) {
+      fragments.push({text: tagString, isTag: true});
+    }
+
+    if (fragment.text) {
+      const normalizedText = fragment.text.replace(/\\N/g, '\n');
+      fragments.push({text: normalizedText, isTag: false});
+      cleanTextParts.push(normalizedText);
+    }
+  }
+
+  return {
+    cleanText: cleanTextParts.join(''),
+    fragments: fragments
+  };
 }
 
 export function dialoguesToAssSubtitleData(dialogues: Dialogue[]): AssSubtitleData[] {
   const subtitles: AssSubtitleData[] = [];
 
   for (const dialogue of dialogues) {
-    const parts = dialogue.slices.map(slice => ({
-      text: getCleanTextFromDialogueSlice(slice),
-      style: slice.style
-    })).filter(part => part.text.trim());
+    const parts = dialogue.slices.map(slice => {
+      const {cleanText, fragments} = parseDialogueSlice(slice);
+      return {
+        text: cleanText,
+        style: slice.style,
+        fragments
+      };
+    }).filter(part => part.text.trim() || part.fragments.some(f => f.isTag));
 
     if (parts.length > 0) {
       subtitles.push({

@@ -751,7 +751,9 @@ export class ClipsStateService {
           if (s.type === 'ass') {
             s.parts.forEach(part => {
               const key = `${part.style}::${part.text}`;
-              uniquePartsMap.set(key, part);
+              if (!uniquePartsMap.has(key)) {
+                uniquePartsMap.set(key, part);
+              }
             });
           }
         });

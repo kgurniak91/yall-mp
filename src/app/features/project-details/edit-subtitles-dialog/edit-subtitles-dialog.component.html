@@ -3,10 +3,27 @@
     <textarea pTextarea [(ngModel)]="text" [autoResize]="true" rows="3"></textarea>
   } @else {
     @for (part of editableParts; track $index) {
-      <div class="flex flex-column gap-2" [class.mb-3]="!$last">
-        <label>{{ part.style }}</label>
-        <textarea pTextarea [rows]="3" [(ngModel)]="part.text"></textarea>
+      <div class="ass-part-container">
+        <div class="part-content">
+          @if (part.fragments && part.fragments.length > 0) {
+            @for (fragment of part.fragments; track $index) {
+              @if (!fragment.isTag) {
+                <textarea pInputTextarea
+                          class="text-fragment"
+                          [(ngModel)]="fragment.text"
+                          rows="1"
+                          [autoResize]="true"></textarea>
+              }
+            }
+          } @else {
+            <textarea pInputTextarea [(ngModel)]="part.text" [rows]="3"></textarea>
+          }
+        </div>
       </div>
+
+      @if(!$last && part.text.trim().length) {
+        <p-divider/>
+      }
     }
   }
 

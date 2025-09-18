@@ -1,6 +1,12 @@
+export interface SubtitleFragment {
+  text: string;
+  isTag: boolean;
+}
+
 export interface SubtitlePart {
   text: string;
   style: string;
+  fragments?: SubtitleFragment[];
 }
 
 interface BaseSubtitleData {

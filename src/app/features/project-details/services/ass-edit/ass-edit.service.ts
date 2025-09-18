@@ -2,6 +2,7 @@ import {Injectable} from '@angular/core';
 import {VideoClip} from '../../../../model/video.types';
 import {ClipContent} from '../../../../model/commands/update-clip-text.command';
 import {AssSubtitlesUtils} from '../../../../shared/utils/ass-subtitles/ass-subtitles.utils';
+import {SubtitlePart} from '../../../../../../shared/types/subtitle.type';
 
 @Injectable()
 export class AssEditService {
@@ -31,14 +32,18 @@ export class AssEditService {
     const oldClipDuration = clip.endTime - oldClipStartTime;
     const newClipDuration = newEndTime - newStartTime;
 
-    if (oldClipDuration <= 0) return rawAssContent;
+    if (oldClipDuration <= 0) {
+      return rawAssContent;
+    }
 
     const stretchFactor = newClipDuration / oldClipDuration;
     const lines = rawAssContent.split(/\r?\n/);
     const updatedLineIndexes = new Set<number>();
 
     for (const sourceSub of clip.sourceSubtitles) {
-      if (sourceSub.type !== 'ass') continue;
+      if (sourceSub.type !== 'ass') {
+        continue;
+      }
 
       for (const part of sourceSub.parts) {
         let searchStartIndex = 0;
@@ -86,7 +91,7 @@ export class AssEditService {
     newContent: ClipContent,
     rawAssContent: string
   ): string {
-    if (!newContent.parts || !clip.hasSubtitle || clip.sourceSubtitles.length === 0) {
+    if (!newContent.parts || !clip.hasSubtitle || clip.parts.length === 0) {
       return rawAssContent;
     }
 
@@ -97,60 +102,97 @@ export class AssEditService {
     }
     const {formatSpec} = parsedEvents;
 
-    if (!formatSpec.has('Style') || !formatSpec.has('Text')) {
+    const startIdx = formatSpec.get('Start');
+    const endIdx = formatSpec.get('End');
+    const styleIdx = formatSpec.get('Style');
+    const textIdx = formatSpec.get('Text');
+
+    if (startIdx === undefined || endIdx === undefined || styleIdx === undefined || textIdx === undefined) {
+      console.error("ASS 'Format' line is missing required fields.");
+      return rawAssContent;
+    }
+
+    const editsMap = new Map<string, SubtitlePart>();
+    for (let i = 0; i < clip.parts.length; i++) {
+      const oldPart = clip.parts[i];
+      const newPart = newContent.parts[i];
+      if (oldPart.text !== newPart.text) {
+        editsMap.set(oldPart.text, newPart);
+      }
+    }
+
+    if (editsMap.size === 0) {
       return rawAssContent;
     }
 
     const lines = rawAssContent.split(/\r?\n/);
-    const originalUniqueParts = clip.parts;
-    const updatedLineIndexes = new Set<number>();
+    const updatedLines = lines.map(line => {
+      if (!line.toLowerCase().startsWith('dialogue:')) {
+        return line;
+      }
 
-    // Iterate through each unique part displayed in the dialog
-    for (let i = 0; i < originalUniqueParts.length; i++) {
-      const oldPart = originalUniqueParts[i];
-      const newPart = newContent.parts[i];
+      const parts = line.split(',');
+      if (parts.length <= Math.max(startIdx, endIdx, styleIdx, textIdx)) {
+        return line;
+      }
 
-      // If the text for this part was changed, find all lines that rendered it.
-      if (oldPart.text !== newPart.text) {
+      const lineStartTime = AssSubtitlesUtils.timeToSeconds(parts[startIdx]);
+      const lineEndTime = AssSubtitlesUtils.timeToSeconds(parts[endIdx]);
+      const isTimeOverlap = lineStartTime < clip.endTime && lineEndTime > clip.startTime;
 
-        // Find every single dialogue line in the raw ASS file that matches the OLD part's criteria, and update it.
-        let searchStartIndex = 0;
-        let lineIndex = -1;
+      if (!isTimeOverlap) {
+        return line;
+      }
 
-        // Loop until no more matches found
-        do {
-          lineIndex = this.findDialogueLineIndex(lines, formatSpec, {
-            // Find lines based on the original, unedited text
-            style: oldPart.style,
-            text: oldPart.text,
-          }, searchStartIndex);
+      const rawTextSegment = parts.slice(textIdx).join(',');
+      const cleanText = rawTextSegment.replace(/{[^}]*}/g, '').replace(/\\N/g, '\n');
+      const newPart = editsMap.get(cleanText);
+      const lineStyle = parts[styleIdx];
 
-          if (lineIndex !== -1) {
-            // Check if line is already updated to avoid infinite loops on weird files
-            if (updatedLineIndexes.has(lineIndex)) {
-              searchStartIndex = lineIndex + 1;
-              continue;
-            }
+      if (newPart && newPart.style === lineStyle) {
+        const newTextSegment = this.reconstructTextSegment(rawTextSegment, newPart);
+        parts.splice(textIdx, parts.length - textIdx, newTextSegment);
+        return parts.join(',');
+      } else {
+        return line;
+      }
+    });
 
-            const originalLine = lines[lineIndex];
-            const lineParts = originalLine.split(',');
-            const textIndex = formatSpec.get('Text')!;
-            const rawTextSegment = lineParts.slice(textIndex).join(',');
+    return updatedLines.join('\r\n');
+  }
 
-            // Reconstruct text part with new text
-            const newTextSegment = this.reconstructTextSegment(rawTextSegment, oldPart.text, newPart.text);
-            lineParts.splice(textIndex, lineParts.length - textIndex, newTextSegment);
-            lines[lineIndex] = lineParts.join(',');
+  private reconstructTextSegment(
+    originalRawText: string,
+    newPart: SubtitlePart
+  ): string {
+    const getTextFromFragments = (p: SubtitlePart) =>
+      p.fragments?.filter(f => !f.isTag).map(f => f.text).join('') ?? p.text;
 
-            // Mark this line as updated and continue searching from the next line
-            updatedLineIndexes.add(lineIndex);
-            searchStartIndex = lineIndex + 1;
-          }
-        } while (lineIndex !== -1);
+    // Determine if the original line was a simple animation (all tags at the start).
+    const textWithoutLeadingTags = originalRawText.replace(/^({[^}]*})+/, '');
+    const wasSimpleAnimation = !textWithoutLeadingTags.includes('{');
+
+    if (wasSimpleAnimation) {
+      // It's a simple animation line. Preserve its unique leading tags.
+      // Then, append the new clean text content (derived from the new part).
+      const tagBlockMatch = originalRawText.match(/^({[^}]*})+/);
+      const leadingTags = tagBlockMatch ? tagBlockMatch[0] : '';
+      const newText = getTextFromFragments(newPart).replace(/\n/g, '\\N');
+      return leadingTags + newText;
+    } else {
+      // It's a line with complex inline styling.
+      // The new fragments from the UI are the absolute source of truth for the entire segment.
+      if (newPart.fragments && newPart.fragments.length > 0) {
+        return newPart.fragments.map(f => f.text.replace(/\n/g, '\\N')).join('');
+      } else {
+        // Fallback: If for some reason there is a complex line but no new fragments,
+        // just append the new text to preserve the original leading tags. This may not be perfect.
+        const lastTagIndex = originalRawText.lastIndexOf('}');
+        const tags = lastTagIndex === -1 ? '' : originalRawText.substring(0, lastTagIndex + 1);
+        const newText = newPart.text.replace(/\n/g, '\\N');
+        return tags + newText;
       }
     }
-
-    return lines.join('\r\n');
   }
 
   private findOriginalDialogueLineIndex(
@@ -185,35 +227,4 @@ export class AssEditService {
     return -1;
   }
 
-  private findDialogueLineIndex(
-    lines: string[],
-    formatSpec: Map<string, number>,
-    criteria: { style: string; text: string },
-    startIndex: number = 0
-  ): number {
-    const textIndex = formatSpec.get('Text')!;
-    for (let i = startIndex; i < lines.length; i++) {
-      const line = lines[i];
-      if (!line.toLowerCase().startsWith('dialogue:')) continue;
-
-      const parts = line.split(',');
-      if (parts.length <= textIndex) continue;
-
-      const style = parts[formatSpec.get('Style')!];
-      const rawTextSegment = parts.slice(textIndex).join(',');
-      const cleanTextFromFile = rawTextSegment.replace(/{[^}]*}/g, '').replace(/\\N/g, '\n');
-
-      // Matching only on style and clean text content
-      if (style === criteria.style && cleanTextFromFile === criteria.text) {
-        return i;
-      }
-    }
-    return -1;
-  }
-
-  private reconstructTextSegment(rawText: string, oldCleanText: string, newCleanText: string): string {
-    const rawOldText = oldCleanText.replace(/\n/g, '\\N');
-    const rawNewText = newCleanText.replace(/\n/g, '\\N');
-    return rawText.replace(rawOldText, rawNewText);
-  }
 }

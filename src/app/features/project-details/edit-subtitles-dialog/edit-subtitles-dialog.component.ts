@@ -3,16 +3,17 @@ import {Button} from 'primeng/button';
 import {FormsModule} from '@angular/forms';
 import {Textarea} from 'primeng/textarea';
 import {DynamicDialogConfig, DynamicDialogRef} from 'primeng/dynamicdialog';
-import {AssSubtitleData, SrtSubtitleData, SubtitleData} from '../../../../../shared/types/subtitle.type';
-import {isEqual} from 'lodash-es';
-import {EditableSubtitlePart} from './edit-subtitles-dialog.type';
+import {AssSubtitleData, SrtSubtitleData, SubtitleData, SubtitlePart} from '../../../../../shared/types/subtitle.type';
+import {cloneDeep, isEqual} from 'lodash-es';
+import {Divider} from 'primeng/divider';
 
 @Component({
   selector: 'app-edit-subtitle-dialog',
   imports: [
     Button,
     FormsModule,
-    Textarea
+    Textarea,
+    Divider
   ],
   templateUrl: './edit-subtitles-dialog.component.html',
   styleUrl: './edit-subtitles-dialog.component.scss'
@@ -21,14 +22,14 @@ export class EditSubtitlesDialogComponent implements OnInit {
   protected readonly config = inject(DynamicDialogConfig);
   protected readonly data: SubtitleData = this.config.data;
   protected text: string = ''; // for .srt
-  protected editableParts: EditableSubtitlePart[] = []; // for .ass
+  protected editableParts: SubtitlePart[] = []; // for .ass
   private readonly ref = inject(DynamicDialogRef);
 
   ngOnInit(): void {
     if (this.data.type === 'srt') {
       this.text = this.data.text;
     } else { // .ass
-      this.editableParts = this.data.parts.map(p => ({...p}));
+      this.editableParts = cloneDeep(this.data.parts);
     }
   }
 
@@ -46,8 +47,15 @@ export class EditSubtitlesDialogComponent implements OnInit {
       }
     } else { // .ass
       const original = this.data as AssSubtitleData;
-      if (!isEqual(this.editableParts, original.parts)) {
-        this.ref.close({parts: this.editableParts});
+
+      // Reconstruct the clean text for each part before comparison and closing
+      const finalParts = this.editableParts.map(p => ({
+        ...p,
+        text: p.fragments?.filter(f => !f.isTag).map(f => f.text).join('') ?? p.text
+      }));
+
+      if (!isEqual(finalParts, original.parts)) {
+        this.ref.close({parts: finalParts});
       } else {
         this.ref.close();
       }

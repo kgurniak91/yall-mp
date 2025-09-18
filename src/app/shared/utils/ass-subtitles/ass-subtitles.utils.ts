@@ -8,17 +8,6 @@ interface ParsedAssEvents {
 export class AssSubtitlesUtils {
 
   /**
-   * Converts seconds into the H:MM:SS.ss format required by ASS files.
-   */
-  static formatTime(seconds: number): string {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = Math.floor(seconds % 60);
-    const cs = Math.round((seconds - Math.floor(seconds)) * 100);
-    return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(cs).padStart(2, '0')}`;
-  }
-
-  /**
    * Parses the raw ASS content into its constituent parts for easier manipulation.
    */
   static parseEvents(rawAssContent: string): ParsedAssEvents | null {
@@ -69,17 +58,12 @@ export class AssSubtitlesUtils {
       return undefined;
     }
 
-    const timeToSeconds = (timeStr: string): number => {
-      const [h, m, s] = timeStr.split(':').map(parseFloat);
-      return (h * 3600) + (m * 60) + s;
-    };
-
     const relevantDialogueLines = dialogueLines.filter(line => {
       const parts = line.split(',');
       if (parts.length <= Math.max(startIndex, endIndex)) return false;
 
-      const lineStartTime = timeToSeconds(parts[startIndex]);
-      const lineEndTime = timeToSeconds(parts[endIndex]);
+      const lineStartTime = AssSubtitlesUtils.timeToSeconds(parts[startIndex]);
+      const lineEndTime = AssSubtitlesUtils.timeToSeconds(parts[endIndex]);
 
       // An ASS line is relevant if it overlaps at all with the clip's time range.
       return lineStartTime < endTime && lineEndTime > startTime;
@@ -87,5 +71,24 @@ export class AssSubtitlesUtils {
 
     // Reconstruct the ASS file with only the filtered dialogue lines
     return `${header}[Events]\n${formatLine}\n${relevantDialogueLines.join('\n')}`;
+  }
+
+  /**
+   * Converts seconds into the H:MM:SS.ss format required by ASS files.
+   */
+  static formatTime(seconds: number): string {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    const cs = Math.round((seconds - Math.floor(seconds)) * 100);
+    return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(cs).padStart(2, '0')}`;
+  }
+
+  /**
+   * Converts the H:MM:SS.ss format required by ASS files into seconds.
+   */
+  static timeToSeconds(timeStr: string): number {
+    const [h, m, s] = timeStr.split(':').map(parseFloat);
+    return (h * 3600) + (m * 60) + s;
   }
 }
