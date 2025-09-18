@@ -41,14 +41,16 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       return true;
     }
 
-    if (this.projectSettingsStateService.useMpvSubtitles()) {
-      // User switched to native MPV subtitles, hide interactive subtitles layer
-      return true;
-    }
+    if (this.rawAssContent()) {
+      if (this.projectSettingsStateService.useMpvSubtitles()) {
+        // User switched to native MPV subtitles, hide interactive subtitles layer
+        return true;
+      }
 
-    if (this.rawAssContent() && !this.isScaleApplied()) {
-      // Interactive subtitles not initialized yet, they need to be scaled first
-      return true;
+      if (!this.isScaleApplied()) {
+        // Interactive subtitles not initialized yet, they need to be scaled first
+        return true;
+      }
     }
 
     const shouldBeHidden = !this.videoStateService.subtitlesVisible()
@@ -250,10 +252,10 @@ export class SubtitlesOverlayComponent implements OnDestroy {
         return;
       }
 
-      // Remove any stale DOM nodes from the previous clip or project.
-      container.innerHTML = '';
-
       if (clip?.hasSubtitle && this.rawAssContent()) {
+        // Remove any stale DOM nodes from the previous clip or project.
+        container.innerHTML = '';
+
         untracked(() => {
           if (this.isInitialized() && this.fakeVideo) {
             this.initializeOrUpdateAssRenderer(this.fakeVideo.videoWidth, this.fakeVideo.videoHeight);
