@@ -55,6 +55,8 @@ let draggableHeaderZones: Rectangle[] = [];
 let isInitialResizeComplete = false;
 let hasRequestedInitialSeek = false;
 let activeVisibilityListener: ((status: any) => void) | null = null;
+let isSaving = false;
+let saveQueue: any[] = [];
 const initialBounds = {width: 1920, height: 1080};
 const FORCED_GAP_SECONDS = 0.05;
 const DRAGGABLE_ZONE_PADDING = 3; // 3px on all sides
@@ -1113,16 +1115,35 @@ async function readAppData() {
     const data = await fs.readFile(APP_DATA_PATH, 'utf-8');
     return JSON.parse(data);
   } catch (error) {
-    console.log('Could not read app data (file might not exist yet), returning null.');
+    if (error instanceof SyntaxError) {
+      console.error('Error parsing JSON, the app data file might be corrupted:', error);
+    } else {
+      console.log('Could not read app data (file might not exist yet)');
+    }
     return null;
   }
 }
 
 async function saveAppData(_: any, data: any) {
+  saveQueue.push(data);
+  processSaveQueue();
+}
+
+async function processSaveQueue() {
+  if (isSaving || saveQueue.length === 0) {
+    return;
+  }
+
+  isSaving = true;
+  const dataToSave = saveQueue.shift();
+
   try {
-    await fs.writeFile(APP_DATA_PATH, JSON.stringify(data, null, 2), 'utf-8');
+    await fs.writeFile(APP_DATA_PATH, JSON.stringify(dataToSave, null, 2), 'utf-8');
   } catch (error) {
-    console.error('Failed to save app data.', error);
+    console.error('Failed to save app data:', error);
+  } finally {
+    isSaving = false;
+    processSaveQueue();
   }
 }
 
