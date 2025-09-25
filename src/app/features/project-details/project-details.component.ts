@@ -194,6 +194,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
     effect(() => {
       const currentSettings = this.projectSettingsStateService.settings();
+      window.electronAPI.playbackUpdateSettings(currentSettings);
       const currentProject = untracked(this.project);
       if (currentProject) {
         this.appStateService.updateProject(currentProject.id, {settings: currentSettings});
@@ -214,6 +215,8 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       // Wait until UI and MPV are ready, and clips have been generated from the video's duration.
       if (this.isUiReady() && this.isMpvReady() && clips.length > 0 && !this.hasFiredStartupSequence) {
         this.hasFiredStartupSequence = true;
+        const settings = this.projectSettingsStateService.settings();
+        window.electronAPI.playbackLoadProject(clips, settings);
         this.startPlaybackSequence();
       }
     });
@@ -550,7 +553,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     }
 
     this.videoStateService.setCurrentTime(seekTime);
-    window.electronAPI.mpvSeekAndPause(seekTime);
+    window.electronAPI.playbackSeek(seekTime);
     this.videoStateService.finishInitialization();
   }
 

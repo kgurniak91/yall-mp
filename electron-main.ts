@@ -10,7 +10,7 @@ import ffmpegStatic from 'ffmpeg-static';
 import {v4 as uuidv4} from 'uuid';
 import {ChildProcess, spawn} from 'child_process';
 import {MpvManager} from './mpv-manager';
-import {FontData, MpvClipRequest, ParsedSubtitlesData} from './src/electron-api';
+import {FontData, ParsedSubtitlesData} from './src/electron-api';
 import ffprobeStatic from 'ffprobe-static';
 import languages from '@cospired/i18n-iso-languages';
 import {compile} from 'ass-compiler';
@@ -20,6 +20,7 @@ import fontkit from 'fontkit';
 import Levenshtein from 'fast-levenshtein';
 import {SubtitleSelection} from './src/app/model/project.types';
 import {dialoguesToAssSubtitleData, mergeIdenticalConsecutiveSubtitles} from './shared/utils/subtitle-parsing';
+import {PlaybackManager} from './playback-manager';
 
 interface AvailableFont {
   family: string;
@@ -40,6 +41,7 @@ const APP_DATA_KEY = 'yall-mp-app-data';
 const APP_DATA_PATH = path.join(app.getPath('userData'), `${APP_DATA_KEY}.json`);
 const FONT_CACHE_DIR = path.join(app.getPath('userData'), 'font-cache');
 
+let playbackManager: PlaybackManager | null = null;
 let mpvManager: MpvManager | null = null;
 let mainWindow: BrowserWindow | null = null;
 let uiWindow: BrowserWindow | null = null;
@@ -468,6 +470,7 @@ app.whenReady().then(() => {
     uiWindow.setParentWindow(videoWindow);
 
     mpvManager = new MpvManager(videoWindow);
+    playbackManager = new PlaybackManager(mpvManager, uiWindow);
 
     mpvManager.on('status', (status) => {
       if (uiWindow) {
@@ -500,17 +503,6 @@ app.whenReady().then(() => {
     mpvManager.observeProperty('time-pos');
     mpvManager.observeProperty('duration');
     mpvManager.observeProperty('pause');
-  });
-
-  ipcMain.handle('mpv:playClip', async (_, request: MpvClipRequest) => {
-    if (!mpvManager?.mediaPath) {
-      return;
-    }
-
-    await executeMpvLoadCommand(mpvManager, request.startTime, request.endTime);
-
-    mpvManager.setProperty('speed', request.playbackRate);
-    mpvManager.setProperty('pause', false);
   });
 
   ipcMain.handle('mpv:finishVideoResize', async (_, containerRect: {
@@ -588,26 +580,12 @@ app.whenReady().then(() => {
     mpvManager?.setProperty(property, value);
   });
 
-  ipcMain.handle('mpv:seekAndPause', async (_, seekTime: number) => {
-    if (!mpvManager?.mediaPath) {
-      return;
-    }
-
-    console.log(`[Main Process] Received mpv:seekAndPause at ${seekTime}s`);
-    hasRequestedInitialSeek = true;
-
-    // Play for 1 frame and stop to force native subtitles rendering:
-    await executeMpvLoadCommand(mpvManager, seekTime, seekTime);
-
-    // Explicitly ensure MPV remains paused after this operation:
-    mpvManager.setProperty('pause', true);
-  });
-
   ipcMain.on('mpv:destroyViewport', () => {
     console.log('[Main Process] Received mpv:destroyViewport. Cleaning up.');
 
     mpvManager?.stop();
     mpvManager = null;
+    playbackManager = null;
 
     if (uiWindow && !uiWindow.isDestroyed() && mainWindow && !mainWindow.isDestroyed()) {
       uiWindow.setParentWindow(mainWindow);
@@ -643,6 +621,23 @@ app.whenReady().then(() => {
       // Ignore errors if the file doesn't exist
     }
   });
+
+  ipcMain.on('playback:play', () => playbackManager?.play());
+  ipcMain.on('playback:pause', () => playbackManager?.pause());
+  ipcMain.on('playback:togglePlayPause', () => playbackManager?.togglePlayPause());
+  ipcMain.on('playback:repeat', () => playbackManager?.repeat());
+  ipcMain.on('playback:forceContinue', () => playbackManager?.forceContinue());
+  ipcMain.on('playback:seek', (_, time) => {
+    // Use this flag on first seek to coordinate showing the video window
+    if (!hasRequestedInitialSeek) {
+      hasRequestedInitialSeek = true;
+    }
+    playbackManager?.seek(time);
+  });
+  ipcMain.on('playback:updateSettings', (_, settings) => {
+    playbackManager?.updateSettings(settings);
+  });
+  ipcMain.handle('playback:loadProject', (_, clips, settings) => playbackManager?.loadProject(clips, settings));
 
   createWindow();
 
@@ -1439,44 +1434,4 @@ function areRectsSimilar(rectsA: Rectangle[], rectsB: Rectangle[], tolerance: nu
   }
 
   return true;
-}
-
-async function executeMpvLoadCommand(
-  mpvManager: MpvManager,
-  startTime: number,
-  endTime: number
-) {
-  // If a previous visibility listener is still waiting, cancel it.
-  if (activeVisibilityListener) {
-    mpvManager.removeListener('status', activeVisibilityListener);
-    activeVisibilityListener = null;
-  }
-
-  const previousVisibility = await mpvManager.getProperty('sub-visibility');
-
-  // Hide the subtitles before changing clips and restore them after playback to prevent flickering:
-  if (previousVisibility === true) {
-    mpvManager.setProperty('sub-visibility', false);
-
-    activeVisibilityListener = (status) => {
-      if (status.event === 'playback-restart') {
-        mpvManager.setProperty('sub-visibility', true);
-        if (activeVisibilityListener) {
-          mpvManager.removeListener('status', activeVisibilityListener);
-          activeVisibilityListener = null;
-        }
-      }
-    };
-
-    mpvManager.on('status', activeVisibilityListener);
-  }
-
-  const command = [
-    'loadfile',
-    mpvManager.mediaPath,
-    'replace', -1,
-    `start=${startTime},end=${endTime}`
-  ];
-
-  mpvManager.sendCommand(command);
 }

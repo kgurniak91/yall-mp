@@ -2,7 +2,6 @@ import {GlobalSettings, ProjectSettings} from './settings.types';
 import type {SubtitleData} from '../../../shared/types/subtitle.type';
 import {AnkiSettings} from './anki.types';
 import {MediaTrack} from '../../../shared/types/media.type';
-import {FontData} from '../../electron-api';
 
 export type SubtitleSelection =
   | { type: 'none' }

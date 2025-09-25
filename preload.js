@@ -33,10 +33,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   ),
   mpvFinishVideoResize: (rect) => ipcRenderer.invoke('mpv:finishVideoResize', rect),
   mpvCommand: (commandArray) => ipcRenderer.invoke('mpv:command', commandArray),
-  mpvPlayClip: (request) => ipcRenderer.invoke('mpv:playClip', request),
   mpvGetProperty: (property) => ipcRenderer.invoke('mpv:getProperty', property),
   mpvSetProperty: (property, value) => ipcRenderer.invoke('mpv:setProperty', property, value),
-  mpvSeekAndPause: (seekTime) => ipcRenderer.invoke('mpv:seekAndPause', seekTime),
   mpvDestroyViewport: () => ipcRenderer.send('mpv:destroyViewport'),
   onMpvEvent: (callback) => {
     const subscription = (_event, value) => callback(value);
@@ -53,4 +51,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // --- Storage
   getAppData: () => ipcRenderer.invoke('app:get-data'),
   setAppData: (data) => ipcRenderer.invoke('app:set-data', data),
+  // --- Playback
+  playbackPlay: () => ipcRenderer.send('playback:play'),
+  playbackPause: () => ipcRenderer.send('playback:pause'),
+  playbackTogglePlayPause: () => ipcRenderer.send('playback:togglePlayPause'),
+  playbackRepeat: () => ipcRenderer.send('playback:repeat'),
+  playbackForceContinue: () => ipcRenderer.send('playback:forceContinue'),
+  playbackSeek: (time) => ipcRenderer.send('playback:seek', time),
+  playbackLoadProject: (clips, settings) => ipcRenderer.invoke('playback:loadProject', clips, settings),
+  playbackUpdateSettings: (settings) => ipcRenderer.send('playback:updateSettings', settings),
+  onPlaybackStateUpdate: (callback) => {
+    const subscription = (_event, value) => callback(value);
+    ipcRenderer.on('playback:state-update', subscription);
+    return () => ipcRenderer.removeListener('playback:state-update', subscription);
+  },
 });

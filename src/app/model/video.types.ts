@@ -54,7 +54,8 @@ export enum PlayerState {
   Playing = 'Playing',
   PausedByUser = 'PausedByUser',
   AutoPausedAtStart = 'AutoPausedAtStart',
-  AutoPausedAtEnd = 'AutoPausedAtEnd'
+  AutoPausedAtEnd = 'AutoPausedAtEnd',
+  Seeking = 'Seeking'
 }
 
 export const SUPPORTED_MEDIA_TYPES = ['mp4', 'mkv', 'webm', 'mov', 'avi'];

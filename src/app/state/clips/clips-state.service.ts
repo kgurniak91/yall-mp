@@ -1,4 +1,4 @@
-import {computed, effect, inject, Injectable, Signal, signal} from '@angular/core';
+import {computed, effect, inject, Injectable, OnDestroy, Signal, signal} from '@angular/core';
 import {VideoStateService} from '../video/video-state.service';
 import {PlayerState, SeekDirection, VideoClip} from '../../model/video.types';
 import {CommandHistoryStateService} from '../command-history/command-history-state.service';
@@ -27,7 +27,7 @@ const FORCED_GAP_SECONDS = 0.05;
 const MIN_SUBTITLE_DURATION = 0.5;
 
 @Injectable()
-export class ClipsStateService {
+export class ClipsStateService implements OnDestroy {
   private readonly videoStateService = inject(VideoStateService);
   private readonly globalSettingsStateService = inject(GlobalSettingsStateService);
   private readonly commandHistoryStateService = inject(CommandHistoryStateService);
@@ -41,6 +41,7 @@ export class ClipsStateService {
   private isInitialized = false;
   private _projectId: string | null = null;
   private readonly _isManuallySeeking = signal(false);
+  private readonly cleanupPlaybackListener: (() => void) | null = null;
 
   public readonly currentClipIndex = this._currentClipIndex.asReadonly();
   public readonly playerState = this._playerState.asReadonly();
@@ -62,6 +63,17 @@ export class ClipsStateService {
 
       this.appStateService.updateProject(projectId, {subtitles});
     });
+
+    this.cleanupPlaybackListener = window.electronAPI.onPlaybackStateUpdate((update) => {
+      this.setPlayerState(update.playerState);
+      this.setCurrentClipByIndex(update.currentClipIndex);
+    });
+  }
+
+  ngOnDestroy(): void {
+    if (this.cleanupPlaybackListener) {
+      this.cleanupPlaybackListener();
+    }
   }
 
   public setProjectId(id: string): void {

@@ -1,7 +1,10 @@
 import {AnkiExportRequest} from './app/model/anki.types';
 import {AppData, SubtitleSelection} from './app/model/project.types';
+import {VideoClip} from './app/model/video.types';
+import {ProjectSettings} from './app/model/settings.types';
 import {SubtitleData} from '../shared/types/subtitle.type';
 import {MediaMetadata} from '../shared/types/media.type';
+import {PlaybackStateUpdate} from '../playback-manager';
 
 export interface MpvClipRequest {
   startTime: number;
@@ -53,10 +56,8 @@ export interface IElectronAPI {
   ) => Promise<void>;
   mpvFinishVideoResize: (rect: { x: number, y: number, width: number, height: number }) => Promise<void>;
   mpvCommand: (commandArray: any[]) => Promise<void>;
-  mpvPlayClip: (request: MpvClipRequest) => Promise<void>;
   mpvGetProperty: (property: string) => Promise<any>;
   mpvSetProperty: (property: string, value: any) => Promise<void>;
-  mpvSeekAndPause: (seekTime: number) => Promise<void>;
   mpvDestroyViewport: () => void;
   onMpvEvent: (callback: (status: any) => void) => (() => void);
   onMainWindowMoved: (callback: () => void) => void;
@@ -65,6 +66,16 @@ export interface IElectronAPI {
   // --- Storage
   getAppData: () => Promise<AppData | null>;
   setAppData: (data: AppData) => Promise<void>;
+  // --- Playback
+  playbackPlay: () => void;
+  playbackPause: () => void;
+  playbackTogglePlayPause: () => void;
+  playbackRepeat: () => void;
+  playbackForceContinue: () => void;
+  playbackSeek: (time: number) => void;
+  playbackLoadProject: (clips: VideoClip[], settings: ProjectSettings) => Promise<void>;
+  playbackUpdateSettings: (settings: ProjectSettings) => void;
+  onPlaybackStateUpdate: (callback: (update: PlaybackStateUpdate) => void) => (() => void);
 }
 
 declare global {

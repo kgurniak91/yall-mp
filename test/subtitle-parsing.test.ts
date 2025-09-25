@@ -1,5 +1,4 @@
-import {test} from 'node:test';
-import assert from 'node:assert';
+import {describe, expect, it} from 'vitest';
 import {compile, Dialogue} from 'ass-compiler';
 import type {AssSubtitleData} from '../shared/types/subtitle.type';
 import {dialoguesToAssSubtitleData} from '../shared/utils/subtitle-parsing';
@@ -36,14 +35,16 @@ function processAndNormalize(dialogues: Dialogue[]): AssSubtitleData[] {
   }));
 }
 
-TEST_CASES.forEach((testCase: TestCase) => {
-  test(`Subtitle Parsing: ${testCase.description}`, () => {
-    const assContent = buildAssFile(testCase.dialogueLines);
-    const expected = testCase.expectedSubtitleData;
+describe('Subtitle Parsing', () => {
+  TEST_CASES.forEach((testCase: TestCase) => {
+    it(`correctly parses: "${testCase.description}"`, () => {
+      const assContent = buildAssFile(testCase.dialogueLines);
+      const expected = testCase.expectedSubtitleData;
 
-    const compiled = compile(assContent, {});
-    const actual = processAndNormalize(compiled.dialogues);
+      const compiled = compile(assContent, {});
+      const actual = processAndNormalize(compiled.dialogues);
 
-    assert.deepStrictEqual(actual, expected);
+      expect(actual).toEqual(expected);
+    });
   });
 });

@@ -46,6 +46,9 @@ describe('ClipsStateService', () => {
   let appStateService: AppStateService;
 
   beforeEach(() => {
+    (window as any).electronAPI = {
+      onPlaybackStateUpdate: jasmine.createSpy('onPlaybackStateUpdateSpy')
+    };
     spectator = createService();
     service = spectator.inject(ClipsStateService);
     assEditService = spectator.inject(AssEditService);

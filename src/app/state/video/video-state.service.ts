@@ -27,8 +27,8 @@ export class VideoStateService implements OnDestroy {
   private readonly appStateService = inject(AppStateService);
   private _projectId: string | null = null;
   private isInitializing = true;
-  private ignoreNextTimeUpdate = false;
   private cleanupMpvListener: (() => void) | null = null;
+  private cleanupPlaybackListener: (() => void) | null = null;
 
   public readonly mediaPath: Signal<string | null> = this._mediaPath.asReadonly();
   public readonly currentTime: Signal<number> = this._currentTime.asReadonly();
@@ -49,38 +49,14 @@ export class VideoStateService implements OnDestroy {
 
   constructor() {
     this.cleanupMpvListener = window.electronAPI.onMpvEvent((status) => {
-      console.log('mpv event', status);
-
-      // Set a flag when a seek or restart occurs, as the next time update may be inaccurate.
-      if (status.event === 'playback-restart' || status.event === 'seek') {
-        this.ignoreNextTimeUpdate = true;
-        return;
+      if (status.event === 'property-change' && status.name === 'duration') {
+        this.setDuration(status.data);
       }
+    });
 
-      if (status.event === 'property-change') {
-        switch (status.name) {
-          case 'time-pos':
-            if (this.isInitializing) {
-              break;
-            }
-            if (this.ignoreNextTimeUpdate) {
-              this.ignoreNextTimeUpdate = false;
-              break;
-            }
-
-            this.setCurrentTime(status.data);
-            break;
-          case 'duration':
-            this.setDuration(status.data);
-            break;
-          case 'pause':
-            this._isPaused.set(status.data);
-            if (status.data === true && !this.isInitializing) {
-              this.saveCurrentPlaybackTime();
-            }
-            break;
-        }
-      }
+    this.cleanupPlaybackListener = window.electronAPI.onPlaybackStateUpdate((update) => {
+      this._currentTime.set(update.currentTime);
+      this._isPaused.set(update.isPaused);
     });
   }
 
@@ -88,6 +64,10 @@ export class VideoStateService implements OnDestroy {
     if (this.cleanupMpvListener) {
       this.cleanupMpvListener();
       this.cleanupMpvListener = null;
+    }
+    if (this.cleanupPlaybackListener) {
+      this.cleanupPlaybackListener();
+      this.cleanupPlaybackListener = null;
     }
     this.saveCurrentPlaybackTime();
   }
