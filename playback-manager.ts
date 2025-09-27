@@ -1,9 +1,9 @@
-import { MpvManager } from './mpv-manager';
-import type { VideoClip } from './src/app/model/video.types';
-import { PlayerState } from './src/app/model/video.types';
-import type { ProjectSettings } from './src/app/model/settings.types';
-import { SubtitleBehavior } from './src/app/model/settings.types';
-import { BrowserWindow } from 'electron';
+import {MpvManager} from './mpv-manager';
+import type {VideoClip} from './src/app/model/video.types';
+import {PlayerState} from './src/app/model/video.types';
+import type {ProjectSettings} from './src/app/model/settings.types';
+import {SubtitleBehavior} from './src/app/model/settings.types';
+import {BrowserWindow} from 'electron';
 
 export interface PlaybackStateUpdate {
   playerState: PlayerState;
@@ -105,6 +105,18 @@ export class PlaybackManager {
     this.settings = newSettings;
     if (this.playerState !== PlayerState.Idle && this.playerState !== PlayerState.Seeking) {
       this.applyClipSettings();
+    }
+  }
+
+  public updateClips(newClips: VideoClip[]): void {
+    this.clips = newClips;
+    const newClipIndex = this.clips.findIndex(c => this.currentTime >= c.startTime && this.currentTime < c.endTime);
+
+    if (newClipIndex !== -1 && newClipIndex !== this.currentClipIndex) {
+      console.log(`[PlaybackManager] Clips updated. Resynced clip index from ${this.currentClipIndex} to ${newClipIndex}.`);
+      this.currentClipIndex = newClipIndex;
+      this.applyClipSettings();
+      this.notifyUI();
     }
   }
 

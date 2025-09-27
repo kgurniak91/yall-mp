@@ -40,7 +40,6 @@ export class ClipsStateService implements OnDestroy {
   private adjustDebounceTimer: any;
   private isInitialized = false;
   private _projectId: string | null = null;
-  private readonly _isManuallySeeking = signal(false);
   private readonly cleanupPlaybackListener: (() => void) | null = null;
 
   public readonly currentClipIndex = this._currentClipIndex.asReadonly();
@@ -50,9 +49,15 @@ export class ClipsStateService implements OnDestroy {
   public readonly currentClip = computed<VideoClip | undefined>(() => {
     return this.clips()[this.currentClipIndex()];
   });
-  public readonly isManuallySeeking = this._isManuallySeeking.asReadonly();
 
   constructor() {
+    effect(() => {
+      const currentClips = this.clips();
+      if (currentClips.length > 0) {
+        window.electronAPI.playbackUpdateClips(currentClips);
+      }
+    });
+
     effect(() => {
       const subtitles = this._subtitles();
       const projectId = this._projectId;
@@ -82,10 +87,6 @@ export class ClipsStateService implements OnDestroy {
 
   public setPlayerState(playerState: PlayerState): void {
     this._playerState.set(playerState);
-  }
-
-  public setManuallySeeking(isSeeking: boolean): void {
-    this._isManuallySeeking.set(isSeeking);
   }
 
   public setSubtitles(subtitles: SubtitleData[]): void {
@@ -437,22 +438,18 @@ export class ClipsStateService implements OnDestroy {
   public goToAdjacentSubtitledClip(direction: SeekDirection): void {
     const adjacentClip = this.findAdjacentSubtitledClip(direction);
     if (adjacentClip) {
-      this.setManuallySeeking(true);
       this.videoStateService.seekAbsolute(adjacentClip.startTime);
-      setTimeout(() => this.setManuallySeeking(false), 100);
     } else if (direction === SeekDirection.Previous) {
       const current = this.currentClip();
       if (current?.hasSubtitle) {
-        this.setManuallySeeking(true);
         this.videoStateService.seekAbsolute(current.startTime);
-        setTimeout(() => this.setManuallySeeking(false), 100);
       }
     }
   }
 
-  public updateClipTimes(clipId: string, newStartTime: number, newEndTime: number): void {
+  public updateClipTimes(sourceSubtitleIds: string[], newStartTime: number, newEndTime: number): void {
     const allClips = this.clips();
-    const clipToUpdate = allClips.find(c => c.id === clipId);
+    const clipToUpdate = allClips.find(c => c.sourceSubtitles.some(s => sourceSubtitleIds.includes(s.id)));
     const project = this.appStateService.getProjectById(this._projectId!);
 
     if (!clipToUpdate || !project) {
@@ -477,13 +474,13 @@ export class ClipsStateService implements OnDestroy {
       return;
     }
 
-    const clipBeingEditedIndex = allClips.findIndex(c => c.id === clipId);
+    const clipBeingEditedIndex = allClips.findIndex(c => c.id === clipToUpdate.id);
     if (this.playerState() === PlayerState.AutoPausedAtEnd && currentActiveIndex === clipBeingEditedIndex) {
       this.setPlayerState(PlayerState.PausedByUser);
     }
 
     const currentTime = this.videoStateService.currentTime();
-    const updatedClips = this.calculateUpdatedClips(allClips, clipId, newStartTime, newEndTime);
+    const updatedClips = this.calculateUpdatedClips(allClips, clipToUpdate.id, newStartTime, newEndTime);
     const activeClipAfterUpdate = updatedClips[currentActiveIndex];
 
     const boundaryMovedLeftPastPlayhead = (activeClipAfterUpdate.startTime > activeClipBeforeUpdate.startTime) && (currentTime < activeClipAfterUpdate.startTime);
@@ -509,7 +506,7 @@ export class ClipsStateService implements OnDestroy {
 
     const command = new UpdateClipTimesCommand(
       this,
-      clipId,
+      clipToUpdate.sourceSubtitles.map(s => s.id),
       clipToUpdate.startTime,
       clipToUpdate.endTime,
       newStartTime,
@@ -586,7 +583,7 @@ export class ClipsStateService implements OnDestroy {
 
     const command = new UpdateClipTimesCommand(
       this, // ClipsStateService instance
-      currentClip.id,
+      currentClip.sourceSubtitles.map(s => s.id),
       currentClip.startTime,
       currentClip.endTime,
       newStartTime,
@@ -644,18 +641,18 @@ export class ClipsStateService implements OnDestroy {
 
   private updateSubtitlesFromClips(updatedClips: VideoClip[]): void {
     const currentSubtitles = this._subtitles();
-    const clipMap = new Map<string, VideoClip>();
+    const subtitleIdToClipMap = new Map<string, VideoClip>();
 
     updatedClips
       .filter(clip => clip.hasSubtitle)
       .forEach(clip => {
-        const subtitleId = clip.id.startsWith('subtitle-') ? clip.id.substring('subtitle-'.length) : clip.id;
-        clipMap.set(subtitleId, clip);
+        clip.sourceSubtitles.forEach(sourceSub => {
+          subtitleIdToClipMap.set(sourceSub.id, clip);
+        });
       });
 
-
     const newSubtitles = currentSubtitles.map(subtitle => {
-      const updatedClip = clipMap.get(subtitle.id);
+      const updatedClip = subtitleIdToClipMap.get(subtitle.id);
       if (updatedClip) {
         return {
           ...subtitle,

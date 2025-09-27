@@ -47,7 +47,8 @@ describe('ClipsStateService', () => {
 
   beforeEach(() => {
     (window as any).electronAPI = {
-      onPlaybackStateUpdate: jasmine.createSpy('onPlaybackStateUpdateSpy')
+      onPlaybackStateUpdate: jasmine.createSpy('onPlaybackStateUpdateSpy'),
+      playbackUpdateClips: jasmine.createSpy('playbackUpdateClipsSpy')
     };
     spectator = createService();
     service = spectator.inject(ClipsStateService);

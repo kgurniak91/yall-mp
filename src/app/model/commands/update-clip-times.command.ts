@@ -4,7 +4,7 @@ import {ClipsStateService} from '../../state/clips/clips-state.service';
 export class UpdateClipTimesCommand implements Command {
   constructor(
     private clipsStateService: ClipsStateService,
-    private clipId: string,
+    private sourceSubtitleIds: string[],
     private oldStartTime: number,
     private oldEndTime: number,
     private newStartTime: number,
@@ -13,10 +13,10 @@ export class UpdateClipTimesCommand implements Command {
   }
 
   execute(): void {
-    this.clipsStateService.updateClipTimes(this.clipId, this.newStartTime, this.newEndTime);
+    this.clipsStateService.updateClipTimes(this.sourceSubtitleIds, this.newStartTime, this.newEndTime);
   }
 
   undo(): void {
-    this.clipsStateService.updateClipTimes(this.clipId, this.oldStartTime, this.oldEndTime);
+    this.clipsStateService.updateClipTimes(this.sourceSubtitleIds, this.oldStartTime, this.oldEndTime);
   }
 }
