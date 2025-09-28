@@ -109,7 +109,24 @@ export class PlaybackManager {
   }
 
   public updateClips(newClips: VideoClip[]): void {
-    this.clips = newClips;
+    const oldActiveClip = this.clips[this.currentClipIndex];
+    this.clips = newClips; // Update the internal clips array immediately.
+    const newClipAtOldIndex = this.clips[this.currentClipIndex];
+
+    // Check if the user's context should be preserved.
+    const shouldPreserveIndex = oldActiveClip && newClipAtOldIndex && this.areVideoClipsEqual(oldActiveClip, newClipAtOldIndex) &&
+      (
+        // Case 1: Paused at the end boundary, and that boundary has not moved.
+        (this.playerState === PlayerState.AutoPausedAtEnd && this.currentTime === oldActiveClip.endTime && newClipAtOldIndex.endTime === oldActiveClip.endTime) ||
+        // Case 2: Paused at the start boundary, and that boundary has not moved.
+        (this.playerState === PlayerState.AutoPausedAtStart && this.currentTime === oldActiveClip.startTime && newClipAtOldIndex.startTime === oldActiveClip.startTime)
+      );
+
+    if (shouldPreserveIndex) {
+      console.log(`[PlaybackManager] Active clip unchanged while paused at an unmodified boundary. Preserving index ${this.currentClipIndex}.`);
+      return;
+    }
+
     const newClipIndex = this.clips.findIndex(c => this.currentTime >= c.startTime && this.currentTime < c.endTime);
 
     if (newClipIndex !== -1 && newClipIndex !== this.currentClipIndex) {
@@ -119,6 +136,15 @@ export class PlaybackManager {
       this.notifyUI();
     }
   }
+
+  private areVideoClipsEqual(clipA?: VideoClip, clipB?: VideoClip): boolean {
+    if (!clipA || !clipB || clipA.sourceSubtitles.length !== clipB.sourceSubtitles.length) {
+      return false;
+    }
+    const idsA = clipA.sourceSubtitles.map(s => s.id).sort().join(',');
+    const idsB = clipB.sourceSubtitles.map(s => s.id).sort().join(',');
+    return idsA === idsB;
+  };
 
   private handleMpvEvent(status: any): void {
     if (status.event === 'property-change' && status.name === 'time-pos' && status.data !== undefined) {

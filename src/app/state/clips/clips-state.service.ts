@@ -18,6 +18,8 @@ import {CreateSubtitledClipCommand} from '../../model/commands/create-subtitled-
 import {GlobalSettingsStateService} from '../global-settings/global-settings-state.service';
 import {ClipContent} from '../../model/commands/update-clip-text.command';
 import {AssEditService} from '../../features/project-details/services/ass-edit/ass-edit.service';
+import {Project} from '../../model/project.types';
+import {AssSubtitlesUtils} from '../../shared/utils/ass-subtitles/ass-subtitles.utils';
 
 const MIN_CLIP_DURATION = 0.1;
 const ADJUST_DEBOUNCE_MS = 50;
@@ -56,17 +58,6 @@ export class ClipsStateService implements OnDestroy {
       if (currentClips.length > 0) {
         window.electronAPI.playbackUpdateClips(currentClips);
       }
-    });
-
-    effect(() => {
-      const subtitles = this._subtitles();
-      const projectId = this._projectId;
-
-      if (!projectId || (subtitles.length === 0 && !this.isInitialized)) {
-        return;
-      }
-
-      this.appStateService.updateProject(projectId, {subtitles});
     });
 
     this.cleanupPlaybackListener = window.electronAPI.onPlaybackStateUpdate((update) => {
@@ -381,13 +372,12 @@ export class ClipsStateService implements OnDestroy {
   public updateClipText(projectId: string, clip: VideoClip, newContent: ClipContent): void {
     const project = this.appStateService.getProjectById(projectId);
 
-    if (project?.rawAssContent && newContent.parts) {
+    if (project?.rawAssContent && newContent.parts) { // ASS
       const newRawAssContent = this.assEditService.updateClipText(
         clip,
         newContent,
         project.rawAssContent
       );
-      this.appStateService.updateProject(projectId, {rawAssContent: newRawAssContent});
 
       const newSubtitles = [...this._subtitles()];
 
@@ -412,26 +402,24 @@ export class ClipsStateService implements OnDestroy {
           }
         }
       }
+
+      this.appStateService.updateProject(projectId, {
+        subtitles: newSubtitles,
+        rawAssContent: newRawAssContent
+      });
+
       this._subtitles.set(newSubtitles);
-    } else if (newContent.text !== undefined) {
+    } else if (newContent.text !== undefined) { // SRT
       const newSubtitles = [...this._subtitles()];
       const sourceSub = clip.sourceSubtitles[0];
       if (sourceSub) {
         const subIndex = newSubtitles.findIndex(s => s.id === sourceSub.id);
         if (subIndex !== -1) {
           (newSubtitles[subIndex] as SrtSubtitleData).text = newContent.text;
+          this.appStateService.updateProject(projectId, {subtitles: newSubtitles});
           this._subtitles.set(newSubtitles);
         }
       }
-    }
-  }
-
-  public advanceToNextClip(): void {
-    const nextIndex = this.currentClipIndex() + 1;
-    if (nextIndex < this.clips().length) {
-      this._currentClipIndex.set(nextIndex);
-    } else {
-      this._playerState.set(PlayerState.Idle); // Reached the end
     }
   }
 
@@ -447,42 +435,73 @@ export class ClipsStateService implements OnDestroy {
     }
   }
 
-  public updateClipTimes(sourceSubtitleIds: string[], newStartTime: number, newEndTime: number): void {
-    const allClips = this.clips();
-    const clipToUpdate = allClips.find(c => c.sourceSubtitles.some(s => sourceSubtitleIds.includes(s.id)));
+  public updateClipTimes(sourceSubtitleIds: string[], newStartTime: number, newEndTime: number, volatileClipId?: string): void {
+    const roundedStartTime = AssSubtitlesUtils.roundToAssPrecision(newStartTime);
+    const roundedEndTime = AssSubtitlesUtils.roundToAssPrecision(newEndTime);
+    const originalClips = this.clips();
     const project = this.appStateService.getProjectById(this._projectId!);
 
-    if (!clipToUpdate || !project) {
-      console.error('Cannot update clip times: Clip or Project not found.');
+    if (!originalClips.length || !project) {
+      console.error('Cannot update clip times: Clips or Project not found.');
       return;
     }
 
-    if (clipToUpdate.hasSubtitle && clipToUpdate.sourceSubtitles[0]?.type === 'ass' && project.rawAssContent) {
-      const newRawAssContent = this.assEditService.stretchClipTimings(
-        clipToUpdate,
-        newStartTime,
-        newEndTime,
-        project.rawAssContent
-      );
-      this.appStateService.updateProject(project.id, {rawAssContent: newRawAssContent});
+    // Get the "before" state directly from the project state, which is the source of truth.
+    const originalSubtitles = project.subtitles as SubtitleData[];
+
+    const clipToUpdate = sourceSubtitleIds.length > 0
+      ? originalClips.find(c => c.sourceSubtitles.some(s => sourceSubtitleIds.includes(s.id)))
+      : originalClips.find(c => c.id === volatileClipId);
+
+    if (!clipToUpdate) {
+      console.error('Cannot update clip times: Clip to update not found.');
+      return;
     }
 
-    const currentActiveIndex = this.currentClipIndex();
-    const activeClipBeforeUpdate = allClips[currentActiveIndex];
+    const updatedClips = this.calculateUpdatedClips(originalClips, clipToUpdate.id, roundedStartTime, roundedEndTime);
+    const newSubtitles = this.getSubtitlesFromClips(updatedClips, originalSubtitles, originalClips);
+    const updates: Partial<Project> = {subtitles: newSubtitles};
 
+    if (project.rawAssContent) {
+      const originalSubsToUpdate: AssSubtitleData[] = [];
+      const updatedSubsToUpdate: AssSubtitleData[] = [];
+
+      newSubtitles.forEach(newSub => {
+        if (newSub.type !== 'ass') return;
+        const originalSub = originalSubtitles.find(os => os.id === newSub.id) as AssSubtitleData | undefined;
+        if (originalSub && (originalSub.startTime !== newSub.startTime || originalSub.endTime !== newSub.endTime)) {
+          originalSubsToUpdate.push(originalSub);
+          updatedSubsToUpdate.push(newSub);
+        }
+      });
+
+      if (originalSubsToUpdate.length > 0) {
+        // The rawAssContent from the project state is the correct "before" state to modify.
+        updates.rawAssContent = this.assEditService.stretchClipTimings(
+          originalSubsToUpdate,
+          updatedSubsToUpdate,
+          project.rawAssContent
+        );
+        this.videoStateService.requestAssRendererSync();
+      }
+    }
+
+    this.appStateService.updateProject(project.id, updates);
+    this._subtitles.set(newSubtitles);
+
+    const currentActiveIndex = this.currentClipIndex();
+    const activeClipBeforeUpdate = originalClips[currentActiveIndex];
     if (!activeClipBeforeUpdate) {
       return;
     }
 
-    const clipBeingEditedIndex = allClips.findIndex(c => c.id === clipToUpdate.id);
+    const clipBeingEditedIndex = originalClips.findIndex(c => c.id === clipToUpdate.id);
     if (this.playerState() === PlayerState.AutoPausedAtEnd && currentActiveIndex === clipBeingEditedIndex) {
       this.setPlayerState(PlayerState.PausedByUser);
     }
 
     const currentTime = this.videoStateService.currentTime();
-    const updatedClips = this.calculateUpdatedClips(allClips, clipToUpdate.id, newStartTime, newEndTime);
     const activeClipAfterUpdate = updatedClips[currentActiveIndex];
-
     const boundaryMovedLeftPastPlayhead = (activeClipAfterUpdate.startTime > activeClipBeforeUpdate.startTime) && (currentTime < activeClipAfterUpdate.startTime);
     const boundaryMovedRightPastPlayPlayhead = (activeClipAfterUpdate.endTime < activeClipBeforeUpdate.endTime) && (currentTime >= activeClipAfterUpdate.endTime);
 
@@ -492,8 +511,6 @@ export class ClipsStateService implements OnDestroy {
         this.setCurrentClipByIndex(newCorrectIndex);
       }
     }
-
-    this.updateSubtitlesFromClips(updatedClips);
   }
 
   public updateClipTimesFromTimeline(clipId: string, newStartTime: number, newEndTime: number): void {
@@ -510,7 +527,8 @@ export class ClipsStateService implements OnDestroy {
       clipToUpdate.startTime,
       clipToUpdate.endTime,
       newStartTime,
-      newEndTime
+      newEndTime,
+      clipToUpdate.id
     );
 
     this.commandHistoryStateService.execute(command);
@@ -639,32 +657,65 @@ export class ClipsStateService implements OnDestroy {
     return undefined; // No adjacent subtitle clip was found
   }
 
-  private updateSubtitlesFromClips(updatedClips: VideoClip[]): void {
-    const currentSubtitles = this._subtitles();
-    const subtitleIdToClipMap = new Map<string, VideoClip>();
-
-    updatedClips
-      .filter(clip => clip.hasSubtitle)
-      .forEach(clip => {
-        clip.sourceSubtitles.forEach(sourceSub => {
-          subtitleIdToClipMap.set(sourceSub.id, clip);
-        });
-      });
-
-    const newSubtitles = currentSubtitles.map(subtitle => {
-      const updatedClip = subtitleIdToClipMap.get(subtitle.id);
-      if (updatedClip) {
-        return {
-          ...subtitle,
-          startTime: updatedClip.startTime,
-          endTime: updatedClip.endTime,
-        };
-      } else {
-        return subtitle;
+  private getSubtitlesFromClips(
+    updatedClips: VideoClip[],
+    originalSubtitles: SubtitleData[],
+    originalClips: VideoClip[]
+  ): SubtitleData[] {
+    const newSubtitles = JSON.parse(JSON.stringify(originalSubtitles)) as SubtitleData[];
+    const originalClipMap = new Map<string, VideoClip>();
+    for (const clip of originalClips) {
+      if (clip.hasSubtitle && clip.sourceSubtitles.length > 0) {
+        const key = clip.sourceSubtitles.map(s => s.id).sort().join(',');
+        originalClipMap.set(key, clip);
       }
+    }
+
+    for (const updatedClip of updatedClips) {
+      if (!updatedClip.hasSubtitle) continue;
+
+      const key = updatedClip.sourceSubtitles.map(s => s.id).sort().join(',');
+      const originalClip = originalClipMap.get(key);
+      if (!originalClip) continue;
+
+      if (Math.abs(originalClip.startTime - updatedClip.startTime) < 0.01 && Math.abs(originalClip.endTime - updatedClip.endTime) < 0.01) {
+        continue;
+      }
+
+      const oldDuration = originalClip.duration;
+      const newDuration = updatedClip.duration;
+      const wasStretched = Math.abs(oldDuration - newDuration) > 0.01;
+
+      for (const sourceSub of updatedClip.sourceSubtitles) {
+        const subToModify = newSubtitles.find(s => s.id === sourceSub.id);
+        const originalSourceSub = originalSubtitles.find(s => s.id === sourceSub.id);
+        if (!subToModify || !originalSourceSub) continue;
+
+        if (wasStretched && oldDuration > 0.01) {
+          const startRatio = (originalSourceSub.startTime - originalClip.startTime) / oldDuration;
+          const endRatio = (originalSourceSub.endTime - originalClip.startTime) / oldDuration;
+          subToModify.startTime = updatedClip.startTime + (startRatio * newDuration);
+          subToModify.endTime = updatedClip.startTime + (endRatio * newDuration);
+        } else {
+          const shiftAmount = updatedClip.startTime - originalClip.startTime;
+          subToModify.startTime = originalSourceSub.startTime + shiftAmount;
+          subToModify.endTime = originalSourceSub.endTime + shiftAmount;
+        }
+      }
+    }
+
+    const finalSubIds = new Set<string>();
+    updatedClips.forEach(c => {
+      if (c.hasSubtitle) c.sourceSubtitles.forEach(s => finalSubIds.add(s.id));
     });
 
-    this._subtitles.set(newSubtitles);
+    return newSubtitles
+      .filter(s => finalSubIds.has(s.id))
+      .map(s => ({
+        ...s,
+        startTime: AssSubtitlesUtils.roundToAssPrecision(s.startTime),
+        endTime: AssSubtitlesUtils.roundToAssPrecision(s.endTime),
+      }));
   }
 
   private generateClips(): VideoClip[] {

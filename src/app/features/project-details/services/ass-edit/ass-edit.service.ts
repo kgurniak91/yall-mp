@@ -2,18 +2,18 @@ import {Injectable} from '@angular/core';
 import {VideoClip} from '../../../../model/video.types';
 import {ClipContent} from '../../../../model/commands/update-clip-text.command';
 import {AssSubtitlesUtils} from '../../../../shared/utils/ass-subtitles/ass-subtitles.utils';
-import {SubtitlePart} from '../../../../../../shared/types/subtitle.type';
+import {AssSubtitleData, SubtitlePart} from '../../../../../../shared/types/subtitle.type';
 
 @Injectable()
 export class AssEditService {
 
   public stretchClipTimings(
-    clip: VideoClip,
-    newStartTime: number,
-    newEndTime: number,
+    originalSourceSubtitles: AssSubtitleData[],
+    updatedSourceSubtitles: AssSubtitleData[],
     rawAssContent: string
   ): string {
-    if (!clip.hasSubtitle || clip.sourceSubtitles.length === 0) {
+    if (originalSourceSubtitles.length === 0 || originalSourceSubtitles.length !== updatedSourceSubtitles.length) {
+      console.warn('stretchClipTimings received empty or mismatched subtitle arrays.');
       return rawAssContent;
     }
 
@@ -22,64 +22,45 @@ export class AssEditService {
       console.error('Failed to parse ASS [Events] in stretchClipTimings.');
       return rawAssContent;
     }
+
     const {formatSpec} = parsedEvents;
-
-    if (!formatSpec.has('Start') || !formatSpec.has('End')) {
+    const startIdx = formatSpec.get('Start');
+    const endIdx = formatSpec.get('End');
+    if (startIdx === undefined || endIdx === undefined) {
       return rawAssContent;
     }
 
-    const oldClipStartTime = clip.startTime;
-    const oldClipDuration = clip.endTime - oldClipStartTime;
-    const newClipDuration = newEndTime - newStartTime;
-
-    if (oldClipDuration <= 0) {
-      return rawAssContent;
-    }
-
-    const stretchFactor = newClipDuration / oldClipDuration;
     const lines = rawAssContent.split(/\r?\n/);
     const updatedLineIndexes = new Set<number>();
 
-    for (const sourceSub of clip.sourceSubtitles) {
-      if (sourceSub.type !== 'ass') {
-        continue;
-      }
+    for (let i = 0; i < originalSourceSubtitles.length; i++) {
+      const originalSub = originalSourceSubtitles[i];
+      const updatedSub = updatedSourceSubtitles[i];
 
-      for (const part of sourceSub.parts) {
+      for (const part of originalSub.parts) {
         let searchStartIndex = 0;
-        let lineIndex = -1;
-        do {
-          lineIndex = this.findOriginalDialogueLineIndex(lines, formatSpec, {
-            startTime: sourceSub.startTime,
-            endTime: sourceSub.endTime,
+
+        while (searchStartIndex < lines.length) {
+          const lineIndex = this.findOriginalDialogueLineIndex(lines, formatSpec, {
+            startTime: originalSub.startTime,
+            endTime: originalSub.endTime,
             style: part.style,
             text: part.text,
           }, searchStartIndex);
 
-          if (lineIndex !== -1 && !updatedLineIndexes.has(lineIndex)) {
-            // Found a unique line, break the search loop for this part
+          if (lineIndex === -1) {
             break;
           }
 
-          if (lineIndex !== -1) {
-            searchStartIndex = lineIndex + 1; // Prepare to search for the next duplicate if this one was already used
-            lineIndex = -1; // Reset to not exit the do-while loop
+          if (!updatedLineIndexes.has(lineIndex)) {
+            const lineParts = lines[lineIndex].split(',');
+            lineParts[startIdx] = AssSubtitlesUtils.formatTime(updatedSub.startTime);
+            lineParts[endIdx] = AssSubtitlesUtils.formatTime(updatedSub.endTime);
+            lines[lineIndex] = lineParts.join(',');
+            updatedLineIndexes.add(lineIndex);
           }
-        } while (lineIndex !== -1 && updatedLineIndexes.has(lineIndex));
 
-
-        if (lineIndex !== -1) {
-          const oldSubStartTimeOffset = sourceSub.startTime - oldClipStartTime;
-          const newSubStartTime = newStartTime + (oldSubStartTimeOffset * stretchFactor);
-          const newSubEndTime = newStartTime + (oldSubStartTimeOffset * stretchFactor) + (sourceSub.endTime - sourceSub.startTime) * stretchFactor;
-
-          const originalLine = lines[lineIndex];
-          const lineParts = originalLine.split(',');
-          lineParts[formatSpec.get('Start')!] = AssSubtitlesUtils.formatTime(newSubStartTime);
-          lineParts[formatSpec.get('End')!] = AssSubtitlesUtils.formatTime(newSubEndTime);
-          lines[lineIndex] = lineParts.join(',');
-
-          updatedLineIndexes.add(lineIndex);
+          searchStartIndex = lineIndex + 1;
         }
       }
     }

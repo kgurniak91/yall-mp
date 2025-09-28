@@ -22,6 +22,7 @@ export class VideoStateService implements OnDestroy {
   private readonly _forceResizeRequest = signal<number | null>(null);
   private readonly _isPaused = signal(true);
   private readonly _isBusy = signal(true);
+  private readonly _assRendererSyncRequest = signal<number | null>(null);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly appStateService = inject(AppStateService);
@@ -46,6 +47,7 @@ export class VideoStateService implements OnDestroy {
   public readonly forceResizeRequest = this._forceResizeRequest.asReadonly();
   public readonly isPaused = this._isPaused.asReadonly();
   public readonly isBusy = this._isBusy.asReadonly();
+  public readonly assRendererSyncRequest = this._assRendererSyncRequest.asReadonly();
 
   constructor() {
     this.cleanupMpvListener = window.electronAPI.onMpvEvent((status) => {
@@ -150,6 +152,14 @@ export class VideoStateService implements OnDestroy {
     this._seekRequest.set({time, type: SeekType.Absolute});
     this._syncTimelineRequest.set(Date.now());
     this.saveCurrentPlaybackTime();
+  }
+
+  public requestAssRendererSync(): void {
+    this._assRendererSyncRequest.set(Date.now());
+  }
+
+  public clearAssRendererSyncRequest(): void {
+    this._assRendererSyncRequest.set(null);
   }
 
   public clearSeekRequest(): void {

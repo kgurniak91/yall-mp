@@ -91,4 +91,11 @@ export class AssSubtitlesUtils {
     const [h, m, s] = timeStr.split(':').map(parseFloat);
     return (h * 3600) + (m * 60) + s;
   }
+
+  /**
+   * Rounds a time in seconds to the two-decimal precision required by the ASS format.
+   */
+  static roundToAssPrecision(seconds: number): number {
+    return Math.round(seconds * 100) / 100;
+  }
 }

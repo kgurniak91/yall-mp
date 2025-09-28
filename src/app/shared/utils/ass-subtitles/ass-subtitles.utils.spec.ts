@@ -166,6 +166,7 @@ describe('AssSubtitlesUtils', () => {
     });
 
     it('should return undefined for malformed content', () => {
+      spyOn(console, 'error').and.callFake(() => {});
       const noEventsContent = `[Script Info]\nTitle: Test`;
       const noFormatContent = `[Script Info]\nTitle: Test\n[Events]`;
       const badFormatContent = ASS_SUBTITLES.replace('Start, End', 'Beginning, Finish');

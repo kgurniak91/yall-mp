@@ -87,6 +87,16 @@ export class SubtitlesOverlayComponent implements OnDestroy {
 
   constructor() {
     effect(() => {
+      if (this.videoStateService.assRendererSyncRequest()) {
+        if (this.assInstance && this.fakeVideo) {
+          console.log('[SubtitlesOverlay] Received explicit request to sync ASS renderer.');
+          this.initializeOrUpdateAssRenderer(this.fakeVideo.videoWidth, this.fakeVideo.videoHeight);
+        }
+        this.videoStateService.clearAssRendererSyncRequest();
+      }
+    });
+
+    effect(() => {
       const baseScale = this.baseAssScale();
       const settings = this.projectSettingsStateService.settings();
 
