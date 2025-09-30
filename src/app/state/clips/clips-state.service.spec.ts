@@ -12,6 +12,9 @@ import {AssEditService} from '../../features/project-details/services/ass-edit/a
 import {GlobalSettingsStateService} from '../global-settings/global-settings-state.service';
 import {MOCK_VIDEO_DURATION, TEST_CASES, TestCase} from '../../../../test/test-cases';
 import {createServiceFactory, SpectatorService} from '@ngneat/spectator';
+import {CreateSubtitledClipCommand} from '../../model/commands/create-subtitled-clip.command';
+import {DeleteSubtitledClipCommand} from '../../model/commands/delete-subtitled-clip.command';
+import {MergeSubtitledClipsCommand} from '../../model/commands/merge-subtitled-clips.command';
 
 describe('ClipsStateService', () => {
   const dependencies = MockBuilder(ClipsStateService)
@@ -601,6 +604,138 @@ describe('ClipsStateService', () => {
         'Dialogue: 0,0:00:03.00,0:00:08.00,Default,,0,0,0,,Test Line'
       ].join('\r\n');
       expect(secondUpdateArgs.rawAssContent).toEqual(expectedSecondRawContent);
+    });
+  });
+
+  describe('Clip Creation, Deletion, and Merging (SRT)', () => {
+    let projectState: any;
+
+    beforeEach(() => {
+      projectState = {
+        id: 'proj-1',
+        subtitles: [
+          {type: 'srt', id: 'srt-1', startTime: 5, endTime: 10, text: 'Subtitle A'},
+          {type: 'srt', id: 'srt-2', startTime: 15, endTime: 20, text: 'Subtitle B'}
+        ]
+      };
+      (appStateService.getProjectById as jasmine.Spy).and.callFake(() => projectState);
+      (appStateService.updateProject as jasmine.Spy).and.callFake((id, updates) => {
+        if (id === 'proj-1') {
+          projectState = {...projectState, ...updates};
+          // When project state changes, the service's internal signal must be updated
+          // to simulate the reactive flow that would happen in the real app.
+          service.setSubtitles(updates.subtitles || projectState.subtitles);
+        }
+      });
+      service.setProjectId('proj-1');
+      service.setSubtitles(JSON.parse(JSON.stringify(projectState.subtitles)));
+    });
+
+    it('should correctly create a new subtitle, and then undo/redo the creation', () => {
+      const newSubtitle: SrtSubtitleData = {type: 'srt', id: 'srt-new', startTime: 11, endTime: 14, text: 'New'};
+      const createCommand = new CreateSubtitledClipCommand(service, newSubtitle);
+
+      // --- EXECUTE ---
+      commandHistoryService.execute(createCommand);
+
+      // There should now be 3 subtitled clips.
+      let subtitledClips = service.clips().filter(c => c.hasSubtitle);
+      expect(subtitledClips.length).toBe(3);
+      expect(subtitledClips[1].text).toBe('New');
+      expect(appStateService.updateProject).toHaveBeenCalledTimes(1);
+
+      // --- UNDO ---
+      commandHistoryService.undo();
+
+      // Should be back to 2 subtitled clips.
+      subtitledClips = service.clips().filter(c => c.hasSubtitle);
+      expect(subtitledClips.length).toBe(2);
+      expect(appStateService.updateProject).toHaveBeenCalledTimes(2);
+      expect(service.clips().some(c => c.text === 'New')).toBeFalse();
+
+      // --- REDO ---
+      commandHistoryService.redo();
+
+      // Back to 3 subtitled clips again.
+      subtitledClips = service.clips().filter(c => c.hasSubtitle);
+      expect(subtitledClips.length).toBe(3);
+      expect(subtitledClips[1].text).toBe('New');
+      expect(appStateService.updateProject).toHaveBeenCalledTimes(3);
+    });
+
+    it('should correctly delete a subtitle, and then undo/redo the deletion', () => {
+      const initialSubtitles = (service as any)._subtitles();
+      expect(initialSubtitles.length).toBe(2);
+
+      const deleteCommand = new DeleteSubtitledClipCommand(service, 'srt-1');
+
+      // --- EXECUTE ---
+      commandHistoryService.execute(deleteCommand);
+
+      // There should now be only 1 subtitled clip.
+      let subtitledClips = service.clips().filter(c => c.hasSubtitle);
+      expect(subtitledClips.length).toBe(1);
+      expect(subtitledClips[0].text).toBe('Subtitle B');
+      expect(appStateService.updateProject).toHaveBeenCalledTimes(1);
+
+      // --- UNDO ---
+      commandHistoryService.undo();
+
+      // Should be back to 2 subtitled clips.
+      subtitledClips = service.clips().filter(c => c.hasSubtitle);
+      expect(subtitledClips.length).toBe(2);
+      expect(subtitledClips[0].text).toBe('Subtitle A');
+      expect(appStateService.updateProject).toHaveBeenCalledTimes(2);
+
+      // --- REDO ---
+      commandHistoryService.redo();
+
+      // Back to 1 subtitled clip again.
+      subtitledClips = service.clips().filter(c => c.hasSubtitle);
+      expect(subtitledClips.length).toBe(1);
+      expect(subtitledClips[0].text).toBe('Subtitle B');
+      expect(appStateService.updateProject).toHaveBeenCalledTimes(3);
+    });
+
+    it('should correctly merge two clips (delete a gap), and then undo/redo the merge', () => {
+      const clipsBeforeMerge = service.clips();
+      expect(clipsBeforeMerge.length).toBe(5); // gap, sub, gap, sub, gap
+      const firstClipId = 'subtitle-5';
+      const secondClipId = 'subtitle-15';
+
+      const mergeCommand = new MergeSubtitledClipsCommand(service, firstClipId, secondClipId);
+
+      // --- EXECUTE ---
+      commandHistoryService.execute(mergeCommand);
+
+      // There should be one long subtitled clip and 2 gaps around it.
+      const clipsAfterMerge = service.clips();
+      expect(clipsAfterMerge.length).toBe(3);
+      const mergedClip = clipsAfterMerge[1];
+      expect(mergedClip.startTime).toBe(5);
+      expect(mergedClip.endTime).toBe(20);
+      expect(mergedClip.text).toBe('Subtitle A\nSubtitle B');
+      expect(appStateService.updateProject).toHaveBeenCalledTimes(1);
+
+      // --- UNDO ---
+      commandHistoryService.undo();
+
+      const clipsAfterUndo = service.clips();
+      // Timeline should be restored to its original state.
+      expect(clipsAfterUndo.length).toBe(5);
+      expect(clipsAfterUndo[1].text).toBe('Subtitle A');
+      expect(clipsAfterUndo[3].text).toBe('Subtitle B');
+      expect(appStateService.updateProject).toHaveBeenCalledTimes(2);
+
+      // --- REDO ---
+      commandHistoryService.redo();
+
+      const clipsAfterRedo = service.clips();
+      // Back to the merged state.
+      expect(clipsAfterRedo.length).toBe(3);
+      expect(clipsAfterRedo[1].endTime).toBe(20);
+      expect(clipsAfterRedo[1].text).toBe('Subtitle A\nSubtitle B');
+      expect(appStateService.updateProject).toHaveBeenCalledTimes(3);
     });
   });
 });

@@ -20,6 +20,7 @@ import {ClipContent} from '../../model/commands/update-clip-text.command';
 import {AssEditService} from '../../features/project-details/services/ass-edit/ass-edit.service';
 import {Project} from '../../model/project.types';
 import {AssSubtitlesUtils} from '../../shared/utils/ass-subtitles/ass-subtitles.utils';
+import {cloneDeep} from 'lodash-es';
 
 const MIN_CLIP_DURATION = 0.1;
 const ADJUST_DEBOUNCE_MS = 50;
@@ -173,9 +174,12 @@ export class ClipsStateService implements OnDestroy {
     if (!currentClip) return;
 
     if (currentClip.hasSubtitle) {
-      const subtitleId = currentClip.id.replace('subtitle-', '');
-      const command = new DeleteSubtitledClipCommand(this, subtitleId);
-      this.commandHistoryStateService.execute(command);
+      // The id of a subtitled VideoClip is `subtitle-${startTime}`, but the source subtitle's ID is required.
+      const sourceSubtitleId = currentClip.sourceSubtitles[0]?.id;
+      if (sourceSubtitleId) {
+        const command = new DeleteSubtitledClipCommand(this, sourceSubtitleId);
+        this.commandHistoryStateService.execute(command);
+      }
     } else {
       const clips = this.clips();
       const currentIndex = this.currentClipIndex();
@@ -199,11 +203,16 @@ export class ClipsStateService implements OnDestroy {
     newText?: string
   ): void {
     const timeBeforeDelete = this.videoStateService.currentTime();
-    const firstSubtitleId = firstClipId.replace('subtitle-', '');
-    const secondSubtitleId = secondClipId.replace('subtitle-', '');
+    const firstSourceSubtitleId = this.clips().find(c => c.id === firstClipId)?.sourceSubtitles[0]?.id;
+    const secondSourceSubtitleId = this.clips().find(c => c.id === secondClipId)?.sourceSubtitles[0]?.id;
+
+    if (!firstSourceSubtitleId || !secondSourceSubtitleId) {
+      return;
+    }
+
     const subtitles = this._subtitles();
-    const firstSubtitleIndex = subtitles.findIndex(c => c.id === firstSubtitleId);
-    const secondSubtitleIndex = subtitles.findIndex(c => c.id === secondSubtitleId);
+    const firstSubtitleIndex = subtitles.findIndex(c => c.id === firstSourceSubtitleId);
+    const secondSubtitleIndex = subtitles.findIndex(c => c.id === secondSourceSubtitleId);
 
     if (firstSubtitleIndex === -1 || secondSubtitleIndex === -1) {
       return;
@@ -214,7 +223,7 @@ export class ClipsStateService implements OnDestroy {
     const secondSubtitle = newSubtitles[secondSubtitleIndex];
 
     // The callback provides the original data to the command for its undo state
-    onMergeCallback?.(firstSubtitle, secondSubtitle);
+    onMergeCallback?.(cloneDeep(firstSubtitle), cloneDeep(secondSubtitle));
 
     // Perform the merge
     firstSubtitle.endTime = secondSubtitle.endTime;
@@ -238,6 +247,7 @@ export class ClipsStateService implements OnDestroy {
     }
 
     newSubtitles.splice(secondSubtitleIndex, 1);
+    this.appStateService.updateProject(this._projectId!, {subtitles: newSubtitles});
     this._subtitles.set(newSubtitles);
 
     // Re-synchronize the active clip index:
@@ -265,6 +275,7 @@ export class ClipsStateService implements OnDestroy {
     newSubtitles[firstSubtitleIndex] = originalFirstSubtitle;
     newSubtitles.splice(firstSubtitleIndex + 1, 0, secondSubtitleToRestore);
 
+    this.appStateService.updateProject(this._projectId!, {subtitles: newSubtitles});
     this._subtitles.set(newSubtitles);
   }
 
@@ -333,6 +344,7 @@ export class ClipsStateService implements OnDestroy {
       newSubtitles.splice(insertIndex, 0, subtitle);
     }
 
+    this.appStateService.updateProject(this._projectId!, {subtitles: newSubtitles});
     this._subtitles.set(newSubtitles);
   }
 
@@ -349,6 +361,7 @@ export class ClipsStateService implements OnDestroy {
     const newSubtitles = [...subtitles];
     newSubtitles.splice(indexToDelete, 1);
 
+    this.appStateService.updateProject(this._projectId!, {subtitles: newSubtitles});
     this._subtitles.set(newSubtitles);
 
     const newClipsArray = this.clips();
@@ -366,6 +379,7 @@ export class ClipsStateService implements OnDestroy {
   public insertSubtitle(subtitle: SubtitleData, index: number): void {
     const newSubtitles = [...this._subtitles()];
     newSubtitles.splice(index, 0, subtitle);
+    this.appStateService.updateProject(this._projectId!, {subtitles: newSubtitles});
     this._subtitles.set(newSubtitles);
   }
 
