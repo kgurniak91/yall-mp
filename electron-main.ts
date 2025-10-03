@@ -60,7 +60,7 @@ let activeVisibilityListener: ((status: any) => void) | null = null;
 let isSaving = false;
 let saveQueue: any[] = [];
 const initialBounds = {width: 1920, height: 1080};
-const FORCED_GAP_SECONDS = 0.05;
+const MIN_GAP_DURATION = 0.1;
 const DRAGGABLE_ZONE_PADDING = 3; // 3px on all sides
 
 if (ffmpegStatic) {
@@ -731,7 +731,7 @@ function preprocessSubtitles(subtitles: SubtitleData[]): SubtitleData[] {
       const originalDuration = currentSubtitle.endTime - currentSubtitle.startTime;
 
       // Push the start time forward by the previous subtitle's end time plus the gap
-      const newStartTime = previousSubtitle.endTime + FORCED_GAP_SECONDS;
+      const newStartTime = previousSubtitle.endTime + MIN_GAP_DURATION;
       const newEndTime = newStartTime + originalDuration;
       const adjustedSubtitle: SubtitleData = {
         ...currentSubtitle,

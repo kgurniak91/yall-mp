@@ -3,26 +3,26 @@ import {ClipsStateService} from '../../state/clips/clips-state.service';
 import type {SubtitleData} from '../../../../shared/types/subtitle.type';
 
 export class DeleteSubtitledClipCommand implements Command {
-  private deletedSubtitle: SubtitleData | undefined;
-  private originalIndex: number | undefined;
+  private deletedSubtitles: SubtitleData[] = [];
+  private originalIndexes: number[] = [];
 
   constructor(
     private clipsStateService: ClipsStateService,
-    private subtitleIdToDelete: string
+    private subtitleIdsToDelete: string[]
   ) {
   }
 
   execute(): void {
-    const result = this.clipsStateService.deleteSubtitle(this.subtitleIdToDelete);
+    const result = this.clipsStateService.deleteSubtitles(this.subtitleIdsToDelete);
     if (result) {
-      this.deletedSubtitle = result.deletedSubtitle;
-      this.originalIndex = result.originalIndex;
+      this.deletedSubtitles = result.deletedSubtitles;
+      this.originalIndexes = result.originalIndexes;
     }
   }
 
   undo(): void {
-    if (this.deletedSubtitle && this.originalIndex !== undefined) {
-      this.clipsStateService.insertSubtitle(this.deletedSubtitle, this.originalIndex);
+    if (this.deletedSubtitles.length > 0 && this.originalIndexes.length > 0) {
+      this.clipsStateService.insertSubtitle(this.deletedSubtitles, this.originalIndexes);
     } else {
       console.error("Cannot undo delete: original subtitle data was not captured.");
     }

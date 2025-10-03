@@ -131,6 +131,7 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
     const mediaPath = this.videoStateService.mediaPath();
     const container = this.timelineContainer()?.nativeElement;
     const clipsSignature = clips.map(c => `${c.id}@${c.startTime}:${c.endTime}`).join(',');
+    this.clipsStateService.currentClipIndex(); // Refresh effect when current clip changes
 
     if (!this.wavesurfer && mediaPath && container) {
       this.initializeWaveSurfer(mediaPath, container);
@@ -191,7 +192,26 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
   }
 
   private handleRegionUpdated = (region: Region) => {
+    // Attempt to update the state based on the user's drag action.
     this.clipsStateService.updateClipTimesFromTimeline(region.id, region.start, region.end);
+
+    // After the attempt, get the TRUE state of the clip.
+    const authoritativeClip = this.clipsStateService.clips().find(c => c.id === region.id);
+
+    // If the UI's region doesn't match the true state (because the update was invalid),
+    // force the UI to snap back to the correct position.
+    if (authoritativeClip && (region.start !== authoritativeClip.startTime || region.end !== authoritativeClip.endTime)) {
+      // Temporarily disable the event listener to prevent an infinite loop while programmatically updating the region.
+      this.wsRegions?.un('region-updated', this.handleRegionUpdated);
+
+      region.setOptions({
+        start: authoritativeClip.startTime,
+        end: authoritativeClip.endTime
+      });
+
+      // Re-enable the listener for future user interactions.
+      this.wsRegions?.on('region-updated', this.handleRegionUpdated);
+    }
   };
 
   private handleRegionClicked = (region: Region, e: MouseEvent) => {

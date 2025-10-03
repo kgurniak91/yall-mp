@@ -7,6 +7,106 @@ import {AssSubtitleData, SubtitlePart} from '../../../../../../shared/types/subt
 @Injectable()
 export class AssEditService {
 
+  public createNewDialogueLine(rawAssContent: string, subtitle: AssSubtitleData): string {
+    const parsedEvents = AssSubtitlesUtils.parseEvents(rawAssContent);
+    if (!parsedEvents) {
+      console.error('Failed to parse ASS [Events] in addSubtitleToRawAss.');
+      return rawAssContent;
+    }
+
+    const {header, formatLine, dialogueLines, formatSpec} = parsedEvents;
+
+    const newDialogueLines = subtitle.parts.map(part => {
+      const lineParts = new Array(formatSpec.size).fill('');
+
+      // Set required fields
+      lineParts[formatSpec.get('Start')!] = AssSubtitlesUtils.formatTime(subtitle.startTime);
+      lineParts[formatSpec.get('End')!] = AssSubtitlesUtils.formatTime(subtitle.endTime);
+      lineParts[formatSpec.get('Style')!] = part.style;
+      lineParts[formatSpec.get('Text')!] = part.text.replace(/\n/g, '\\N');
+
+      // Set common defaults for optional fields if they exist in the format
+      if (formatSpec.has('Layer')) lineParts[formatSpec.get('Layer')!] = '0';
+      if (formatSpec.has('Name')) lineParts[formatSpec.get('Name')!] = '';
+      if (formatSpec.has('MarginL')) lineParts[formatSpec.get('MarginL')!] = '0';
+      if (formatSpec.has('MarginR')) lineParts[formatSpec.get('MarginR')!] = '0';
+      if (formatSpec.has('MarginV')) lineParts[formatSpec.get('MarginV')!] = '0';
+      if (formatSpec.has('Effect')) lineParts[formatSpec.get('Effect')!] = '';
+
+      return `Dialogue: ${lineParts.join(',')}`;
+    });
+
+    const allLines = [...dialogueLines, ...newDialogueLines].sort((a, b) => {
+      const partsA = a.split(',');
+      const partsB = b.split(',');
+      const startTimeA = AssSubtitlesUtils.timeToSeconds(partsA[formatSpec.get('Start')!]);
+      const startTimeB = AssSubtitlesUtils.timeToSeconds(partsB[formatSpec.get('Start')!]);
+      return startTimeA - startTimeB;
+    });
+
+    return `${header}[Events]\n${formatLine}\n${allLines.join('\r\n')}`;
+  }
+
+  public removeDialogueLines(rawAssContent: string, clipToRemove: VideoClip): string {
+    if (!clipToRemove.hasSubtitle) return rawAssContent;
+
+    const parsedEvents = AssSubtitlesUtils.parseEvents(rawAssContent);
+    if (!parsedEvents) {
+      return rawAssContent;
+    }
+
+    const {header, formatLine, dialogueLines, formatSpec} = parsedEvents;
+    const startIdx = formatSpec.get('Start')!;
+    const endIdx = formatSpec.get('End')!;
+    const styleIdx = formatSpec.get('Style')!;
+    const textIdx = formatSpec.get('Text')!;
+
+    const removalSignatures = new Set<string>();
+    for (const sourceSub of clipToRemove.sourceSubtitles as AssSubtitleData[]) {
+      for (const part of sourceSub.parts) {
+        const signature = `${AssSubtitlesUtils.formatTime(sourceSub.startTime)},${AssSubtitlesUtils.formatTime(sourceSub.endTime)},${part.style},${part.text}`;
+        removalSignatures.add(signature);
+      }
+    }
+
+    const filteredLines = dialogueLines.filter(line => {
+      const parts = line.split(',');
+      if (parts.length <= Math.max(startIdx, endIdx, styleIdx, textIdx)) {
+        return true; // Keep malformed lines
+      }
+      const lineStart = parts[startIdx];
+      const lineEnd = parts[endIdx];
+      const lineStyle = parts[styleIdx];
+      const lineText = parts.slice(textIdx).join(',').replace(/{[^}]*}/g, '').replace(/\\N/g, '\n');
+
+      const lineSignature = `${lineStart},${lineEnd},${lineStyle},${lineText}`;
+
+      return !removalSignatures.has(lineSignature);
+    });
+
+    return `${header}[Events]\n${formatLine}\n${filteredLines.join('\r\n')}`;
+  }
+
+  public mergeDialogueLines(rawAssContent: string, firstClip: VideoClip, secondClip: VideoClip): string {
+    const allSourceSubs = [...firstClip.sourceSubtitles, ...secondClip.sourceSubtitles] as AssSubtitleData[];
+    const gapStartTime = firstClip.endTime;
+    const gapEndTime = secondClip.startTime;
+    const midpoint = gapStartTime + ((gapEndTime - gapStartTime) / 2);
+
+    const originalSubsToUpdate: AssSubtitleData[] = JSON.parse(JSON.stringify(allSourceSubs));
+    const updatedSubsToUpdate: AssSubtitleData[] = JSON.parse(JSON.stringify(allSourceSubs));
+
+    for (const sub of updatedSubsToUpdate) {
+      if (firstClip.sourceSubtitles.some(s => s.id === sub.id)) {
+        sub.endTime = midpoint;
+      } else { // Belongs to secondClip
+        sub.startTime = midpoint;
+      }
+    }
+
+    return this.stretchClipTimings(originalSubsToUpdate, updatedSubsToUpdate, rawAssContent);
+  }
+
   public stretchClipTimings(
     originalSourceSubtitles: AssSubtitleData[],
     updatedSourceSubtitles: AssSubtitleData[],

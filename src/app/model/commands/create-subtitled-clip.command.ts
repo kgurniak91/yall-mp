@@ -18,7 +18,7 @@ export class CreateSubtitledClipCommand implements Command {
 
   undo(): void {
     if (this.addedSubtitleId) {
-      this.clipsStateService.deleteSubtitle(this.addedSubtitleId);
+      this.clipsStateService.deleteSubtitles([this.addedSubtitleId]);
     } else {
       console.error("Cannot undo add: subtitle ID was not captured.");
     }

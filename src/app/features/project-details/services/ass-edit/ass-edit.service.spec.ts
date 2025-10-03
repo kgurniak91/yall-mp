@@ -302,4 +302,107 @@ Dialogue: 1,0:00:20.00,0:00:22.00,Default,,0,0,0,,Shadow Text
       expect(result).toContain(expectedLineLayer1);
     });
   });
+
+  describe('addDialogueLines', () => {
+    it('adds a new dialogue line to an existing ASS file', () => {
+      const initialContent = assFileTemplate(`Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello`);
+      const newSubtitle: AssSubtitleData = {
+        type: 'ass',
+        id: 'new-sub',
+        startTime: 3,
+        endTime: 4,
+        parts: [{text: 'New Line', style: 'Top', fragments: []}]
+      };
+
+      const result = service.createNewDialogueLine(initialContent, newSubtitle);
+
+      expect(result).toContain('Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello');
+      expect(result).toContain('Dialogue: 0,0:00:03.00,0:00:04.00,Top,,0,0,0,,New Line');
+    });
+
+    it('should correctly sort dialogue lines after adding a new one', () => {
+      const initialContent = assFileTemplate(`Dialogue: 0,0:00:05.00,0:00:06.00,Default,,0,0,0,,Last`);
+      const newSubtitle: AssSubtitleData = {
+        type: 'ass',
+        id: 'new-sub',
+        startTime: 1,
+        endTime: 2,
+        parts: [{text: 'First', style: 'Default', fragments: []}]
+      };
+
+      const result = service.createNewDialogueLine(initialContent, newSubtitle);
+      const lines = result.split('\n').filter(l => l.startsWith('Dialogue:'));
+
+      expect(lines[0]).toContain('First');
+      expect(lines[1]).toContain('Last');
+    });
+  });
+
+  describe('removeDialogueLines', () => {
+    it('removes a single, simple dialogue line', () => {
+      const dialogueLine = 'Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello';
+      const rawAssContent = assFileTemplate(dialogueLine);
+      const clipToRemove: Partial<VideoClip> = {
+        hasSubtitle: true,
+        sourceSubtitles: [{
+          type: 'ass', id: 'sub-1', startTime: 1, endTime: 2, parts: [{text: 'Hello', style: 'Default'}]
+        }]
+      };
+
+      const result = service.removeDialogueLines(rawAssContent, clipToRemove as VideoClip);
+
+      expect(result).not.toContain(dialogueLine);
+    });
+
+    it('removes all dialogue lines associated with a complex multi-part clip', () => {
+      const dialogueLines = `
+Dialogue: 0,0:00:10.00,0:00:12.00,Default,,0,0,0,,Part 1
+Dialogue: 0,0:00:10.00,0:00:12.00,Top,,0,0,0,,Part 2
+Dialogue: 0,0:00:15.00,0:00:16.00,Default,,0,0,0,,Unaffected
+      `.trim();
+      const rawAssContent = assFileTemplate(dialogueLines);
+      const clipToRemove: Partial<VideoClip> = {
+        hasSubtitle: true,
+        sourceSubtitles: [
+          {type: 'ass', id: 'sub-1', startTime: 10, endTime: 12, parts: [{text: 'Part 1', style: 'Default'}]},
+          {type: 'ass', id: 'sub-2', startTime: 10, endTime: 12, parts: [{text: 'Part 2', style: 'Top'}]}
+        ]
+      };
+
+      const result = service.removeDialogueLines(rawAssContent, clipToRemove as VideoClip);
+
+      expect(result).not.toContain('Part 1');
+      expect(result).not.toContain('Part 2');
+      expect(result).toContain('Unaffected');
+    });
+  });
+
+  describe('mergeDialogueLines', () => {
+    it('stretches two consecutive clips to meet at the midpoint of the gap', () => {
+      const dialogueLines = `
+Dialogue: 0,0:00:05.00,0:00:06.00,Default,,0,0,0,,Part 1
+Dialogue: 0,0:00:08.00,0:00:10.00,Top,,0,0,0,,Part 2
+      `.trim();
+      const rawAssContent = assFileTemplate(dialogueLines);
+
+      const clip1: Partial<VideoClip> = {
+        startTime: 5, endTime: 6, sourceSubtitles: [
+          {type: 'ass', id: 'sub-a', startTime: 5, endTime: 6, parts: [{text: 'Part 1', style: 'Default'}]}
+        ]
+      };
+      const clip2: Partial<VideoClip> = {
+        startTime: 8, endTime: 10, sourceSubtitles: [
+          {type: 'ass', id: 'sub-b', startTime: 8, endTime: 10, parts: [{text: 'Part 2', style: 'Top'}]}
+        ]
+      };
+
+      const result = service.mergeDialogueLines(rawAssContent, clip1 as VideoClip, clip2 as VideoClip);
+
+      const expectedLineA = 'Dialogue: 0,0:00:05.00,0:00:07.00,Default,,0,0,0,,Part 1';
+      const expectedLineB = 'Dialogue: 0,0:00:07.00,0:00:10.00,Top,,0,0,0,,Part 2';
+
+      expect(result).toContain(expectedLineA);
+      expect(result).toContain(expectedLineB);
+    });
+  });
 });
