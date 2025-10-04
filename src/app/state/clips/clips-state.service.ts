@@ -210,16 +210,28 @@ export class ClipsStateService implements OnDestroy {
     if (!project) return;
     const updates: Partial<Project> = {subtitles: newSubtitles};
 
-    // TODO: Update rawAssContent if it's an ASS project.
-    // This requires a more complex implementation in AssEditService to duplicate dialogue lines.
+    if (project.rawAssContent) {
+      updates.rawAssContent = this.assEditService.splitDialogueLines(
+        project.rawAssContent,
+        originalSubtitles as AssSubtitleData[],
+        splitPoint,
+        newSecondPartSubs as AssSubtitleData[]
+      );
+    }
 
     this.appStateService.updateProject(this._projectId!, updates);
     this._subtitles.set(newSubtitles);
   }
 
   public unsplitClip(originalSubtitles: SubtitleData[], secondSubtitleIds: string[]): void {
-    const idsToRestore = new Set(originalSubtitles.map(s => s.id));
+    const project = this.appStateService.getProjectById(this._projectId!);
+    if (!project) return;
+
     const idsToRemove = new Set(secondSubtitleIds);
+    const subtitlesToRemove = this._subtitles().filter(s => idsToRemove.has(s.id));
+
+    const idsToRestore = new Set(originalSubtitles.map(s => s.id));
+    const subtitlesToExtend = this._subtitles().filter(s => idsToRestore.has(s.id));
 
     const newSubtitles = this._subtitles()
       .filter(s => !idsToRemove.has(s.id) && !idsToRestore.has(s.id));
@@ -227,11 +239,16 @@ export class ClipsStateService implements OnDestroy {
     newSubtitles.push(...originalSubtitles);
     newSubtitles.sort((a, b) => a.startTime - b.startTime);
 
-    const project = this.appStateService.getProjectById(this._projectId!);
-    if (!project) return;
-
     const updates: Partial<Project> = {subtitles: newSubtitles};
-    // TODO: Undo changes in rawAssContent if it's an ASS project.
+
+    if (project.rawAssContent) {
+      updates.rawAssContent = this.assEditService.unsplitDialogueLines(
+        project.rawAssContent,
+        subtitlesToExtend as AssSubtitleData[],
+        subtitlesToRemove as AssSubtitleData[],
+        originalSubtitles as AssSubtitleData[]
+      );
+    }
 
     this.appStateService.updateProject(this._projectId!, updates);
     this._subtitles.set(newSubtitles);
@@ -550,16 +567,17 @@ export class ClipsStateService implements OnDestroy {
         const newPart = newContent.parts[i];
 
         if (oldPart.text !== newPart.text) {
-          // ...find EVERY subtitle object in the entire project that contains the old part...
-          for (let j = 0; j < newSubtitles.length; j++) {
-            const subtitle = newSubtitles[j];
-            if (subtitle.type === 'ass') {
-              const partIndex = subtitle.parts.findIndex(p => p.style === oldPart.style && p.text === oldPart.text);
+          // ...find EVERY subtitle object that is a source for the current clip...
+          for (const sourceSub of clip.sourceSubtitles) {
+            // Find the main subtitle by ID to ensure the correct one is updated
+            const subtitleToUpdate = newSubtitles.find(s => s.id === sourceSub.id);
+            if (subtitleToUpdate?.type === 'ass') {
+              const partIndex = subtitleToUpdate.parts.findIndex(p => p.style === oldPart.style && p.text === oldPart.text);
               if (partIndex !== -1) {
                 // ...and update it with the new part:
-                const updatedParts = [...subtitle.parts];
+                const updatedParts = [...subtitleToUpdate.parts];
                 updatedParts[partIndex] = newPart;
-                (newSubtitles[j] as AssSubtitleData).parts = updatedParts;
+                (subtitleToUpdate as AssSubtitleData).parts = updatedParts;
               }
             }
           }

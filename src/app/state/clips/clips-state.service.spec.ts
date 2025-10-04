@@ -908,21 +908,32 @@ Dialogue: 0,0:00:15.00,0:00:20.00,Top,,0,0,0,,Subtitle B Top
     });
 
     it('correctly splits a subtitle, and then undo/redo', () => {
+      const splitPoint = 17.5;
       const clipToSplit = service.clips().find(c => c.startTime === 15)!;
+      videoStateService.setCurrentTime(splitPoint); // Set split point
       const splitCommand = new SplitSubtitledClipCommand(service, clipToSplit.id);
 
+      // Execute
       commandHistoryService.execute(splitCommand);
       const subtitledClips = service.clips().filter(c => c.hasSubtitle);
       expect(subtitledClips.length).toBe(3);
-      const splitPoint = 15 + (20 - 15) / 2;
       expect(subtitledClips[1].endTime).toBeCloseTo(splitPoint);
       expect(subtitledClips[2].startTime).toBeCloseTo(splitPoint + 0.1);
 
+      let updatedContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
+      expect(updatedContent.split('Dialogue:').length - 1).toBe(5); // 1 original + 2 for first part + 2 for second part
+
+      // Undo
       commandHistoryService.undo();
       expect(service.clips().filter(c => c.hasSubtitle).length).toBe(2);
+      updatedContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
+      expect(updatedContent.split('Dialogue:').length - 1).toBe(3);
 
+      // Redo
       commandHistoryService.redo();
       expect(service.clips().filter(c => c.hasSubtitle).length).toBe(3);
+      updatedContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
+      expect(updatedContent.split('Dialogue:').length - 1).toBe(5);
     });
   });
 });

@@ -242,6 +242,130 @@ export class AssEditService {
     return updatedLines.join('\r\n');
   }
 
+  public splitDialogueLines(
+    rawAssContent: string,
+    originalSourceSubtitles: AssSubtitleData[],
+    splitPoint: number,
+    newSecondPartSubs: AssSubtitleData[]
+  ): string {
+    const parsedEvents = AssSubtitlesUtils.parseEvents(rawAssContent);
+    if (!parsedEvents) {
+      console.error('Failed to parse ASS [Events] in splitDialogueLines.');
+      return rawAssContent;
+    }
+
+    const {header, formatLine, dialogueLines, formatSpec} = parsedEvents;
+    const startIdx = formatSpec.get('Start')!;
+    const endIdx = formatSpec.get('End')!;
+    const newDialogueLines: string[] = [];
+    const lineIndexesToModify = new Set<number>();
+    const modifiedLines: { [index: number]: string } = {};
+
+    for (let i = 0; i < originalSourceSubtitles.length; i++) {
+      const sourceSub = originalSourceSubtitles[i];
+      const newSub = newSecondPartSubs[i];
+
+      for (const part of sourceSub.parts) {
+        let searchStartIndex = 0;
+        while (searchStartIndex < dialogueLines.length) {
+          const lineIndex = this.findOriginalDialogueLineIndex(
+            dialogueLines,
+            formatSpec,
+            {startTime: sourceSub.startTime, endTime: sourceSub.endTime, style: part.style, text: part.text},
+            searchStartIndex
+          );
+
+          if (lineIndex === -1) {
+            break;
+          }
+
+          if (!lineIndexesToModify.has(lineIndex)) {
+            lineIndexesToModify.add(lineIndex);
+            const originalLineParts = dialogueLines[lineIndex].split(',');
+
+            const newLineParts = [...originalLineParts];
+            newLineParts[startIdx] = AssSubtitlesUtils.formatTime(newSub.startTime);
+            newLineParts[endIdx] = AssSubtitlesUtils.formatTime(newSub.endTime);
+            newDialogueLines.push(newLineParts.join(','));
+
+            originalLineParts[endIdx] = AssSubtitlesUtils.formatTime(splitPoint);
+            modifiedLines[lineIndex] = originalLineParts.join(',');
+          }
+
+          searchStartIndex = lineIndex + 1;
+        }
+      }
+    }
+
+    const finalLines = dialogueLines
+      .map((line, index) => modifiedLines[index] || line)
+      .concat(newDialogueLines)
+      .sort((a, b) => {
+        const partsA = a.split(',');
+        const partsB = b.split(',');
+        const startTimeA = AssSubtitlesUtils.timeToSeconds(partsA[startIdx]);
+        const startTimeB = AssSubtitlesUtils.timeToSeconds(partsB[startIdx]);
+        return startTimeA - startTimeB;
+      });
+
+    return `${header}[Events]\n${formatLine}\n${finalLines.join('\r\n')}`;
+  }
+
+  public unsplitDialogueLines(
+    rawAssContent: string,
+    subtitlesToExtend: AssSubtitleData[],
+    subtitlesToRemove: AssSubtitleData[],
+    restoredFullSubtitles: AssSubtitleData[]
+  ): string {
+    const parsedEvents = AssSubtitlesUtils.parseEvents(rawAssContent);
+    if (!parsedEvents) return rawAssContent;
+
+    const {header, formatLine, dialogueLines, formatSpec} = parsedEvents;
+    const endIdx = formatSpec.get('End')!;
+    const textIdx = formatSpec.get('Text')!;
+    const startIdx = formatSpec.get('Start')!;
+    const styleIdx = formatSpec.get('Style')!;
+
+    const removalSignatures = new Set<string>();
+    for (const sub of subtitlesToRemove) {
+      for (const part of sub.parts) {
+        const signature = `${AssSubtitlesUtils.formatTime(sub.startTime)},${AssSubtitlesUtils.formatTime(sub.endTime)},${part.style},${part.text}`;
+        removalSignatures.add(signature);
+      }
+    }
+
+    const filteredLines = dialogueLines.filter(line => {
+      const parts = line.split(',');
+      const lineSignature = `${parts[startIdx]},${parts[endIdx]},${parts[styleIdx]},${parts.slice(textIdx).join(',').replace(/{[^}]*}/g, '').replace(/\\N/g, '\n')}`;
+      return !removalSignatures.has(lineSignature);
+    });
+
+    const finalLines = filteredLines.map(line => {
+      const lineParts = line.split(',');
+      const lineStart = AssSubtitlesUtils.timeToSeconds(lineParts[startIdx]);
+      const lineEnd = AssSubtitlesUtils.timeToSeconds(lineParts[endIdx]);
+      const lineStyle = lineParts[styleIdx];
+      const cleanText = lineParts.slice(textIdx).join(',').replace(/{[^}]*}/g, '').replace(/\\N/g, '\n');
+
+      const subToExtend = subtitlesToExtend.find(s =>
+        Math.abs(s.startTime - lineStart) < 0.01 &&
+        Math.abs(s.endTime - lineEnd) < 0.01 &&
+        s.parts.some(p => p.style === lineStyle && p.text === cleanText)
+      );
+
+      if (subToExtend) {
+        const restoredSub = restoredFullSubtitles.find(rs => rs.id === subToExtend.id);
+        if (restoredSub) {
+          lineParts[endIdx] = AssSubtitlesUtils.formatTime(restoredSub.endTime);
+          return lineParts.join(',');
+        }
+      }
+      return line;
+    });
+
+    return `${header}[Events]\n${formatLine}\n${finalLines.join('\r\n')}`;
+  }
+
   private reconstructTextSegment(
     originalRawText: string,
     newPart: SubtitlePart

@@ -405,4 +405,97 @@ Dialogue: 0,0:00:08.00,0:00:10.00,Top,,0,0,0,,Part 2
       expect(result).toContain(expectedLineB);
     });
   });
+
+  describe('splitDialogueLines', () => {
+    it('splits a simple, single-line clip', () => {
+      const dialogueLine = 'Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,This is a test';
+      const rawAssContent = assFileTemplate(dialogueLine);
+      const splitPoint = 12.5;
+
+      const clipToSplit: Partial<VideoClip> = {
+        sourceSubtitles: [{
+          type: 'ass', id: 'sub-1', startTime: 10, endTime: 15, parts: [{text: 'This is a test', style: 'Default'}]
+        }]
+      };
+
+      const newSecondPartSubs: AssSubtitleData[] = [{
+        type: 'ass', id: 'sub-2', startTime: splitPoint + 0.1, endTime: 15, parts: [{
+          text: 'This is a test',
+          style: 'Default'
+        }]
+      }];
+
+      const result = service.splitDialogueLines(rawAssContent, clipToSplit.sourceSubtitles as AssSubtitleData[], splitPoint, newSecondPartSubs);
+
+      const expectedLine1 = 'Dialogue: 0,0:00:10.00,0:00:12.50,Default,,0,0,0,,This is a test';
+      const expectedLine2 = 'Dialogue: 0,0:00:12.60,0:00:15.00,Default,,0,0,0,,This is a test';
+
+      expect(result).toContain(expectedLine1);
+      expect(result).toContain(expectedLine2);
+      expect(result).not.toContain(dialogueLine);
+    });
+
+    it('splits a complex clip with multiple identical dialogue lines for effects', () => {
+      const dialogueLines = `
+Dialogue: 0,0:00:20.00,0:00:25.00,Default,,0,0,0,,Shadow Text
+Dialogue: 1,0:00:20.00,0:00:25.00,Default,,0,0,0,,Shadow Text
+      `.trim();
+      const rawAssContent = assFileTemplate(dialogueLines);
+      const splitPoint = 22.0;
+
+      const clipToSplit: Partial<VideoClip> = {
+        sourceSubtitles: [{
+          type: 'ass', id: 'sub-1', startTime: 20, endTime: 25, parts: [{text: 'Shadow Text', style: 'Default'}]
+        }]
+      };
+
+      const newSecondPartSubs: AssSubtitleData[] = [{
+        type: 'ass',
+        id: 'sub-2',
+        startTime: splitPoint + 0.1,
+        endTime: 25,
+        parts: [{text: 'Shadow Text', style: 'Default'}]
+      }];
+
+      const result = service.splitDialogueLines(rawAssContent, clipToSplit.sourceSubtitles as AssSubtitleData[], splitPoint, newSecondPartSubs);
+
+      const expectedLines = [
+        'Dialogue: 0,0:00:20.00,0:00:22.00,Default,,0,0,0,,Shadow Text',
+        'Dialogue: 1,0:00:20.00,0:00:22.00,Default,,0,0,0,,Shadow Text',
+        'Dialogue: 0,0:00:22.10,0:00:25.00,Default,,0,0,0,,Shadow Text',
+        'Dialogue: 1,0:00:22.10,0:00:25.00,Default,,0,0,0,,Shadow Text',
+      ];
+
+      for (const line of expectedLines) {
+        expect(result).toContain(line);
+      }
+      expect(result.split('Dialogue:').length - 1).toBe(4);
+    });
+  });
+
+  describe('unsplitDialogueLines', () => {
+    it('re-merges a simple split clip', () => {
+      const dialogueLines = `
+Dialogue: 0,0:00:10.00,0:00:12.50,Default,,0,0,0,,This is a test
+Dialogue: 0,0:00:12.60,0:00:15.00,Default,,0,0,0,,This is a test
+      `.trim();
+      const rawAssContent = assFileTemplate(dialogueLines);
+
+      const subtitlesToExtend: AssSubtitleData[] = [{
+        type: 'ass', id: 'sub-1', startTime: 10, endTime: 12.5, parts: [{text: 'This is a test', style: 'Default'}]
+      }];
+      const subtitlesToRemove: AssSubtitleData[] = [{
+        type: 'ass', id: 'sub-2', startTime: 12.6, endTime: 15, parts: [{text: 'This is a test', style: 'Default'}]
+      }];
+      const restoredFullSubtitles: AssSubtitleData[] = [{
+        type: 'ass', id: 'sub-1', startTime: 10, endTime: 15, parts: [{text: 'This is a test', style: 'Default'}]
+      }];
+
+      const result = service.unsplitDialogueLines(rawAssContent, subtitlesToExtend, subtitlesToRemove, restoredFullSubtitles);
+
+      const expectedLine = 'Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,This is a test';
+      expect(result).toContain(expectedLine);
+      expect(result.split('Dialogue:').length - 1).toBe(1);
+    });
+  });
 });
