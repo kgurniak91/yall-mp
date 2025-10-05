@@ -3,7 +3,7 @@ import {signal} from '@angular/core';
 import {MockBuilder} from 'ng-mocks';
 import {AssSubtitleData, SrtSubtitleData} from '../../../../shared/types/subtitle.type';
 import {VideoClip} from '../../model/video.types';
-import {ClipsStateService} from './clips-state.service';
+import {ADJUST_DEBOUNCE_MS, ClipsStateService, MIN_GAP_DURATION, MIN_SUBTITLE_DURATION} from './clips-state.service';
 import {VideoStateService} from '../video/video-state.service';
 import {CommandHistoryStateService} from '../command-history/command-history-state.service';
 import {AppStateService} from '../app/app-state.service';
@@ -16,6 +16,7 @@ import {CreateSubtitledClipCommand} from '../../model/commands/create-subtitled-
 import {DeleteSubtitledClipCommand} from '../../model/commands/delete-subtitled-clip.command';
 import {MergeSubtitledClipsCommand} from '../../model/commands/merge-subtitled-clips.command';
 import {SplitSubtitledClipCommand} from '../../model/commands/split-subtitled-clip.command';
+import {cloneDeep} from 'lodash-es';
 
 describe('ClipsStateService', () => {
   const currentTimeSignal = signal(0);
@@ -333,7 +334,6 @@ describe('ClipsStateService', () => {
       const clipA = clips[1];
 
       // ACT: Drag right edge of Clip A past Clip B, trying to consume it almost entirely (19.95).
-      // It should be clamped to 20 - MIN_SUBTITLE_DURATION (19.5)
       service.updateClipTimesFromTimeline(clipA.id, 5, 19.95);
 
       // ASSERT
@@ -341,7 +341,7 @@ describe('ClipsStateService', () => {
       const updatedClipA = clips.find(c => c.sourceSubtitles.some(s => s.id === 'srt-1'))!;
       const updatedClipB = clips.find(c => c.sourceSubtitles.some(s => s.id === 'srt-2'))!;
 
-      const expectedClipBStartTime = 20 - 0.5; // 0.5 is MIN_SUBTITLE_DURATION
+      const expectedClipBStartTime = 20 - MIN_SUBTITLE_DURATION;
 
       expect(clips.filter(c => c.hasSubtitle).length).withContext('Should still have 2 subtitled clips').toBe(2);
       expect(clips.length).withContext('Should have 4 clips (gap consumed)').toBe(4);
@@ -363,7 +363,6 @@ describe('ClipsStateService', () => {
       const clipB = clips[3];
 
       // ACT: Drag left edge of Clip B to where Clip A starts, consuming it almost entirely (5.05s).
-      // It should be clamped to 5 + MIN_SUBTITLE_DURATION (5.5)
       service.updateClipTimesFromTimeline(clipB.id, 5.05, 20);
 
       // ASSERT
@@ -371,7 +370,7 @@ describe('ClipsStateService', () => {
       const updatedClipA = clips.find(c => c.sourceSubtitles.some(s => s.id === 'srt-1'))!;
       const updatedClipB = clips.find(c => c.sourceSubtitles.some(s => s.id === 'srt-2'))!;
 
-      const expectedClipAEndTime = 5 + 0.5; // 0.5 is MIN_SUBTITLE_DURATION
+      const expectedClipAEndTime = 5 + MIN_SUBTITLE_DURATION;
 
       expect(clips.filter(c => c.hasSubtitle).length).withContext('Should still have 2 subtitled clips').toBe(2);
       expect(clips.length).withContext('Should have 4 clips (gap consumed)').toBe(4);
@@ -448,7 +447,7 @@ describe('ClipsStateService', () => {
       const updatedGap = clips[0];
       const updatedSub = clips[1];
 
-      // The subtitle's start time should be clamped to endTime - MIN_SUBTITLE_DURATION (15 - 0.5 = 14.5)
+      // The subtitle's start time should be clamped to endTime - MIN_SUBTITLE_DURATION:
       expect(updatedSub.startTime).toBe(14.5);
       expect(updatedSub.endTime).toBe(15);
       // The gap should have been prevented from stretching further.
@@ -525,6 +524,84 @@ describe('ClipsStateService', () => {
       expect(updatedSub.startTime).withContext('Invert Right: Start anchor should be preserved').toBe(10);
       expect(updatedSub.endTime).withContext('Invert Right: End time should be adjusted').toBe(10.5);
     });
+  });
+
+  describe('Boundary Adjustments with Keyboard Shortcuts', () => {
+    const srtSubs: SrtSubtitleData[] = [
+      {type: 'srt', id: 'srt-1', startTime: 10, endTime: 20, text: 'Subtitle A'},
+    ];
+
+    beforeEach(() => {
+      projectState.subtitles = cloneDeep(srtSubs);
+      service.setSubtitles(cloneDeep(srtSubs));
+      // The clips will be: gap(0-10), sub(10-20), gap(20-end)
+      // Select the subtitled clip at index 1
+      service.setCurrentClipByIndex(1);
+    });
+
+    it('should snap playhead to new start time if adjustment moves the boundary past the playhead', fakeAsync(() => {
+      // ARRANGE: Playhead is at 10.01s. Default 50ms adjustment will move start boundary to 10.05s, past the playhead.
+      currentTimeSignal.set(10.01);
+
+      // ACT: Adjust start boundary to the right by 50ms.
+      service.adjustCurrentClipBoundary('start', 'right');
+      tick(ADJUST_DEBOUNCE_MS); // Let debounce complete
+
+      // ASSERT: The playhead should be moved to the new start time of 10.05s.
+      const newStartTime = 10.05;
+      expect(videoStateService.seekAbsolute).toHaveBeenCalledWith(newStartTime);
+    }));
+
+    it('should snap playhead when paused exactly at the start and the start boundary is moved right', fakeAsync(() => {
+      // ARRANGE: Playhead is exactly at the start time, 10.0s.
+      currentTimeSignal.set(10.0);
+
+      // ACT: Adjust start boundary to the right by 50ms, moving it to 10.05s.
+      service.adjustCurrentClipBoundary('start', 'right');
+      tick(ADJUST_DEBOUNCE_MS);
+
+      // ASSERT: The playhead (at 10.0) is now before the new start (10.05), so it should be snapped.
+      const newStartTime = 10.05;
+      expect(videoStateService.seekAbsolute).toHaveBeenCalledWith(newStartTime);
+    }));
+
+    it('should snap playhead to new end time if adjustment moves the boundary before the playhead', fakeAsync(() => {
+      // ARRANGE: Playhead is at 19.99s. Default 50ms adjustment will move end boundary to 19.95s, before the playhead.
+      currentTimeSignal.set(19.99);
+
+      // ACT: Adjust end boundary to the left by 50ms.
+      service.adjustCurrentClipBoundary('end', 'left');
+      tick(ADJUST_DEBOUNCE_MS);
+
+      // ASSERT: The playhead should be moved to just before the new end time.
+      const newEndTime = 19.95;
+      expect(videoStateService.seekAbsolute).toHaveBeenCalledWith(newEndTime - 0.01);
+    }));
+
+    it('should NOT snap playhead if it remains within the new boundaries after adjustment', fakeAsync(() => {
+      // ARRANGE: Playhead is at 15s. The 50ms adjustment will not move a boundary past it.
+      currentTimeSignal.set(15);
+
+      // ACT: Adjust end boundary to the right (expanding the clip).
+      service.adjustCurrentClipBoundary('end', 'right');
+      tick(ADJUST_DEBOUNCE_MS);
+
+      // ASSERT: The playhead is still valid, so no seek should occur.
+      expect(videoStateService.seekAbsolute).not.toHaveBeenCalled();
+    }));
+
+    it('should snap playhead back when shrinking an end boundary while auto-paused exactly at that boundary', fakeAsync(() => {
+      // ARRANGE: Playhead is exactly at the end time, 20s.
+      currentTimeSignal.set(20);
+
+      // ACT: Adjust end boundary to the left by 50ms, moving it to 19.95s.
+      service.adjustCurrentClipBoundary('end', 'left');
+      tick(ADJUST_DEBOUNCE_MS);
+
+      // ASSERT: The playhead should be moved to just before the new end time to remain inside the clip.
+      const newEndTime = 19.95;
+      expect(videoStateService.seekAbsolute).toHaveBeenCalledWith(newEndTime - 0.01);
+    }));
   });
 
   describe('ASS Timing Adjustments', () => {
@@ -768,7 +845,7 @@ Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,Clip B
 
       const splitPoint = 8;
       expect(subtitledClips[0].endTime).toBeCloseTo(splitPoint);
-      expect(subtitledClips[1].startTime).toBeCloseTo(splitPoint + 0.1); // 0.1 is MIN_GAP_DURATION
+      expect(subtitledClips[1].startTime).toBeCloseTo(splitPoint + MIN_GAP_DURATION);
 
       // UNDO/REDO
       commandHistoryService.undo();
@@ -799,7 +876,7 @@ Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,Clip B
       const thirdClip = subtitledClips[2]; // This is the second part
 
       expect(secondClip.endTime).toBeCloseTo(expectedSplitPoint);
-      expect(thirdClip.startTime).toBeCloseTo(expectedSplitPoint + 0.1); // + MIN_GAP_DURATION
+      expect(thirdClip.startTime).toBeCloseTo(expectedSplitPoint + MIN_GAP_DURATION);
       expect(thirdClip.endTime).toBe(20); // End time of original clip should be preserved
       videoStateService.setCurrentTime(0); // Reset just in case
     });

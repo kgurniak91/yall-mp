@@ -23,9 +23,9 @@ import {AssSubtitlesUtils} from '../../shared/utils/ass-subtitles/ass-subtitles.
 import {cloneDeep} from 'lodash-es';
 import {v4 as uuidv4} from 'uuid';
 
-const ADJUST_DEBOUNCE_MS = 50;
-const MIN_GAP_DURATION = 0.1;
-const MIN_SUBTITLE_DURATION = 0.5;
+export const ADJUST_DEBOUNCE_MS = 50;
+export const MIN_GAP_DURATION = 0.1;
+export const MIN_SUBTITLE_DURATION = 0.5;
 
 @Injectable()
 export class ClipsStateService implements OnDestroy {
@@ -678,6 +678,9 @@ export class ClipsStateService implements OnDestroy {
     const currentClip = this.currentClip();
     if (!currentClip) return;
 
+    // Get a stable identifier for the clip BEFORE its properties (like ID/startTime) change.
+    const sourceSubtitleIds = new Set(currentClip.sourceSubtitles.map(s => s.id));
+
     const adjustAmountSeconds = this.globalSettingsStateService.boundaryAdjustAmountMs() / 1000;
     const directionMultiplier = direction === 'left' ? -1 : 1;
     const changeAmount = adjustAmountSeconds * directionMultiplier;
@@ -700,6 +703,32 @@ export class ClipsStateService implements OnDestroy {
 
     const command = new UpdateClipTimesCommand(this, potentialNewSubtitles);
     this.commandHistoryStateService.execute(command);
+
+    // After state update, find the SAME logical clip using its stable source IDs.
+    const updatedClip = this.clips().find(c => {
+      if (c.sourceSubtitles.length !== sourceSubtitleIds.size) {
+        return false;
+      }
+      return c.sourceSubtitles.every(s => sourceSubtitleIds.has(s.id));
+    });
+
+    if (!updatedClip) {
+      return;
+    }
+
+    const currentTime = this.videoStateService.currentTime();
+    let snappedTime: number | null = null;
+
+    if (currentTime < updatedClip.startTime) {
+      snappedTime = updatedClip.startTime;
+    } else if (currentTime >= updatedClip.endTime) {
+      // Snap to just before the end time to stay within the clip
+      snappedTime = Math.max(updatedClip.startTime, updatedClip.endTime - 0.01);
+    }
+
+    if (snappedTime !== null) {
+      this.videoStateService.seekAbsolute(snappedTime);
+    }
   }
 
   private findAdjacentSubtitledClip(direction: SeekDirection): VideoClip | undefined {
