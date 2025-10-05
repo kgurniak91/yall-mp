@@ -23,6 +23,7 @@ export class VideoStateService implements OnDestroy {
   private readonly _isPaused = signal(true);
   private readonly _isBusy = signal(true);
   private readonly _assRendererSyncRequest = signal<number | null>(null);
+  private readonly _toggleSubtitlesRequest = signal<number | null>(null);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly appStateService = inject(AppStateService);
@@ -48,6 +49,7 @@ export class VideoStateService implements OnDestroy {
   public readonly isPaused = this._isPaused.asReadonly();
   public readonly isBusy = this._isBusy.asReadonly();
   public readonly assRendererSyncRequest = this._assRendererSyncRequest.asReadonly();
+  public readonly toggleSubtitlesRequest = this._toggleSubtitlesRequest.asReadonly();
 
   constructor() {
     this.cleanupMpvListener = window.electronAPI.onMpvEvent((status) => {
@@ -59,6 +61,7 @@ export class VideoStateService implements OnDestroy {
     this.cleanupPlaybackListener = window.electronAPI.onPlaybackStateUpdate((update) => {
       this._currentTime.set(update.currentTime);
       this._isPaused.set(update.isPaused);
+      this._subtitlesVisible.set(update.subtitlesVisible);
     });
   }
 
@@ -107,7 +110,7 @@ export class VideoStateService implements OnDestroy {
   }
 
   public toggleSubtitlesVisible(): void {
-    this._subtitlesVisible.update((isVisible) => !isVisible);
+    this._toggleSubtitlesRequest.set(Date.now());
   }
 
   public setSubtitlesVisible(isVisible: boolean): void {
@@ -201,6 +204,10 @@ export class VideoStateService implements OnDestroy {
 
   public clearForceResizeRequest(): void {
     this._forceResizeRequest.set(null);
+  }
+
+  public clearToggleSubtitlesRequest(): void {
+    this._toggleSubtitlesRequest.set(null);
   }
 
   public saveCurrentPlaybackTime(): void {

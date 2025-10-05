@@ -3,6 +3,7 @@ import {app, type BrowserWindow} from 'electron';
 import Mpv, {StatusObject} from 'node-mpv';
 import type {SubtitleSelection} from './src/app/model/project.types';
 import path from 'path';
+import {MediaTrack} from './shared/types/media.type';
 
 const TIME_UPDATE_FPS = 60;
 
@@ -18,7 +19,9 @@ export class MpvManager extends EventEmitter {
     mediaPath: string,
     audioTrackIndex: number | null,
     subtitleSelection: SubtitleSelection,
-    useMpvSubtitles: boolean
+    allSubtitleTracks: MediaTrack[],
+    useMpvSubtitles: boolean,
+    subtitlesVisible: boolean,
   ): Promise<void> {
     this.mediaPath = mediaPath;
 
@@ -39,7 +42,7 @@ export class MpvManager extends EventEmitter {
       '--keep-open=always',
       '--idle=yes',
       '--pause',
-      `--sub-visibility=${useMpvSubtitles ? 'yes' : 'no'}`,
+      '--sub-visibility=no',
       '--hr-seek=yes',
       '--cache=no',
     ];
@@ -48,16 +51,18 @@ export class MpvManager extends EventEmitter {
       args.push(`--aid=${audioTrackIndex}`);
     }
 
-    switch (subtitleSelection.type) {
-      case 'embedded':
-        args.push(`--sid=${subtitleSelection.trackIndex}`);
-        break;
-      case 'external':
-        args.push(`--sub-file=${subtitleSelection.filePath}`);
-        break;
-      case 'none':
-        // do nothing
-        break;
+    let mpvRelativeSubtitleIndex: number | undefined = undefined;
+    if (subtitleSelection.type === 'embedded') {
+      // Find the 0-based position of the selected track within the list of ONLY subtitle tracks:
+      const relativeIndex = allSubtitleTracks.findIndex(track => track.index === subtitleSelection.trackIndex);
+      if (relativeIndex !== -1) {
+        // MPV's relative track IDs are 1-based:
+        mpvRelativeSubtitleIndex = (relativeIndex + 1);
+        args.push(`--sid=${mpvRelativeSubtitleIndex}`);
+        console.log(`[MpvManager] Mapped ffprobe absolute index ${subtitleSelection.trackIndex} to mpv relative index ${mpvRelativeSubtitleIndex}`);
+      } else {
+        console.warn(`[MpvManager] Could not find selected subtitle track index ${subtitleSelection.trackIndex} in the provided list.`);
+      }
     }
 
     this.mpv = new Mpv(options, args);
@@ -69,6 +74,24 @@ export class MpvManager extends EventEmitter {
 
       await this.mpv.load(mediaPath, 'replace');
       console.log(`[MpvManager] Loaded media: ${mediaPath}`);
+
+      if (subtitleSelection.type === 'external') {
+        await this.mpv.addSubtitles(subtitleSelection.filePath, 'select');
+        console.log(`[MpvManager] Added external subtitles: ${subtitleSelection.filePath}`);
+      } else if (subtitleSelection.type === 'embedded' && mpvRelativeSubtitleIndex != null) {
+        await this.mpv.selectSubtitles(mpvRelativeSubtitleIndex);
+        console.log(`[MpvManager] Selected embedded subtitle track: ${mpvRelativeSubtitleIndex}`);
+      }
+
+      if (useMpvSubtitles) {
+        if (subtitlesVisible) {
+          await this.showSubtitles();
+        } else {
+          await this.hideSubtitles();
+        }
+      } else {
+        await this.hideSubtitles();
+      }
 
       this.emit('ready');
     } catch (error) {
@@ -168,6 +191,20 @@ export class MpvManager extends EventEmitter {
       this.mpv.quit();
       this.mpv = null;
     }
+  }
+
+  public showSubtitles(): Promise<void> {
+    if (!this.mpv) {
+      return Promise.reject(new Error('MPV is not running.'));
+    }
+    return this.mpv.showSubtitles();
+  }
+
+  public hideSubtitles(): Promise<void> {
+    if (!this.mpv) {
+      return Promise.reject(new Error('MPV is not running.'));
+    }
+    return this.mpv.hideSubtitles();
   }
 
   private getMpvExecutablePath(): string {

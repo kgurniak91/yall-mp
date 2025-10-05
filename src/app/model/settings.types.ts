@@ -19,6 +19,7 @@ export interface ProjectSettings {
   useMpvSubtitles: boolean;
   assScale: number;
   assScalePercentage: number;
+  subtitlesVisible: boolean;
 }
 
 export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
@@ -31,6 +32,7 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
   useMpvSubtitles: false,
   assScale: 1.0,
   assScalePercentage: 100.00,
+  subtitlesVisible: true
 };
 
 export interface GlobalSettings {

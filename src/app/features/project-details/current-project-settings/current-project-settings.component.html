@@ -41,7 +41,7 @@
                          (ngModelChange)="onSettingChange('useMpvSubtitles', $event)"/>
           <label for="renderer-interactive" class="ml-2 cursor-pointer">
             <span class="font-bold block">Interactive (ASS.js)</span>
-            <span class="text-sm">Allows word selection but may have rendering issues with complex styles.</span>
+            <span class="text-sm">Allows word selection and manual editing of subtitles but may have rendering issues with complex styles.</span>
           </label>
         </div>
 
@@ -53,7 +53,7 @@
                          (ngModelChange)="onSettingChange('useMpvSubtitles', $event)"/>
           <label for="renderer-mpv" class="ml-2 cursor-pointer">
             <span class="font-bold block">Pixel-Perfect (MPV)</span>
-            <span class="text-sm">Provides highly accurate rendering but subtitles are not interactive.</span>
+            <span class="text-sm">A high-precision, non-interactive preview of the original subtitles. Does not show manual edits.</span>
           </label>
         </div>
       </div>

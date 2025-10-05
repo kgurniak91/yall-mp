@@ -193,6 +193,13 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     inject(SubtitlesHighlighterService); // start listening
 
     effect(() => {
+      const subtitlesVisible = this.videoStateService.subtitlesVisible();
+      untracked(() => {
+        this.projectSettingsStateService.setSubtitlesVisible(subtitlesVisible);
+      });
+    });
+
+    effect(() => {
       const currentSettings = this.projectSettingsStateService.settings();
       window.electronAPI.playbackUpdateSettings(currentSettings);
       const currentProject = untracked(this.project);
@@ -218,15 +225,6 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
         const settings = this.projectSettingsStateService.settings();
         window.electronAPI.playbackLoadProject(clips, settings);
         this.startPlaybackSequence();
-      }
-    });
-
-    effect(() => {
-      const useMpv = this.projectSettingsStateService.useMpvSubtitles();
-
-      if (untracked(this.isMpvReady)) {
-        console.log(`[ProjectDetails] Setting MPV sub-visibility to: ${useMpv}`);
-        window.electronAPI.mpvSetProperty('sub-visibility', useMpv);
       }
     });
 
@@ -266,6 +264,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     }
 
     this.projectSettingsStateService.setSettings(foundProject.settings);
+    this.videoStateService.setSubtitlesVisible(foundProject.settings.subtitlesVisible);
     this.appStateService.setCurrentProject(projectId);
     this.clipsStateService.setProjectId(projectId);
     this.videoStateService.setProjectId(projectId);
@@ -316,7 +315,9 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       foundProject.mediaPath,
       foundProject.settings.selectedAudioTrackIndex,
       foundProject.subtitleSelection,
-      foundProject.settings.useMpvSubtitles
+      foundProject.subtitleTracks,
+      foundProject.settings.useMpvSubtitles,
+      foundProject.settings.subtitlesVisible
     );
   }
 
@@ -325,8 +326,8 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       this.cleanupInitialSeekListener();
     }
     this.fontInjectionService.clearFonts();
-    window.electronAPI.mpvSetProperty('sub-visibility', false);
-    window.electronAPI.mpvDestroyViewport();
+    window.electronAPI.mpvHideSubtitles();
+    window.electronAPI.onMpvDestroyViewport();
   }
 
   onPlayerReady(): void {

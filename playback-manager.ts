@@ -10,6 +10,7 @@ export interface PlaybackStateUpdate {
   currentClipIndex: number;
   currentTime: number;
   isPaused: boolean;
+  subtitlesVisible: boolean;
 }
 
 export class PlaybackManager {
@@ -19,6 +20,11 @@ export class PlaybackManager {
   private playerState: PlayerState = PlayerState.Idle;
   private currentTime = 0;
   private preSeekState: PlayerState = PlayerState.Idle;
+  private userOverriddenClipId: string | null = null;
+  private subtitlesVisible: boolean = true;
+  private isSeekingWithinSameClip = false;
+  private mpvSubtitlesHiddenDueToRenderer = false;
+  private isProjectLoaded = false;
 
   constructor(
     private mpvManager: MpvManager,
@@ -37,18 +43,22 @@ export class PlaybackManager {
   }
 
   public loadProject(clips: VideoClip[], settings: ProjectSettings): void {
+    this.isProjectLoaded = true;
     this.clips = clips;
     this.settings = settings;
+    this.subtitlesVisible = settings.subtitlesVisible;
     this.currentClipIndex = 0;
     this.currentTime = 0;
-    this.setPlayerState(PlayerState.Idle);
+    this.userOverriddenClipId = null;
+    this.mpvSubtitlesHiddenDueToRenderer = false;
+    this.setPlayerState(PlayerState.Idle, true);
   }
 
   public play(): void {
     if (this.playerState === PlayerState.AutoPausedAtEnd) {
       this.playClipAtIndex(this.currentClipIndex + 1);
     } else {
-      this.applyClipSettings();
+      this.applyClipTransitionSettings();
       this.mpvManager.setProperty('pause', false);
       this.setPlayerState(PlayerState.Playing);
     }
@@ -67,11 +77,30 @@ export class PlaybackManager {
     }
   }
 
+  public toggleSubtitles(): void {
+    const currentClip = this.clips[this.currentClipIndex];
+    if (!currentClip) {
+      return;
+    }
+
+    this.subtitlesVisible = !this.subtitlesVisible;
+    this.userOverriddenClipId = currentClip.id;
+
+    if (this.settings?.useMpvSubtitles) {
+      if (this.subtitlesVisible) {
+        this.mpvManager.showSubtitles();
+      } else {
+        this.mpvManager.hideSubtitles();
+      }
+    }
+
+    this.notifyUI();
+  }
+
   public repeat(): void {
     const clip = this.clips[this.currentClipIndex];
     if (clip) {
       this.mpvManager.sendCommand(['seek', clip.startTime, 'absolute']);
-      this.applyClipSettings();
       this.mpvManager.setProperty('pause', false);
       this.setPlayerState(PlayerState.Playing);
     }
@@ -84,67 +113,86 @@ export class PlaybackManager {
   }
 
   public seek(time: number): void {
-    const targetClipIndex = this.clips.findIndex(c => time >= c.startTime && time < c.endTime);
-    if (targetClipIndex === -1 || this.playerState === PlayerState.Seeking) {
+    const targetClipIndex = this.clips.findIndex(
+      (c) => time >= c.startTime && time < c.endTime
+    );
+    if (targetClipIndex === -1) {
       return;
     }
 
-    this.preSeekState = this.playerState;
+    const oldClipIndex = this.currentClipIndex;
+    this.isSeekingWithinSameClip = (oldClipIndex === targetClipIndex);
+
+    this.preSeekState = (this.playerState === PlayerState.Seeking) ? this.preSeekState : this.playerState;
     this.setPlayerState(PlayerState.Seeking);
     this.mpvManager.setProperty('pause', true);
+
+    // Only apply behavior (hide/show) if moving between different clips
+    if (!this.isSeekingWithinSameClip) {
+      this.userOverriddenClipId = null;
+      if (this.settings?.useMpvSubtitles) {
+        this.mpvManager.hideSubtitles();
+      }
+    }
 
     this.currentClipIndex = targetClipIndex;
     this.currentTime = time;
     this.notifyUI();
 
     this.mpvManager.sendCommand(['seek', time, 'absolute']);
-    this.applyClipSettings();
   }
 
   public updateSettings(newSettings: ProjectSettings): void {
+    const oldSettings = this.settings;
     this.settings = newSettings;
-    if (this.playerState !== PlayerState.Idle && this.playerState !== PlayerState.Seeking) {
-      this.applyClipSettings();
-    }
-  }
 
-  public updateClips(newClips: VideoClip[]): void {
-    const oldActiveClip = this.clips[this.currentClipIndex];
-    this.clips = newClips; // Update the internal clips array immediately.
-    const newClipAtOldIndex = this.clips[this.currentClipIndex];
+    const rendererChanged = oldSettings && oldSettings.useMpvSubtitles !== newSettings.useMpvSubtitles;
+    const visibilityChanged = oldSettings && oldSettings.subtitlesVisible !== newSettings.subtitlesVisible;
 
-    // Check if the user's context should be preserved.
-    const shouldPreserveIndex = oldActiveClip && newClipAtOldIndex && this.areVideoClipsEqual(oldActiveClip, newClipAtOldIndex) &&
-      (
-        // Case 1: Paused at the end boundary, and that boundary has not moved.
-        (this.playerState === PlayerState.AutoPausedAtEnd && this.currentTime === oldActiveClip.endTime && newClipAtOldIndex.endTime === oldActiveClip.endTime) ||
-        // Case 2: Paused at the start boundary, and that boundary has not moved.
-        (this.playerState === PlayerState.AutoPausedAtStart && this.currentTime === oldActiveClip.startTime && newClipAtOldIndex.startTime === oldActiveClip.startTime)
-      );
-
-    if (shouldPreserveIndex) {
-      console.log(`[PlaybackManager] Active clip unchanged while paused at an unmodified boundary. Preserving index ${this.currentClipIndex}.`);
-      return;
+    if (visibilityChanged) {
+      this.subtitlesVisible = newSettings.subtitlesVisible;
     }
 
-    const newClipIndex = this.clips.findIndex(c => this.currentTime >= c.startTime && this.currentTime < c.endTime);
-
-    if (newClipIndex !== -1 && newClipIndex !== this.currentClipIndex) {
-      console.log(`[PlaybackManager] Clips updated. Resynced clip index from ${this.currentClipIndex} to ${newClipIndex}.`);
-      this.currentClipIndex = newClipIndex;
-      this.applyClipSettings();
+    if (rendererChanged || visibilityChanged) {
+      if (rendererChanged) {
+        this.mpvSubtitlesHiddenDueToRenderer = false; // Reset this only on renderer change
+      }
+      this.applyClipTransitionSettings();
       this.notifyUI();
     }
   }
 
-  private areVideoClipsEqual(clipA?: VideoClip, clipB?: VideoClip): boolean {
-    if (!clipA || !clipB || clipA.sourceSubtitles.length !== clipB.sourceSubtitles.length) {
-      return false;
+  public updateClips(newClips: VideoClip[]): void {
+    const oldClipIndex = this.currentClipIndex;
+    this.clips = newClips;
+
+    let newClipIndex;
+
+    if (this.playerState === PlayerState.AutoPausedAtEnd) {
+      newClipIndex = this.clips.findIndex(c => c.endTime === this.currentTime);
+      if (newClipIndex === -1) {
+        // Fallback if not exactly on a clip boundary anymore
+        newClipIndex = this.clips.findIndex(c => this.currentTime >= c.startTime && this.currentTime < c.endTime);
+      }
+    } else {
+      newClipIndex = this.clips.findIndex(c => this.currentTime >= c.startTime && this.currentTime < c.endTime);
     }
-    const idsA = clipA.sourceSubtitles.map(s => s.id).sort().join(',');
-    const idsB = clipB.sourceSubtitles.map(s => s.id).sort().join(',');
-    return idsA === idsB;
-  };
+
+    if (newClipIndex === -1) {
+      // Failsafe: if no clip is found, don't change the index. This prevents state corruption.
+      return;
+    }
+
+    const indexChanged = newClipIndex !== oldClipIndex;
+    this.currentClipIndex = newClipIndex;
+
+    if (indexChanged) {
+      this.applyClipTransitionSettings();
+    }
+
+    // Always notify the UI after a clip update, because the clip list or state might need syncing.
+    this.notifyUI();
+  }
 
   private handleMpvEvent(status: any): void {
     if (status.event === 'property-change' && status.name === 'time-pos' && status.data !== undefined) {
@@ -162,8 +210,18 @@ export class PlaybackManager {
     } else if (status.event === 'seek') {
       if (this.playerState === PlayerState.Seeking) {
         const shouldResume = this.preSeekState === PlayerState.Playing;
+
+        if (!this.isSeekingWithinSameClip) {
+          this.applyClipTransitionSettings();
+        }
+
+        this.isSeekingWithinSameClip = false;
+
         this.mpvManager.setProperty('pause', !shouldResume);
-        this.setPlayerState(shouldResume ? PlayerState.Playing : PlayerState.PausedByUser);
+        this.setPlayerState(
+          shouldResume ? PlayerState.Playing : PlayerState.PausedByUser,
+          true
+        );
       }
     } else if (status.event === 'end-file') {
       this.setPlayerState(PlayerState.Idle);
@@ -193,10 +251,11 @@ export class PlaybackManager {
     }
 
     this.currentClipIndex = index;
+    this.userOverriddenClipId = null;
     const clipToPlay = this.clips[this.currentClipIndex];
 
+    this.applyClipTransitionSettings();
     this.mpvManager.sendCommand(['seek', clipToPlay.startTime, 'absolute']);
-    this.applyClipSettings();
 
     if (clipToPlay.hasSubtitle && this.settings?.autoPauseAtStart) {
       this.currentTime = clipToPlay.startTime;
@@ -208,21 +267,39 @@ export class PlaybackManager {
     }
   }
 
-  private applyClipSettings(): void {
+  private applyClipTransitionSettings(): void {
     const clip = this.clips[this.currentClipIndex];
     if (!clip || !this.settings) {
       return;
     }
 
-    const newSpeed = clip.hasSubtitle ? this.settings.subtitledClipSpeed : this.settings.gapSpeed;
-    this.mpvManager.setProperty('speed', newSpeed);
+    const speed = clip.hasSubtitle ? this.settings.subtitledClipSpeed : this.settings.gapSpeed;
+    this.mpvManager.setProperty('speed', speed);
 
-    const behavior = this.settings.subtitleBehavior;
+    if (this.userOverriddenClipId === clip.id) {
+      return;
+    }
+
     if (clip.hasSubtitle) {
+      const behavior = this.settings.subtitleBehavior;
       if (behavior === SubtitleBehavior.ForceShow) {
-        this.mpvManager.setProperty('sub-visibility', true);
+        this.subtitlesVisible = true;
       } else if (behavior === SubtitleBehavior.ForceHide) {
-        this.mpvManager.setProperty('sub-visibility', false);
+        this.subtitlesVisible = false;
+      }
+    }
+
+    if (!this.settings.useMpvSubtitles) {
+      if (!this.mpvSubtitlesHiddenDueToRenderer) {
+        this.mpvManager.hideSubtitles();
+        this.mpvSubtitlesHiddenDueToRenderer = true;
+      }
+    } else {
+      this.mpvSubtitlesHiddenDueToRenderer = false;
+      if (this.subtitlesVisible) {
+        this.mpvManager.showSubtitles();
+      } else {
+        this.mpvManager.hideSubtitles();
       }
     }
   }
@@ -237,12 +314,17 @@ export class PlaybackManager {
   }
 
   private notifyUI(): void {
+    if (!this.isProjectLoaded) {
+      return;
+    }
+
     if (this.uiWindow && !this.uiWindow.isDestroyed()) {
       const payload: PlaybackStateUpdate = {
         playerState: this.playerState,
         currentClipIndex: this.currentClipIndex,
         currentTime: this.currentTime,
         isPaused: this.isPaused,
+        subtitlesVisible: this.subtitlesVisible,
       };
       this.uiWindow.webContents.send('playback:state-update', payload);
     }

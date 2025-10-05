@@ -440,7 +440,9 @@ app.whenReady().then(() => {
     mediaPath: string,
     audioTrackIndex: number | null,
     subtitleSelection: SubtitleSelection,
-    useMpvSubtitles: boolean
+    subtitleTracks: MediaTrack[],
+    useMpvSubtitles: boolean,
+    subtitlesVisible: boolean
   ) => {
     if (!uiWindow || !mainWindow) {
       return;
@@ -499,7 +501,7 @@ app.whenReady().then(() => {
     });
 
     // Start MPV inside the child window's handle
-    await mpvManager.start(mediaPath, audioTrackIndex, subtitleSelection, useMpvSubtitles);
+    await mpvManager.start(mediaPath, audioTrackIndex, subtitleSelection, subtitleTracks, useMpvSubtitles, subtitlesVisible);
     mpvManager.observeProperty('time-pos');
     mpvManager.observeProperty('duration');
     mpvManager.observeProperty('pause');
@@ -580,6 +582,9 @@ app.whenReady().then(() => {
     mpvManager?.setProperty(property, value);
   });
 
+  ipcMain.handle('mpv:showSubtitles', () => mpvManager?.showSubtitles());
+  ipcMain.handle('mpv:hideSubtitles', () => mpvManager?.hideSubtitles());
+
   ipcMain.on('mpv:destroyViewport', () => {
     console.log('[Main Process] Received mpv:destroyViewport. Cleaning up.');
 
@@ -625,6 +630,7 @@ app.whenReady().then(() => {
   ipcMain.on('playback:play', () => playbackManager?.play());
   ipcMain.on('playback:pause', () => playbackManager?.pause());
   ipcMain.on('playback:togglePlayPause', () => playbackManager?.togglePlayPause());
+  ipcMain.on('playback:toggleSubtitles', () => playbackManager?.toggleSubtitles());
   ipcMain.on('playback:repeat', () => playbackManager?.repeat());
   ipcMain.on('playback:forceContinue', () => playbackManager?.forceContinue());
   ipcMain.on('playback:seek', (_, time) => {

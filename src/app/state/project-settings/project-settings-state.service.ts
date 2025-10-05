@@ -17,4 +17,8 @@ export class ProjectSettingsStateService {
   public setSettings(projectSettings: ProjectSettings | undefined): void {
     this._settings.set(projectSettings ? {...DEFAULT_PROJECT_SETTINGS, ...projectSettings} : DEFAULT_PROJECT_SETTINGS);
   }
+
+  public setSubtitlesVisible(isVisible: boolean): void {
+    this._settings.update(s => ({...s, subtitlesVisible: isVisible}));
+  }
 }

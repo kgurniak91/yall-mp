@@ -28,14 +28,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // --- FFmpeg
   checkFFmpegAvailability: () => ipcRenderer.invoke('ffmpeg:check'),
   // --- MPV
-  mpvCreateViewport: (mediaPath, audioTrackIndex, subtitleSelection, useMpvSubtitles) => ipcRenderer.invoke(
-    'mpv:createViewport', mediaPath, audioTrackIndex, subtitleSelection, useMpvSubtitles
+  mpvCreateViewport: (mediaPath, audioTrackIndex, subtitleSelection, subtitleTracks, useMpvSubtitles, subtitlesVisible) => ipcRenderer.invoke(
+    'mpv:createViewport', mediaPath, audioTrackIndex, subtitleSelection, subtitleTracks, useMpvSubtitles, subtitlesVisible
   ),
   mpvFinishVideoResize: (rect) => ipcRenderer.invoke('mpv:finishVideoResize', rect),
   mpvCommand: (commandArray) => ipcRenderer.invoke('mpv:command', commandArray),
   mpvGetProperty: (property) => ipcRenderer.invoke('mpv:getProperty', property),
   mpvSetProperty: (property, value) => ipcRenderer.invoke('mpv:setProperty', property, value),
-  mpvDestroyViewport: () => ipcRenderer.send('mpv:destroyViewport'),
+  mpvShowSubtitles: () => ipcRenderer.invoke('mpv:showSubtitles'),
+  mpvHideSubtitles: () => ipcRenderer.invoke('mpv:hideSubtitles'),
+  onMpvDestroyViewport: () => ipcRenderer.send('mpv:destroyViewport'),
   onMpvEvent: (callback) => {
     const subscription = (_event, value) => callback(value);
     ipcRenderer.on('mpv:event', subscription);
@@ -55,6 +57,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   playbackPlay: () => ipcRenderer.send('playback:play'),
   playbackPause: () => ipcRenderer.send('playback:pause'),
   playbackTogglePlayPause: () => ipcRenderer.send('playback:togglePlayPause'),
+  playbackToggleSubtitles: () => ipcRenderer.send('playback:toggleSubtitles'),
   playbackRepeat: () => ipcRenderer.send('playback:repeat'),
   playbackForceContinue: () => ipcRenderer.send('playback:forceContinue'),
   playbackSeek: (time) => ipcRenderer.send('playback:seek', time),

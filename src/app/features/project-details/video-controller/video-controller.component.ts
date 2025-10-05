@@ -29,6 +29,10 @@ export class VideoControllerComponent implements OnDestroy {
       this.handleTogglePlayPause();
     }
 
+    if (this.videoStateService.toggleSubtitlesRequest()) {
+      this.handleToggleSubtitles();
+    }
+
     if (this.videoStateService.repeatRequest()) {
       this.handleRepeat();
     }
@@ -46,6 +50,11 @@ export class VideoControllerComponent implements OnDestroy {
   private handleTogglePlayPause(): void {
     window.electronAPI.playbackTogglePlayPause();
     this.videoStateService.clearPlayPauseRequest();
+  }
+
+  private handleToggleSubtitles(): void {
+    window.electronAPI.playbackToggleSubtitles();
+    this.videoStateService.clearToggleSubtitlesRequest();
   }
 
   private handleForceContinue(): void {

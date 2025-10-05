@@ -3,7 +3,7 @@ import {AppData, SubtitleSelection} from './app/model/project.types';
 import {VideoClip} from './app/model/video.types';
 import {ProjectSettings} from './app/model/settings.types';
 import {SubtitleData} from '../shared/types/subtitle.type';
-import {MediaMetadata} from '../shared/types/media.type';
+import {MediaMetadata, MediaTrack} from '../shared/types/media.type';
 import {PlaybackStateUpdate} from '../playback-manager';
 
 export interface MpvClipRequest {
@@ -52,13 +52,20 @@ export interface IElectronAPI {
   checkFFmpegAvailability: () => Promise<boolean>;
   // --- MPV
   mpvCreateViewport: (
-    mediaPath: string, audioTrackIndex: number | null, subtitleSelection: SubtitleSelection, useMpvSubtitles: boolean
+    mediaPath: string,
+    audioTrackIndex: number | null,
+    subtitleSelection: SubtitleSelection,
+    subtitleTracks: MediaTrack[],
+    useMpvSubtitles: boolean,
+    subtitlesVisible: boolean
   ) => Promise<void>;
   mpvFinishVideoResize: (rect: { x: number, y: number, width: number, height: number }) => Promise<void>;
   mpvCommand: (commandArray: any[]) => Promise<void>;
   mpvGetProperty: (property: string) => Promise<any>;
   mpvSetProperty: (property: string, value: any) => Promise<void>;
-  mpvDestroyViewport: () => void;
+  mpvShowSubtitles: () => Promise<void>;
+  mpvHideSubtitles: () => Promise<void>;
+  onMpvDestroyViewport: () => void;
   onMpvEvent: (callback: (status: any) => void) => (() => void);
   onMainWindowMoved: (callback: () => void) => void;
   onMpvManagerReady: (callback: () => void) => void;
@@ -70,6 +77,7 @@ export interface IElectronAPI {
   playbackPlay: () => void;
   playbackPause: () => void;
   playbackTogglePlayPause: () => void;
+  playbackToggleSubtitles: () => void;
   playbackRepeat: () => void;
   playbackForceContinue: () => void;
   playbackSeek: (time: number) => void;
