@@ -19,10 +19,6 @@
   pointer-events: all;
   cursor: default;
 
-  &.subtitles-blurred {
-    filter: blur(1rem);
-  }
-
   &.subtitles-hidden {
     & > .srt-container,
     & ::ng-deep .ASS-box {

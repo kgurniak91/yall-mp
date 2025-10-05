@@ -13,18 +13,6 @@
     </div>
   </p-fieldset>
 
-  <p-fieldset legend="Subtitle Display" [toggleable]="false">
-    <div class="setting-item">
-      <label>When Subtitles are Off</label>
-      <p-selectButton [options]="hiddenSubtitleStyleOptions"
-                      [ngModel]="globalSettingsStateService.hiddenSubtitleStyle()"
-                      (ngModelChange)="globalSettingsStateService.setHiddenSubtitleStyle($event)"
-                      optionLabel="label"
-                      optionValue="value"
-                      aria-labelledby="basic"/>
-    </div>
-  </p-fieldset>
-
   <p-fieldset legend="Timeline Editing" [toggleable]="false">
     <div class="setting-item-column">
       <label for="adjustValue">

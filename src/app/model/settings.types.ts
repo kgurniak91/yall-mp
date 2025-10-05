@@ -4,11 +4,6 @@ export enum SubtitleBehavior {
   ForceHide = 'ForceHide',
 }
 
-export enum HiddenSubtitleStyle {
-  Hidden = 'Hidden',
-  Blurred = 'Blurred'
-}
-
 export interface ProjectSettings {
   autoPauseAtStart: boolean;
   autoPauseAtEnd: boolean;
@@ -38,14 +33,12 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
 export interface GlobalSettings {
   boundaryAdjustAmountMs: number;
   seekAmountSeconds: number;
-  hiddenSubtitleStyle: HiddenSubtitleStyle;
   defaultProjectSettings: ProjectSettings;
 }
 
 export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   boundaryAdjustAmountMs: 50,
   seekAmountSeconds: 2,
-  hiddenSubtitleStyle: HiddenSubtitleStyle.Blurred,
   defaultProjectSettings: DEFAULT_PROJECT_SETTINGS
 };
 

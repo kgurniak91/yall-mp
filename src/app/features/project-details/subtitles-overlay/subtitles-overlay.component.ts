@@ -13,8 +13,6 @@ import {
 } from '@angular/core';
 import {VideoStateService} from '../../../state/video/video-state.service';
 import {VideoClip} from '../../../model/video.types';
-import {GlobalSettingsStateService} from '../../../state/global-settings/global-settings-state.service';
-import {HiddenSubtitleStyle} from '../../../model/settings.types';
 import {ProjectSettingsStateService} from '../../../state/project-settings/project-settings-state.service';
 import ASS from 'assjs';
 import {SubtitlesHighlighterService} from '../services/subtitles-highlighter/subtitles-highlighter.service';
@@ -53,22 +51,13 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       }
     }
 
-    const shouldBeHidden = !this.videoStateService.subtitlesVisible()
-      && (this.globalSettingsStateService.hiddenSubtitleStyle() === HiddenSubtitleStyle.Hidden);
-
-    return shouldBeHidden || this.videoStateService.isBusy();
-  });
-
-  protected readonly shouldBeBlurred = computed(() => {
-    const style = this.globalSettingsStateService.hiddenSubtitleStyle();
-    return !this.videoStateService.subtitlesVisible() && style === HiddenSubtitleStyle.Blurred;
+    return !this.videoStateService.subtitlesVisible() || this.videoStateService.isBusy();
   });
 
   protected readonly isWordHovered = signal(false);
   protected readonly videoStateService = inject(VideoStateService);
   private readonly projectSettingsStateService = inject(ProjectSettingsStateService);
   private readonly subtitleContainer = viewChild.required<ElementRef<HTMLDivElement>>('subtitleContainer');
-  private readonly globalSettingsStateService = inject(GlobalSettingsStateService);
   private readonly subtitlesHighlighterService = inject(SubtitlesHighlighterService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly isInitialized = signal(false);

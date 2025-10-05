@@ -12,7 +12,7 @@ import {Popover} from 'primeng/popover';
 import {ActivatedRoute, Router} from '@angular/router';
 import {AppStateService} from '../../state/app/app-state.service';
 import {ProjectSettingsStateService} from '../../state/project-settings/project-settings-state.service';
-import {BuiltInSettingsPresets, HiddenSubtitleStyle, ProjectSettings, SettingsPreset} from '../../model/settings.types';
+import {BuiltInSettingsPresets, ProjectSettings, SettingsPreset} from '../../model/settings.types';
 import {DialogService, DynamicDialogRef} from 'primeng/dynamicdialog';
 import {CommandHistoryStateService} from '../../state/command-history/command-history-state.service';
 import {EditSubtitlesDialogComponent} from './edit-subtitles-dialog/edit-subtitles-dialog.component';
@@ -20,7 +20,6 @@ import {ClipContent, UpdateClipTextCommand} from '../../model/commands/update-cl
 import {take} from 'rxjs';
 import {ToastService} from '../../shared/services/toast/toast.service';
 import type {SubtitleData} from '../../../../shared/types/subtitle.type';
-import {GlobalSettingsStateService} from '../../state/global-settings/global-settings-state.service';
 import {DropdownModule} from 'primeng/dropdown';
 import {FormsModule} from '@angular/forms';
 import {AnkiStateService} from '../../state/anki/anki-state.service';
@@ -133,8 +132,6 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   protected readonly ankiStateService = inject(AnkiStateService);
   protected readonly clipsStateService = inject(ClipsStateService);
   protected readonly projectSettingsStateService = inject(ProjectSettingsStateService);
-  protected readonly globalSettingsStateService = inject(GlobalSettingsStateService);
-  protected readonly HiddenSubtitleStyle = HiddenSubtitleStyle;
   protected readonly project = computed(() => {
     const projectId = this.route.snapshot.paramMap.get('id');
     if (!projectId) {
