@@ -209,7 +209,7 @@ describe('PlaybackManager', () => {
         vi.clearAllMocks();
 
         simulateEndOfClip(playbackManager, 20);
-        expect(mockMpvManager.sendCommand).toHaveBeenCalledWith(['seek', 20, 'absolute+exact']);
+        expect(mockMpvManager.sendCommand).toHaveBeenCalledWith(['seek', 19.99, 'absolute+exact']);
         expect(getLastStateUpdate()).toEqual(expect.objectContaining({
           playerState: PlayerState.AutoPausedAtEnd,
           currentClipIndex: 1
@@ -224,7 +224,7 @@ describe('PlaybackManager', () => {
 
         simulateEndOfClip(playbackManager, 20);
         expect(getLastStateUpdate()).toEqual(expect.objectContaining({
-          currentTime: 20.0
+          currentTime: 19.99
         }));
       });
     });
@@ -255,7 +255,7 @@ describe('PlaybackManager', () => {
         vi.clearAllMocks();
 
         simulateEndOfClip(playbackManager, 20);
-        expect(mockMpvManager.sendCommand).toHaveBeenCalledWith(['seek', 20, 'absolute+exact']);
+        expect(mockMpvManager.sendCommand).toHaveBeenCalledWith(['seek', 19.99, 'absolute+exact']);
         expect(getLastStateUpdate()).toEqual(expect.objectContaining({
           playerState: PlayerState.AutoPausedAtEnd,
           currentClipIndex: 1
@@ -278,6 +278,15 @@ describe('PlaybackManager', () => {
         expect(getLastStateUpdate()).toEqual(expect.objectContaining({
           playerState: PlayerState.AutoPausedAtStart,
           currentClipIndex: 1
+        }));
+      });
+
+      it('seeks to slightly after the start time when auto-pausing at the start', () => {
+        simulateEndOfClip(playbackManager, 10);
+        // The subtitled clip starts at 10.0 so the playback indicator should pause at 10.0 + 0.01
+        expect(mockMpvManager.sendCommand).toHaveBeenCalledWith(['seek', 10.01, 'absolute']);
+        expect(getLastStateUpdate()).toEqual(expect.objectContaining({
+          currentTime: 10.01
         }));
       });
 

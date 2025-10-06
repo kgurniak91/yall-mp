@@ -235,10 +235,14 @@ export class PlaybackManager {
     }
 
     if (finishedClip.hasSubtitle && this.settings?.autoPauseAtEnd) {
-      this.currentTime = finishedClip.endTime;
+      // Seek to a fraction of a second BEFORE the end time.
+      // Seeking to the exact end time can cause ASS.js to not render the subtitles
+      // on re-initialization, as the time is no longer strictly within clip bounds.
+      const pauseTime = (finishedClip.endTime - 0.01);
+      this.currentTime = pauseTime;
       this.setPlayerState(PlayerState.AutoPausedAtEnd);
       this.mpvManager.setProperty('pause', true);
-      this.mpvManager.sendCommand(['seek', finishedClip.endTime, 'absolute+exact']);
+      this.mpvManager.sendCommand(['seek', pauseTime, 'absolute+exact']);
     } else {
       this.playClipAtIndex(this.currentClipIndex + 1);
     }
@@ -255,10 +259,15 @@ export class PlaybackManager {
     const clipToPlay = this.clips[this.currentClipIndex];
 
     this.applyClipTransitionSettings();
-    this.mpvManager.sendCommand(['seek', clipToPlay.startTime, 'absolute']);
 
-    if (clipToPlay.hasSubtitle && this.settings?.autoPauseAtStart) {
-      this.currentTime = clipToPlay.startTime;
+    const shouldAutoPauseAtStart = clipToPlay.hasSubtitle && this.settings?.autoPauseAtStart;
+
+    // Determine the precise target time, nudging it slightly if auto-pausing at the start to make sure it's still within clip bounds:
+    const targetTime = shouldAutoPauseAtStart ? (clipToPlay.startTime + 0.01) : clipToPlay.startTime;
+    this.mpvManager.sendCommand(['seek', targetTime, 'absolute']);
+
+    if (shouldAutoPauseAtStart) {
+      this.currentTime = targetTime;
       this.mpvManager.setProperty('pause', true);
       this.setPlayerState(PlayerState.AutoPausedAtStart);
     } else {
