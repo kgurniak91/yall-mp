@@ -153,6 +153,7 @@
                                   [settingsPresets]="settingsPresets()"
                                   [isAssProject]="isAssProject()"
                                   [selectedSettingsPreset]="selectedSettingsPreset()"
+                                  [detectedLanguage]="project()?.detectedLanguage"
                                   (settingsChange)="projectSettingsStateService.setSettings($event)"
                                   (selectedSettingsPresetChange)="onSettingsPresetChange($event)"/>
   </p-drawer>

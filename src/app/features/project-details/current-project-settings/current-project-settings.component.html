@@ -13,6 +13,28 @@
     </p-fieldset>
   </div>
 
+  <p-fieldset legend="Subtitles language" [toggleable]="false">
+    <div class="setting-item-column">
+      <div class="flex align-items-center gap-2">
+        <p-select inputId="sub-lang"
+                  [options]="subtitlesLanguageOptions"
+                  [ngModel]="settings().subtitlesLanguage"
+                  (ngModelChange)="onSettingChange('subtitlesLanguage', $event)"
+                  styleClass="w-full"
+                  optionLabel="label"
+                  optionValue="value"></p-select>
+        <p-button icon="fa-solid fa-rotate-left"
+                  (click)="onSettingChange('subtitlesLanguage', detectedLanguage() || 'other')"
+                  [disabled]="!detectedLanguage() || settings().subtitlesLanguage === detectedLanguage()"
+                  pTooltip="Reset to auto-detected language"
+                  styleClass="p-button-secondary"/>
+      </div>
+      <small class="block">
+        Changes how words are detected in subtitles when hovering.
+      </small>
+    </div>
+  </p-fieldset>
+
   @if (audioTracks().length > 1) {
     <p-fieldset legend="Audio" [toggleable]="false">
       <div class="setting-item-column">

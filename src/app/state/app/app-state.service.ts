@@ -1,8 +1,9 @@
 import {computed, inject, Injectable, signal} from '@angular/core';
 import {AppData, Project} from '../../model/project.types';
-import {DEFAULT_GLOBAL_SETTINGS, GlobalSettings} from '../../model/settings.types';
+import {DEFAULT_GLOBAL_SETTINGS, DEFAULT_PROJECT_SETTINGS, GlobalSettings} from '../../model/settings.types';
 import {AnkiSettings} from '../../model/anki.types';
 import {StorageService} from '../../core/services/storage/storage.service';
+import {merge} from 'lodash-es';
 
 const defaults: AppData = {
   projects: [],
@@ -36,7 +37,16 @@ export class AppStateService {
   public async loadAppData(): Promise<void> {
     const data = await this.storageService.get();
     if (data) {
-      this._appData.set(data);
+      const mergedData = merge({}, defaults, data);
+
+      if (mergedData.projects?.length) {
+        mergedData.projects = mergedData.projects.map(p => {
+          const completeSettings = merge({}, DEFAULT_PROJECT_SETTINGS, p.settings);
+          return {...p, settings: completeSettings};
+        });
+      }
+
+      this._appData.set(mergedData);
     }
   }
 

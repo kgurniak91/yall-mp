@@ -3,6 +3,8 @@ import type {SubtitleData} from '../../../shared/types/subtitle.type';
 import {AnkiSettings} from './anki.types';
 import {MediaTrack} from '../../../shared/types/media.type';
 
+export type SupportedLanguage = 'jpn' | 'cmn' | 'zho' | 'tha' | 'other';
+
 export type SubtitleSelection =
   | { type: 'none' }
   | { type: 'external'; filePath: string }
@@ -18,6 +20,7 @@ export interface Project {
   createdDate: number;
   duration: number;
   lastPlaybackTime: number;
+  detectedLanguage: SupportedLanguage;
   settings: ProjectSettings;
   subtitles: SubtitleData[];
   audioTracks: MediaTrack[];

@@ -18,6 +18,7 @@ import ASS from 'assjs';
 import {SubtitlesHighlighterService} from '../services/subtitles-highlighter/subtitles-highlighter.service';
 import {distinctUntilChanged, filter, fromEvent, map, merge, pairwise, throttleTime} from 'rxjs';
 import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
+import {TokenizationService} from '../services/tokenization/tokenization.service';
 
 const FALLBACK_VIDEO_ASPECT_RATIO = 16 / 9;
 
@@ -59,6 +60,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   private readonly projectSettingsStateService = inject(ProjectSettingsStateService);
   private readonly subtitleContainer = viewChild.required<ElementRef<HTMLDivElement>>('subtitleContainer');
   private readonly subtitlesHighlighterService = inject(SubtitlesHighlighterService);
+  private readonly tokenizationService = inject(TokenizationService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly isInitialized = signal(false);
   private readonly isScaleApplied = signal(false);
@@ -375,27 +377,8 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   }
 
   private getWordBoundaries(textNode: Node, offset: number): { start: number, end: number } | null {
-    if (textNode.nodeType !== Node.TEXT_NODE || !textNode.textContent) {
-      return null;
-    }
-    const textContent = textNode.textContent;
-
-    let start = offset;
-    while (start > 0 && /\p{L}|\p{N}|'|-/u.test(textContent[start - 1])) {
-      start--;
-    }
-
-    let end = offset;
-    while (end < textContent.length && /\p{L}|\p{N}|'|-/u.test(textContent[end])) {
-      end++;
-    }
-
-    // No word characters were found at the cursor's position
-    if (start === end) {
-      return null;
-    }
-
-    return {start, end};
+    const textContent = textNode.textContent || '';
+    return this.tokenizationService.getWordBoundaries(textContent, offset);
   }
 
   private handleMouseDown(event: MouseEvent): void {

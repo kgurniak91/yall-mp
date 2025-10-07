@@ -1,16 +1,10 @@
 import {AnkiExportRequest} from './app/model/anki.types';
-import {AppData, SubtitleSelection} from './app/model/project.types';
+import {AppData, SubtitleSelection, SupportedLanguage} from './app/model/project.types';
 import {VideoClip} from './app/model/video.types';
 import {ProjectSettings} from './app/model/settings.types';
 import {SubtitleData} from '../shared/types/subtitle.type';
 import {MediaMetadata, MediaTrack} from '../shared/types/media.type';
 import {PlaybackStateUpdate} from '../playback-manager';
-
-export interface MpvClipRequest {
-  startTime: number;
-  endTime: number;
-  playbackRate: number;
-}
 
 export interface FontData {
   fontFamily: string;
@@ -21,6 +15,7 @@ export interface ParsedSubtitlesData {
   subtitles: SubtitleData[];
   rawAssContent?: string;
   styles?: any;
+  detectedLanguage: SupportedLanguage;
 }
 
 export interface IElectronAPI {

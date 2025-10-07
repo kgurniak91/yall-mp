@@ -228,7 +228,8 @@ export class ProjectFormComponent implements OnInit {
       audioTracks: this.audioTracks(),
       subtitleTracks: this.subtitleTracks(),
       videoWidth: this.videoWidth(),
-      videoHeight: this.videoHeight()
+      videoHeight: this.videoHeight(),
+      detectedLanguage: 'other'
     };
     this.appStateService.createProject(newProject);
     this.router.navigate(['/project', newProject.id]);

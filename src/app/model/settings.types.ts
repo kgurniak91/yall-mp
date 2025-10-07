@@ -1,3 +1,5 @@
+import {SupportedLanguage} from './project.types';
+
 export enum SubtitleBehavior {
   DoNothing = 'DoNothing',
   ForceShow = 'ForceShow',
@@ -15,6 +17,7 @@ export interface ProjectSettings {
   assScale: number;
   assScalePercentage: number;
   subtitlesVisible: boolean;
+  subtitlesLanguage: SupportedLanguage;
 }
 
 export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
@@ -27,7 +30,8 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
   useMpvSubtitles: false,
   assScale: 1.0,
   assScalePercentage: 100.00,
-  subtitlesVisible: true
+  subtitlesVisible: true,
+  subtitlesLanguage: 'other'
 };
 
 export interface GlobalSettings {

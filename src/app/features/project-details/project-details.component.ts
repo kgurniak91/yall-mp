@@ -33,6 +33,7 @@ import {SubtitlesHighlighterComponent} from './subtitles-highlighter/subtitles-h
 import {FontInjectionService} from './services/font-injection/font-injection.service';
 import {AssSubtitlesUtils} from '../../shared/utils/ass-subtitles/ass-subtitles.utils';
 import {AssEditService} from './services/ass-edit/ass-edit.service';
+import {TokenizationService} from './services/tokenization/tokenization.service';
 
 @Component({
   selector: 'app-project-details',
@@ -59,7 +60,8 @@ import {AssEditService} from './services/ass-edit/ass-edit.service';
     ProjectSettingsStateService,
     VideoStateService,
     FontInjectionService,
-    AssEditService
+    AssEditService,
+    TokenizationService
   ]
 })
 export class ProjectDetailsComponent implements OnInit, OnDestroy {
@@ -151,7 +153,8 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     return {
       subtitles: project.subtitles,
       rawAssContent: project.rawAssContent,
-      styles: project.styles
+      styles: project.styles,
+      detectedLanguage: project.detectedLanguage
     };
   });
 
@@ -188,6 +191,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   constructor() {
     inject(KeyboardShortcutsService); // start listening
     inject(SubtitlesHighlighterService); // start listening
+    inject(TokenizationService); // start listening
 
     effect(() => {
       const subtitlesVisible = this.videoStateService.subtitlesVisible();
@@ -199,10 +203,6 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     effect(() => {
       const currentSettings = this.projectSettingsStateService.settings();
       window.electronAPI.playbackUpdateSettings(currentSettings);
-      const currentProject = untracked(this.project);
-      if (currentProject) {
-        this.appStateService.updateProject(currentProject.id, {settings: currentSettings});
-      }
     });
 
     effect(() => {
@@ -260,7 +260,6 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       this.loadAndInjectFonts(projectId);
     }
 
-    this.projectSettingsStateService.setSettings(foundProject.settings);
     this.videoStateService.setSubtitlesVisible(foundProject.settings.subtitlesVisible);
     this.appStateService.setCurrentProject(projectId);
     this.clipsStateService.setProjectId(projectId);
@@ -285,7 +284,8 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
             break;
           case 'none':
             subtitleResult = {
-              subtitles: []
+              subtitles: [],
+              detectedLanguage: 'other'
             };
             break;
         }
@@ -294,6 +294,11 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
           rawAssContent: subtitleResult.rawAssContent,
           styles: subtitleResult.styles,
           subtitles: subtitleResult.subtitles,
+          detectedLanguage: subtitleResult.detectedLanguage,
+          settings: {
+            ...foundProject.settings,
+            subtitlesLanguage: subtitleResult.detectedLanguage,
+          }
         });
 
         if (subtitleResult.rawAssContent) {

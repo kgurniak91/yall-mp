@@ -18,9 +18,10 @@ import fontScanner from 'font-scanner';
 import {Decoder} from 'ts-ebml';
 import fontkit from 'fontkit';
 import Levenshtein from 'fast-levenshtein';
-import {SubtitleSelection} from './src/app/model/project.types';
+import {SubtitleSelection, SupportedLanguage} from './src/app/model/project.types';
 import {dialoguesToAssSubtitleData, mergeIdenticalConsecutiveSubtitles} from './shared/utils/subtitle-parsing';
 import {PlaybackManager} from './playback-manager';
+import {francAll} from 'franc-all';
 
 interface AvailableFont {
   family: string;
@@ -56,7 +57,6 @@ let ffprobePath = '';
 let draggableHeaderZones: Rectangle[] = [];
 let isInitialResizeComplete = false;
 let hasRequestedInitialSeek = false;
-let activeVisibilityListener: ((status: any) => void) | null = null;
 let isSaving = false;
 let saveQueue: any[] = [];
 const initialBounds = {width: 1920, height: 1080};
@@ -685,13 +685,16 @@ async function handleSubtitleParse(projectId: string, filePath: string): Promise
       const finalTimeline = mergeIdenticalConsecutiveSubtitles(granularTimeline);
       const requiredFonts = getRequiredFontsFromAss(content);
       const fonts = await loadFontData(requiredFonts, undefined, filePath);
+      const fullText = getFullTextFromSubtitles(finalTimeline);
+      const detectedLanguage = detectLanguage(fullText);
 
       await fs.writeFile(path.join(FONT_CACHE_DIR, `${projectId}.json`), JSON.stringify(fonts));
 
       return {
         subtitles: finalTimeline,
         rawAssContent: content,
-        styles: compiled.styles
+        styles: compiled.styles,
+        detectedLanguage
       };
     } else {
       const response = new Response(content);
@@ -707,14 +710,20 @@ async function handleSubtitleParse(projectId: string, filePath: string): Promise
         endTime: cue.endTime,
         text: cue.text,
       }));
+      const processedSubtitles = preprocessSubtitles(subtitles);
+      const fullText = getFullTextFromSubtitles(processedSubtitles);
+      const detectedLanguage = detectLanguage(fullText);
+
       return {
-        subtitles: preprocessSubtitles(subtitles)
+        subtitles: preprocessSubtitles(subtitles),
+        detectedLanguage
       };
     }
   } catch (error) {
     console.error(`Error reading or parsing subtitle file at ${filePath}:`, error);
     return {
-      subtitles: []
+      subtitles: [],
+      detectedLanguage: 'other'
     };
   }
 }
@@ -1049,13 +1058,16 @@ async function handleExtractSubtitleTrack(projectId: string, mediaPath: string, 
             const finalTimeline = mergeIdenticalConsecutiveSubtitles(granularTimeline);
             const requiredFonts = getRequiredFontsFromAss(subtitleContent);
             const fonts = await loadFontData(requiredFonts, mediaPath, undefined);
+            const fullText = getFullTextFromSubtitles(finalTimeline);
+            const detectedLanguage = detectLanguage(fullText);
 
             await fs.writeFile(path.join(FONT_CACHE_DIR, `${projectId}.json`), JSON.stringify(fonts));
 
             resolve({
               subtitles: finalTimeline,
               rawAssContent: subtitleContent,
-              styles: compiled.styles
+              styles: compiled.styles,
+              detectedLanguage
             });
           } else {
             const response = new Response(subtitleContent);
@@ -1070,8 +1082,13 @@ async function handleExtractSubtitleTrack(projectId: string, mediaPath: string, 
               endTime: cue.endTime,
               text: cue.text
             }));
+            const processedSubtitles = preprocessSubtitles(subtitles);
+            const fullText = getFullTextFromSubtitles(processedSubtitles);
+            const detectedLanguage = detectLanguage(fullText);
+
             resolve({
-              subtitles: preprocessSubtitles(subtitles)
+              subtitles: preprocessSubtitles(subtitles),
+              detectedLanguage
             });
           }
         } catch (e) {
@@ -1443,4 +1460,27 @@ function areRectsSimilar(rectsA: Rectangle[], rectsB: Rectangle[], tolerance: nu
   }
 
   return true;
+}
+
+function getFullTextFromSubtitles(subtitles: SubtitleData[]): string {
+  return subtitles.map(sub => {
+    if (sub.type === 'srt') {
+      return sub.text;
+    } else { // ass
+      return sub.parts.map(p => p.text).join('\n');
+    }
+  }).join('\n');
+}
+
+function detectLanguage(text: string): SupportedLanguage {
+  const supportedSpecialCaseLanguages: SupportedLanguage[] = ['jpn', 'cmn', 'zho', 'tha'];
+  const langResults = francAll(text, {minLength: 3, only: supportedSpecialCaseLanguages});
+  const topLang = langResults.length > 0 ? langResults[0][0] : 'und';
+
+  if (topLang === 'jpn') return 'jpn';
+  if (topLang === 'cmn') return 'cmn';
+  if (topLang === 'zho') return 'zho';
+  if (topLang === 'tha') return 'tha';
+
+  return 'other';
 }
