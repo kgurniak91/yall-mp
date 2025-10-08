@@ -1,6 +1,21 @@
 @use 'sass:color';
 @use "@fontsource-variable/inter";
 
+// Base subtitle font (Latin, Cyrillic, Greek, Devanagari, Hindi, Vietnamese etc.)
+@use '@fontsource-variable/noto-sans';
+
+// CJK scripts
+@use '@fontsource-variable/noto-sans-jp';
+@use '@fontsource-variable/noto-sans-sc';
+@use '@fontsource-variable/noto-sans-tc';
+@use '@fontsource-variable/noto-sans-kr';
+
+// Other major complex scripts
+@use '@fontsource-variable/noto-sans-thai';
+@use '@fontsource-variable/noto-sans-arabic';
+@use '@fontsource-variable/noto-sans-hebrew';
+@use '@fontsource-variable/noto-sans-bengali';
+
 :root {
   --app-header-height: 2.5rem;
   --app-bg: #1e1e1e;
@@ -14,8 +29,9 @@
   --app-gap-bg: rgba(100, 100, 100, 0.1);
   --app-text: #e5e7eb;
   --app-text-secondary: #ceced1;
-  --app-font-family: "Inter Variable";
   --app-border-radius: 0.75rem;
+  --app-font-family: "Inter Variable";
+  --app-font-subtitles: "Noto Sans SC Variable", "Noto Sans TC Variable", "Noto Sans JP Variable", "Noto Sans KR Variable", "Noto Sans Thai Variable", "Noto Sans Arabic Variable", "Noto Sans Hebrew Variable", "Noto Sans Bengali Variable", "Noto Sans Variable";
 
   --p-progressbar-value-background: var(--p-sky-600) !important;
   --p-button-primary-background: var(--p-sky-600) !important;

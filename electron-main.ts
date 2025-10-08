@@ -1410,11 +1410,28 @@ async function loadFontData(
   // Final fallback
   const remainingForFallback = requiredFonts.filter(r => !foundFonts.has(r.family));
   if (remainingForFallback.length > 0) {
-    const arial = availableFonts.find(f => f.family === 'Arial' && !f.isBold && !f.isItalic);
-    if (arial) {
+    let notoFallbackUri: string | null = null;
+    try {
+      const notoPath = path.join(__dirname, 'dist', 'yall-mp', 'browser', 'media', 'noto-sans-latin-wght-normal.woff2');
+      const fontBuffer = await fs.readFile(notoPath);
+      notoFallbackUri = `data:font/woff2;base64,${fontBuffer.toString('base64')}`;
+      console.log('[Fonts] Successfully loaded bundled Noto Sans Variable as a fallback option.');
+    } catch (e) {
+      console.warn('[Fonts] Could not load bundled Noto Sans Variable for fallback, will proceed to system fonts.', e);
+    }
+
+    if (notoFallbackUri) {
       for (const req of remainingForFallback) {
-        console.warn(`[Fonts] Could not find a good match for "${req.family}". Defaulting to Arial.`);
-        foundFonts.set(req.family, arial.dataUri);
+        console.warn(`[Fonts] Could not find a good match for "${req.family}". Defaulting to bundled Noto Sans.`);
+        foundFonts.set(req.family, notoFallbackUri);
+      }
+    } else {
+      const arial = availableFonts.find(f => f.family === 'Arial' && !f.isBold && !f.isItalic);
+      if (arial) {
+        for (const req of remainingForFallback) {
+          console.warn(`[Fonts] Could not find a good match for "${req.family}". Defaulting to Arial.`);
+          foundFonts.set(req.family, arial.dataUri);
+        }
       }
     }
   }

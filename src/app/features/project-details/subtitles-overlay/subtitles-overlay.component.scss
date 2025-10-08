@@ -18,6 +18,7 @@
   height: 100%;
   pointer-events: all;
   cursor: default;
+  font-family: var(--app-font-subtitles), sans-serif;
 
   &.subtitles-hidden {
     & > .srt-container,
