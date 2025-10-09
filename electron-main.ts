@@ -188,6 +188,14 @@ function createWindow() {
     show: false,
   });
 
+  const isDev = !app.isPackaged;
+
+  mainWindow.on('focus', () => {
+    if (uiWindow && !uiWindow.isDestroyed()) {
+      uiWindow.focus();
+    }
+  });
+
   uiWindow = new BrowserWindow({
     width: initialBounds.width,
     height: initialBounds.height,
@@ -317,6 +325,10 @@ function createWindow() {
       uiWindow.hide();
       uiWindow.showInactive();
       uiWindow.webContents.send('window:maximized-state-changed', mainWindow.isMaximizable());
+
+      if (!isDev) {
+        uiWindow.focus();
+      }
     }
   });
 
@@ -342,7 +354,15 @@ function createWindow() {
   const indexPath = path.join(__dirname, './dist/yall-mp/browser/index.html');
   uiWindow.loadFile(indexPath);
 
-  uiWindow.webContents.openDevTools({mode: 'detach'});
+  if (isDev) {
+    uiWindow.webContents.once('devtools-opened', () => {
+      if (uiWindow && !uiWindow.isDestroyed()) {
+        uiWindow.focus();
+      }
+    });
+
+    uiWindow.webContents.openDevTools({mode: 'detach'});
+  }
 }
 
 app.whenReady().then(() => {
