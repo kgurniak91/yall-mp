@@ -116,7 +116,11 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   protected onToggleMaximizeClicked(): void {
-    window.electronAPI.windowToggleMaximize();
+    if (this.isFullScreen()) {
+      window.electronAPI.windowToggleFullScreen();
+    } else {
+      window.electronAPI.windowToggleMaximize();
+    }
   }
 
   protected onToggleFullScreenClicked(): void {

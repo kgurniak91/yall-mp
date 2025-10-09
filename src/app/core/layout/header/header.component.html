@@ -44,15 +44,18 @@
               severity="secondary"
               size="small"
               text/>
+
+    @let canBeRestored = (isMaximized() || isFullScreen());
     <p-button (click)="onToggleMaximizeClicked()"
               class="window-control"
-              icon="fa-solid {{isMaximized() ? 'fa-window-restore' : 'fa-window-maximize'}}"
-              pTooltip="{{isMaximized() ? 'Restore' : 'Maximize'}}"
+              icon="fa-solid {{canBeRestored ? 'fa-window-restore' : 'fa-window-maximize'}}"
+              pTooltip="{{canBeRestored ? 'Restore' : 'Maximize'}}"
               tooltipPosition="bottom"
               severity="secondary"
               showDelay="1000"
               size="small"
               text/>
+
     <p-button (click)="onToggleFullScreenClicked()"
               class="window-control"
               icon="fa-solid {{isFullScreen() ? 'fa-compress' : 'fa-expand'}}"
