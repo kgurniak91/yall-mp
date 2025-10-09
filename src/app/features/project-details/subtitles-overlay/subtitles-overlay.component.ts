@@ -195,7 +195,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
 
       const hoverSubscription = merge(mouseMove$, mouseLeave$).subscribe(rect => {
         if (rect) {
-          this.subtitlesHighlighterService.show(rect);
+          this.showHighlight(rect);
           this.isWordHovered.set(true);
         } else {
           this.subtitlesHighlighterService.hide();
@@ -275,6 +275,35 @@ export class SubtitlesOverlayComponent implements OnDestroy {
 
   protected onDoubleClick(event: MouseEvent): void {
     event.stopPropagation();
+  }
+
+  private showHighlight(rects: DOMRect | DOMRect[]): void {
+    const container = this.videoContainerElement();
+    if (!container) {
+      this.subtitlesHighlighterService.show(rects);
+      return;
+    }
+
+    const containerRect = container.getBoundingClientRect();
+    const rectArray = Array.isArray(rects) ? rects : [rects];
+
+    const trimmedRects = rectArray
+      .map(rect => this.intersectRect(rect, containerRect))
+      .filter((rect): rect is DOMRect => rect !== null);
+
+    this.subtitlesHighlighterService.show(trimmedRects);
+  }
+
+  private intersectRect(r1: DOMRect, r2: DOMRect): DOMRect | null {
+    const left = Math.max(r1.left, r2.left);
+    const top = Math.max(r1.top, r2.top);
+    const right = Math.min(r1.right, r2.right);
+    const bottom = Math.min(r1.bottom, r2.bottom);
+
+    if (right > left && bottom > top) {
+      return new DOMRect(left, top, right - left, bottom - top);
+    }
+    return null;
   }
 
   private initializeOrUpdateAssRenderer(width: number, height: number): void {
@@ -361,6 +390,12 @@ export class SubtitlesOverlayComponent implements OnDestroy {
     }
 
     const wordRange = document.createRange();
+    const nodeLength = wordInfo.node.textContent?.length ?? 0;
+    if (wordInfo.start > nodeLength || wordInfo.end > nodeLength) {
+      console.warn('Stale word info detected in getWordRectFromEvent. Aborting highlight.');
+      return null;
+    }
+
     wordRange.setStart(wordInfo.node, wordInfo.start);
     wordRange.setEnd(wordInfo.node, wordInfo.end);
 
@@ -437,7 +472,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
 
     const rect = this.getWordRectFromEvent(event);
     if (rect) {
-      this.subtitlesHighlighterService.show(rect);
+      this.showHighlight(rect);
     } else {
       this.subtitlesHighlighterService.hide();
     }
@@ -483,16 +518,21 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       const currentNode = this.interactiveTextNodes[i];
       const range = document.createRange();
 
+      const currentNodeLength = currentNode.textContent?.length || 0;
       const startOffset = (i === startIndex) ? start.offset : 0;
-      const endOffset = (i === endIndex) ? end.offset : (currentNode.textContent?.length || 0);
+      const endOffset = (i === endIndex) ? end.offset : currentNodeLength;
 
+      if (startOffset > currentNodeLength || endOffset > currentNodeLength) {
+        console.warn('Stale selection info detected in updateSelectionHighlight. Skipping a highlight rectangle.');
+        continue;
+      }
       if (startOffset < endOffset) {
         range.setStart(currentNode, startOffset);
         range.setEnd(currentNode, endOffset);
         Array.from(range.getClientRects()).forEach(rect => rects.push(rect));
       }
     }
-    this.subtitlesHighlighterService.show(rects);
+    this.showHighlight(rects);
   }
 
   private getSelectedText(): string {
