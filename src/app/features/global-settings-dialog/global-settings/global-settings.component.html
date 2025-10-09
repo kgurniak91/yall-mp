@@ -26,4 +26,36 @@
                 [step]="10"/>
     </div>
   </p-fieldset>
+
+  <p-fieldset legend="Subtitles" [toggleable]="false">
+    <div class="setting-item-column">
+      <label for="srt-font-size">Font Size (px)</label>
+      <p-inputNumber inputId="srt-font-size"
+                     [ngModel]="globalSettingsStateService.srtFontSizePx()"
+                     (ngModelChange)="onSrtFontSizeChange($event)"
+                     [showButtons]="true"
+                     [min]="MIN_SRT_FONT_SIZE"
+                     [max]="MAX_SRT_FONT_SIZE"
+                     [step]="1"/>
+      <small class="block mt-2">Adjusts the size of plain-text (SRT, VTT) subtitles.</small>
+    </div>
+
+    <div class="setting-item-column">
+      <label for="srt-bg-opacity">
+        Background Opacity ({{ (globalSettingsStateService.srtBackgroundOpacity() * 100) | number:'1.0-0' }}%)
+      </label>
+      <p-slider id="srt-bg-opacity"
+                [ngModel]="globalSettingsStateService.srtBackgroundOpacity()"
+                (ngModelChange)="onSrtBackgroundOpacityChange($event)"
+                [min]="0"
+                [max]="1"
+                [step]="0.01"/>
+    </div>
+
+    <div class="subtitle-preview-container" [style.background-color]="globalSettingsStateService.srtBackgroundColor()">
+      <div class="subtitle-preview" [style.font-size.px]="globalSettingsStateService.srtFontSizePx()">
+        Subtitle Preview Text
+      </div>
+    </div>
+  </p-fieldset>
 </div>

@@ -19,6 +19,7 @@ import {SubtitlesHighlighterService} from '../services/subtitles-highlighter/sub
 import {distinctUntilChanged, filter, fromEvent, map, merge, pairwise, throttleTime} from 'rxjs';
 import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
 import {TokenizationService} from '../services/tokenization/tokenization.service';
+import {GlobalSettingsStateService} from '../../../state/global-settings/global-settings-state.service';
 
 const FALLBACK_VIDEO_ASPECT_RATIO = 16 / 9;
 
@@ -57,6 +58,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
 
   protected readonly isWordHovered = signal(false);
   protected readonly videoStateService = inject(VideoStateService);
+  protected readonly globalSettingsStateService = inject(GlobalSettingsStateService);
   private readonly projectSettingsStateService = inject(ProjectSettingsStateService);
   private readonly subtitleContainer = viewChild.required<ElementRef<HTMLDivElement>>('subtitleContainer');
   private readonly subtitlesHighlighterService = inject(SubtitlesHighlighterService);

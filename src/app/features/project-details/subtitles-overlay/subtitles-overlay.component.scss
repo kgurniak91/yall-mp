@@ -31,12 +31,13 @@
 
 .srt-container {
   position: absolute;
-  bottom: 0.5rem;
+  bottom: 1rem;
   left: 50%;
   transform: translateX(-50%);
   pointer-events: all;
-  padding: 0.5rem;
-  background-color: rgba(0, 0, 0, 0.5);
+  padding: 0;
+  color: white;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
   border-radius: var(--app-border-radius);
   text-align: center;
   font-size: 1.5rem;

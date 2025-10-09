@@ -1,0 +1,19 @@
+.subtitle-preview-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: var(--app-border-radius);
+  padding: 1rem;
+  margin-top: 1rem;
+  overflow: hidden;
+}
+
+.subtitle-preview {
+  font-family: var(--app-font-subtitles), sans-serif;
+  color: white;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
+  height: 6.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}

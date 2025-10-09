@@ -38,12 +38,16 @@ export interface GlobalSettings {
   boundaryAdjustAmountMs: number;
   seekAmountSeconds: number;
   defaultProjectSettings: ProjectSettings;
+  srtFontSizePx: number;
+  srtBackgroundOpacity: number;
 }
 
 export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   boundaryAdjustAmountMs: 50,
   seekAmountSeconds: 2,
-  defaultProjectSettings: DEFAULT_PROJECT_SETTINGS
+  defaultProjectSettings: DEFAULT_PROJECT_SETTINGS,
+  srtFontSizePx: 28,
+  srtBackgroundOpacity: 0.3
 };
 
 export interface SettingsPreset {

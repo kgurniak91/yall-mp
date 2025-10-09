@@ -7,7 +7,9 @@
   @if (!rawAssContent()) {
     @if (currentClip(); as clip) {
       @if (clip.hasSubtitle) {
-        <div class="srt-container">
+        <div class="srt-container"
+             [style.background-color]="globalSettingsStateService.srtBackgroundColor()"
+             [style.font-size.px]="globalSettingsStateService.srtFontSizePx()">
           {{ clip.text }}
         </div>
       }
