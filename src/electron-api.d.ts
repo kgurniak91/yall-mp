@@ -26,8 +26,8 @@ export interface IElectronAPI {
   windowEscape: () => void;
   windowHandleDoubleClick: () => void;
   windowClose: () => void;
-  onWindowMaximizedStateChanged: (callback: (isMaximized: boolean) => void) => void;
-  onWindowFullScreenStateChanged: (callback: (isFullScreen: boolean) => void) => void;
+  onWindowMaximizedStateChanged: (callback: (isMaximized: boolean) => void) => () => void;
+  onWindowFullScreenStateChanged: (callback: (isFullScreen: boolean) => void) => () => void;
   windowUpdateDraggableZones: (shapes: { x: number, y: number, width: number, height: number }[]) => Promise<void>;
   // --- Files
   openFileDialog: (options: any) => Promise<string[]>;
@@ -62,8 +62,8 @@ export interface IElectronAPI {
   mpvHideSubtitles: () => Promise<void>;
   onMpvDestroyViewport: () => void;
   onMpvEvent: (callback: (status: any) => void) => (() => void);
-  onMainWindowMoved: (callback: () => void) => void;
-  onMpvManagerReady: (callback: () => void) => void;
+  onMainWindowMoved: (callback: () => void) => (() => void);
+  onMpvManagerReady: (callback: () => void) => (() => void);
   onMpvInitialSeekComplete: (callback: () => void) => (() => void);
   // --- Storage
   getAppData: () => Promise<AppData | null>;

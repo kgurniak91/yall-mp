@@ -28,6 +28,8 @@ export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
   private isReadyEmitted = false;
   private resizeDebounceTimer: any;
   private isMpvReady = signal(false);
+  private cleanupMpvReadyListener: (() => void) | null = null;
+  private cleanupMainWindowMovedListener: (() => void) | null = null;
 
   constructor() {
     effect(() => {
@@ -38,7 +40,7 @@ export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
       }
     });
 
-    window.electronAPI.onMpvManagerReady(() => {
+    this.cleanupMpvReadyListener = window.electronAPI.onMpvManagerReady(() => {
       console.log('[VideoPlayer] Received mpv:managerReady, enabling resize handler.');
       this.isMpvReady.set(true);
       this.handleResize();
@@ -49,7 +51,7 @@ export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
     this.resizeObserver = new ResizeObserver(() => this.handleResize());
     this.resizeObserver.observe(this.mpvPlaceholderRef().nativeElement);
 
-    window.electronAPI.onMainWindowMoved(() => {
+    this.cleanupMainWindowMovedListener = window.electronAPI.onMainWindowMoved(() => {
       this.handleResize();
     });
   }
@@ -57,6 +59,12 @@ export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
   ngOnDestroy() {
     this.resizeObserver?.disconnect();
     clearTimeout(this.resizeDebounceTimer);
+    if (this.cleanupMpvReadyListener) {
+      this.cleanupMpvReadyListener();
+    }
+    if (this.cleanupMainWindowMovedListener) {
+      this.cleanupMainWindowMovedListener();
+    }
   }
 
   private handleResize(): void {

@@ -187,6 +187,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   private isUiReady = signal(false);
   private hasFiredStartupSequence = false;
   private cleanupInitialSeekListener: (() => void) | null = null;
+  private cleanupMpvReadyListener: (() => void) | null = null;
 
   constructor() {
     inject(KeyboardShortcutsService); // start listening
@@ -225,7 +226,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       }
     });
 
-    window.electronAPI.onMpvManagerReady(() => {
+    this.cleanupMpvReadyListener = window.electronAPI.onMpvManagerReady(() => {
       console.log('[ProjectDetails] Received mpv:managerReady signal!');
       this.isMpvReady.set(true);
     });
@@ -324,6 +325,9 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.cleanupMpvReadyListener) {
+      this.cleanupMpvReadyListener();
+    }
     if (this.cleanupInitialSeekListener) {
       this.cleanupInitialSeekListener();
     }

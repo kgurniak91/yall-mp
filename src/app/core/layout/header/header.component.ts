@@ -48,10 +48,12 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly dialogService = inject(DialogService);
   private resizeObserver: ResizeObserver | undefined;
   private resizeDebounceTimer: any;
+  private cleanupMaximizedListener: (() => void) | null = null;
+  private cleanupFullScreenListener: (() => void) | null = null;
 
   ngOnInit() {
-    window.electronAPI.onWindowMaximizedStateChanged((isMaximized: boolean) => this.isMaximized.set(isMaximized));
-    window.electronAPI.onWindowFullScreenStateChanged((isFullScreen: boolean) => this.isFullScreen.set(isFullScreen));
+    this.cleanupMaximizedListener = window.electronAPI.onWindowMaximizedStateChanged((isMaximized: boolean) => this.isMaximized.set(isMaximized));
+    this.cleanupFullScreenListener = window.electronAPI.onWindowFullScreenStateChanged((isFullScreen: boolean) => this.isFullScreen.set(isFullScreen));
 
     this.router.events.pipe(
       filter((event): event is NavigationEnd => event instanceof NavigationEnd)
@@ -75,6 +77,12 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
   ngOnDestroy() {
     this.resizeObserver?.disconnect();
     clearTimeout(this.resizeDebounceTimer);
+    if (this.cleanupMaximizedListener) {
+      this.cleanupMaximizedListener();
+    }
+    if (this.cleanupFullScreenListener) {
+      this.cleanupFullScreenListener();
+    }
   }
 
   private deleteProject(): void {

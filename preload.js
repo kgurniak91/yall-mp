@@ -8,8 +8,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   windowEscape: () => ipcRenderer.send('window:escape'),
   windowHandleDoubleClick: () => ipcRenderer.send('window:handle-double-click'),
   windowClose: () => ipcRenderer.send('window:close'),
-  onWindowMaximizedStateChanged: (callback) => ipcRenderer.on('window:maximized-state-changed', (_event, value) => callback(value)),
-  onWindowFullScreenStateChanged: (callback) => ipcRenderer.on('window:fullscreen-state-changed', (_event, value) => callback(value)),
+  onWindowMaximizedStateChanged: (callback) => {
+    const subscription = (_event, value) => callback(value);
+    ipcRenderer.on('window:maximized-state-changed', subscription);
+    return () => ipcRenderer.removeListener('window:maximized-state-changed', subscription);
+  },
+  onWindowFullScreenStateChanged: (callback) => {
+    const subscription = (_event, value) => callback(value);
+    ipcRenderer.on('window:fullscreen-state-changed', subscription);
+    return () => ipcRenderer.removeListener('window:fullscreen-state-changed', subscription);
+  },
   windowUpdateDraggableZones: (shapes) => ipcRenderer.send('window:update-draggable-zones', shapes),
   // --- Files
   openFileDialog: (options) => ipcRenderer.invoke('dialog:openFile', options),
@@ -43,8 +51,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('mpv:event', subscription);
     return () => ipcRenderer.removeListener('mpv:event', subscription); // return cleanup function
   },
-  onMainWindowMoved: (callback) => ipcRenderer.on('mpv:mainWindowMovedOrResized', callback),
-  onMpvManagerReady: (callback) => ipcRenderer.on('mpv:managerReady', callback),
+  onMainWindowMoved: (callback) => {
+    const subscription = () => callback();
+    ipcRenderer.on('mpv:mainWindowMovedOrResized', subscription);
+    return () => ipcRenderer.removeListener('mpv:mainWindowMovedOrResized', subscription);
+  },
+  onMpvManagerReady: (callback) => {
+    const subscription = () => callback();
+    ipcRenderer.on('mpv:managerReady', subscription);
+    return () => ipcRenderer.removeListener('mpv:managerReady', subscription);
+  },
   onMpvInitialSeekComplete: (callback) => {
     const subscription = () => callback();
     ipcRenderer.on('mpv:initial-seek-complete', subscription);
