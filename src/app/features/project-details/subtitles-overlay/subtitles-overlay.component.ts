@@ -273,10 +273,6 @@ export class SubtitlesOverlayComponent implements OnDestroy {
     this.mutationObserver?.disconnect();
   }
 
-  protected onDoubleClick(event: MouseEvent): void {
-    event.stopPropagation();
-  }
-
   private showHighlight(rects: DOMRect | DOMRect[]): void {
     const container = this.videoContainerElement();
     if (!container) {
