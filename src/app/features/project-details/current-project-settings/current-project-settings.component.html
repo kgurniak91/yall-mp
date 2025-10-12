@@ -13,6 +13,27 @@
     </p-fieldset>
   </div>
 
+  <p-fieldset legend="Default Subtitles Lookup Action" [toggleable]="false">
+    <div class="setting-item-column">
+      <div class="flex align-items-center gap-2">
+        <p-select [options]="lookupServiceOptions()"
+                  [ngModel]="settings().defaultSubtitleLookupServiceId"
+                  (ngModelChange)="onSettingChange('defaultSubtitleLookupServiceId', $event)"
+                  styleClass="w-full"
+                  optionLabel="name"
+                  optionValue="id"></p-select>
+        <p-button icon="fa-solid fa-rotate-left"
+                  (click)="onSettingChange('defaultSubtitleLookupServiceId', null)"
+                  [disabled]="settings().defaultSubtitleLookupServiceId === null"
+                  pTooltip="Reset to global default"
+                  styleClass="p-button-secondary"/>
+      </div>
+      <small class="block">
+        Overrides the default action for a single left-click on a word.
+      </small>
+    </div>
+  </p-fieldset>
+
   <p-fieldset legend="Subtitles language" [toggleable]="false">
     <div class="setting-item-column">
       <div class="flex align-items-center gap-2">

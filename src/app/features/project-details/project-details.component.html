@@ -5,7 +5,10 @@
                            [rawAssContent]="scopedAssContent()"
                            [videoWidth]="project()?.videoWidth"
                            [videoHeight]="project()?.videoHeight"
-                           [videoContainerElement]="videoController.videoContainerElement()"/>
+                           [videoContainerElement]="videoController.videoContainerElement()"
+                           [isContextMenuOpen]="isContextMenuOpen()"
+                           (contextMenuRequested)="onContextMenu($event)"
+                           (defaultActionRequested)="onDefaultAction($event)"/>
   </div>
 
   <div class="toolbar">
@@ -160,3 +163,8 @@
 </div>
 
 <app-subtitles-highlighter/>
+
+<p-contextMenu #subtitlesContextMenu
+               [model]="subtitlesMenuItems()"
+               styleClass="subtitles-context-menu"
+               (onHide)="onContextMenuHide()"></p-contextMenu>

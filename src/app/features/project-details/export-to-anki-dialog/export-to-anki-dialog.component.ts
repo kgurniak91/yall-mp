@@ -1,4 +1,4 @@
-import {Component, computed, inject, OnInit, signal} from '@angular/core';
+import {Component, computed, inject, OnDestroy, OnInit, signal} from '@angular/core';
 import {AnkiCardTemplate, AnkiExportRequest, ExportToAnkiDialogData} from '../../../model/anki.types';
 import {AnkiStateService} from '../../../state/anki/anki-state.service';
 import {DynamicDialogConfig, DynamicDialogRef} from 'primeng/dynamicdialog';
@@ -8,6 +8,23 @@ import {FormsModule} from '@angular/forms';
 import {Button} from 'primeng/button';
 import {AssSubtitleData, SubtitleData, SubtitlePart} from '../../../../../shared/types/subtitle.type';
 import {Checkbox} from 'primeng/checkbox';
+import {Textarea} from 'primeng/textarea';
+import {ClipNotes} from '../../../model/project.types';
+import {cloneDeep, isEqual} from 'lodash-es';
+import {AppStateService} from '../../../state/app/app-state.service';
+import {Popover} from 'primeng/popover';
+
+const SAVE_DEBOUNCE_TIME_MS = 500;
+
+interface NoteViewItem {
+  text: string;
+  originalIndex: number;
+}
+
+interface SelectionGroupView {
+  selection: string;
+  notes: NoteViewItem[];
+}
 
 @Component({
   selector: 'app-export-to-anki-dialog',
@@ -15,24 +32,21 @@ import {Checkbox} from 'primeng/checkbox';
     Select,
     FormsModule,
     Button,
-    Checkbox
+    Checkbox,
+    Textarea,
+    Popover
   ],
   templateUrl: './export-to-anki-dialog.component.html',
   styleUrl: './export-to-anki-dialog.component.scss'
 })
-export class ExportToAnkiDialogComponent implements OnInit {
-  private readonly ankiService = inject(AnkiStateService);
-  private readonly ref = inject(DynamicDialogRef);
-  private readonly config = inject(DynamicDialogConfig);
-  private readonly toastService = inject(ToastService);
+export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
   protected readonly data: ExportToAnkiDialogData;
   protected readonly validTemplates = computed(() =>
     this.ankiService.ankiCardTemplates().filter(t => t.isValid)
   );
-  protected selectedTemplate = signal<AnkiCardTemplate | null>(null);
-  protected isExporting = signal(false);
-  protected assSubtitleData: AssSubtitleData | null = null;
-  protected selectedSubtitleParts = signal<SubtitlePart[]>([]);
+  protected readonly selectedTemplate = signal<AnkiCardTemplate | null>(null);
+  protected readonly isExporting = signal(false);
+  protected readonly selectedSubtitleParts = signal<SubtitlePart[]>([]);
   protected readonly finalTextPreview = computed(() => {
     if (this.data.subtitleData.type === 'srt') {
       return this.data.subtitleData.text;
@@ -40,6 +54,25 @@ export class ExportToAnkiDialogComponent implements OnInit {
       return this.selectedSubtitleParts().map(p => p.text).join('\n');
     }
   });
+  protected readonly notesView = signal<SelectionGroupView[]>([]);
+  protected readonly finalAnkiNotes = computed(() => {
+    let formattedString = '';
+    for (const group of this.notesView()) {
+      formattedString += `* "${group.selection}"\n`;
+      for (const note of group.notes) {
+        formattedString += `  - ${note.text.trim()}\n`;
+      }
+    }
+    return formattedString.trim();
+  });
+  protected assSubtitleData: AssSubtitleData | null = null;
+  private readonly ankiService = inject(AnkiStateService);
+  private readonly ref = inject(DynamicDialogRef);
+  private readonly config = inject(DynamicDialogConfig);
+  private readonly toastService = inject(ToastService);
+  private readonly appStateService = inject(AppStateService);
+  private initialNotes: ClipNotes | undefined;
+  private debounceTimeout: any;
 
   constructor() {
     this.data = this.config.data as ExportToAnkiDialogData;
@@ -51,9 +84,43 @@ export class ExportToAnkiDialogComponent implements OnInit {
       // Pre-select all parts by default for convenience
       this.selectedSubtitleParts.set([...this.assSubtitleData.parts]);
     }
+
+    const clipNotes = this.data.project.notes?.[this.data.subtitleData.id];
+    this.initialNotes = cloneDeep(clipNotes); // Store initial state for comparison when saving
+    this.buildNotesView(clipNotes);
   }
 
-  onCancel(): void {
+  ngOnDestroy() {
+    this.clearDebounceTimeout();
+    this.saveNotesIfChanged();
+  }
+
+  onNoteChange(noteItem: NoteViewItem, event: Event): void {
+    noteItem.text = (event.target as HTMLTextAreaElement).value;
+
+    this.clearDebounceTimeout();
+    this.debounceTimeout = setTimeout(() => {
+      this.saveNotesIfChanged();
+    }, SAVE_DEBOUNCE_TIME_MS);
+  }
+
+  onDeleteNote(selection: string, noteIndex: number): void {
+    this.notesView.update(currentView => {
+      return currentView.map(group => {
+        if (group.selection === selection) {
+          return {
+            ...group,
+            notes: group.notes.filter(note => note.originalIndex !== noteIndex)
+          };
+        }
+        return group;
+      }).filter(group => group.notes.length > 0); // Remove the entire group if it's now empty
+    });
+    this.saveNotesIfChanged();
+    this.toastService.success('Note removed');
+  }
+
+  onClose(): void {
     this.ref.close();
   }
 
@@ -62,6 +129,9 @@ export class ExportToAnkiDialogComponent implements OnInit {
     if (!template || !template.ankiDeck || !template.ankiNoteType) {
       return;
     }
+
+    this.clearDebounceTimeout();
+    this.saveNotesIfChanged();
 
     if (!this.finalTextPreview().trim()) {
       this.toastService.warn('Please select at least one subtitle part to export.');
@@ -89,7 +159,8 @@ export class ExportToAnkiDialogComponent implements OnInit {
       template: template,
       subtitleData: subtitleForExport,
       mediaPath: project.mediaPath,
-      exportTime
+      exportTime,
+      notes: this.finalAnkiNotes()
     };
 
     try {
@@ -105,6 +176,56 @@ export class ExportToAnkiDialogComponent implements OnInit {
       console.error(e);
     } finally {
       this.isExporting.set(false);
+    }
+  }
+
+  private buildNotesView(clipNotes: ClipNotes | undefined): void {
+    if (!clipNotes) {
+      this.notesView.set([]);
+      return;
+    }
+
+    const view: SelectionGroupView[] = Object.entries(clipNotes).map(([selection, noteList]) => ({
+      selection,
+      notes: noteList.map((text, index) => ({text, originalIndex: index}))
+    }));
+
+    this.notesView.set(view);
+  }
+
+  private saveNotesIfChanged(): void {
+    const project = this.data.project;
+    const clipId = this.data.subtitleData.id;
+
+    const finalNotes: ClipNotes = {};
+    for (const group of this.notesView()) {
+      if (group.notes.length > 0) {
+        // re-index the notes to get a clean, contiguous array
+        finalNotes[group.selection] = group.notes
+          .sort((a, b) => a.originalIndex - b.originalIndex)
+          .map(note => note.text);
+      }
+    }
+
+    if (!isEqual(this.initialNotes, finalNotes)) {
+      const newProjectNotes = cloneDeep(project.notes ?? {});
+
+      if (Object.keys(finalNotes).length > 0) {
+        newProjectNotes[clipId] = finalNotes;
+      } else {
+        delete newProjectNotes[clipId];
+      }
+
+      this.appStateService.updateProject(project.id, {notes: newProjectNotes});
+
+      // Update the baseline to the newly saved state for future comparisons
+      this.initialNotes = cloneDeep(finalNotes);
+    }
+  }
+
+  private clearDebounceTimeout(): void {
+    if (this.debounceTimeout) {
+      clearTimeout(this.debounceTimeout);
     }
   }
 }

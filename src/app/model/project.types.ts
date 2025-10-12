@@ -10,6 +10,8 @@ export type SubtitleSelection =
   | { type: 'external'; filePath: string }
   | { type: 'embedded'; trackIndex: number; };
 
+export type ClipNotes = Record<string, string[]>;
+
 export interface Project {
   id: string;
   mediaFileName: string;
@@ -29,6 +31,7 @@ export interface Project {
   videoWidth?: number;
   videoHeight?: number;
   styles?: any;
+  notes?: Record<string, ClipNotes>;
 }
 
 export interface AppData {

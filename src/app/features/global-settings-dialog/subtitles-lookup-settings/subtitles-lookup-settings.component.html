@@ -1,0 +1,118 @@
+<div class="settings-container">
+  <p-fieldset legend="Default Browser" [toggleable]="false">
+    <div class="setting-item-column gap-4">
+      <div class="flex items-start">
+        <p-radioButton name="browserChoice"
+                       [value]="SubtitleLookupBrowserType.BuiltIn"
+                       inputId="browser-builtin"
+                       [ngModel]="globalSettingsStateService.subtitleLookupBrowserType()"
+                       (ngModelChange)="onBrowserSettingChange($event)"/>
+        <label for="browser-builtin" class="ml-2 cursor-pointer">
+          <span class="font-bold block">Use built-in browser (Recommended)</span>
+          <span class="text-sm">Opens lookups in a simple, integrated window inside the app for capturing notes.</span>
+        </label>
+      </div>
+      <div class="flex items-start">
+        <p-radioButton name="browserChoice"
+                       [value]="SubtitleLookupBrowserType.System"
+                       inputId="browser-system"
+                       [ngModel]="globalSettingsStateService.subtitleLookupBrowserType()"
+                       (ngModelChange)="onBrowserSettingChange($event)"/>
+        <label for="browser-system" class="ml-2 cursor-pointer">
+          <span class="font-bold block">Use system's default browser</span>
+          <span class="text-sm">Opens lookups in your default web browser (e.g., Chrome, Firefox). Note-taking is disabled.</span>
+        </label>
+      </div>
+    </div>
+  </p-fieldset>
+
+  <p-fieldset legend="Lookup Services" [toggleable]="false">
+    <p-message severity="secondary" styleClass="h-full mb-4">
+      <ng-template #icon>
+        <i class="fa-solid fa-circle-info"></i>
+      </ng-template>
+      <p class="m-0">
+        Some websites (like Google) use anti-bot measures that can cause delays or CAPTCHAs in the <b>Built-in Browser</b>.
+        <br>
+        For these websites, using the <b>System Browser</b> is recommended for a smoother experience.
+        <br>
+        Note that using the <b>System Browser</b> disables the ability to automatically add notes for Anki export.
+      </p>
+    </p-message>
+
+    <div class="flex justify-content-end mb-3">
+      <p-button label="Add New Service" icon="fa-solid fa-plus" (onClick)="onAddNewService()"/>
+    </div>
+
+    <p-table [value]="globalSettingsStateService.subtitleLookupServices()"
+             [tableStyle]="{'table-layout': 'fixed', 'width': '100%'}"
+             responsiveLayout="scroll">
+      <ng-template pTemplate="header">
+        <tr>
+          <th style="width: 25%">Name</th>
+          <th>URL Template</th>
+          <th style="width: 10rem">Browser</th>
+          <th style="width: 5rem" class="text-center">Default</th>
+          <th style="width: 4rem" class="text-center"></th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-service>
+        <tr>
+          <td>{{ service.name }}</td>
+          <td class="url-cell">{{ service.urlTemplate }}</td>
+          <td>{{ getDisplayBrowserType(service) }}</td>
+          <td class="text-center">
+            @if (service.isDefault) {
+              <i class="fa-solid fa-check text-green-500"></i>
+            }
+          </td>
+          <td class="text-center">
+            <p-button icon="fa-solid fa-ellipsis-v"
+                      severity="secondary"
+                      (onClick)="$event.stopPropagation(); menu.toggle($event)"/>
+            <p-menu #menu [model]="actionMenuItems()"
+                    [popup]="true"
+                    appendTo="body"
+                    (onShow)="onActionsMenuShow(service)"/>
+          </td>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="emptymessage">
+        <td colspan="5">
+          <p class="text-center">
+            No lookup services configured. Click "Add New Service" to start.
+          </p>
+        </td>
+      </ng-template>
+    </p-table>
+  </p-fieldset>
+</div>
+
+<!-- Add/Edit Dialog -->
+<p-dialog [header]="dialogHeader()" [(visible)]="isDialogVisible" [modal]="true" (onHide)="hideDialog()">
+  @if (editingService(); as service) {
+    <div class="flex flex-column gap-4 p-4" style="min-width: 30rem;">
+      <div class="flex flex-column gap-2">
+        <label for="service-name">Name</label>
+        <input pInputText id="service-name" [(ngModel)]="service.name" placeholder="e.g., Google Images"/>
+      </div>
+      <div class="flex flex-column gap-2">
+        <label for="service-url">URL Template</label>
+        <input pInputText id="service-url" [(ngModel)]="service.urlTemplate"
+               placeholder="e.g., https://images.google.com/search?q=%%SS"/>
+        <small>Use <b>%%SS</b> as a placeholder for the selected subtitle text.</small>
+      </div>
+      <div class="flex flex-column gap-2">
+        <label for="service-browser">Browser</label>
+        <p-select id="service-browser"
+                  appendTo="body"
+                  [options]="browserTypeOptions()"
+                  [(ngModel)]="service.browserType"/>
+      </div>
+    </div>
+  }
+  <ng-template pTemplate="footer">
+    <p-button label="Cancel" severity="secondary" (onClick)="hideDialog()"/>
+    <p-button label="Save" (onClick)="saveService()"/>
+  </ng-template>
+</p-dialog>

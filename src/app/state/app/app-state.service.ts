@@ -39,6 +39,14 @@ export class AppStateService {
     if (data) {
       const mergedData = merge({}, defaults, data);
 
+      if (data.globalSettings?.subtitleLookupServices) {
+        mergedData.globalSettings.subtitleLookupServices = data.globalSettings.subtitleLookupServices;
+      }
+
+      if (data.ankiSettings?.ankiCardTemplates) {
+        mergedData.ankiSettings.ankiCardTemplates = data.ankiSettings.ankiCardTemplates;
+      }
+
       if (mergedData.projects?.length) {
         mergedData.projects = mergedData.projects.map(p => {
           const completeSettings = merge({}, DEFAULT_PROJECT_SETTINGS, p.settings);

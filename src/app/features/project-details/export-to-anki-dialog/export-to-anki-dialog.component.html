@@ -33,11 +33,76 @@
     </p-select>
   </div>
 
+  <div class="flex flex-column gap-2">
+    <div class="flex align-items-center gap-2 mb-1">
+      <label>Notes</label>
+      <p-button
+        icon="fa-solid fa-circle-question"
+        [text]="true"
+        rounded="true"
+        severity="secondary"
+        pTooltip="How to add notes"
+        (click)="notesHelpPopover.toggle($event)">
+      </p-button>
+      <p-popover #notesHelpPopover [style]="{width: '350px'}">
+        <div class="flex flex-column gap-3 p-2">
+          <h4 class="m-0">How to Add Notes</h4>
+          <ul class="m-0 pl-3">
+            <li>
+              <b>Click a word</b> (or <b>drag to select a phrase</b>) in the subtitles to open a lookup service (website).
+            </li>
+            <li class="mt-2">
+              Ensure the lookup service (website) is set to use the <b>built-in browser</b>.
+            </li>
+            <li class="mt-2">
+              Inside the browser, select any text and add it as a note using one of these methods:
+              <ul class="mt-2 pl-3">
+                <li><b>Right-Click</b> &rarr; <b>Add to Notes</b></li>
+                <li>Pressing <b>Ctrl+Shift+S</b></li>
+              </ul>
+            </li>
+          </ul>
+          <small>
+            <i>
+              Note: The new note will be saved under the original word/phrase that was selected from the subtitles.
+            </i>
+          </small>
+        </div>
+      </p-popover>
+    </div>
+
+    <div class="notes-container flex flex-column gap-3">
+      @for (selectionGroup of notesView(); track selectionGroup.selection) {
+        <div class="selection-group">
+          <b class="selection-header">"{{ selectionGroup.selection }}"</b>
+          <div class="notes-list flex flex-column gap-2 pl-2 pt-2">
+            @for (note of selectionGroup.notes; track note.originalIndex) {
+              <div class="note-item flex align-items-start gap-2">
+                <textarea pInputTextarea
+                          [value]="note.text"
+                          (input)="onNoteChange(note, $event)"
+                          [autoResize]="true"
+                          class="flex-1"
+                          rows="1"></textarea>
+                <p-button icon="fa-solid fa-trash"
+                          severity="danger"
+                          [text]="true"
+                          (onClick)="onDeleteNote(selectionGroup.selection, note.originalIndex)"></p-button>
+              </div>
+            }
+          </div>
+        </div>
+      } @empty {
+        <span class="text-gray-500">No notes for this clip.</span>
+      }
+    </div>
+  </div>
+
   <div class="flex align-items-center justify-content-end gap-2">
-    <p-button label="Cancel"
+    <p-button label="Close"
               icon="fa-solid fa-close"
               severity="secondary"
-              (click)="onCancel()"></p-button>
+              (click)="onClose()"></p-button>
 
     <p-button label="Export"
               icon="fa-solid fa-upload"

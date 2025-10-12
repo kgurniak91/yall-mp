@@ -1,4 +1,4 @@
-import {app, BrowserWindow, dialog, ipcMain, Rectangle, screen} from 'electron';
+import {app, BrowserWindow, dialog, ipcMain, Menu, Rectangle, screen, shell, WebContentsView} from 'electron';
 import path from 'path';
 import os from 'os';
 import {promises as fs} from 'fs';
@@ -41,12 +41,18 @@ interface RequiredFont {
 const APP_DATA_KEY = 'yall-mp-app-data';
 const APP_DATA_PATH = path.join(app.getPath('userData'), `${APP_DATA_KEY}.json`);
 const FONT_CACHE_DIR = path.join(app.getPath('userData'), 'font-cache');
+const USER_AGENT_OPTIONS = {
+  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+};
 
 let playbackManager: PlaybackManager | null = null;
 let mpvManager: MpvManager | null = null;
 let mainWindow: BrowserWindow | null = null;
 let uiWindow: BrowserWindow | null = null;
 let videoWindow: BrowserWindow | null = null;
+let subtitlesLookupWindow: BrowserWindow | null = null;
+let subtitlesLookupView: WebContentsView | null = null;
+let currentSubtitlesLookupContext: { clipSubtitleId: string; originalSelection: string; } | null = null;
 let preMaximizeBounds: Electron.Rectangle | null = null;
 let isFullScreen = false;
 let isFixingMaximize = false;
@@ -194,6 +200,10 @@ function createWindow() {
     if (uiWindow && !uiWindow.isDestroyed()) {
       uiWindow.focus();
     }
+
+    if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed() && subtitlesLookupWindow.isVisible()) {
+      subtitlesLookupWindow.hide();
+    }
   });
 
   uiWindow = new BrowserWindow({
@@ -250,6 +260,12 @@ function createWindow() {
     }
     // Otherwise, a user resized the UI window. Force the main window to match it.
     mainWindow.setBounds(uiWindow.getBounds());
+  });
+
+  uiWindow.on('focus', () => {
+    if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed() && subtitlesLookupWindow.isVisible()) {
+      subtitlesLookupWindow.hide();
+    }
   });
 
   // Dragging maximized window should unmaximize it automatically:
@@ -455,6 +471,159 @@ app.whenReady().then(() => {
     updateUiWindowShape();
   });
 
+  ipcMain.handle('app:openInSystemBrowser', async (_, url: string) => {
+    // Security: Validate the URL protocol before opening
+    if (url.startsWith('http:') || url.startsWith('https:')) {
+      await shell.openExternal(url);
+    } else {
+      console.warn(`Blocked attempt to open non-http(s) URL: ${url}`);
+    }
+  });
+
+  ipcMain.handle('lookup:open-window', async (_, data: {
+    url: string,
+    clipSubtitleId: string,
+    originalSelection: string
+  }) => {
+    const {url, clipSubtitleId, originalSelection} = data;
+    currentSubtitlesLookupContext = {clipSubtitleId, originalSelection};
+
+    const TITLE_BAR_HEIGHT = 40; // 2.5rem
+    const FOOTER_HEIGHT = 40; // 2.5rem
+    const LOOKUP_PARTITION = 'in-memory:lookup_session';
+
+    // Create the window and view ONCE, then detach/reattach the view on subsequent loads:
+    if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
+      subtitlesLookupWindow.show();
+      subtitlesLookupWindow.focus();
+
+      // Detach the view to hide old content and reveal the host window
+      if (subtitlesLookupView && subtitlesLookupWindow.contentView.children.includes(subtitlesLookupView)) {
+        subtitlesLookupWindow.contentView.removeChildView(subtitlesLookupView);
+      }
+
+      // Now that the view is detached, the spinner in the host window will be visible
+      subtitlesLookupWindow.webContents.send('view:loading-state-change', true);
+
+      if (subtitlesLookupView) {
+        // Load the new URL into the existing, but detached, view.
+        await subtitlesLookupView.webContents.loadURL(url, USER_AGENT_OPTIONS).catch(err => {
+          if (err.code !== 'ERR_ABORTED') {
+            console.error('Subsequent lookup URL load failed:', err);
+          }
+        });
+      }
+    } else {
+      subtitlesLookupWindow = new BrowserWindow({
+        width: 1280,
+        height: 720,
+        parent: mainWindow!,
+        frame: false,
+        show: false,
+        title: 'Subtitles Lookup',
+        backgroundColor: '#ffffff',
+        webPreferences: {
+          preload: path.join(__dirname, 'subtitles-lookup-host-preload.js'),
+        }
+      });
+
+      await subtitlesLookupWindow.loadFile(path.join(__dirname, './dist/yall-mp/browser/subtitles-lookup-host.html'));
+      subtitlesLookupWindow.show();
+      subtitlesLookupWindow.focus();
+
+      subtitlesLookupWindow.on('hide', () => {
+        if (uiWindow && !uiWindow.isDestroyed()) {
+          uiWindow.focus();
+        }
+      });
+
+      subtitlesLookupWindow.on('close', (event) => {
+        event.preventDefault();
+        subtitlesLookupWindow?.hide();
+      });
+
+      const view = new WebContentsView({
+        webPreferences: {
+          preload: path.join(__dirname, 'subtitles-lookup-preload.js'),
+          devTools: !app.isPackaged,
+          partition: LOOKUP_PARTITION
+        }
+      });
+      subtitlesLookupView = view;
+
+      const updateViewBounds = () => {
+        if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
+          const [width, height] = subtitlesLookupWindow.getSize();
+          view.setBounds({x: 0, y: TITLE_BAR_HEIGHT, width: width, height: height - TITLE_BAR_HEIGHT - FOOTER_HEIGHT});
+        }
+      };
+      updateViewBounds();
+      subtitlesLookupWindow.on('resize', updateViewBounds);
+
+      view.webContents.on('did-finish-load', () => {
+        if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
+          subtitlesLookupWindow.webContents.send('view:loading-state-change', false);
+          // Re-attach the view now that it has new content:
+          if (!subtitlesLookupWindow.contentView.children.includes(view)) {
+            subtitlesLookupWindow.contentView.addChildView(view);
+          }
+        }
+      });
+
+      view.webContents.on('did-fail-load', (_, errorCode, errorDescription) => {
+        console.error(`Lookup view failed to load: ${errorDescription} (Code: ${errorCode})`);
+        if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
+          subtitlesLookupWindow.webContents.send('view:loading-state-change', false);
+        }
+      });
+
+      // The spinner is showing by default on the host. Now load the initial URL:
+      await view.webContents.loadURL(url, USER_AGENT_OPTIONS).catch(err => {
+        if (err.code !== 'ERR_ABORTED') {
+          console.error('Initial lookup URL load failed:', err);
+        }
+      });
+    }
+  });
+
+  ipcMain.on('lookup:close-window', () => {
+    subtitlesLookupWindow?.hide();
+  });
+
+  ipcMain.on('lookup:show-context-menu', (_, selectedText) => {
+    const template = [
+      {
+        label: 'Add to Notes',
+        click: () => {
+          if (uiWindow && !uiWindow.isDestroyed() && currentSubtitlesLookupContext && selectedText) {
+            uiWindow.webContents.send('project:add-note', {
+              clipSubtitleId: currentSubtitlesLookupContext.clipSubtitleId,
+              text: selectedText,
+              selection: currentSubtitlesLookupContext.originalSelection
+            });
+          } else {
+            console.error('[Main Process] Could not send note: uiWindow or context is missing.');
+          }
+        }
+      }
+    ];
+    const menu = Menu.buildFromTemplate(template);
+    const parentWindow = subtitlesLookupWindow ?? undefined;
+    menu.popup({window: parentWindow});
+  });
+
+  ipcMain.on('lookup:add-note', (_, {text}) => {
+    if (uiWindow && !uiWindow.isDestroyed() && currentSubtitlesLookupContext) {
+      uiWindow.webContents.send('project:add-note', {
+        clipSubtitleId: currentSubtitlesLookupContext.clipSubtitleId,
+        text: text,
+        selection: currentSubtitlesLookupContext.originalSelection
+      });
+    } else {
+      console.error('[Main Process] Could not forward note: uiWindow or context is missing.');
+    }
+  });
+
   ipcMain.handle('mpv:createViewport', async (
     _,
     mediaPath: string,
@@ -625,6 +794,12 @@ app.whenReady().then(() => {
       videoWindow = null;
       console.log('[Main Process] Deferred videoWindow cleanup complete.');
     }, 0);
+
+    if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
+      subtitlesLookupWindow.destroy();
+    }
+    subtitlesLookupWindow = null;
+    subtitlesLookupView = null;
   });
 
   ipcMain.handle('fonts:get-fonts', async (_, projectId: string) => {
@@ -1400,7 +1575,7 @@ async function loadFontData(
     for (const available of availableFonts) {
       const familyDistance = Levenshtein.get(req.family, available.family);
 
-      // Give a large penalty if the font is a known bad fuzzy match (e.g. Arial for Kozuka)
+      // Give a large penalty if the font is a known bad fuzzy match (e.g., Arial for Kozuka)
       const isUnrelated = familyDistance > (req.family.length / 2);
       const unrelatedPenalty = isUnrelated ? 100 : 0;
 

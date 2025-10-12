@@ -13,12 +13,11 @@ import {ConfirmationService, MenuItem} from 'primeng/api';
 import {ActivatedRoute, NavigationEnd, Router} from '@angular/router';
 import {AppStateService} from '../../../state/app/app-state.service';
 import {filter} from 'rxjs';
-import {DialogService} from 'primeng/dynamicdialog';
-import {GlobalSettingsDialogComponent} from '../../../features/global-settings-dialog/global-settings-dialog.component';
 import {Project} from '../../../model/project.types';
 import {Button} from 'primeng/button';
 import {Menu} from 'primeng/menu';
 import {Tooltip} from 'primeng/tooltip';
+import {DialogOrchestrationService} from '../../services/dialog-orchestration/dialog-orchestration.service';
 
 @Component({
   selector: 'app-header',
@@ -45,7 +44,7 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly appStateService = inject(AppStateService);
   private readonly confirmationService = inject(ConfirmationService);
-  private readonly dialogService = inject(DialogService);
+  private readonly dialogOrchestrationService = inject(DialogOrchestrationService);
   private resizeObserver: ResizeObserver | undefined;
   private resizeDebounceTimer: any;
   private cleanupMaximizedListener: (() => void) | null = null;
@@ -99,16 +98,6 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
         }
       });
     }
-  }
-
-  private openGlobalSettings(): void {
-    this.dialogService.open(GlobalSettingsDialogComponent, {
-      header: 'Global settings',
-      width: 'clamp(20rem, 95vw, 60rem)',
-      focusOnShow: false,
-      closable: true,
-      modal: true
-    });
   }
 
   protected onMinimizeClicked(): void {
@@ -177,7 +166,7 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
       {
         label: 'Global settings',
         icon: 'fa-solid fa-gear',
-        command: () => this.openGlobalSettings()
+        command: () => this.dialogOrchestrationService.openGlobalSettingsDialog()
       },
       {
         label: 'Help & Shortcuts',

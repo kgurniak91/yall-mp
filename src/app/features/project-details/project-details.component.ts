@@ -1,4 +1,4 @@
-import {Component, computed, effect, inject, OnDestroy, OnInit, signal, untracked} from '@angular/core';
+import {Component, computed, effect, inject, OnDestroy, OnInit, signal, untracked, viewChild} from '@angular/core';
 import {VideoControllerComponent} from './video-controller/video-controller.component';
 import {VideoStateService} from '../../state/video/video-state.service';
 import {TimelineEditorComponent} from './timeline-editor/timeline-editor.component';
@@ -12,7 +12,13 @@ import {Popover} from 'primeng/popover';
 import {ActivatedRoute, Router} from '@angular/router';
 import {AppStateService} from '../../state/app/app-state.service';
 import {ProjectSettingsStateService} from '../../state/project-settings/project-settings-state.service';
-import {BuiltInSettingsPresets, ProjectSettings, SettingsPreset} from '../../model/settings.types';
+import {
+  BuiltInSettingsPresets,
+  ProjectSettings,
+  SettingsPreset,
+  SubtitleLookupBrowserType,
+  SubtitleLookupService
+} from '../../model/settings.types';
 import {DialogService, DynamicDialogRef} from 'primeng/dynamicdialog';
 import {CommandHistoryStateService} from '../../state/command-history/command-history-state.service';
 import {EditSubtitlesDialogComponent} from './edit-subtitles-dialog/edit-subtitles-dialog.component';
@@ -34,6 +40,11 @@ import {FontInjectionService} from './services/font-injection/font-injection.ser
 import {AssSubtitlesUtils} from '../../shared/utils/ass-subtitles/ass-subtitles.utils';
 import {AssEditService} from './services/ass-edit/ass-edit.service';
 import {TokenizationService} from './services/tokenization/tokenization.service';
+import {ContextMenu} from 'primeng/contextmenu';
+import {GlobalSettingsStateService} from '../../state/global-settings/global-settings-state.service';
+import {MenuItem} from 'primeng/api';
+import {DialogOrchestrationService} from '../../core/services/dialog-orchestration/dialog-orchestration.service';
+import {cloneDeep} from 'lodash-es';
 
 @Component({
   selector: 'app-project-details',
@@ -48,7 +59,8 @@ import {TokenizationService} from './services/tokenization/tokenization.service'
     FormsModule,
     CurrentProjectSettingsComponent,
     SubtitlesOverlayComponent,
-    SubtitlesHighlighterComponent
+    SubtitlesHighlighterComponent,
+    ContextMenu
   ],
   templateUrl: './project-details.component.html',
   styleUrl: './project-details.component.scss',
@@ -175,6 +187,10 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     ) ?? project.rawAssContent;
   });
 
+  protected readonly subtitlesContextMenu = viewChild.required<ContextMenu>('subtitlesContextMenu');
+  protected readonly subtitlesMenuItems = signal<MenuItem[]>([]);
+  protected readonly isContextMenuOpen = signal(false);
+  private selectedSubtitleTextForMenu = '';
   private wasPlayingBeforeSettingsOpened = false;
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -182,16 +198,19 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   private readonly fontInjectionService = inject(FontInjectionService);
   private readonly dialogService = inject(DialogService);
   private readonly toastService = inject(ToastService);
+  private readonly globalSettingsStateService = inject(GlobalSettingsStateService);
+  private readonly dialogOrchestrationService = inject(DialogOrchestrationService);
+  private readonly subtitlesHighlighterService = inject(SubtitlesHighlighterService);
   private dialogRef: DynamicDialogRef | undefined;
   private isMpvReady = signal(false);
   private isUiReady = signal(false);
   private hasFiredStartupSequence = false;
   private cleanupInitialSeekListener: (() => void) | null = null;
   private cleanupMpvReadyListener: (() => void) | null = null;
+  private cleanupAddNoteListener: (() => void) | null = null;
 
   constructor() {
     inject(KeyboardShortcutsService); // start listening
-    inject(SubtitlesHighlighterService); // start listening
     inject(TokenizationService); // start listening
 
     effect(() => {
@@ -238,6 +257,10 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     this.cleanupInitialSeekListener = window.electronAPI.onMpvInitialSeekComplete(() => {
       console.log('[ProjectDetails] Received initial-seek-complete. Hiding spinner.');
       setTimeout(() => this.videoStateService.setIsBusy(false), 25);
+    });
+
+    this.cleanupAddNoteListener = window.electronAPI.onProjectAddNote((note) => {
+      this.addNoteToProject(note.clipSubtitleId, note.selection, note.text);
     });
 
     const projectId = this.route.snapshot.paramMap.get('id');
@@ -330,6 +353,9 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     }
     if (this.cleanupInitialSeekListener) {
       this.cleanupInitialSeekListener();
+    }
+    if (this.cleanupAddNoteListener) {
+      this.cleanupAddNoteListener();
     }
     this.fontInjectionService.clearFonts();
     window.electronAPI.mpvHideSubtitles();
@@ -424,7 +450,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
     this.dialogService.open(ExportToAnkiDialogComponent, {
       header: 'Export to Anki',
-      width: 'clamp(20rem, 95vw, 40rem)',
+      width: 'clamp(20rem, 95vw, 45rem)',
       focusOnShow: false,
       modal: true,
       closable: true,
@@ -503,6 +529,107 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     window.electronAPI.windowHandleDoubleClick();
   }
 
+  onContextMenu(payload: { event: MouseEvent, text: string }): void {
+    if (this.isContextMenuOpen()) {
+      return;
+    }
+
+    this.subtitlesHighlighterService.hide();
+    this.isContextMenuOpen.set(true);
+    this.selectedSubtitleTextForMenu = payload.text;
+
+    const menuItems: MenuItem[] = [
+      {
+        label: `Selected text: "${payload.text}"`,
+        disabled: true,
+        styleClass: 'context-menu-selected-text'
+      },
+      {
+        separator: true
+      }
+    ];
+
+    this.globalSettingsStateService.subtitleLookupServices().forEach(service => {
+      menuItems.push({
+        label: service.name,
+        command: () => this.executeLookup(service, this.selectedSubtitleTextForMenu)
+      });
+    });
+
+    menuItems.push(
+      {separator: true},
+      {
+        label: 'Copy to Clipboard',
+        icon: 'fa-solid fa-copy',
+        command: () => navigator.clipboard.writeText(this.selectedSubtitleTextForMenu)
+      },
+      {
+        label: 'Configure...',
+        icon: 'fa-solid fa-cog',
+        command: () => this.dialogOrchestrationService.openGlobalSettingsDialog(3)
+      }
+    );
+
+    this.subtitlesMenuItems.set(menuItems);
+    this.subtitlesContextMenu().show(payload.event);
+  }
+
+  onContextMenuHide(): void {
+    this.isContextMenuOpen.set(false);
+  }
+
+  onDefaultAction(text: string): void {
+    const projectSettings = this.projectSettingsStateService.settings();
+    const allServices = this.globalSettingsStateService.subtitleLookupServices();
+
+    let serviceToUse;
+
+    // Check for a project-specific override
+    if (projectSettings.defaultSubtitleLookupServiceId) {
+      serviceToUse = allServices.find(s => s.id === projectSettings.defaultSubtitleLookupServiceId);
+    }
+
+    // If no override, find the global default
+    if (!serviceToUse) {
+      serviceToUse = allServices.find(s => s.isDefault);
+    }
+
+    // Fallback to the first service if no default is set for some reason
+    if (!serviceToUse && allServices.length > 0) {
+      serviceToUse = allServices[0];
+    }
+
+    if (serviceToUse) {
+      this.executeLookup(serviceToUse, text);
+    } else {
+      this.toastService.warn('No default lookup service is configured.');
+    }
+  }
+
+  private executeLookup(service: SubtitleLookupService, text: string): void {
+    if (!text) {
+      return;
+    }
+
+    const currentClip = this.clipsStateService.currentClip();
+    if (!currentClip?.hasSubtitle) {
+      return;
+    }
+
+    const finalUrl = service.urlTemplate.replace('%%SS', encodeURIComponent(text));
+    const browserType = service.browserType || this.globalSettingsStateService.subtitleLookupBrowserType();
+
+    if (browserType === SubtitleLookupBrowserType.System) {
+      window.electronAPI.openInSystemBrowser(finalUrl);
+    } else { // SubtitleLookupBrowserType.BuiltIn
+      window.electronAPI.openSubtitlesLookupWindow({
+        url: finalUrl,
+        clipSubtitleId: currentClip.sourceSubtitles[0].id,
+        originalSelection: text
+      });
+    }
+  }
+
   private toggleSettingsRequestListener = effect(() => {
     if (this.videoStateService.toggleSettingsRequest()) {
       this.toggleSettings();
@@ -573,10 +700,15 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   }
 
   private createSubtitleDataFromVideoClip(clip: VideoClip): SubtitleData {
+    const sourceId = clip.sourceSubtitles[0]?.id; // Get the ID of the first source subtitle
+    if (!sourceId) {
+      throw new Error('Cannot create subtitle data from a clip with no source subtitles.');
+    }
+
     if (this.isAssProject()) {
       return {
         type: 'ass',
-        id: clip.id,
+        id: sourceId,
         startTime: clip.startTime,
         endTime: clip.endTime,
         parts: clip.parts
@@ -584,11 +716,26 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     } else { // srt
       return {
         type: 'srt',
-        id: clip.id,
+        id: sourceId,
         startTime: clip.startTime,
         endTime: clip.endTime,
         text: clip.text || ''
       };
     }
+  }
+
+  private addNoteToProject(clipSubtitleId: string, selection: string, text: string): void {
+    const project = this.project();
+    if (!project) {
+      return;
+    }
+
+    const newProjectNotes = cloneDeep(project.notes ?? {});
+    newProjectNotes[clipSubtitleId] = newProjectNotes[clipSubtitleId] ?? {};
+    newProjectNotes[clipSubtitleId][selection] = newProjectNotes[clipSubtitleId][selection] ?? [];
+    newProjectNotes[clipSubtitleId][selection].push(text);
+
+    this.appStateService.updateProject(project.id, {notes: newProjectNotes});
+    this.toastService.success('Note added!');
   }
 }

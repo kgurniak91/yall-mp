@@ -19,6 +19,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('window:fullscreen-state-changed', subscription);
   },
   windowUpdateDraggableZones: (shapes) => ipcRenderer.send('window:update-draggable-zones', shapes),
+  openInSystemBrowser: (url) => ipcRenderer.invoke('app:openInSystemBrowser', url),
+  // --- Subtitles Lookup
+  openSubtitlesLookupWindow: (data) => ipcRenderer.invoke('lookup:open-window', data),
+  onProjectAddNote: (callback) => {
+    const subscription = (_event, value) => callback(value);
+    ipcRenderer.on('project:add-note', subscription);
+    return () => ipcRenderer.removeListener('project:add-note', subscription);
+  },
+  closeLookupWindow: () => ipcRenderer.send('lookup:close-window'),
+  onViewLoadingStateChange: (callback) => {
+    const subscription = (_event, isLoading) => callback(isLoading);
+    ipcRenderer.on('view:loading-state-change', subscription);
+    return () => ipcRenderer.removeListener('view:loading-state-change', subscription);
+  },
   // --- Files
   openFileDialog: (options) => ipcRenderer.invoke('dialog:openFile', options),
   parseSubtitleFile: (projectId, filePath) => ipcRenderer.invoke('subtitle:parse', projectId, filePath),

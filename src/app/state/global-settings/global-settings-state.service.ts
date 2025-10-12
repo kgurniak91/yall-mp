@@ -1,6 +1,6 @@
 import {computed, inject, Injectable} from '@angular/core';
 import {AppStateService} from '../app/app-state.service';
-import {ProjectSettings} from '../../model/settings.types';
+import {ProjectSettings, SubtitleLookupBrowserType, SubtitleLookupService} from '../../model/settings.types';
 
 @Injectable({
   providedIn: 'root'
@@ -11,6 +11,8 @@ export class GlobalSettingsStateService {
   public readonly boundaryAdjustAmountMs = computed(() => this.appStateService.globalSettings().boundaryAdjustAmountMs);
   public readonly seekAmountSeconds = computed(() => this.appStateService.globalSettings().seekAmountSeconds);
   public readonly defaultProjectSettings = computed(() => this.appStateService.globalSettings().defaultProjectSettings);
+  public readonly subtitleLookupServices = computed(() => this.appStateService.globalSettings().subtitleLookupServices);
+  public readonly subtitleLookupBrowserType = computed(() => this.appStateService.globalSettings().subtitleLookupBrowserType);
   public readonly srtFontSizePx = computed(() => this.appStateService.globalSettings().srtFontSizePx);
   public readonly srtBackgroundOpacity = computed(() => this.appStateService.globalSettings().srtBackgroundOpacity);
   public readonly srtBackgroundColor = computed(() => `rgba(0, 0, 0, ${this.srtBackgroundOpacity()})`);
@@ -39,4 +41,11 @@ export class GlobalSettingsStateService {
     this.appStateService.updateGlobalSettings({srtBackgroundOpacity: value});
   }
 
+  public setSubtitleLookupBrowserType(value: SubtitleLookupBrowserType): void {
+    this.appStateService.updateGlobalSettings({subtitleLookupBrowserType: value});
+  }
+
+  public updateSubtitleLookupServices(services: SubtitleLookupService[]): void {
+    this.appStateService.updateGlobalSettings({subtitleLookupServices: services});
+  }
 }

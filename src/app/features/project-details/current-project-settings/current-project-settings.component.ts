@@ -1,4 +1,4 @@
-import {Component, computed, input, output} from '@angular/core';
+import {Component, computed, inject, input, output} from '@angular/core';
 import {MediaTrack} from '../../../../../shared/types/media.type';
 import {ProjectSettings, SettingsPreset} from '../../../model/settings.types';
 import {Fieldset} from 'primeng/fieldset';
@@ -13,6 +13,7 @@ import {Tooltip} from "primeng/tooltip";
 import {RadioButton} from 'primeng/radiobutton';
 import {Divider} from 'primeng/divider';
 import {SupportedLanguage} from '../../../model/project.types';
+import {GlobalSettingsStateService} from '../../../state/global-settings/global-settings-state.service';
 
 @Component({
   selector: 'app-current-project-settings',
@@ -52,6 +53,18 @@ export class CurrentProjectSettingsComponent {
     {label: 'Thai', value: 'tha'},
     {label: 'Other (Space-Delimited)', value: 'other'}
   ];
+  protected readonly lookupServiceOptions = computed(() => {
+    const globalServices = this.globalSettingsStateService.subtitleLookupServices();
+    const options: { name: string, id: string | null }[] = [...globalServices];
+    const defaultService = globalServices.find(s => s.isDefault);
+
+    if (defaultService) {
+      options.unshift({name: `Default (${defaultService.name})`, id: null});
+    }
+
+    return options;
+  });
+  private readonly globalSettingsStateService = inject(GlobalSettingsStateService);
 
   protected onSettingsPresetChange(preset: SettingsPreset | null): void {
     this.selectedSettingsPresetChange.emit(preset);

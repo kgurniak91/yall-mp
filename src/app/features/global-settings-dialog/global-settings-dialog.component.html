@@ -1,8 +1,9 @@
-<p-tabs [value]="0" scrollable>
+<p-tabs [(value)]="selectedTabIndex" scrollable>
   <p-tablist>
     <p-tab [value]="0">General</p-tab>
     <p-tab [value]="1">Project Defaults</p-tab>
     <p-tab [value]="2">Anki integration</p-tab>
+    <p-tab [value]="3">Subtitles Lookup</p-tab>
   </p-tablist>
   <p-tabpanels>
     <p-tabpanel [value]="0">
@@ -26,6 +27,14 @@
         <code>&#123;"apiVersion": "AnkiConnect v.6"&#125;</code>
       </p>
       <app-anki-settings/>
+    </p-tabpanel>
+    <p-tabpanel [value]="3">
+      <p>
+        Configure online lookup services for words and phrases selected from subtitles.
+        <br>
+        Use the placeholder <b>%%SS</b> to represent the selected text in the URL.
+      </p>
+      <app-subtitles-lookup-settings/>
     </p-tabpanel>
   </p-tabpanels>
 </p-tabs>

@@ -26,9 +26,23 @@ export interface IElectronAPI {
   windowEscape: () => void;
   windowHandleDoubleClick: () => void;
   windowClose: () => void;
-  onWindowMaximizedStateChanged: (callback: (isMaximized: boolean) => void) => () => void;
-  onWindowFullScreenStateChanged: (callback: (isFullScreen: boolean) => void) => () => void;
+  onWindowMaximizedStateChanged: (callback: (isMaximized: boolean) => void) => (() => void);
+  onWindowFullScreenStateChanged: (callback: (isFullScreen: boolean) => void) => (() => void);
   windowUpdateDraggableZones: (shapes: { x: number, y: number, width: number, height: number }[]) => Promise<void>;
+  openInSystemBrowser: (url: string) => Promise<void>;
+  // --- Subtitles Lookup
+  openSubtitlesLookupWindow: (data: {
+    url: string;
+    clipSubtitleId: string;
+    originalSelection: string;
+  }) => Promise<void>;
+  onProjectAddNote: (callback: (note: {
+    clipSubtitleId: string;
+    text: string;
+    selection: string;
+  }) => void) => (() => void);
+  closeLookupWindow: () => void;
+  onViewLoadingStateChange: (callback: (isLoading: boolean) => void) => (() => void);
   // --- Files
   openFileDialog: (options: any) => Promise<string[]>;
   parseSubtitleFile: (projectId: string, filePath: string) => Promise<ParsedSubtitlesData>;

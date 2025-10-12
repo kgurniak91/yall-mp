@@ -7,6 +7,7 @@ import {
   inject,
   input,
   OnDestroy,
+  output,
   signal,
   untracked,
   viewChild
@@ -35,6 +36,9 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   public readonly videoContainerElement = input<HTMLDivElement | undefined>();
   public readonly videoWidth = input<number | undefined>();
   public readonly videoHeight = input<number | undefined>();
+  public readonly isContextMenuOpen = input.required<boolean>();
+  public readonly contextMenuRequested = output<{ event: MouseEvent, text: string }>();
+  public readonly defaultActionRequested = output<string>();
 
   protected readonly shouldBeHidden = computed(() => {
     if (!this.currentClip()?.hasSubtitle) {
@@ -182,6 +186,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       if (!container) return;
 
       const mouseMove$ = fromEvent<MouseEvent>(container, 'mousemove').pipe(
+        filter(() => !this.isContextMenuOpen()),
         filter(() => !this.projectSettingsStateService.useMpvSubtitles()),
         filter(() => !this.isSelecting()),
         throttleTime(50, undefined, {leading: true, trailing: true}),
@@ -206,10 +211,12 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       const handleMouseDown = (event: MouseEvent) => this.handleMouseDown(event);
       const handleMouseMove = (event: MouseEvent) => this.handleMouseMove(event);
       const handleMouseUp = (event: MouseEvent) => this.handleMouseUp(event);
+      const handleContextMenu = (event: MouseEvent) => this.handleContextMenu(event);
 
       container.addEventListener('mousedown', handleMouseDown);
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('contextmenu', handleContextMenu);
 
       this.mutationObserver?.disconnect();
       this.mutationObserver = new MutationObserver(() => {
@@ -226,6 +233,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
         container.removeEventListener('mousedown', handleMouseDown);
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener('contextmenu', handleContextMenu);
         this.mutationObserver?.disconnect();
       });
     });
@@ -419,6 +427,11 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       return;
     }
 
+    // Auto-pause the video if it's playing
+    if (!this.videoStateService.isPaused()) {
+      this.videoStateService.togglePlayPause();
+    }
+
     const wordInfo = this.getWordInfoFromEvent(event);
     const container = this.subtitleContainer().nativeElement;
 
@@ -450,28 +463,78 @@ export class SubtitlesOverlayComponent implements OnDestroy {
     if (!this.isSelecting()) {
       return;
     }
+
+    if (event.button !== 0) {
+      // If it was another mouse button, just cancel the selection
+      this.isSelecting.set(false);
+      this.selectionAnchor = null;
+      this.selectionFocus = null;
+      this.subtitlesHighlighterService.hide();
+      return;
+    }
+
     event.preventDefault();
 
     const selectedText = this.getSelectedText().trim();
-    const wasSimpleClick = this.selectionAnchor?.node === this.selectionFocus?.node &&
-      this.selectionAnchor?.start === this.selectionFocus?.start;
+    const wasSimpleClick = (this.selectionAnchor?.node === this.selectionFocus?.node) &&
+      (this.selectionAnchor?.start === this.selectionFocus?.start);
 
-    if (wasSimpleClick && selectedText) {
-      console.log(`User clicked word: "${selectedText}"`);
-    } else if (selectedText) {
-      console.log(`User selected phrase: "${selectedText}"`);
+    if (selectedText) {
+      if (wasSimpleClick) {
+        this.defaultActionRequested.emit(selectedText);
+      } else {
+        this.contextMenuRequested.emit({event, text: selectedText});
+      }
     }
 
     this.isSelecting.set(false);
     this.selectionAnchor = null;
     this.selectionFocus = null;
 
-    const rect = this.getWordRectFromEvent(event);
-    if (rect) {
-      this.showHighlight(rect);
+    if (wasSimpleClick) {
+      // If it was a simple click (default action), immediately restore the hover highlight because no menu is covering it:
+      const rect = this.getWordRectFromEvent(event);
+      if (rect) {
+        this.showHighlight(rect);
+      } else {
+        this.subtitlesHighlighterService.hide();
+      }
     } else {
+      // If it was a multi-word drag, a context menu has been opened - hide the highlight:
       this.subtitlesHighlighterService.hide();
     }
+  }
+
+  private handleContextMenu(event: MouseEvent): void {
+    if (this.projectSettingsStateService.useMpvSubtitles()) {
+      return;
+    }
+
+    let textForMenu = '';
+
+    if (this.isSelecting()) {
+      // If drag-selection is currently active, the selected text is the phrase the user has highlighted:
+      textForMenu = this.getSelectedText().trim();
+    } else {
+      // If not, it's a simple right-click - find the single word under the cursor:
+      const wordInfo = this.getWordInfoFromEvent(event);
+      if (wordInfo && wordInfo.node.textContent) {
+        textForMenu = wordInfo.node.textContent.substring(wordInfo.start, wordInfo.end);
+      }
+    }
+
+    if (!textForMenu?.trim()?.length) {
+      return;
+    }
+
+    event.preventDefault();
+
+    // Auto-pause the video if it's playing
+    if (!this.videoStateService.isPaused()) {
+      this.videoStateService.togglePlayPause();
+    }
+
+    this.contextMenuRequested.emit({event, text: textForMenu});
   }
 
   private getWordInfoFromEvent(event: MouseEvent): { node: Node, start: number, end: number } | null {

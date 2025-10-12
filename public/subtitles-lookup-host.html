@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Subtitles Lookup</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Roboto, Helvetica, Arial, sans-serif;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      background-color: #ffffff;
+    }
+
+    #title-bar {
+      height: 2.5rem;
+      background-color: #1e1e1eff;
+      border-bottom: 1px solid #4a4a4a;
+      display: flex;
+      align-items: center;
+      padding: 0 0.5rem;
+      flex-shrink: 0;
+      -webkit-user-select: none;
+    }
+
+    #title {
+      font-weight: 600;
+      font-size: 1.25rem;
+      color: #ceced1;
+    }
+
+    #title-bar-drag-region {
+      flex-grow: 1;
+      height: 100%;
+      -webkit-app-region: drag;
+    }
+
+    #close-btn {
+      -webkit-app-region: no-drag;
+      border: none;
+      background: transparent;
+      color: #dc2626;
+      font-size: 1.5rem;
+      line-height: 1;
+      padding: 0;
+      width: 1.5rem;
+      height: 1.5rem;
+      cursor: pointer;
+    }
+
+    #close-btn:hover {
+      background-color: #fef2f2;
+    }
+
+    #main-content {
+      flex-grow: 1;
+      position: relative;
+    }
+
+    #spinner-container {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #ffffff;
+      z-index: 10;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .lds-spinner,
+    .lds-spinner div,
+    .lds-spinner div:after {
+      box-sizing: border-box;
+    }
+
+    .lds-spinner {
+      display: inline-block;
+      position: relative;
+      width: 80px;
+      height: 80px;
+    }
+
+    .lds-spinner div {
+      transform-origin: 40px 40px;
+      animation: lds-spinner 1.2s linear infinite;
+    }
+
+    .lds-spinner div:after {
+      content: " ";
+      display: block;
+      position: absolute;
+      top: 3.2px;
+      left: 36.8px;
+      width: 6.4px;
+      height: 17.6px;
+      border-radius: 20%;
+      background: currentColor;
+    }
+
+    .lds-spinner div:nth-child(1) {
+      transform: rotate(0deg);
+      animation-delay: -1.1s;
+    }
+
+    .lds-spinner div:nth-child(2) {
+      transform: rotate(30deg);
+      animation-delay: -1s;
+    }
+
+    .lds-spinner div:nth-child(3) {
+      transform: rotate(60deg);
+      animation-delay: -0.9s;
+    }
+
+    .lds-spinner div:nth-child(4) {
+      transform: rotate(90deg);
+      animation-delay: -0.8s;
+    }
+
+    .lds-spinner div:nth-child(5) {
+      transform: rotate(120deg);
+      animation-delay: -0.7s;
+    }
+
+    .lds-spinner div:nth-child(6) {
+      transform: rotate(150deg);
+      animation-delay: -0.6s;
+    }
+
+    .lds-spinner div:nth-child(7) {
+      transform: rotate(180deg);
+      animation-delay: -0.5s;
+    }
+
+    .lds-spinner div:nth-child(8) {
+      transform: rotate(210deg);
+      animation-delay: -0.4s;
+    }
+
+    .lds-spinner div:nth-child(9) {
+      transform: rotate(240deg);
+      animation-delay: -0.3s;
+    }
+
+    .lds-spinner div:nth-child(10) {
+      transform: rotate(270deg);
+      animation-delay: -0.2s;
+    }
+
+    .lds-spinner div:nth-child(11) {
+      transform: rotate(300deg);
+      animation-delay: -0.1s;
+    }
+
+    .lds-spinner div:nth-child(12) {
+      transform: rotate(330deg);
+      animation-delay: 0s;
+    }
+
+    @keyframes lds-spinner {
+      0% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+      }
+    }
+
+    #footer {
+      height: 2.5rem;
+      background-color: #1e1e1eff;
+      border-top: 1px solid #4a4a4a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      padding: 0;
+      color: #ceced1;
+      flex-shrink: 0;
+      -webkit-user-select: none;
+    }
+
+    #help-text {
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+<div id="title-bar">
+  <span id="title">Subtitles Lookup</span>
+  <div id="title-bar-drag-region"></div>
+  <button id="close-btn" title="Close">&times;</button>
+</div>
+
+<div id="main-content">
+  <div id="spinner-container">
+    <div class="lds-spinner">
+      <div></div>
+      <div></div>
+      <div></div>
+      <div></div>
+      <div></div>
+      <div></div>
+      <div></div>
+      <div></div>
+      <div></div>
+      <div></div>
+      <div></div>
+      <div></div>
+    </div>
+  </div>
+</div>
+
+<div id="footer">
+  <p id="help-text">
+    <b>Tip:</b> Select text and click <b>right mouse button</b> or use <b>Ctrl+Shift+S</b> to add <b>clip notes</b> for <b>Anki export</b>.
+  </p>
+</div>
+
+<script>
+  document.getElementById('close-btn').addEventListener('click', () => {
+    window.electronAPI.closeLookupWindow();
+  });
+
+  // Listen for events from the main process to show/hide the spinner
+  window.electronAPI.onViewLoadingStateChange((isLoading) => {
+    const spinner = document.getElementById('spinner-container');
+    if (spinner) {
+      if (isLoading) {
+        spinner.classList.remove('hidden');
+      } else {
+        spinner.classList.add('hidden');
+      }
+    }
+  });
+</script>
+</body>
+</html>

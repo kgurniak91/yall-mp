@@ -128,3 +128,15 @@ p-toast {
     top: calc(var(--app-header-height) + 1.25rem) !important; // 1.25rem is the default PrimeNG offset
   }
 }
+
+p-contextmenu .p-contextmenu-root-list {
+  max-width: 25rem !important;
+  max-height: 50vh !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+.context-menu-selected-text {
+  font-family: var(--app-font-subtitles), sans-serif !important;
+  width: fit-content !important;
+}

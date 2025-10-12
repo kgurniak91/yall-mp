@@ -1,0 +1,10 @@
+:host ::ng-deep {
+  .p-datatable .p-datatable-tbody > tr > td.url-cell {
+    word-break: break-all;
+  }
+
+  .p-datatable .p-datatable-thead > tr > th.text-center,
+  .p-datatable .p-datatable-tbody > tr > td.text-center {
+    text-align: center;
+  }
+}
