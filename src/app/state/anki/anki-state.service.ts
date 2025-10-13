@@ -1,13 +1,12 @@
-import {computed, effect, inject, Injectable, signal} from '@angular/core';
-import {AnkiCardTemplate, AnkiConnectStatus, AnkiFieldMappingSource} from '../../model/anki.types';
+import {computed, inject, Injectable, signal} from '@angular/core';
+import {AnkiCardTemplate, AnkiConnectStatus} from '../../model/anki.types';
 import {AppStateService} from '../app/app-state.service';
-import {v4 as uuidv4} from 'uuid';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AnkiStateService {
-  readonly status = signal<AnkiConnectStatus>('disconnected');
+  readonly status = signal<AnkiConnectStatus>(AnkiConnectStatus.disconnected);
   readonly deckNames = signal<string[]>([]);
   readonly noteTypes = signal<string[]>([]);
   readonly noteTypeFields = signal<Record<string, string[]>>({});
@@ -21,24 +20,10 @@ export class AnkiStateService {
   constructor() {
     this.checkAnkiConnection();
     this.checkFFmpegAvailability();
-
-    effect(() => {
-      const templates = this.ankiCardTemplates();
-      const fieldsMap = this.noteTypeFields();
-
-      const validatedTemplates = templates.map(template => {
-        const fields = template.ankiNoteType ? fieldsMap[template.ankiNoteType] || [] : [];
-        return {...template, isValid: this.isTemplateValid(template, fields)};
-      });
-
-      if (JSON.stringify(templates) !== JSON.stringify(validatedTemplates)) {
-        this.appStateService.updateAnkiSettings({ankiCardTemplates: validatedTemplates});
-      }
-    });
   }
 
   async checkAnkiConnection(): Promise<void> {
-    this.status.set('checking');
+    this.status.set(AnkiConnectStatus.checking);
     this.deckNames.set([]);
     this.noteTypes.set([]);
 
@@ -46,16 +31,16 @@ export class AnkiStateService {
       const result = await window.electronAPI.checkAnkiConnection();
 
       if (result !== null && typeof result === 'number') {
-        this.status.set('connected');
+        this.status.set(AnkiConnectStatus.connected);
         await Promise.all([
           this.fetchDeckNames(),
           this.fetchNoteTypes()
         ]);
       } else {
-        this.status.set('disconnected');
+        this.status.set(AnkiConnectStatus.disconnected);
       }
     } catch (e) {
-      this.status.set('error');
+      this.status.set(AnkiConnectStatus.error);
     }
   }
 
@@ -65,7 +50,7 @@ export class AnkiStateService {
   }
 
   async fetchDeckNames(): Promise<void> {
-    if (this.status() !== 'connected') {
+    if (this.status() !== AnkiConnectStatus.connected) {
       return;
     }
 
@@ -88,7 +73,7 @@ export class AnkiStateService {
   }
 
   async fetchNoteTypes(): Promise<void> {
-    if (this.status() !== 'connected') {
+    if (this.status() !== AnkiConnectStatus.connected) {
       return;
     }
 
@@ -110,70 +95,44 @@ export class AnkiStateService {
     }
   }
 
-  async fetchNoteTypeFields(noteTypeName: string): Promise<void> {
-    if (this.status() !== 'connected' || !noteTypeName || this.noteTypeFields()[noteTypeName]) {
-      return;
+  async fetchNoteTypeFields(noteTypeName: string): Promise<string[]> {
+    if (this.status() !== AnkiConnectStatus.connected || !noteTypeName) {
+      return [];
+    }
+
+    // Return cached data if it already exists
+    if (this.noteTypeFields()[noteTypeName]) {
+      return this.noteTypeFields()[noteTypeName];
     }
 
     this.isLoadingNoteTypeFields.set(true);
     try {
       const names = await window.electronAPI.getAnkiNoteTypeFieldNames(noteTypeName);
-      console.log('Fetched note type fields:', names);
-      this.noteTypeFields.update(data => ({...data, [noteTypeName]: names || []}))
+      const finalNames = names || [];
+      this.noteTypeFields.update(data => ({...data, [noteTypeName]: finalNames}));
+      return finalNames;
+    } catch (e) {
+      console.error(`Failed to fetch fields for ${noteTypeName}`, e);
+      return [];
     } finally {
       this.isLoadingNoteTypeFields.set(false);
     }
   }
 
-  addAnkiCardTemplate(): string {
-    const newTemplate: AnkiCardTemplate = {
-      id: uuidv4(),
-      name: 'New Card Template',
-      ankiDeck: null,
-      ankiNoteType: null,
-      fieldMappings: [],
-      isValid: false
-    };
-
+  addAnkiCardTemplate(template: AnkiCardTemplate): void {
     const currentTemplates = this.ankiCardTemplates();
-    this.appStateService.updateAnkiSettings({ankiCardTemplates: [newTemplate, ...currentTemplates]});
-    return newTemplate.id;
+    this.appStateService.updateAnkiSettings({ankiCardTemplates: [...currentTemplates, template]});
   }
 
-  updateAnkiCardTemplate(id: string, updates: Partial<AnkiCardTemplate>): void {
+  updateAnkiCardTemplate(id: string, updates: AnkiCardTemplate): void {
     const currentTemplates = this.ankiCardTemplates();
-    const newTemplates = currentTemplates.map(t => t.id === id ? {...t, ...updates} : t);
+    const newTemplates = currentTemplates.map(t => t.id === id ? updates : t);
     this.appStateService.updateAnkiSettings({ankiCardTemplates: newTemplates});
   }
 
-  public updateCardTemplate(id: string, updates: Partial<AnkiCardTemplate>): void {
-    const currentTemplates = this.ankiCardTemplates();
-    const newTemplates = currentTemplates.map(t => {
-      if (t.id === id) {
-        const updatedTemplate = { ...t, ...updates };
-        if ('ankiNoteType' in updates && updates.ankiNoteType !== t.ankiNoteType) {
-          updatedTemplate.fieldMappings = [];
-        }
-        return updatedTemplate;
-      }
-      return t;
-    });
-    this.appStateService.updateAnkiSettings({ ankiCardTemplates: newTemplates });
-  }
-
-  public deleteCardTemplate(id: string): void {
+  deleteCardTemplate(id: string): void {
     const currentTemplates = this.ankiCardTemplates();
     const newTemplates = currentTemplates.filter(t => t.id !== id);
-    this.appStateService.updateAnkiSettings({ ankiCardTemplates: newTemplates });
-  }
-
-  private isTemplateValid(template: AnkiCardTemplate, fieldsForNoteType: string[]): boolean {
-    if (!template.name || !template.ankiDeck || !template.ankiNoteType) {
-      return false;
-    }
-
-    const requiredSources: AnkiFieldMappingSource[] = ['id', 'text', 'audio'];
-    const mappedSources = template.fieldMappings.map(m => m.source);
-    return requiredSources.every(required => mappedSources.includes(required));
+    this.appStateService.updateAnkiSettings({ankiCardTemplates: newTemplates});
   }
 }

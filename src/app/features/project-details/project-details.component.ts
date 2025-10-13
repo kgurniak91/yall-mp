@@ -30,7 +30,7 @@ import {DropdownModule} from 'primeng/dropdown';
 import {FormsModule} from '@angular/forms';
 import {AnkiStateService} from '../../state/anki/anki-state.service';
 import {ExportToAnkiDialogComponent} from './export-to-anki-dialog/export-to-anki-dialog.component';
-import {ExportToAnkiDialogData} from '../../model/anki.types';
+import {AnkiConnectStatus, ExportToAnkiDialogData} from '../../model/anki.types';
 import {CurrentProjectSettingsComponent} from './current-project-settings/current-project-settings.component';
 import {SubtitlesOverlayComponent} from './subtitles-overlay/subtitles-overlay.component';
 import {ParsedSubtitlesData} from '../../../electron-api';
@@ -45,6 +45,7 @@ import {GlobalSettingsStateService} from '../../state/global-settings/global-set
 import {MenuItem} from 'primeng/api';
 import {DialogOrchestrationService} from '../../core/services/dialog-orchestration/dialog-orchestration.service';
 import {cloneDeep} from 'lodash-es';
+import {GlobalSettingsTab} from '../global-settings-dialog/global-settings-dialog.types';
 
 @Component({
   selector: 'app-project-details',
@@ -417,13 +418,15 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
-  openAnkiExportDialog(): void {
+  async openAnkiExportDialog(): Promise<void> {
     if (!this.ankiStateService.isAnkiExportAvailable()) {
       this.toastService.error('Anki export is not available. FFmpeg could not be found.');
       return;
     }
 
-    if (this.ankiStateService.status() !== 'connected') {
+    await this.ankiStateService.checkAnkiConnection();
+
+    if (this.ankiStateService.status() !== AnkiConnectStatus.connected) {
       this.toastService.error('Failed to connect. Is Anki open?');
       return;
     }
@@ -435,12 +438,6 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     }
 
     const subtitleForExport: SubtitleData = this.createSubtitleDataFromVideoClip(currentClip);
-
-    const hasValidTemplates = this.ankiStateService.ankiCardTemplates().some(t => t.isValid);
-    if (!hasValidTemplates) {
-      this.toastService.warn('Please configure at least one valid Anki template in the global settings.');
-      return;
-    }
 
     const data: ExportToAnkiDialogData = {
       subtitleData: subtitleForExport,
@@ -566,7 +563,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       {
         label: 'Configure...',
         icon: 'fa-solid fa-cog',
-        command: () => this.dialogOrchestrationService.openGlobalSettingsDialog(3)
+        command: () => this.dialogOrchestrationService.openGlobalSettingsDialog(GlobalSettingsTab.SubtitlesLookup)
       }
     );
 
@@ -731,9 +728,21 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     }
 
     const newProjectNotes = cloneDeep(project.notes ?? {});
-    newProjectNotes[clipSubtitleId] = newProjectNotes[clipSubtitleId] ?? {};
-    newProjectNotes[clipSubtitleId][selection] = newProjectNotes[clipSubtitleId][selection] ?? [];
-    newProjectNotes[clipSubtitleId][selection].push(text);
+
+    // Ensure the note object for the specific clip exists
+    const clipNotes = newProjectNotes[clipSubtitleId] ?? {};
+    newProjectNotes[clipSubtitleId] = clipNotes;
+
+    // Ensure the lookupNotes object exists within that clip's notes
+    const lookupNotes = clipNotes.lookupNotes ?? {};
+    clipNotes.lookupNotes = lookupNotes;
+
+    // Ensure the array for the specific selection exists
+    const selectionArray = lookupNotes[selection] ?? [];
+    lookupNotes[selection] = selectionArray;
+
+    // Add the new note text to the array
+    selectionArray.push(text);
 
     this.appStateService.updateProject(project.id, {notes: newProjectNotes});
     this.toastService.success('Note added!');

@@ -1,4 +1,4 @@
-import {Component, inject, signal} from '@angular/core';
+import {Component, effect, inject, signal} from '@angular/core';
 import {GlobalSettingsStateService} from '../../state/global-settings/global-settings-state.service';
 import {ProjectSettings} from '../../model/settings.types';
 import {Tab, TabList, TabPanel, TabPanels, Tabs} from 'primeng/tabs';
@@ -10,7 +10,8 @@ import {GlobalSettingsComponent} from './global-settings/global-settings.compone
 import {AnkiSettingsComponent} from './anki-settings/anki-settings.component';
 import {SubtitlesLookupSettingsComponent} from './subtitles-lookup-settings/subtitles-lookup-settings.component';
 import {DynamicDialogConfig} from 'primeng/dynamicdialog';
-import {GlobalSettingsDialogConfig} from './global-settings-dialog.types';
+import {GlobalSettingsDialogConfig, GlobalSettingsTab} from './global-settings-dialog.types';
+import {AnkiStateService} from '../../state/anki/anki-state.service';
 
 @Component({
   selector: 'app-global-settings-dialog',
@@ -31,16 +32,29 @@ import {GlobalSettingsDialogConfig} from './global-settings-dialog.types';
 })
 export class GlobalSettingsDialogComponent {
   protected readonly globalSettingsStateService = inject(GlobalSettingsStateService);
-  protected readonly selectedTabIndex = signal(0);
+  protected readonly selectedTabIndex = signal(GlobalSettingsTab.General);
+  protected readonly GlobalSettingsTab = GlobalSettingsTab;
   private readonly config = inject(DynamicDialogConfig);
+  private readonly ankiStateService = inject(AnkiStateService);
   private readonly data: GlobalSettingsDialogConfig;
 
   constructor() {
     this.data = this.config.data as GlobalSettingsDialogConfig;
-    this.selectedTabIndex.set(this.data.activeTabIndex || 0);
+    this.selectedTabIndex.set(this.data.activeTabIndex || GlobalSettingsTab.General);
+
+    effect(() => {
+      if (this.selectedTabIndex() === GlobalSettingsTab.Anki) {
+        this.ankiStateService.checkAnkiConnection();
+      }
+    });
   }
 
   onDefaultSettingsChange(newDefaults: ProjectSettings) {
     this.globalSettingsStateService.setDefaultProjectSettings(newDefaults);
+  }
+
+  onExternalLinkClick(url: string, event: MouseEvent): void {
+    event.preventDefault();
+    window.electronAPI.openInSystemBrowser(url);
   }
 }

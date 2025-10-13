@@ -1,0 +1,65 @@
+<form [formGroup]="form" class="flex flex-column gap-4 p-fluid">
+  <div class="flex flex-column gap-2">
+    <label for="name" class="required">Template Name</label>
+    <input id="name" pInputText formControlName="name" placeholder="e.g., Listening Cards"/>
+  </div>
+
+  <div class="flex flex-column gap-2">
+    <label for="deck" class="required">Deck</label>
+    <p-select id="deck"
+              [options]="ankiStateService.deckNames()"
+              formControlName="ankiDeck"
+              placeholder="Select Deck"
+              appendTo="body"/>
+  </div>
+
+  <div class="flex flex-column gap-2">
+    <label for="noteType" class="required">Note Type</label>
+    <p-select id="noteType"
+              [options]="ankiStateService.noteTypes()"
+              formControlName="ankiNoteType"
+              placeholder="Select Note Type"
+              appendTo="body"/>
+  </div>
+
+  @if (form.get('ankiNoteType')?.value) {
+    <p-fieldset legend="Field Mappings" [toggleable]="false" formGroupName="fieldMappings">
+      <div class="flex flex-column">
+        @for (source of appAnkiFields; track source.key; let isLast = $last) {
+          <div class="flex flex-column sm:flex-row align-items-center sm:gap-4 py-3">
+            <div class="w-full sm:w-auto flex-grow-1">
+              <label class="font-bold" [for]="source.key" [class.required]="source.required">
+                {{ source.label }}
+              </label>
+              <small class="block text-gray-500">{{ source.description }}</small>
+            </div>
+            <div class="w-full sm:w-auto mt-2 sm:mt-0">
+              <p-select [inputId]="source.key"
+                        placeholder="Select Anki field..."
+                        [options]="getAvailableAnkiFields(source.key)"
+                        [showClear]="true"
+                        appendTo="body"
+                        [formControlName]="source.key"
+                        [style]="{'width': '12.5rem'}"/>
+            </div>
+          </div>
+          @if (!isLast) {
+            <p-divider></p-divider>
+          }
+        }
+      </div>
+      @if (form.get('fieldMappings')?.hasError('ankiMappingInvalid') && form.get('fieldMappings')?.touched) {
+        <p-message severity="error" icon="fa-regular fa-circle-xmark">
+          <p class="m-0">
+            The <b>ID</b> field and at least one other field (e.g., <b>Text</b>, <b>Audio</b>) must be mapped.
+          </p>
+        </p-message>
+      }
+    </p-fieldset>
+  }
+
+  <div class="flex justify-content-end gap-2 mt-4">
+    <p-button label="Cancel" severity="secondary" (onClick)="onCancel()"/>
+    <p-button label="Save" (onClick)="onSave()"/>
+  </div>
+</form>

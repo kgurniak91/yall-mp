@@ -14,6 +14,9 @@ import {RadioButton} from 'primeng/radiobutton';
 import {Divider} from 'primeng/divider';
 import {SupportedLanguage} from '../../../model/project.types';
 import {GlobalSettingsStateService} from '../../../state/global-settings/global-settings-state.service';
+import {Message} from 'primeng/message';
+import {DialogOrchestrationService} from '../../../core/services/dialog-orchestration/dialog-orchestration.service';
+import {GlobalSettingsTab} from '../../global-settings-dialog/global-settings-dialog.types';
 
 @Component({
   selector: 'app-current-project-settings',
@@ -26,7 +29,8 @@ import {GlobalSettingsStateService} from '../../../state/global-settings/global-
     Button,
     Tooltip,
     RadioButton,
-    Divider
+    Divider,
+    Message
   ],
   templateUrl: './current-project-settings.component.html',
   styleUrl: './current-project-settings.component.scss'
@@ -65,6 +69,12 @@ export class CurrentProjectSettingsComponent {
     return options;
   });
   private readonly globalSettingsStateService = inject(GlobalSettingsStateService);
+  private readonly dialogOrchestrationService = inject(DialogOrchestrationService);
+
+  protected openGlobalSettings(event: MouseEvent): void {
+    event.preventDefault();
+    this.dialogOrchestrationService.openGlobalSettingsDialog(GlobalSettingsTab.ProjectDefaults);
+  }
 
   protected onSettingsPresetChange(preset: SettingsPreset | null): void {
     this.selectedSettingsPresetChange.emit(preset);

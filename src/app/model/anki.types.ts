@@ -14,10 +14,14 @@ export interface AnkiCardTemplate {
   ankiDeck: string | null;
   ankiNoteType: string | null;
   fieldMappings: AnkiFieldMapping[];
-  isValid: boolean;
 }
 
-export type AnkiConnectStatus = 'connected' | 'disconnected' | 'checking' | 'error';
+export enum AnkiConnectStatus {
+  connected = 'connected',
+  disconnected = 'disconnected',
+  checking = 'checking',
+  error = 'error'
+}
 
 export interface AnkiSettings {
   ankiCardTemplates: AnkiCardTemplate[];

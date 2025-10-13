@@ -1,35 +1,35 @@
 <p-tabs [(value)]="selectedTabIndex" scrollable>
   <p-tablist>
-    <p-tab [value]="0">General</p-tab>
-    <p-tab [value]="1">Project Defaults</p-tab>
-    <p-tab [value]="2">Anki integration</p-tab>
-    <p-tab [value]="3">Subtitles Lookup</p-tab>
+    <p-tab [value]="GlobalSettingsTab.General">General</p-tab>
+    <p-tab [value]="GlobalSettingsTab.ProjectDefaults">Project Defaults</p-tab>
+    <p-tab [value]="GlobalSettingsTab.Anki">Anki integration</p-tab>
+    <p-tab [value]="GlobalSettingsTab.SubtitlesLookup">Subtitles Lookup</p-tab>
   </p-tablist>
   <p-tabpanels>
-    <p-tabpanel [value]="0">
-      <p>
+    <p-tabpanel [value]="GlobalSettingsTab.General">
+      <p class="mt-0">
         Global settings common for all projects.
       </p>
       <app-global-settings/>
     </p-tabpanel>
-    <p-tabpanel [value]="1">
-      <p>
+    <p-tabpanel [value]="GlobalSettingsTab.ProjectDefaults">
+      <p class="mt-0">
         Settings that will be applied by default to all new projects.
       </p>
       <app-common-project-settings [settings]="globalSettingsStateService.defaultProjectSettings()"
                                    (settingsChange)="onDefaultSettingsChange($event)"/>
     </p-tabpanel>
-    <p-tabpanel [value]="2">
-      <p>
-        <a href="https://apps.ankiweb.net/">Anki</a> is a smart spaced repetition flashcard program.
-        Make sure you have the <a href="https://ankiweb.net/shared/info/2055492159">AnkiConnect</a> addon installed.
-        Open the Anki program and go to <a href="http://localhost:8765/">http://localhost:8765/</a> - you should see something like this:
+    <p-tabpanel [value]="GlobalSettingsTab.Anki">
+      <p class="mt-0">
+        <a href="#" (click)="onExternalLinkClick('https://apps.ankiweb.net/', $event)">Anki</a> is a smart spaced repetition flashcard program.
+        Make sure you have the <a href="#" (click)="onExternalLinkClick('https://ankiweb.net/shared/info/2055492159', $event)">AnkiConnect</a> addon installed.
+        Open the Anki program and go to <a href="#" (click)="onExternalLinkClick('http://localhost:8765/', $event)">http://localhost:8765/</a> - you should see something like this:
         <code>&#123;"apiVersion": "AnkiConnect v.6"&#125;</code>
       </p>
       <app-anki-settings/>
     </p-tabpanel>
-    <p-tabpanel [value]="3">
-      <p>
+    <p-tabpanel [value]="GlobalSettingsTab.SubtitlesLookup">
+      <p class="mt-0">
         Configure online lookup services for words and phrases selected from subtitles.
         <br>
         Use the placeholder <b>%%SS</b> to represent the selected text in the URL.

@@ -3,16 +3,16 @@
     <div class="flex align-items-center gap-2">
       <label>
         @switch (ankiStateService.status()) {
-          @case ('connected') {
+          @case (AnkiConnectStatus.connected) {
             Connected
           }
-          @case ('disconnected') {
+          @case (AnkiConnectStatus.disconnected) {
             Failed to connect. Is Anki open?
           }
-          @case ('checking') {
+          @case (AnkiConnectStatus.checking) {
             Checking...
           }
-          @case ('error') {
+          @case (AnkiConnectStatus.error) {
             An unexpected error occurred.
           }
         }
@@ -20,51 +20,62 @@
       <p-button label="Refresh"
                 icon="fa-solid fa-rotate"
                 severity="primary"
-                [loading]="ankiStateService.status() === 'checking'"
+                [loading]="ankiStateService.status() === AnkiConnectStatus.checking"
                 (onClick)="ankiStateService.checkAnkiConnection()"/>
     </div>
   </p-fieldset>
 
   <p-fieldset legend="Card templates" [toggleable]="false">
-    @if (ankiStateService.status() === 'connected') {
-      <div class="mb-3">
+    @if (ankiStateService.status() === AnkiConnectStatus.connected) {
+      <div class="mb-3 flex justify-content-end">
         <p-button label="Add New Template"
                   severity="primary"
                   icon="fa-solid fa-plus"
                   (onClick)="onAddNewTemplate()"/>
       </div>
 
-      <p-accordion [multiple]="false"
-                   [value]="accordionActiveIndex()"
-                   (onOpen)="onTabOpen($event)"
-                   (onClose)="onTabClose()">
-        @for (template of ankiStateService.ankiCardTemplates(); track template.id) {
-          <p-accordion-panel [value]="$index">
-            <p-accordion-header>
-              <div class="flex align-items-center gap-2 pr-2">
-                <b>{{ template.name || 'New Card Template' }}</b>
-                <p-badge [value]="template.isValid ? 'Valid' : 'Incomplete'"
-                         [severity]="template.isValid ? 'success' : 'warn'">
-                </p-badge>
+      <p-table [value]="ankiStateService.ankiCardTemplates()" responsiveLayout="scroll">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Name</th>
+            <th>Anki Deck</th>
+            <th>Anki Note Type</th>
+            <th style="width: 8rem"></th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-template>
+          <tr>
+            <td>{{ template.name }}</td>
+            <td>{{ template.ankiDeck }}</td>
+            <td>{{ template.ankiNoteType }}</td>
+            <td>
+              <div class="flex gap-2 justify-content-end">
+                <p-button icon="fa-solid fa-pencil"
+                          severity="secondary"
+                          (onClick)="onEditTemplate(template)"
+                          pTooltip="Edit"
+                          tooltipPosition="bottom"/>
+                <p-button icon="fa-solid fa-trash"
+                          severity="danger"
+                          (onClick)="onDeleteTemplate(template.id)"
+                          pTooltip="Delete"
+                          tooltipPosition="bottom"/>
               </div>
-            </p-accordion-header>
-            <p-accordion-content>
-              <app-anki-card-template-form [template]="template"
-                                           [decks]="ankiStateService.deckNames()"
-                                           [noteTypes]="ankiStateService.noteTypes()"
-                                           [fields]="fieldsForSelectedNoteType()"
-                                           (update)="ankiStateService.updateAnkiCardTemplate(template.id, $event)"
-                                           (delete)="onDeleteTemplate(template.id)"/>
-            </p-accordion-content>
-          </p-accordion-panel>
-        } @empty {
-          <p class="text-center">
-            No card templates configured.
-            <br>
-            Click "Add New Template" to get started.
-          </p>
-        }
-      </p-accordion>
+            </td>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="4">
+              <p class="text-center py-4">
+                No card templates configured.
+                <br>
+                Click "Add New Template" to get started.
+              </p>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
     } @else {
       <p class="text-center">
         Connect to Anki in order to configure card templates.

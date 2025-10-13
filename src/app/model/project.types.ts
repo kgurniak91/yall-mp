@@ -10,7 +10,12 @@ export type SubtitleSelection =
   | { type: 'external'; filePath: string }
   | { type: 'embedded'; trackIndex: number; };
 
-export type ClipNotes = Record<string, string[]>;
+export type LookupNotes = Record<string, string[]>;
+
+export interface ProjectClipNotes {
+  lookupNotes?: LookupNotes;
+  manualNote?: string;
+}
 
 export interface Project {
   id: string;
@@ -31,7 +36,8 @@ export interface Project {
   videoWidth?: number;
   videoHeight?: number;
   styles?: any;
-  notes?: Record<string, ClipNotes>;
+  notes?: Record<string, ProjectClipNotes>;
+  selectedAnkiTemplateIds?: string[];
 }
 
 export interface AppData {

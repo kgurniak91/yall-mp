@@ -140,3 +140,8 @@ p-contextmenu .p-contextmenu-root-list {
   font-family: var(--app-font-subtitles), sans-serif !important;
   width: fit-content !important;
 }
+
+label.required::after {
+  content: ' *';
+  color: var(--p-red-500)
+}

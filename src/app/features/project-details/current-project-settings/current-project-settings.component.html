@@ -1,4 +1,12 @@
 <div class="settings-container">
+  <p-message severity="secondary" styleClass="w-full mb-4">
+    <span>
+      These settings apply only to the current project.
+      <br>
+      For more options, <a href="#" (click)="openGlobalSettings($event)">visit the global settings</a>.
+    </span>
+  </p-message>
+
   <div class="settings-preset-fieldset">
     <p-fieldset legend="Settings Preset" [toggleable]="false">
       <div class="setting-item">

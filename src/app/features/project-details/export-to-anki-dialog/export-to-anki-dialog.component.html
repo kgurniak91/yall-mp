@@ -23,36 +23,57 @@
     </div>
   }
 
-  <div class="flex flex-column gap-2">
-    <label for="template-select">Export using template:</label>
-    <p-select id="template-select"
-              [options]="validTemplates()"
-              optionLabel="name"
-              placeholder="Select a valid template"
-              [(ngModel)]="selectedTemplate">
-    </p-select>
+  <div class="flex flex-column gap-4">
+    <label for="template-select">Export using template(s):</label>
+    <div class="flex flex-column gap-2">
+      @for (template of ankiService.ankiCardTemplates(); track template.id) {
+        <div class="flex align-items-center">
+          <p-checkbox [value]="template"
+                      [inputId]="template.id"
+                      [(ngModel)]="selectedTemplates"></p-checkbox>
+          <label [for]="template.id" class="ml-2">{{ template.name }}</label>
+        </div>
+      } @empty {
+        <span class="text-gray-500">
+        No valid Anki templates found.
+      </span>
+      }
+    </div>
+    <div class="text-sm mt-2">
+      <a href="#" (click)="openGlobalSettings($event)">Add or edit templates in global settings</a>.
+    </div>
+  </div>
+
+  <div class="flex flex-column gap-4">
+    <label for="manual-note">Manual Note</label>
+    <textarea id="manual-note"
+              pInputTextarea
+              [(ngModel)]="manualNote"
+              [autoResize]="true"
+              rows="3"
+              placeholder="Add a personal note for this clip..."></textarea>
   </div>
 
   <div class="flex flex-column gap-2">
     <div class="flex align-items-center gap-2 mb-1">
-      <label>Notes</label>
-      <p-button
-        icon="fa-solid fa-circle-question"
-        [text]="true"
-        rounded="true"
-        severity="secondary"
-        pTooltip="How to add notes"
-        (click)="notesHelpPopover.toggle($event)">
+      <label>Lookup Notes</label>
+      <p-button icon="fa-solid fa-circle-question"
+                [text]="true"
+                size="small"
+                rounded="true"
+                severity="secondary"
+                pTooltip="How to Add"
+                (click)="notesHelpPopover.toggle($event)">
       </p-button>
       <p-popover #notesHelpPopover [style]="{width: '350px'}">
         <div class="flex flex-column gap-3 p-2">
-          <h4 class="m-0">How to Add Notes</h4>
+          <h4 class="m-0">How to Add Lookup Notes</h4>
           <ul class="m-0 pl-3">
             <li>
               <b>Click a word</b> (or <b>drag to select a phrase</b>) in the subtitles to open a lookup service (website).
             </li>
             <li class="mt-2">
-              Ensure the lookup service (website) is set to use the <b>built-in browser</b>.
+              Ensure the lookup service (website) is set to use the <b>built-in browser</b> in global settings.
             </li>
             <li class="mt-2">
               Inside the browser, select any text and add it as a note using one of these methods:
@@ -72,7 +93,7 @@
     </div>
 
     <div class="notes-container flex flex-column gap-3">
-      @for (selectionGroup of notesView(); track selectionGroup.selection) {
+      @for (selectionGroup of lookupNotesView(); track selectionGroup.selection) {
         <div class="selection-group">
           <b class="selection-header">"{{ selectionGroup.selection }}"</b>
           <div class="notes-list flex flex-column gap-2 pl-2 pt-2">
@@ -93,7 +114,7 @@
           </div>
         </div>
       } @empty {
-        <span class="text-gray-500">No notes for this clip.</span>
+        <span class="text-gray-500">No lookup notes for this clip.</span>
       }
     </div>
   </div>
@@ -106,7 +127,7 @@
 
     <p-button label="Export"
               icon="fa-solid fa-upload"
-              [disabled]="!selectedTemplate()"
+              [disabled]="selectedTemplates().length === 0"
               [loading]="isExporting()"
               (click)="onExport()">
     </p-button>

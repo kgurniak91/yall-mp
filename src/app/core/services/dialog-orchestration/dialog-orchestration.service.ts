@@ -1,7 +1,10 @@
 import {inject, Injectable} from '@angular/core';
 import {GlobalSettingsDialogComponent} from '../../../features/global-settings-dialog/global-settings-dialog.component';
 import {DialogService} from 'primeng/dynamicdialog';
-import {GlobalSettingsDialogConfig} from '../../../features/global-settings-dialog/global-settings-dialog.types';
+import {
+  GlobalSettingsDialogConfig,
+  GlobalSettingsTab
+} from '../../../features/global-settings-dialog/global-settings-dialog.types';
 
 @Injectable({
   providedIn: 'root'
@@ -9,7 +12,7 @@ import {GlobalSettingsDialogConfig} from '../../../features/global-settings-dial
 export class DialogOrchestrationService {
   private readonly dialogService = inject(DialogService);
 
-  openGlobalSettingsDialog(tabIndex: number = 0): void {
+  openGlobalSettingsDialog(tabIndex: GlobalSettingsTab = GlobalSettingsTab.General): void {
     const data: GlobalSettingsDialogConfig = {
       activeTabIndex: tabIndex
     };

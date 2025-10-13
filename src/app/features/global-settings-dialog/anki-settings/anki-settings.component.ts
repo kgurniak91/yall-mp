@@ -1,80 +1,63 @@
-import {Component, computed, effect, inject, signal} from '@angular/core';
+import {Component, inject} from '@angular/core';
 import {Button} from 'primeng/button';
 import {Fieldset} from 'primeng/fieldset';
 import {AnkiStateService} from '../../../state/anki/anki-state.service';
-import {Accordion, AccordionContent, AccordionHeader, AccordionPanel, AccordionTabOpenEvent} from 'primeng/accordion';
-import {FormsModule} from '@angular/forms';
-import {AnkiCardTemplateFormComponent} from './anki-card-template-form/anki-card-template-form.component';
-import {Badge} from 'primeng/badge';
 import {ToastService} from '../../../shared/services/toast/toast.service';
 import {ConfirmationService} from 'primeng/api';
+import {DialogService} from 'primeng/dynamicdialog';
+import {AnkiTemplateFormDialogComponent} from './anki-template-form-dialog/anki-template-form-dialog.component';
+import {AnkiCardTemplate, AnkiConnectStatus} from '../../../model/anki.types';
+import {TableModule} from 'primeng/table';
+import {Tooltip} from 'primeng/tooltip';
+import {v4 as uuidv4} from 'uuid';
 
 @Component({
   selector: 'app-anki-settings',
   imports: [
     Button,
     Fieldset,
-    Accordion,
-    AccordionPanel,
-    AccordionHeader,
-    AccordionContent,
-    FormsModule,
-    AnkiCardTemplateFormComponent,
-    Badge
+    TableModule,
+    Tooltip
   ],
   templateUrl: './anki-settings.component.html',
   styleUrl: './anki-settings.component.scss'
 })
 export class AnkiSettingsComponent {
-  protected selectedTemplateIndex = signal<number | undefined>(undefined);
-  protected accordionActiveIndex = computed(() => {
-    const selected = this.selectedTemplateIndex();
-    return selected === undefined ? -1 : selected;
-  });
+  protected readonly AnkiConnectStatus = AnkiConnectStatus;
   protected readonly ankiStateService = inject(AnkiStateService);
-  protected readonly fieldsForSelectedNoteType = computed(() => {
-    const index = this.selectedTemplateIndex();
-    if (index === undefined) return [];
-
-    const template = this.ankiStateService.ankiCardTemplates()[index];
-    if (!template?.ankiNoteType) return [];
-
-    return this.ankiStateService.noteTypeFields()[template.ankiNoteType] || [];
-  });
   private readonly confirmationService = inject(ConfirmationService);
   private readonly toastService = inject(ToastService);
+  private readonly dialogService = inject(DialogService);
 
-  constructor() {
-    effect(() => {
-      const index = this.selectedTemplateIndex();
-      if (index !== undefined) {
-        const template = this.ankiStateService.ankiCardTemplates()[index];
-        const noteType = template?.ankiNoteType;
-        if (noteType) {
-          this.ankiStateService.fetchNoteTypeFields(noteType);
-        }
+  protected onAddNewTemplate(): void {
+    const ref = this.dialogService.open(AnkiTemplateFormDialogComponent, {
+      header: 'Add New Anki Template',
+      width: 'clamp(20rem, 95vw, 40rem)',
+      modal: true
+    });
+
+    ref.onClose.subscribe((templateData: AnkiCardTemplate) => {
+      if (templateData) {
+        this.ankiStateService.addAnkiCardTemplate({...templateData, id: uuidv4()});
+        this.toastService.success('Template added successfully.');
       }
     });
   }
 
-  protected onTabOpen(event: AccordionTabOpenEvent): void {
-    this.selectedTemplateIndex.set(event.index);
-  }
+  protected onEditTemplate(template: AnkiCardTemplate): void {
+    const ref = this.dialogService.open(AnkiTemplateFormDialogComponent, {
+      header: `Edit "${template.name}"`,
+      width: 'clamp(20rem, 95vw, 40rem)',
+      modal: true,
+      data: {template}
+    });
 
-  protected onTabClose(): void {
-    this.selectedTemplateIndex.set(undefined);
-  }
-
-  protected onAddNewTemplate(): void {
-    const invalidTemplate = this.ankiStateService.ankiCardTemplates().find(t => !t.isValid);
-
-    if (invalidTemplate) {
-      this.toastService.warn('Make sure all templates are valid before adding a new one.');
-      return;
-    }
-
-    this.ankiStateService.addAnkiCardTemplate();
-    this.selectedTemplateIndex.set(0);
+    ref.onClose.subscribe((templateData: AnkiCardTemplate) => {
+      if (templateData) {
+        this.ankiStateService.updateAnkiCardTemplate(template.id, templateData);
+        this.toastService.success('Template updated successfully.');
+      }
+    });
   }
 
   protected onDeleteTemplate(id: string): void {
@@ -84,7 +67,7 @@ export class AnkiSettingsComponent {
       icon: 'fa-solid fa-circle-exclamation',
       accept: () => {
         this.ankiStateService.deleteCardTemplate(id);
-        this.selectedTemplateIndex.set(undefined);
+        this.toastService.success('Template deleted.');
       }
     });
   }
