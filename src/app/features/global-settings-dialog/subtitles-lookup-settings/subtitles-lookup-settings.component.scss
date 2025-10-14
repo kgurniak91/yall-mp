@@ -1,6 +1,6 @@
 :host ::ng-deep {
-  .p-datatable .p-datatable-tbody > tr > td.url-cell {
-    word-break: break-all;
+  .p-datatable .p-datatable-tbody > tr > td.word-break {
+    word-break: break-word;
   }
 
   .p-datatable .p-datatable-thead > tr > th.text-center,

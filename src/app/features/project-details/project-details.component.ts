@@ -535,6 +535,19 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     this.isContextMenuOpen.set(true);
     this.selectedSubtitleTextForMenu = payload.text;
 
+    const projectSettings = this.projectSettingsStateService.settings();
+    const allServices = this.globalSettingsStateService.subtitleLookupServices();
+
+    let effectiveDefaultServiceId: string | null = null;
+    if (projectSettings.defaultSubtitleLookupServiceId) {
+      effectiveDefaultServiceId = projectSettings.defaultSubtitleLookupServiceId;
+    } else {
+      const globalDefault = allServices.find(s => s.isDefault);
+      if (globalDefault) {
+        effectiveDefaultServiceId = globalDefault.id;
+      }
+    }
+
     const menuItems: MenuItem[] = [
       {
         label: `Selected text: "${payload.text}"`,
@@ -546,11 +559,16 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       }
     ];
 
-    this.globalSettingsStateService.subtitleLookupServices().forEach(service => {
-      menuItems.push({
+    allServices.forEach(service => {
+      const isDefault = service.id === effectiveDefaultServiceId;
+      const menuItem: MenuItem = {
         label: service.name,
+        badge: isDefault ? 'Default' : undefined,
+        badgeStyleClass: 'p-badge-info',
         command: () => this.executeLookup(service, this.selectedSubtitleTextForMenu)
-      });
+      };
+
+      menuItems.push(menuItem);
     });
 
     menuItems.push(
@@ -589,11 +607,6 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     // If no override, find the global default
     if (!serviceToUse) {
       serviceToUse = allServices.find(s => s.isDefault);
-    }
-
-    // Fallback to the first service if no default is set for some reason
-    if (!serviceToUse && allServices.length > 0) {
-      serviceToUse = allServices[0];
     }
 
     if (serviceToUse) {

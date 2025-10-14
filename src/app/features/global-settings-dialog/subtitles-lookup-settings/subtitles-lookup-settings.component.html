@@ -58,8 +58,8 @@
       </ng-template>
       <ng-template pTemplate="body" let-service>
         <tr>
-          <td>{{ service.name }}</td>
-          <td class="url-cell">{{ service.urlTemplate }}</td>
+          <td class="word-break">{{ service.name }}</td>
+          <td class="word-break">{{ service.urlTemplate }}</td>
           <td>{{ getDisplayBrowserType(service) }}</td>
           <td class="text-center">
             @if (service.isDefault) {
