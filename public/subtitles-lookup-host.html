@@ -269,6 +269,13 @@
   document.getElementById('close-btn').addEventListener('click', () => {
     window.electronAPI.closeLookupWindow();
   });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      window.electronAPI.closeLookupWindow();
+    }
+  });
 </script>
 </body>
 </html>
