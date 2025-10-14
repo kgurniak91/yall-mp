@@ -21,14 +21,9 @@ export class KeyboardShortcutsService implements OnDestroy {
   }
 
   private readonly handleKeyDown = (event: KeyboardEvent): void => {
+    // Ignore keyboard events from input fields to prevent them from triggering shortcuts
     const target = event.target as HTMLElement;
     if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
-
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      window.electronAPI.windowEscape();
-      return;
-    }
 
     const keyMap = new Map<string, KeyboardAction>();
     keyMap.set('c', KeyboardAction.ToggleSubtitles);
