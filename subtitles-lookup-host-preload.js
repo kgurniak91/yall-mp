@@ -6,5 +6,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const subscription = (_event, isLoading) => callback(isLoading);
     ipcRenderer.on('view:loading-state-change', subscription);
     return () => ipcRenderer.removeListener('view:loading-state-change', subscription);
+  },
+  onLookupShowToast: (callback) => {
+    const subscription = (_event, message) => callback(message);
+    ipcRenderer.on('lookup:show-toast', subscription);
+    return () => ipcRenderer.removeListener('lookup:show-toast', subscription);
   }
 });

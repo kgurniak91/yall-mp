@@ -186,6 +186,12 @@
       -webkit-user-select: none;
     }
 
+    #footer.toast-active {
+      background-color: #16A34A;
+      color: white;
+      font-weight: bold;
+    }
+
     #help-text {
       margin: 0;
     }
@@ -224,20 +230,44 @@
 </div>
 
 <script>
-  document.getElementById('close-btn').addEventListener('click', () => {
-    window.electronAPI.closeLookupWindow();
+  let toastTimeout;
+  const originalHelpTextHTML = document.getElementById('help-text').innerHTML;
+
+  function showToast(message) {
+    const footer = document.getElementById('footer');
+    const helpText = document.getElementById('help-text');
+    if (!footer || !helpText) {
+      return;
+    }
+
+    clearTimeout(toastTimeout);
+
+    // Instantly change the footer's content and appearance
+    helpText.textContent = message;
+    footer.classList.add('toast-active');
+
+    // Set a timer to revert the changes after 3 seconds
+    toastTimeout = setTimeout(() => {
+      footer.classList.remove('toast-active');
+      helpText.innerHTML = originalHelpTextHTML;
+    }, 3000);
+  }
+
+  // Listen for toast events from the main process
+  window.electronAPI.onLookupShowToast((message) => {
+    showToast(message);
   });
 
   // Listen for events from the main process to show/hide the spinner
   window.electronAPI.onViewLoadingStateChange((isLoading) => {
     const spinner = document.getElementById('spinner-container');
     if (spinner) {
-      if (isLoading) {
-        spinner.classList.remove('hidden');
-      } else {
-        spinner.classList.add('hidden');
-      }
+      spinner.classList.toggle('hidden', !isLoading);
     }
+  });
+
+  document.getElementById('close-btn').addEventListener('click', () => {
+    window.electronAPI.closeLookupWindow();
   });
 </script>
 </body>

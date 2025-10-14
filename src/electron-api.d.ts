@@ -43,6 +43,7 @@ export interface IElectronAPI {
   }) => void) => (() => void);
   closeLookupWindow: () => void;
   onViewLoadingStateChange: (callback: (isLoading: boolean) => void) => (() => void);
+  onLookupShowToast: (callback: (message: string) => void) => (() => void);
   // --- Files
   openFileDialog: (options: any) => Promise<string[]>;
   parseSubtitleFile: (projectId: string, filePath: string) => Promise<ParsedSubtitlesData>;

@@ -745,6 +745,5 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     selectionArray.push(text);
 
     this.appStateService.updateProject(project.id, {notes: newProjectNotes});
-    this.toastService.success('Note added!');
   }
 }

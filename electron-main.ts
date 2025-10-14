@@ -601,6 +601,9 @@ app.whenReady().then(() => {
               text: selectedText,
               selection: currentSubtitlesLookupContext.originalSelection
             });
+            if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
+              subtitlesLookupWindow.webContents.send('lookup:show-toast', 'Note added!');
+            }
           } else {
             console.error('[Main Process] Could not send note: uiWindow or context is missing.');
           }
@@ -619,6 +622,9 @@ app.whenReady().then(() => {
         text: text,
         selection: currentSubtitlesLookupContext.originalSelection
       });
+      if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
+        subtitlesLookupWindow.webContents.send('lookup:show-toast', 'Note added!');
+      }
     } else {
       console.error('[Main Process] Could not forward note: uiWindow or context is missing.');
     }
