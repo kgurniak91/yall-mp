@@ -987,7 +987,7 @@ async function handleAnkiExport(exportRequest: AnkiExportRequest) {
     return {cardId: null, error: 'FFmpeg is not available, cannot export media.'};
   }
 
-  const {template, subtitleData, mediaPath, exportTime, notes} = exportRequest;
+  const {template, subtitleData, mediaPath, exportTime, notes, tags} = exportRequest;
   const tempDir = os.tmpdir();
   const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
   const finalFields: Record<string, string> = {};
@@ -1099,7 +1099,7 @@ async function handleAnkiExport(exportRequest: AnkiExportRequest) {
       deckName: template.ankiDeck!,
       modelName: template.ankiNoteType!,
       fields: finalFields,
-      tags: ['yall-mp'],
+      tags,
       options: {
         allowDuplicate: true
       }

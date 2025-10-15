@@ -38,6 +38,7 @@ export interface Project {
   styles?: any;
   notes?: Record<string, ProjectClipNotes>;
   selectedAnkiTemplateIds?: string[];
+  ankiTags: string[];
 }
 
 export interface AppData {

@@ -22,6 +22,11 @@
               appendTo="body"/>
   </div>
 
+  <div class="flex flex-column gap-2">
+    <label for="anki-tags">Template-Specific Tags</label>
+    <app-tags-input formControlName="tags"></app-tags-input>
+  </div>
+
   @if (form.get('ankiNoteType')?.value) {
     <p-fieldset legend="Field Mappings" [toggleable]="false" formGroupName="fieldMappings">
       <div class="flex flex-column">

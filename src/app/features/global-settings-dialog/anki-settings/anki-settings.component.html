@@ -25,6 +25,16 @@
     </div>
   </p-fieldset>
 
+  <p-fieldset legend="Global Anki Tags" [toggleable]="false">
+    <div class="setting-item-column">
+      <app-tags-input [ngModel]="ankiStateService.ankiGlobalTags()"
+                      (ngModelChange)="ankiStateService.setAnkiGlobalTags($event)"/>
+      <small class="block mt-2">
+        These tags will be suggested for every Anki card created by this application.
+      </small>
+    </div>
+  </p-fieldset>
+
   <p-fieldset legend="Card templates" [toggleable]="false">
     @if (ankiStateService.status() === AnkiConnectStatus.connected) {
       <div class="mb-3 flex justify-content-end">

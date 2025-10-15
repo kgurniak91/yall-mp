@@ -14,6 +14,7 @@ export interface AnkiCardTemplate {
   ankiDeck: string | null;
   ankiNoteType: string | null;
   fieldMappings: AnkiFieldMapping[];
+  tags: string[];
 }
 
 export enum AnkiConnectStatus {
@@ -25,6 +26,7 @@ export enum AnkiConnectStatus {
 
 export interface AnkiSettings {
   ankiCardTemplates: AnkiCardTemplate[];
+  tags: string[];
 }
 
 export interface AnkiCard {
@@ -43,6 +45,7 @@ export interface AnkiExportRequest {
   mediaPath: string;
   exportTime: number;
   notes: string;
+  tags: string[];
 }
 
 export interface ExportToAnkiDialogData {

@@ -157,8 +157,10 @@
                                   [isAssProject]="isAssProject()"
                                   [selectedSettingsPreset]="selectedSettingsPreset()"
                                   [detectedLanguage]="project()?.detectedLanguage"
+                                  [ankiTags]="project()?.ankiTags || []"
                                   (settingsChange)="projectSettingsStateService.setSettings($event)"
-                                  (selectedSettingsPresetChange)="onSettingsPresetChange($event)"/>
+                                  (selectedSettingsPresetChange)="onSettingsPresetChange($event)"
+                                  (ankiTagsChange)="onAnkiTagsChange($event)"/>
   </p-drawer>
 </div>
 

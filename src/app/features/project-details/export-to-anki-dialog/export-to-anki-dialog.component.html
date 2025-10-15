@@ -32,11 +32,64 @@
                       [inputId]="template.id"
                       [(ngModel)]="selectedTemplates"></p-checkbox>
           <label [for]="template.id" class="ml-2">{{ template.name }}</label>
+          <p-button icon="fa-solid fa-tags"
+                    [text]="true"
+                    size="small"
+                    rounded="true"
+                    severity="secondary"
+                    pTooltip="View combined Anki tags"
+                    tooltipPosition="right"
+                    (click)="tagsPopover.toggle($event)"/>
+          <p-popover #tagsPopover [style]="{width: '22.5rem'}">
+            <div class="flex flex-column gap-2 p-2">
+              <h4 class="m-0">Combined Anki tags for this template</h4>
+              @let groupedTags = getGroupedTagsForTemplate(template);
+
+              <div class="flex flex-column gap-2">
+                <small>Global</small>
+                <div class="flex flex-wrap gap-2">
+                  @for (tag of groupedTags.global; track tag) {
+                    <p-chip [label]="tag"/>
+                  } @empty {
+                    <small class="text-gray-500">No global Anki tags defined.</small>
+                  }
+                </div>
+              </div>
+
+              <div class="flex flex-column gap-2">
+                <small>Project</small>
+                <div class="flex flex-wrap gap-2">
+                  @for (tag of groupedTags.project; track tag) {
+                    <p-chip [label]="tag"/>
+                  } @empty {
+                    <small class="text-gray-500">No project Anki tags defined.</small>
+                  }
+                </div>
+              </div>
+
+              <div class="flex flex-column gap-2">
+                <small>Template</small>
+                <div class="flex flex-wrap gap-2">
+                  @for (tag of groupedTags.template; track tag) {
+                    <p-chip [label]="tag"/>
+                  } @empty {
+                    <small class="text-gray-500">No template-specific Anki tags defined.</small>
+                  }
+                </div>
+              </div>
+
+              <p-divider/>
+
+              <small class="text-gray-500">
+                Card-specific tags entered at the bottom of export form will also be included.
+              </small>
+            </div>
+          </p-popover>
         </div>
       } @empty {
         <span class="text-gray-500">
-        No valid Anki templates found.
-      </span>
+          No valid Anki templates found.
+        </span>
       }
     </div>
     <div class="text-sm mt-2">
@@ -65,7 +118,7 @@
                 pTooltip="How to Add"
                 (click)="notesHelpPopover.toggle($event)">
       </p-button>
-      <p-popover #notesHelpPopover [style]="{width: '350px'}">
+      <p-popover #notesHelpPopover [style]="{width: '22.5rem'}">
         <div class="flex flex-column gap-3 p-2">
           <h4 class="m-0">How to Add Lookup Notes</h4>
           <ul class="m-0 pl-3">
@@ -117,6 +170,12 @@
         <span class="text-gray-500">No lookup notes for this clip.</span>
       }
     </div>
+  </div>
+
+  <div class="flex flex-column gap-2">
+    <label for="anki-tags">Card-Specific Tags</label>
+    <app-tags-input [ngModel]="cardSpecificTags()"
+                    (ngModelChange)="cardSpecificTags.set($event)"></app-tags-input>
   </div>
 
   <div class="flex align-items-center justify-content-end gap-2">

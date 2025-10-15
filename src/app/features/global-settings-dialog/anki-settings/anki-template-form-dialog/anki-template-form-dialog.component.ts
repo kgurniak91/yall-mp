@@ -11,6 +11,7 @@ import {ToastService} from '../../../../shared/services/toast/toast.service';
 import {Divider} from 'primeng/divider';
 import {ankiMappingValidator, APP_ANKI_FIELDS} from './anki-template-form-dialog.types';
 import {Message} from 'primeng/message';
+import {TagsInputComponent} from '../../../../shared/components/tags-input/tags-input.component';
 
 @Component({
   selector: 'app-anki-template-form-dialog',
@@ -21,7 +22,8 @@ import {Message} from 'primeng/message';
     Select,
     Fieldset,
     Divider,
-    Message
+    Message,
+    TagsInputComponent
   ],
   templateUrl: './anki-template-form-dialog.component.html',
   styleUrl: './anki-template-form-dialog.component.scss'
@@ -117,6 +119,7 @@ export class AnkiTemplateFormDialogComponent implements OnInit {
       name: [template?.name || '', Validators.required],
       ankiDeck: [template?.ankiDeck || null, Validators.required],
       ankiNoteType: [template?.ankiNoteType || null, Validators.required],
+      tags: [template?.tags || []],
       fieldMappings: this.fb.group(mappingControls, {validators: ankiMappingValidator})
     });
   }

@@ -1,0 +1,23 @@
+<div class="flex flex-column gap-2">
+  <div class="flex align-items-center gap-2">
+    <input pInputText
+           id="anki-tags"
+           class="w-full"
+           [(ngModel)]="newTag"
+           placeholder="Type a tag and press Enter..."
+           (keydown.enter)="addTag(); $event.preventDefault()"
+           [disabled]="disabled"/>
+    <p-button icon="fa-solid fa-plus"
+              (onClick)="addTag()"
+              [disabled]="disabled || !newTag.trim()">
+    </p-button>
+  </div>
+
+  <div class="flex flex-wrap gap-2">
+    @for (tag of tags; track tag) {
+      <p-chip [label]="tag"
+              [removable]="true"
+              (onRemove)="removeTag(tag)"/>
+    }
+  </div>
+</div>

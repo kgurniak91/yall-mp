@@ -16,6 +16,7 @@ import {MediaTrack} from '../../../../shared/types/media.type';
 import {finalize, forkJoin, from, timer} from 'rxjs';
 import {SUBTITLE_OPTIONS, SubtitleOptionType} from './project-form.type';
 import {SpinnerComponent} from '../../shared/components/spinner/spinner.component';
+import {generateTagFromFileName} from '../../shared/utils/tag/tag.utils';
 
 const EDIT_CONFIRMATION_MESSAGE = `
 Are you sure you want to edit this project?
@@ -210,9 +211,12 @@ export class ProjectFormComponent implements OnInit {
     const now = Date.now();
     const {subtitleSelection, subtitleFileName} = this.buildSubtitleSelection();
     const firstAudioTrack = this.audioTracks()[0];
+    const mediaFileName = this.getBaseName(mediaPath);
+    const generatedAnkiTag = generateTagFromFileName(mediaFileName);
+
     const newProject: Project = {
       id: uuidv4(),
-      mediaFileName: this.getBaseName(mediaPath),
+      mediaFileName,
       subtitleFileName: subtitleFileName,
       mediaPath: mediaPath,
       subtitleSelection: subtitleSelection,
@@ -229,7 +233,8 @@ export class ProjectFormComponent implements OnInit {
       subtitleTracks: this.subtitleTracks(),
       videoWidth: this.videoWidth(),
       videoHeight: this.videoHeight(),
-      detectedLanguage: 'other'
+      detectedLanguage: 'other',
+      ankiTags: [generatedAnkiTag]
     };
     this.appStateService.createProject(newProject);
     this.router.navigate(['/project', newProject.id]);

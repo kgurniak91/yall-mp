@@ -17,6 +17,7 @@ import {GlobalSettingsStateService} from '../../../state/global-settings/global-
 import {Message} from 'primeng/message';
 import {DialogOrchestrationService} from '../../../core/services/dialog-orchestration/dialog-orchestration.service';
 import {GlobalSettingsTab} from '../../global-settings-dialog/global-settings-dialog.types';
+import {TagsInputComponent} from '../../../shared/components/tags-input/tags-input.component';
 
 @Component({
   selector: 'app-current-project-settings',
@@ -30,7 +31,8 @@ import {GlobalSettingsTab} from '../../global-settings-dialog/global-settings-di
     Tooltip,
     RadioButton,
     Divider,
-    Message
+    Message,
+    TagsInputComponent
   ],
   templateUrl: './current-project-settings.component.html',
   styleUrl: './current-project-settings.component.scss'
@@ -42,6 +44,8 @@ export class CurrentProjectSettingsComponent {
   public readonly isAssProject = input(false);
   public readonly selectedSettingsPreset = input.required<SettingsPreset | null>();
   public readonly detectedLanguage = input<SupportedLanguage>();
+  public readonly ankiTags = input<string[]>();
+  public readonly ankiTagsChange = output<string[]>();
   public readonly settingsChange = output<ProjectSettings>();
   public readonly selectedSettingsPresetChange = output<SettingsPreset | null>();
   protected readonly audioTrackOptions = computed(() => {

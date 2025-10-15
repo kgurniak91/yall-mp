@@ -15,6 +15,7 @@ export class AnkiStateService {
   readonly isLoadingNoteTypeFields = signal(false);
   readonly ankiCardTemplates = computed(() => this.appStateService.ankiSettings().ankiCardTemplates);
   readonly isAnkiExportAvailable = signal(false);
+  readonly ankiGlobalTags = computed(() => this.appStateService.ankiSettings().tags);
   private readonly appStateService = inject(AppStateService);
 
   constructor() {
@@ -134,5 +135,9 @@ export class AnkiStateService {
     const currentTemplates = this.ankiCardTemplates();
     const newTemplates = currentTemplates.filter(t => t.id !== id);
     this.appStateService.updateAnkiSettings({ankiCardTemplates: newTemplates});
+  }
+
+  setAnkiGlobalTags(tags: string[]): void {
+    this.appStateService.updateAnkiSettings({tags});
   }
 }

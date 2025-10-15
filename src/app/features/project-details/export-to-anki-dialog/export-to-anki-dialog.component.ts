@@ -19,6 +19,9 @@ import {AppStateService} from '../../../state/app/app-state.service';
 import {Popover} from 'primeng/popover';
 import {DialogOrchestrationService} from '../../../core/services/dialog-orchestration/dialog-orchestration.service';
 import {GlobalSettingsTab} from '../../global-settings-dialog/global-settings-dialog.types';
+import {Divider} from 'primeng/divider';
+import {Chip} from 'primeng/chip';
+import {TagsInputComponent} from '../../../shared/components/tags-input/tags-input.component';
 import {Tooltip} from 'primeng/tooltip';
 
 const SAVE_DEBOUNCE_TIME_MS = 500;
@@ -41,6 +44,9 @@ interface SelectionGroupView {
     Checkbox,
     Textarea,
     Popover,
+    Divider,
+    Chip,
+    TagsInputComponent,
     Tooltip
   ],
   templateUrl: './export-to-anki-dialog.component.html',
@@ -48,6 +54,7 @@ interface SelectionGroupView {
 })
 export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
   protected readonly data: ExportToAnkiDialogData;
+  protected readonly cardSpecificTags = signal<string[]>([]);
   protected readonly selectedTemplates = signal<AnkiCardTemplate[]>([]);
   protected readonly manualNote = signal<string>('');
   protected readonly isExporting = signal(false);
@@ -94,6 +101,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
     return finalParts.join('');
   });
   protected assSubtitleData: AssSubtitleData | null = null;
+  protected readonly exportTags = signal<string[]>([]);
   protected readonly ankiService = inject(AnkiStateService);
   private readonly ref = inject(DynamicDialogRef);
   private readonly config = inject(DynamicDialogConfig);
@@ -115,6 +123,10 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
     }
 
     const project = this.data.project;
+    const globalTags = this.ankiService.ankiGlobalTags();
+    const projectTags = project.ankiTags || [];
+    this.exportTags.set(Array.from(new Set([...globalTags, ...projectTags])));
+
     if (project.selectedAnkiTemplateIds) {
       const preselectedTemplates = this.ankiService.ankiCardTemplates().filter(t => project.selectedAnkiTemplateIds!.includes(t.id));
       this.selectedTemplates.set(preselectedTemplates);
@@ -130,6 +142,18 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
     this.clearDebounceTimeout();
     this.saveNotesIfChanged();
     this.saveSelectedTemplates();
+  }
+
+  getGroupedTagsForTemplate(template: AnkiCardTemplate): { global: string[], project: string[], template: string[] } {
+    const global = this.ankiService.ankiGlobalTags();
+    const project = this.data.project.ankiTags || [];
+    const templateTags = template.tags || [];
+
+    return {
+      global: [...new Set(global)],
+      project: [...new Set(project)],
+      template: [...new Set(templateTags)],
+    };
   }
 
   onNoteChange(noteItem: NoteViewItem, event: Event): void {
@@ -189,6 +213,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
 
     if (!this.finalTextPreview().trim()) {
       this.toastService.warn('Please select at least one subtitle part to export.');
+      this.isExporting.set(false);
       return;
     }
 
@@ -215,12 +240,18 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
         continue;
       }
 
+      const baseTags = this.exportTags();
+      const templateTags = template.tags || [];
+      const cardSpecificTags = this.cardSpecificTags() || [];
+      const finalTags = Array.from(new Set([...baseTags, ...templateTags, ...cardSpecificTags]));
+
       const request: AnkiExportRequest = {
         template: template,
         subtitleData: subtitleForExport,
         mediaPath: project.mediaPath,
         exportTime,
-        notes: this.formattedAnkiNotes()
+        notes: this.formattedAnkiNotes(),
+        tags: finalTags
       };
 
       try {

@@ -10,7 +10,8 @@ const defaults: AppData = {
   lastOpenedProjectId: null,
   globalSettings: DEFAULT_GLOBAL_SETTINGS,
   ankiSettings: {
-    ankiCardTemplates: []
+    ankiCardTemplates: [],
+    tags: ['yall-mp']
   }
 };
 

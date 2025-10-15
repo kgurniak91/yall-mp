@@ -522,6 +522,13 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
+  onAnkiTagsChange(ankiTags: string[]) {
+    const project = this.project();
+    if (project) {
+      this.appStateService.updateProject(project.id, {ankiTags});
+    }
+  }
+
   onVideoAreaDoubleClick(): void {
     window.electronAPI.windowHandleDoubleClick();
   }

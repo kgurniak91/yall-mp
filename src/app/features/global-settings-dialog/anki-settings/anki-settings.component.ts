@@ -10,6 +10,8 @@ import {AnkiCardTemplate, AnkiConnectStatus} from '../../../model/anki.types';
 import {TableModule} from 'primeng/table';
 import {Tooltip} from 'primeng/tooltip';
 import {v4 as uuidv4} from 'uuid';
+import {TagsInputComponent} from '../../../shared/components/tags-input/tags-input.component';
+import {FormsModule} from '@angular/forms';
 
 @Component({
   selector: 'app-anki-settings',
@@ -17,7 +19,9 @@ import {v4 as uuidv4} from 'uuid';
     Button,
     Fieldset,
     TableModule,
-    Tooltip
+    Tooltip,
+    TagsInputComponent,
+    FormsModule
   ],
   templateUrl: './anki-settings.component.html',
   styleUrl: './anki-settings.component.scss'

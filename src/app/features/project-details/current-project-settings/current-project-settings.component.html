@@ -21,6 +21,16 @@
     </p-fieldset>
   </div>
 
+  <p-fieldset legend="Project-Specific Anki Tags" [toggleable]="false">
+    <div class="setting-item-column">
+      <app-tags-input [ngModel]="ankiTags()"
+                      (ngModelChange)="ankiTagsChange.emit($event)"/>
+      <small class="block mt-2">
+        Default tags for all cards created from this project.
+      </small>
+    </div>
+  </p-fieldset>
+
   <p-fieldset legend="Default Subtitles Lookup Action" [toggleable]="false">
     <div class="setting-item-column">
       <div class="flex align-items-center gap-2">
