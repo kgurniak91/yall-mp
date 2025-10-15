@@ -39,6 +39,7 @@ export interface Project {
   notes?: Record<string, ProjectClipNotes>;
   selectedAnkiTemplateIds?: string[];
   ankiTags: string[];
+  lastAnkiSuspendState?: boolean;
 }
 
 export interface AppData {

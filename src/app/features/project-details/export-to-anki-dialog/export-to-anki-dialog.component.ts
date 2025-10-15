@@ -103,6 +103,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
   protected assSubtitleData: AssSubtitleData | null = null;
   protected readonly exportTags = signal<string[]>([]);
   protected readonly ankiService = inject(AnkiStateService);
+  protected readonly suspendCard = signal<boolean>(false);
   private readonly ref = inject(DynamicDialogRef);
   private readonly config = inject(DynamicDialogConfig);
   private readonly toastService = inject(ToastService);
@@ -123,6 +124,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
     }
 
     const project = this.data.project;
+    this.suspendCard.set(project.lastAnkiSuspendState ?? false);
     const globalTags = this.ankiService.ankiGlobalTags();
     const projectTags = project.ankiTags || [];
     this.exportTags.set(Array.from(new Set([...globalTags, ...projectTags])));
@@ -142,6 +144,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
     this.clearDebounceTimeout();
     this.saveNotesIfChanged();
     this.saveSelectedTemplates();
+    this.savePostExportActions();
   }
 
   getGroupedTagsForTemplate(template: AnkiCardTemplate): { global: string[], project: string[], template: string[] } {
@@ -251,7 +254,8 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
         mediaPath: project.mediaPath,
         exportTime,
         notes: this.formattedAnkiNotes(),
-        tags: finalTags
+        tags: finalTags,
+        suspend: this.suspendCard()
       };
 
       try {
@@ -331,6 +335,17 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
     // Only update if there's a change
     if (!isEqual(project.selectedAnkiTemplateIds, selectedIds)) {
       this.appStateService.updateProject(project.id, {selectedAnkiTemplateIds: selectedIds});
+    }
+  }
+
+  private savePostExportActions(): void {
+    const project = this.data.project;
+    const lastSuspendState = this.suspendCard();
+
+    if (project.lastAnkiSuspendState !== lastSuspendState) {
+      this.appStateService.updateProject(project.id, {
+        lastAnkiSuspendState: lastSuspendState
+      });
     }
   }
 

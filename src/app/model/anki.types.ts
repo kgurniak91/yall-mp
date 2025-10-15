@@ -46,6 +46,7 @@ export interface AnkiExportRequest {
   exportTime: number;
   notes: string;
   tags: string[];
+  suspend: boolean;
 }
 
 export interface ExportToAnkiDialogData {
