@@ -248,6 +248,7 @@ function createWindow() {
       uiWindow.webContents.send('mpv:mainWindowMovedOrResized');
     }
     updateUiWindowShape();
+    videoWindow?.showInactive();
   };
 
   mainWindow.on('resize', syncWindowGeometry);
