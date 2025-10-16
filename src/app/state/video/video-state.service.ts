@@ -74,7 +74,7 @@ export class VideoStateService implements OnDestroy {
       this.cleanupPlaybackListener();
       this.cleanupPlaybackListener = null;
     }
-    this.saveCurrentPlaybackTime();
+    this.saveCurrentPlaybackTime(this._currentTime());
   }
 
   public setProjectId(id: string): void {
@@ -146,15 +146,19 @@ export class VideoStateService implements OnDestroy {
   }
 
   public seekRelative(time: number): void {
+    let targetTime = this.currentTime() + time;
+    const duration = this.duration();
+    targetTime = Math.max(0, Math.min(targetTime, duration - 0.01));
+
     this._seekRequest.set({time, type: SeekType.Relative});
     this._syncTimelineRequest.set(Date.now());
-    this.saveCurrentPlaybackTime();
+    this.saveCurrentPlaybackTime(targetTime);
   }
 
   public seekAbsolute(time: number): void {
     this._seekRequest.set({time, type: SeekType.Absolute});
     this._syncTimelineRequest.set(Date.now());
-    this.saveCurrentPlaybackTime();
+    this.saveCurrentPlaybackTime(time);
   }
 
   public requestAssRendererSync(): void {
@@ -210,9 +214,9 @@ export class VideoStateService implements OnDestroy {
     this._toggleSubtitlesRequest.set(null);
   }
 
-  public saveCurrentPlaybackTime(): void {
-    if (this._projectId && this.duration() > 0) {
-      this.appStateService.updateProject(this._projectId, {lastPlaybackTime: this._currentTime()});
+  public saveCurrentPlaybackTime(time: number): void {
+    if (this._projectId && this.duration() > 0 && time != null && isFinite(time)) {
+      this.appStateService.updateProject(this._projectId, {lastPlaybackTime: time});
     }
   }
 
@@ -225,8 +229,8 @@ export class VideoStateService implements OnDestroy {
       filter(() => !this.isPaused() && !this.isInitializing),
       auditTime(5000),
       takeUntilDestroyed(this.destroyRef)
-    ).subscribe(() => {
-      this.saveCurrentPlaybackTime();
+    ).subscribe((time) => {
+      this.saveCurrentPlaybackTime(time);
     });
   }
 }
