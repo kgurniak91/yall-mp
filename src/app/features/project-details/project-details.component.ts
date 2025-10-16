@@ -206,6 +206,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   private isMpvReady = signal(false);
   private isUiReady = signal(false);
   private hasFiredStartupSequence = false;
+  private hasSetInitialClip = false;
   private cleanupInitialSeekListener: (() => void) | null = null;
   private cleanupMpvReadyListener: (() => void) | null = null;
   private cleanupAddNoteListener: (() => void) | null = null;
@@ -237,11 +238,25 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
     effect(() => {
       const clips = this.clipsStateService.clips();
+      const project = this.project();
+
+      // Once the clips array is populated for the first time, find and set the correct starting index.
+      if (clips.length > 0 && project && !this.hasSetInitialClip) {
+        const initialClipIndex = clips.findIndex(
+          c => project.lastPlaybackTime >= c.startTime && project.lastPlaybackTime < c.endTime
+        );
+
+        if (initialClipIndex !== -1) {
+          this.clipsStateService.setCurrentClipByIndex(initialClipIndex);
+          this.hasSetInitialClip = true; // Ensure this only runs once
+        }
+      }
+
       // Wait until UI and MPV are ready, and clips have been generated from the video's duration.
-      if (this.isUiReady() && this.isMpvReady() && clips.length > 0 && !this.hasFiredStartupSequence) {
+      if (this.isUiReady() && this.isMpvReady() && clips.length > 0 && !this.hasFiredStartupSequence && project) {
         this.hasFiredStartupSequence = true;
         const settings = this.projectSettingsStateService.settings();
-        window.electronAPI.playbackLoadProject(clips, settings);
+        window.electronAPI.playbackLoadProject(clips, settings, project.lastPlaybackTime);
         this.startPlaybackSequence();
       }
     });
@@ -280,13 +295,15 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Set the initial playback time immediately to prevent the timeline from defaulting to 0
+    this.videoStateService.setCurrentTime(foundProject.lastPlaybackTime);
+
     // Logic for re-entering the project - the rawAssContent should already exist in this case:
     if (foundProject.rawAssContent) {
       this.loadAndInjectFonts(projectId);
     }
 
     this.videoStateService.setSubtitlesVisible(foundProject.settings.subtitlesVisible);
-    this.appStateService.setCurrentProject(projectId);
     this.clipsStateService.setProjectId(projectId);
     this.videoStateService.setProjectId(projectId);
     this.videoStateService.setMediaPath(foundProject.mediaPath);
@@ -338,6 +355,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     }
 
     this.clipsStateService.setSubtitles(subtitles);
+
     await window.electronAPI.mpvCreateViewport(
       foundProject.mediaPath,
       foundProject.settings.selectedAudioTrackIndex,

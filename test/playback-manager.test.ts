@@ -59,10 +59,10 @@ const getLastStateUpdate = (): PlaybackStateUpdate | undefined => {
 describe('PlaybackManager', () => {
   let playbackManager: PlaybackManager;
 
-  const setupManager = (settings: Partial<ProjectSettings> = {}) => {
+  const setupManager = (settings: Partial<ProjectSettings> = {}, startTime = 0) => {
     const fullSettings = {...DEFAULT_PROJECT_SETTINGS, ...settings};
     const manager = new PlaybackManager(mockMpvManager as unknown as MpvManager, mockUiWindow as unknown as BrowserWindow);
-    manager.loadProject(cloneDeep(mockClips), fullSettings);
+    manager.loadProject(cloneDeep(mockClips), fullSettings, startTime);
     return manager;
   };
 
@@ -90,6 +90,25 @@ describe('PlaybackManager', () => {
       // ASSERT: The internal state and the initial UI notification should both reflect that subtitles are hidden.
       expect((playbackManager as any).subtitlesVisible).toBe(false);
       expect(getLastStateUpdate()?.subtitlesVisible).toBe(false);
+    });
+
+    it('should apply correct settings on the first seek after loading', () => {
+      // ARRANGE: Create a manager and load a project, which primes the state but doesn't apply settings yet
+      const manager = new PlaybackManager(mockMpvManager as unknown as MpvManager, mockUiWindow as unknown as BrowserWindow);
+      const settings = {...DEFAULT_PROJECT_SETTINGS, subtitledClipSpeed: 1.0, gapSpeed: 3.0};
+      const lastPlaybackTime = 15; // A time inside the subtitled clip 'sub-1'
+      manager.loadProject(cloneDeep(mockClips), settings, lastPlaybackTime);
+
+      // Sanity check: no settings should have been applied during load
+      expect(mockMpvManager.setProperty).not.toHaveBeenCalled();
+
+      // ACT: Perform the initial seek, which mimics what the UI does on startup
+      manager.seek(lastPlaybackTime);
+      simulateSeekComplete(manager);
+
+      // ASSERT: The speed for the subtitled clip (1.0) should have been applied now
+      expect(mockMpvManager.setProperty).toHaveBeenCalledWith('speed', 1.0);
+      expect(mockMpvManager.setProperty).not.toHaveBeenCalledWith('speed', 3.0); // Should NOT have applied gap speed
     });
   });
 
@@ -121,6 +140,7 @@ describe('PlaybackManager', () => {
     it('should apply correct settings for the first clip when starting playback from idle', () => {
       // ARRANGE: Setup with a fast gap speed. The first clip is a gap.
       playbackManager = setupManager({gapSpeed: 3.0, subtitledClipSpeed: 1.0});
+      vi.clearAllMocks(); // Clear mocks after setup to isolate the 'play' action
 
       // ACT: Start playback from the beginning.
       playbackManager.play();
@@ -332,8 +352,8 @@ describe('PlaybackManager', () => {
     ];
 
     beforeEach(() => {
-      playbackManager = setupManager();
-      playbackManager.loadProject(JSON.parse(JSON.stringify(fourClipLayout)), {} as any);
+      playbackManager = new PlaybackManager(mockMpvManager as unknown as MpvManager, mockUiWindow as unknown as BrowserWindow);
+      playbackManager.loadProject(JSON.parse(JSON.stringify(fourClipLayout)), {} as ProjectSettings, 0);
     });
 
     it('should correctly re-synchronize the active clip index if the playhead is now in a different clip', () => {

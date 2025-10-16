@@ -42,13 +42,20 @@ export class PlaybackManager {
     }
   }
 
-  public loadProject(clips: VideoClip[], settings: ProjectSettings): void {
+  public loadProject(clips: VideoClip[], settings: ProjectSettings, lastPlaybackTime: number): void {
     this.isProjectLoaded = true;
     this.clips = clips;
     this.settings = settings;
     this.subtitlesVisible = settings.subtitlesVisible;
-    this.currentClipIndex = 0;
-    this.currentTime = 0;
+
+    let initialClipIndex = this.clips.findIndex(
+      (c) => lastPlaybackTime >= c.startTime && lastPlaybackTime < c.endTime
+    );
+    if (initialClipIndex === -1) {
+      initialClipIndex = 0;
+    }
+    this.currentClipIndex = initialClipIndex;
+    this.currentTime = lastPlaybackTime;
     this.userOverriddenClipId = null;
     this.mpvSubtitlesHiddenDueToRenderer = false;
     this.setPlayerState(PlayerState.Idle, true);
@@ -58,7 +65,10 @@ export class PlaybackManager {
     if (this.playerState === PlayerState.AutoPausedAtEnd) {
       this.playClipAtIndex(this.currentClipIndex + 1);
     } else {
-      this.applyClipTransitionSettings();
+      // If starting from a paused or idle state, re-apply settings to prevent race conditions.
+      if (this.isPaused) {
+        this.applyClipTransitionSettings();
+      }
       this.mpvManager.setProperty('pause', false);
       this.setPlayerState(PlayerState.Playing);
     }
@@ -123,11 +133,17 @@ export class PlaybackManager {
     const oldClipIndex = this.currentClipIndex;
     this.isSeekingWithinSameClip = (oldClipIndex === targetClipIndex);
 
-    this.preSeekState = (this.playerState === PlayerState.Seeking) ? this.preSeekState : this.playerState;
-    this.setPlayerState(PlayerState.Seeking);
-    this.mpvManager.setProperty('pause', true);
+    this.currentClipIndex = targetClipIndex;
+    this.currentTime = time;
 
-    // Only apply behavior (hide/show) if moving between different clips
+    // Apply speed setting immediately for the new clip to prevent race condition
+    const clip = this.clips[this.currentClipIndex];
+    if (clip && this.settings) {
+      const speed = clip.hasSubtitle ? this.settings.subtitledClipSpeed : this.settings.gapSpeed;
+      this.mpvManager.setProperty('speed', speed);
+    }
+
+    // Handle anti-flicker hide for subtitles if moving to a new clip
     if (!this.isSeekingWithinSameClip) {
       this.userOverriddenClipId = null;
       if (this.settings?.useMpvSubtitles) {
@@ -135,8 +151,10 @@ export class PlaybackManager {
       }
     }
 
-    this.currentClipIndex = targetClipIndex;
-    this.currentTime = time;
+    this.preSeekState = (this.playerState === PlayerState.Seeking) ? this.preSeekState : this.playerState;
+    this.setPlayerState(PlayerState.Seeking);
+    this.mpvManager.setProperty('pause', true);
+
     this.notifyUI();
 
     this.mpvManager.sendCommand(['seek', time, 'absolute']);
@@ -210,9 +228,11 @@ export class PlaybackManager {
     } else if (status.event === 'seek') {
       if (this.playerState === PlayerState.Seeking) {
         const shouldResume = this.preSeekState === PlayerState.Playing;
+        const isInitialSeek = this.preSeekState === PlayerState.Idle;
 
-        if (!this.isSeekingWithinSameClip) {
-          this.applyClipTransitionSettings();
+        // Apply final subtitle visibility state now that the seek is complete.
+        if (!this.isSeekingWithinSameClip || isInitialSeek) {
+          this.applySubtitleVisibilityForClip();
         }
 
         this.isSeekingWithinSameClip = false;
@@ -235,9 +255,6 @@ export class PlaybackManager {
     }
 
     if (finishedClip.hasSubtitle && this.settings?.autoPauseAtEnd) {
-      // Seek to a fraction of a second BEFORE the end time.
-      // Seeking to the exact end time can cause ASS.js to not render the subtitles
-      // on re-initialization, as the time is no longer strictly within clip bounds.
       const pauseTime = (finishedClip.endTime - 0.01);
       this.currentTime = pauseTime;
       this.setPlayerState(PlayerState.AutoPausedAtEnd);
@@ -256,10 +273,9 @@ export class PlaybackManager {
 
     this.currentClipIndex = index;
     this.userOverriddenClipId = null;
-    const clipToPlay = this.clips[this.currentClipIndex];
-
     this.applyClipTransitionSettings();
 
+    const clipToPlay = this.clips[this.currentClipIndex];
     const shouldAutoPauseAtStart = clipToPlay.hasSubtitle && this.settings?.autoPauseAtStart;
 
     // Determine the precise target time, nudging it slightly if auto-pausing at the start to make sure it's still within clip bounds:
@@ -284,6 +300,14 @@ export class PlaybackManager {
 
     const speed = clip.hasSubtitle ? this.settings.subtitledClipSpeed : this.settings.gapSpeed;
     this.mpvManager.setProperty('speed', speed);
+    this.applySubtitleVisibilityForClip();
+  }
+
+  private applySubtitleVisibilityForClip(): void {
+    const clip = this.clips[this.currentClipIndex];
+    if (!clip || !this.settings) {
+      return;
+    }
 
     if (this.userOverriddenClipId === clip.id) {
       return;

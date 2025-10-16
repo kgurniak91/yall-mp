@@ -130,20 +130,28 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
     const clips = this.clipsStateService.clips();
     const mediaPath = this.videoStateService.mediaPath();
     const container = this.timelineContainer()?.nativeElement;
-    const clipsSignature = clips.map(c => `${c.id}@${c.startTime}:${c.endTime}`).join(',');
     this.clipsStateService.currentClipIndex(); // Refresh effect when current clip changes
 
     if (!this.wavesurfer && mediaPath && container) {
       this.initializeWaveSurfer(mediaPath, container);
     }
 
-    if (!this.isWaveSurferReady() || !this.wsRegions) {
+    if (!this.isWaveSurferReady() || !this.wsRegions || clips.length === 0) {
       return;
     }
+
+    const clipsSignature = clips.map(c => `${c.id}@${c.startTime}:${c.endTime}`).join(',');
 
     if (clipsSignature !== this.lastDrawnClipsSignature) {
       this.drawRegions(clips);
       this.lastDrawnClipsSignature = clipsSignature;
+    }
+
+    // Once the first set of regions is drawn, hide the loader
+    if (this.loading()) {
+      setTimeout(() => {
+        this.loading.set(false);
+      }, 0);
     }
 
     this.syncHighlight();
@@ -247,7 +255,6 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
       this.wavesurfer.zoom(currentZoom);
       this.isWaveSurferReady.set(true);
     }
-    this.loading.set(false);
   };
 
   private syncHighlight(): void {

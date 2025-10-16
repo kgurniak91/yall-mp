@@ -847,7 +847,7 @@ app.whenReady().then(() => {
   ipcMain.on('playback:updateClips', (_, clips) => {
     playbackManager?.updateClips(clips);
   });
-  ipcMain.handle('playback:loadProject', (_, clips, settings) => playbackManager?.loadProject(clips, settings));
+  ipcMain.handle('playback:loadProject', (_, clips, settings, lastPlaybackTime) => playbackManager?.loadProject(clips, settings, lastPlaybackTime));
 
   createWindow();
 

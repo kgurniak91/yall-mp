@@ -91,7 +91,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   playbackRepeat: () => ipcRenderer.send('playback:repeat'),
   playbackForceContinue: () => ipcRenderer.send('playback:forceContinue'),
   playbackSeek: (time) => ipcRenderer.send('playback:seek', time),
-  playbackLoadProject: (clips, settings) => ipcRenderer.invoke('playback:loadProject', clips, settings),
+  playbackLoadProject: (clips, settings, lastPlaybackTime) => ipcRenderer.invoke('playback:loadProject', clips, settings, lastPlaybackTime),
   playbackUpdateSettings: (settings) => ipcRenderer.send('playback:updateSettings', settings),
   playbackUpdateClips: (clips) => ipcRenderer.send('playback:updateClips', clips),
   onPlaybackStateUpdate: (callback) => {

@@ -91,7 +91,7 @@ export interface IElectronAPI {
   playbackRepeat: () => void;
   playbackForceContinue: () => void;
   playbackSeek: (time: number) => void;
-  playbackLoadProject: (clips: VideoClip[], settings: ProjectSettings) => Promise<void>;
+  playbackLoadProject: (clips: VideoClip[], settings: ProjectSettings, lastPlaybackTime: number) => Promise<void>;
   playbackUpdateSettings: (settings: ProjectSettings) => void;
   playbackUpdateClips: (clips: VideoClip[]) => void;
   onPlaybackStateUpdate: (callback: (update: PlaybackStateUpdate) => void) => (() => void);

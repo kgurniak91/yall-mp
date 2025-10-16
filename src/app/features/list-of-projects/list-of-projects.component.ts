@@ -24,8 +24,7 @@ export class ListOfProjectsComponent {
   private readonly router = inject(Router);
 
   navigateToProject(project: Project): void {
-    // TODO: Update the lastOpened time here before navigating
-    // this.projectStateService.updateProject({...project, lastOpened: Date.now()});
+    this.appStateService.setCurrentProject(project.id);
     this.router.navigate(['/project', project.id]);
   }
 
