@@ -427,15 +427,15 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       return;
     }
 
-    // Auto-pause the video if it's playing
-    if (!this.videoStateService.isPaused()) {
-      this.videoStateService.togglePlayPause();
-    }
-
     const wordInfo = this.getWordInfoFromEvent(event);
     const container = this.subtitleContainer().nativeElement;
 
     if (wordInfo && container.contains(wordInfo.node)) {
+      // Auto-pause the video if it's playing
+      if (!this.videoStateService.isPaused()) {
+        this.videoStateService.togglePlayPause();
+      }
+
       event.preventDefault();
       this.isSelecting.set(true);
       this.selectionAnchor = wordInfo;
