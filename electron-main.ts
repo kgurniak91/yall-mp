@@ -65,6 +65,7 @@ let isInitialResizeComplete = false;
 let hasRequestedInitialSeek = false;
 let isSaving = false;
 let saveQueue: any[] = [];
+let showVideoTimeout: NodeJS.Timeout | null = null;
 const initialBounds = {width: 1920, height: 1080};
 const MIN_GAP_DURATION = 0.1;
 const DRAGGABLE_ZONE_PADDING = 3; // 3px on all sides
@@ -224,7 +225,13 @@ function createWindow() {
       return;
     }
 
+    // Always hide the video window immediately at the start of any geometry change to prevent flickering
     videoWindow?.hide();
+
+    if (showVideoTimeout) {
+      clearTimeout(showVideoTimeout);
+    }
+
     const bounds = mainWindow.getBounds();
 
     isProgrammaticResize = true;
@@ -248,7 +255,12 @@ function createWindow() {
       uiWindow.webContents.send('mpv:mainWindowMovedOrResized');
     }
     updateUiWindowShape();
-    videoWindow?.showInactive();
+
+    showVideoTimeout = setTimeout(() => {
+      if (videoWindow && !videoWindow.isDestroyed() && mainWindow && !mainWindow.isMinimized()) {
+        videoWindow.showInactive();
+      }
+    }, 250);
   };
 
   mainWindow.on('resize', syncWindowGeometry);
