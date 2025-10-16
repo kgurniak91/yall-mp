@@ -180,6 +180,8 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
       barWidth: 2,
       barGap: 1,
       minPxPerSec: this.currentZoom(),
+      autoScroll: true,
+      autoCenter: true,
       // Prevent wavesurfer from interacting with media, because the player is driven externally
       media: undefined,
       // Pass the URL directly to load the waveform
