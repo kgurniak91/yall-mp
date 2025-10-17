@@ -1,155 +1,125 @@
 import {inject, Injectable, OnDestroy} from '@angular/core';
-import {VideoStateService} from '../../../../state/video/video-state.service';
-import {KeyboardAction, SeekDirection} from '../../../../model/video.types';
-import {ClipsStateService} from '../../../../state/clips/clips-state.service';
-import {CommandHistoryStateService} from '../../../../state/command-history/command-history-state.service';
-import {GlobalSettingsStateService} from '../../../../state/global-settings/global-settings-state.service';
+import {KeyboardAction} from '../../../../model/video.types';
+import {ProjectActionService} from '../project-action/project-action.service';
+import {SINGLE_SHOT_ACTIONS} from '../project-action/project-action.types';
 
 @Injectable()
 export class KeyboardShortcutsService implements OnDestroy {
-  private videoStateService = inject(VideoStateService);
-  private clipsStateService = inject(ClipsStateService);
-  private globalSettingsStateService = inject(GlobalSettingsStateService);
-  private commandHistoryStateService = inject(CommandHistoryStateService);
+  private readonly actionService = inject(ProjectActionService);
+  // Tracks keys currently held down to prevent OS key-repeat from firing single-shot actions multiple times:
+  private activeKeys = new Set<string>();
 
   constructor() {
     document.addEventListener('keydown', this.handleKeyDown);
+    document.addEventListener('keyup', this.handleKeyUp);
   }
 
   ngOnDestroy(): void {
     document.removeEventListener('keydown', this.handleKeyDown);
+    document.removeEventListener('keyup', this.handleKeyUp);
   }
 
-  private readonly handleKeyDown = (event: KeyboardEvent): void => {
-    // Ignore keyboard events from input fields to prevent them from triggering shortcuts
-    const target = event.target as HTMLElement;
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
-
-    const keyMap = new Map<string, KeyboardAction>();
-    keyMap.set('c', KeyboardAction.ToggleSubtitles);
-    keyMap.set('C', KeyboardAction.ToggleSubtitles);
-    keyMap.set(',', KeyboardAction.ToggleSettings);
-    keyMap.set(' ', KeyboardAction.TogglePlayPause);
-    keyMap.set('s', KeyboardAction.EditCurrentSubtitles);
-    keyMap.set('S', KeyboardAction.EditCurrentSubtitles);
-    keyMap.set('\\', KeyboardAction.SplitClip);
-    keyMap.set('Delete', KeyboardAction.DeleteClip);
-    keyMap.set('Insert', KeyboardAction.CreateClip);
-
-    let action: KeyboardAction | undefined;
-
-    if (event.ctrlKey) {
-      if (event.key === 'ArrowLeft') {
-        action = KeyboardAction.PreviousSubtitledClip;
-      } else if (event.key === 'ArrowRight') {
-        action = KeyboardAction.NextSubtitledClip;
-      } else if (event.key === 'ArrowUp') {
-        action = KeyboardAction.RepeatCurrentClip;
-      } else if (event.key === 'ArrowDown') {
-        action = KeyboardAction.ForceContinue;
-      } else if (event.key === '[') {
-        action = KeyboardAction.AdjustClipStartRight;
-      } else if (event.key === ']') {
-        action = KeyboardAction.AdjustClipEndLeft;
-      } else if (event.key.toLowerCase() === 'z') {
-        if (event.shiftKey) {
-          action = KeyboardAction.Redo;
-        } else {
-          action = KeyboardAction.Undo;
-        }
-      } else if (event.key.toLowerCase() === 'y') {
-        action = KeyboardAction.Redo;
-      } else if (event.key.toLowerCase() === 'e') {
-        action = KeyboardAction.ExportToAnki;
-      }
-    } else {
-      if (event.key === 'ArrowLeft') {
-        action = KeyboardAction.SeekBackward;
-      } else if (event.key === 'ArrowRight') {
-        action = KeyboardAction.SeekForward;
-      } else if (event.key === 'ArrowUp') {
-        action = KeyboardAction.RepeatCurrentClip;
-      } else if (event.key === 'ArrowDown') {
-        action = KeyboardAction.ForceContinue;
-      } else if (event.key === '[') {
-        action = KeyboardAction.AdjustClipStartLeft;
-      } else if (event.key === ']') {
-        action = KeyboardAction.AdjustClipEndRight;
-      } else if (event.key.toLowerCase() === 'e') {
-        action = KeyboardAction.ExportToAnki;
-      } else {
-        action = keyMap.get(event.key);
-      }
-    }
-
-    if (action) {
-      event.preventDefault();
-      this.executeAction(action);
-    }
+  private readonly handleKeyUp = (event: KeyboardEvent): void => {
+    this.activeKeys.delete(event.code);
   };
 
-  private executeAction(action: KeyboardAction): void {
-    switch (action) {
-      case KeyboardAction.ToggleSubtitles:
-        this.videoStateService.toggleSubtitlesVisible();
-        break;
-      case KeyboardAction.SeekBackward:
-        this.videoStateService.seekRelative(-this.globalSettingsStateService.seekAmountSeconds());
-        break;
-      case KeyboardAction.SeekForward:
-        this.videoStateService.seekRelative(this.globalSettingsStateService.seekAmountSeconds());
-        break;
-      case KeyboardAction.PreviousSubtitledClip:
-        this.clipsStateService.goToAdjacentSubtitledClip(SeekDirection.Previous);
-        break;
-      case KeyboardAction.NextSubtitledClip:
-        this.clipsStateService.goToAdjacentSubtitledClip(SeekDirection.Next);
-        break;
-      case KeyboardAction.RepeatCurrentClip:
-        this.videoStateService.repeatCurrentClip();
-        break;
-      case KeyboardAction.ForceContinue:
-        this.videoStateService.forceContinue();
-        break;
-      case KeyboardAction.TogglePlayPause:
-        this.videoStateService.togglePlayPause();
-        break;
-      case KeyboardAction.AdjustClipStartLeft:
-        this.clipsStateService.adjustCurrentClipBoundary('start', 'left');
-        break;
-      case KeyboardAction.AdjustClipStartRight:
-        this.clipsStateService.adjustCurrentClipBoundary('start', 'right');
-        break;
-      case KeyboardAction.AdjustClipEndLeft:
-        this.clipsStateService.adjustCurrentClipBoundary('end', 'left');
-        break;
-      case KeyboardAction.AdjustClipEndRight:
-        this.clipsStateService.adjustCurrentClipBoundary('end', 'right');
-        break;
-      case KeyboardAction.ToggleSettings:
-        this.videoStateService.toggleSettings();
-        break;
-      case KeyboardAction.EditCurrentSubtitles:
-        this.videoStateService.requestEditSubtitles();
-        break;
-      case KeyboardAction.Undo:
-        this.commandHistoryStateService.undo();
-        break;
-      case KeyboardAction.Redo:
-        this.commandHistoryStateService.redo();
-        break;
-      case KeyboardAction.SplitClip:
-        this.clipsStateService.splitCurrentSubtitledClip();
-        break;
-      case KeyboardAction.DeleteClip:
-        this.clipsStateService.deleteCurrentClip();
-        break;
-      case KeyboardAction.CreateClip:
-        this.clipsStateService.createNewSubtitledClipAtCurrentTime();
-        break;
-      case KeyboardAction.ExportToAnki:
-        this.videoStateService.requestAnkiExport();
-        break;
+  private readonly handleKeyDown = (event: KeyboardEvent): void => {
+    const target = event.target as HTMLElement;
+    // Ignore if user is typing in an input field
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+      return;
     }
+
+    const action = this.mapEventToAction(event);
+    if (!action) {
+      return;
+    }
+
+    // If it's a single-shot action (like Play/Pause), only dispatch if the key isn't already registered as down.
+    if (SINGLE_SHOT_ACTIONS.has(action)) {
+      if (this.activeKeys.has(event.code)) {
+        event.preventDefault(); // Prevent default browser behavior on repeat
+        return; // Ignore OS key repeat
+      }
+      this.activeKeys.add(event.code);
+    }
+
+    // Dispatch the action.
+    // For single-shot, this happens once per press.
+    // For continuous, this happens on every OS key repeat, and ProjectActionService throttles it.
+    event.preventDefault();
+    this.actionService.dispatch(action);
+  };
+
+  private mapEventToAction(event: KeyboardEvent): KeyboardAction | undefined {
+    const key = event.key;
+    const lowerKey = key.toLowerCase();
+
+    // --- Ctrl + Key ---
+    if (event.ctrlKey && !event.shiftKey && !event.altKey) {
+      switch (key) {
+        case 'ArrowLeft':
+          return KeyboardAction.PreviousSubtitledClip;
+        case 'ArrowRight':
+          return KeyboardAction.NextSubtitledClip;
+        case 'ArrowUp':
+          return KeyboardAction.RepeatCurrentClip;
+        case 'ArrowDown':
+          return KeyboardAction.ForceContinue;
+        case '[':
+          return KeyboardAction.AdjustClipStartRight;
+        case ']':
+          return KeyboardAction.AdjustClipEndLeft;
+        case 'z':
+        case 'Z':
+          return KeyboardAction.Undo;
+        case 'y':
+        case 'Y':
+          return KeyboardAction.Redo;
+        case 'e':
+        case 'E':
+          return KeyboardAction.ExportToAnki;
+      }
+    }
+
+    // --- Ctrl + Shift + Key ---
+    if (event.ctrlKey && event.shiftKey && !event.altKey) {
+      if (lowerKey === 'z') return KeyboardAction.Redo;
+    }
+
+    // --- No Modifiers (or Shift for casing) ---
+    if (!event.ctrlKey && !event.altKey) {
+      switch (key) {
+        case 'ArrowLeft':
+          return KeyboardAction.SeekBackward;
+        case 'ArrowRight':
+          return KeyboardAction.SeekForward;
+        case 'ArrowUp':
+          return KeyboardAction.RepeatCurrentClip;
+        case 'ArrowDown':
+          return KeyboardAction.ForceContinue;
+        case '[':
+          return KeyboardAction.AdjustClipStartLeft;
+        case ']':
+          return KeyboardAction.AdjustClipEndRight;
+        case 'Delete':
+          return KeyboardAction.DeleteClip;
+        case 'Insert':
+          return KeyboardAction.CreateClip;
+        case ' ':
+          return KeyboardAction.TogglePlayPause;
+        case '\\':
+          return KeyboardAction.SplitClip;
+        // Char keys (case-insensitive mapping)
+        case ',':
+          return KeyboardAction.ToggleSettings;
+        default:
+          if (lowerKey === 'c') return KeyboardAction.ToggleSubtitles;
+          if (lowerKey === 's') return KeyboardAction.EditCurrentSubtitles;
+          if (lowerKey === 'e') return KeyboardAction.ExportToAnki;
+      }
+    }
+
+    return undefined;
   }
 }

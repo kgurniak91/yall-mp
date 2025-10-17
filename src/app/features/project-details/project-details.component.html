@@ -94,20 +94,20 @@
 
     <div class="settings-wrapper">
       <p-button icon="fa-solid fa-eraser"
-                (click)="clipsStateService.deleteCurrentClip()"
+                (click)="deleteCurrentClip()"
                 pTooltip="Delete clip (Delete)"
                 tooltipPosition="left"
                 severity="secondary"/>
 
       @if (currentClipHasSubtitles()) {
         <p-button icon="fa-solid fa-divide rotate-90"
-                  (click)="clipsStateService.splitCurrentSubtitledClip()"
+                  (click)="splitCurrentSubtitledClip()"
                   pTooltip="Split subtitled clip (\)"
                   tooltipPosition="left"
                   severity="secondary"/>
       } @else {
         <p-button icon="fa-regular fa-square-plus"
-                  (click)="clipsStateService.createNewSubtitledClipAtCurrentTime()"
+                  (click)="createNewSubtitledClipAtCurrentTime()"
                   pTooltip="Create subtitled clip (Insert)"
                   tooltipPosition="left"
                   severity="secondary"/>
@@ -130,7 +130,7 @@
       @let subtitlesVisible = videoStateService.subtitlesVisible();
       <p-button icon="{{subtitlesVisible ? 'fa-solid' : 'fa-regular'}} fa-closed-captioning"
                 [pTooltip]="(subtitlesVisible ? 'Hide subtitles' : 'Show subtitles') + ' (C)'"
-                (onClick)="videoStateService.toggleSubtitlesVisible()"
+                (onClick)="toggleSubtitlesVisible()"
                 tooltipPosition="left"
                 severity="secondary"/>
 

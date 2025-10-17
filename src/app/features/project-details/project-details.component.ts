@@ -6,7 +6,7 @@ import {Button} from 'primeng/button';
 import {Tooltip} from 'primeng/tooltip';
 import {Drawer} from 'primeng/drawer';
 import {KeyboardShortcutsService} from './services/keyboard-shortcuts/keyboard-shortcuts.service';
-import {SeekDirection, VideoClip} from '../../model/video.types';
+import {KeyboardAction, VideoClip} from '../../model/video.types';
 import {ClipsStateService} from '../../state/clips/clips-state.service';
 import {Popover} from 'primeng/popover';
 import {ActivatedRoute, Router} from '@angular/router';
@@ -46,6 +46,7 @@ import {MenuItem} from 'primeng/api';
 import {DialogOrchestrationService} from '../../core/services/dialog-orchestration/dialog-orchestration.service';
 import {cloneDeep} from 'lodash-es';
 import {GlobalSettingsTab} from '../global-settings-dialog/global-settings-dialog.types';
+import {ProjectActionService} from './services/project-action/project-action.service';
 
 @Component({
   selector: 'app-project-details',
@@ -66,6 +67,7 @@ import {GlobalSettingsTab} from '../global-settings-dialog/global-settings-dialo
   templateUrl: './project-details.component.html',
   styleUrl: './project-details.component.scss',
   providers: [
+    ProjectActionService,
     KeyboardShortcutsService,
     SubtitlesHighlighterService,
     ClipsStateService,
@@ -193,6 +195,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   protected readonly isContextMenuOpen = signal(false);
   private selectedSubtitleTextForMenu = '';
   private wasPlayingBeforeSettingsOpened = false;
+  private readonly actionService = inject(ProjectActionService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly appStateService = inject(AppStateService);
@@ -387,53 +390,67 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   }
 
   goToNextSubtitledClip() {
-    this.clipsStateService.goToAdjacentSubtitledClip(SeekDirection.Next);
+    this.actionService.dispatch(KeyboardAction.NextSubtitledClip);
   }
 
   goToPreviousSubtitledClip() {
-    this.clipsStateService.goToAdjacentSubtitledClip(SeekDirection.Previous);
+    this.actionService.dispatch(KeyboardAction.PreviousSubtitledClip);
   }
 
   togglePlayPause() {
-    this.videoStateService.togglePlayPause();
+    this.actionService.dispatch(KeyboardAction.TogglePlayPause);
   }
 
   repeatCurrentClip() {
-    this.videoStateService.repeatCurrentClip();
+    this.actionService.dispatch(KeyboardAction.RepeatCurrentClip);
   }
 
   adjustClipStartLeft(): void {
-    this.clipsStateService.adjustCurrentClipBoundary('start', 'left');
+    this.actionService.dispatch(KeyboardAction.AdjustClipStartLeft);
   }
 
   adjustClipStartRight(): void {
-    this.clipsStateService.adjustCurrentClipBoundary('start', 'right');
+    this.actionService.dispatch(KeyboardAction.AdjustClipStartRight);
   }
 
   adjustClipEndLeft(): void {
-    this.clipsStateService.adjustCurrentClipBoundary('end', 'left');
+    this.actionService.dispatch(KeyboardAction.AdjustClipEndLeft);
   }
 
   adjustClipEndRight(): void {
-    this.clipsStateService.adjustCurrentClipBoundary('end', 'right');
+    this.actionService.dispatch(KeyboardAction.AdjustClipEndRight);
   }
 
   toggleSettings(): void {
-    const isVisible = this.isSettingsVisible();
+    this.actionService.dispatch(KeyboardAction.ToggleSettings);
+  }
 
-    if (!isVisible) {
-      this.wasPlayingBeforeSettingsOpened = this.clipsStateService.isPlaying();
-      if (this.wasPlayingBeforeSettingsOpened) {
-        window.electronAPI.mpvSetProperty('pause', true);
-      }
-      this.isSettingsVisible.set(true);
-    } else {
-      if (this.wasPlayingBeforeSettingsOpened) {
-        window.electronAPI.mpvSetProperty('pause', false);
-      }
-      this.isSettingsVisible.set(false);
-      this.wasPlayingBeforeSettingsOpened = false;
-    }
+  deleteCurrentClip(): void {
+    this.actionService.dispatch(KeyboardAction.DeleteClip);
+  }
+
+  splitCurrentSubtitledClip(): void {
+    this.actionService.dispatch(KeyboardAction.SplitClip);
+  }
+
+  createNewSubtitledClipAtCurrentTime(): void {
+    this.actionService.dispatch(KeyboardAction.CreateClip);
+  }
+
+  toggleSubtitlesVisible(): void {
+    this.actionService.dispatch(KeyboardAction.ToggleSubtitles);
+  }
+
+  openEditSubtitlesDialog(): void {
+    this.actionService.dispatch(KeyboardAction.EditCurrentSubtitles);
+  }
+
+  undo(): void {
+    this.actionService.dispatch(KeyboardAction.Undo);
+  }
+
+  redo(): void {
+    this.actionService.dispatch(KeyboardAction.Redo);
   }
 
   async openAnkiExportDialog(): Promise<void> {
@@ -471,61 +488,6 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       closable: true,
       data
     });
-  }
-
-  openEditSubtitlesDialog(): void {
-    if (!this.canEditSubtitles()) {
-      this.toastService.info('Subtitle editing is only available in the "Interactive (ASS.js)" renderer mode.');
-      return;
-    }
-
-    const currentClip = this.clipsStateService.currentClip();
-    if (!currentClip || !currentClip.hasSubtitle) {
-      return;
-    }
-
-    const dataForDialog: SubtitleData = this.createSubtitleDataFromVideoClip(currentClip);
-
-    this.dialogRef = this.dialogService.open(EditSubtitlesDialogComponent, {
-      header: 'Edit Subtitles',
-      width: '50vw',
-      modal: true,
-      data: dataForDialog
-    });
-
-    this.dialogRef.onClose.pipe(
-      take(1)
-    ).subscribe((result: ClipContent | undefined) => {
-      if (!result) return; // Closed without saving or no changes were made
-
-      const oldContent: ClipContent = {
-        text: currentClip.text,
-        parts: currentClip.parts
-      };
-
-      const newContent: ClipContent = {
-        text: result.text,
-        parts: result.parts
-      };
-
-      const command = new UpdateClipTextCommand(
-        this.clipsStateService,
-        this.project()!.id,
-        currentClip.id,
-        oldContent,
-        newContent
-      );
-
-      this.commandHistoryStateService.execute(command);
-    });
-  }
-
-  undo(): void {
-    this.commandHistoryStateService.undo();
-  }
-
-  redo(): void {
-    this.commandHistoryStateService.redo();
   }
 
   onSettingsPresetChange(preset: SettingsPreset | null): void {
@@ -667,14 +629,75 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
   private toggleSettingsRequestListener = effect(() => {
     if (this.videoStateService.toggleSettingsRequest()) {
-      this.toggleSettings();
+      const isVisible = this.isSettingsVisible();
+
+      if (!isVisible) {
+        this.wasPlayingBeforeSettingsOpened = this.clipsStateService.isPlaying();
+        if (this.wasPlayingBeforeSettingsOpened) {
+          window.electronAPI.mpvSetProperty('pause', true);
+        }
+        this.isSettingsVisible.set(true);
+      } else {
+        if (this.wasPlayingBeforeSettingsOpened) {
+          window.electronAPI.mpvSetProperty('pause', false);
+        }
+        this.isSettingsVisible.set(false);
+        this.wasPlayingBeforeSettingsOpened = false;
+      }
       this.videoStateService.clearToggleSettingsRequest();
     }
   });
 
   private editCurrentSubtitlesListener = effect(() => {
     if (this.videoStateService.editSubtitlesRequest()) {
-      this.openEditSubtitlesDialog();
+      if (!this.canEditSubtitles()) {
+        this.toastService.info('Subtitle editing is only available in the "Interactive (ASS.js)" renderer mode.');
+        this.videoStateService.clearEditSubtitlesRequest();
+        return;
+      }
+
+      const currentClip = this.clipsStateService.currentClip();
+      if (!currentClip || !currentClip.hasSubtitle) {
+        this.videoStateService.clearEditSubtitlesRequest();
+        return;
+      }
+
+      const dataForDialog: SubtitleData = this.createSubtitleDataFromVideoClip(currentClip);
+
+      this.dialogRef = this.dialogService.open(EditSubtitlesDialogComponent, {
+        header: 'Edit Subtitles',
+        width: '50vw',
+        modal: true,
+        data: dataForDialog
+      });
+
+      this.dialogRef.onClose.pipe(
+        take(1)
+      ).subscribe((result: ClipContent | undefined) => {
+        if (!result) {
+          return; // Closed without saving or no changes were made
+        }
+
+        const oldContent: ClipContent = {
+          text: currentClip.text,
+          parts: currentClip.parts
+        };
+
+        const newContent: ClipContent = {
+          text: result.text,
+          parts: result.parts
+        };
+
+        const command = new UpdateClipTextCommand(
+          this.clipsStateService,
+          this.project()!.id,
+          currentClip.id,
+          oldContent,
+          newContent
+        );
+
+        this.commandHistoryStateService.execute(command);
+      });
       this.videoStateService.clearEditSubtitlesRequest();
     }
   });
