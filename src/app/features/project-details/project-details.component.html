@@ -146,8 +146,8 @@
     <app-timeline-editor/>
   </div>
 
-  <p-drawer [(visible)]="isSettingsVisible"
-            (onHide)="toggleSettings()"
+  <p-drawer [visible]="projectSettingsStateService.isSettingsDrawerOpen()"
+            (visibleChange)="projectSettingsStateService.setSettingsDrawerOpen($event)"
             header="Settings"
             position="right"
             [style]="{width: '30rem'}">

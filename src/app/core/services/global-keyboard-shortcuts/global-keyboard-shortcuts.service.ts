@@ -27,6 +27,12 @@ export class GlobalKeyboardShortcutsService implements OnDestroy {
     if (event.key === 'Escape') {
       event.preventDefault();
 
+      const isProjectSettingsDrawerOpened = document.querySelector('.p-drawer-active app-current-project-settings');
+      if (isProjectSettingsDrawerOpened) {
+        // Handled in ProjectKeyboardShortcutsService
+        return;
+      }
+
       // Close the confirmation dialog if any
       const visibleConfirmationDialog = document.querySelector('.p-dialog-mask .p-confirmdialog');
       if (visibleConfirmationDialog) {
@@ -42,7 +48,7 @@ export class GlobalKeyboardShortcutsService implements OnDestroy {
         return;
       }
 
-      // If no dialogs are open, perform the window action (exit fullscreen or minimize)
+      // If no dialogs nor drawers are open, perform the window action (exit fullscreen or minimize)
       window.electronAPI.windowEscape();
     }
   };

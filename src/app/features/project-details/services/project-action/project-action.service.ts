@@ -7,12 +7,14 @@ import {GlobalSettingsStateService} from '../../../../state/global-settings/glob
 import {filter, Subject, throttleTime} from 'rxjs';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {CONTINUOUS_ACTIONS, SINGLE_SHOT_ACTIONS} from './project-action.types';
+import {ProjectSettingsStateService} from '../../../../state/project-settings/project-settings-state.service';
 
 @Injectable()
 export class ProjectActionService {
   private videoStateService = inject(VideoStateService);
   private clipsStateService = inject(ClipsStateService);
   private globalSettingsStateService = inject(GlobalSettingsStateService);
+  private projectSettingsStateService = inject(ProjectSettingsStateService);
   private commandHistoryStateService = inject(CommandHistoryStateService);
   private action$ = new Subject<KeyboardAction>();
   private readonly destroyRef = inject(DestroyRef);
@@ -80,7 +82,7 @@ export class ProjectActionService {
         this.clipsStateService.adjustCurrentClipBoundary('end', 'right');
         break;
       case KeyboardAction.ToggleSettings:
-        this.videoStateService.toggleSettings();
+        this.projectSettingsStateService.setSettingsDrawerOpen(!this.projectSettingsStateService.isSettingsDrawerOpen());
         break;
       case KeyboardAction.EditCurrentSubtitles:
         this.videoStateService.requestEditSubtitles();

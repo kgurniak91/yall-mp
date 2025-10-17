@@ -15,7 +15,6 @@ export class VideoStateService implements OnDestroy {
   private readonly _playPauseRequest = signal<number | null>(null);
   private readonly _repeatRequest = signal<number | null>(null);
   private readonly _forceContinueRequest = signal<number | null>(null);
-  private readonly _toggleSettingsRequest = signal<number | null>(null);
   private readonly _editSubtitlesRequest = signal<number | null>(null);
   private readonly _syncTimelineRequest = signal<number | null>(null);
   private readonly _ankiExportRequest = signal<number | null>(null);
@@ -41,7 +40,6 @@ export class VideoStateService implements OnDestroy {
   public readonly playPauseRequest = this._playPauseRequest.asReadonly();
   public readonly repeatRequest = this._repeatRequest.asReadonly();
   public readonly forceContinueRequest = this._forceContinueRequest.asReadonly();
-  public readonly toggleSettingsRequest = this._toggleSettingsRequest.asReadonly();
   public readonly editSubtitlesRequest = this._editSubtitlesRequest.asReadonly();
   public readonly syncTimelineRequest = this._syncTimelineRequest.asReadonly();
   public readonly ankiExportRequest = this._ankiExportRequest.asReadonly();
@@ -121,10 +119,6 @@ export class VideoStateService implements OnDestroy {
     this._playPauseRequest.set(Date.now());
   }
 
-  public toggleSettings(): void {
-    this._toggleSettingsRequest.set(Date.now());
-  }
-
   public requestEditSubtitles(): void {
     this._editSubtitlesRequest.set(Date.now());
   }
@@ -192,10 +186,6 @@ export class VideoStateService implements OnDestroy {
 
   public clearForceContinueRequest(): void {
     this._forceContinueRequest.set(null);
-  }
-
-  public clearToggleSettingsRequest(): void {
-    this._toggleSettingsRequest.set(null);
   }
 
   public clearEditSubtitlesRequest(): void {

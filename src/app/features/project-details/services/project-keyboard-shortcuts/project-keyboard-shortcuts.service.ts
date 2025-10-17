@@ -2,9 +2,11 @@ import {inject, Injectable, OnDestroy} from '@angular/core';
 import {KeyboardAction} from '../../../../model/video.types';
 import {ProjectActionService} from '../project-action/project-action.service';
 import {SINGLE_SHOT_ACTIONS} from '../project-action/project-action.types';
+import {ProjectSettingsStateService} from '../../../../state/project-settings/project-settings-state.service';
 
 @Injectable()
-export class KeyboardShortcutsService implements OnDestroy {
+export class ProjectKeyboardShortcutsService implements OnDestroy {
+  private readonly projectSettingsStateService = inject(ProjectSettingsStateService);
   private readonly actionService = inject(ProjectActionService);
   // Tracks keys currently held down to prevent OS key-repeat from firing single-shot actions multiple times:
   private activeKeys = new Set<string>();
@@ -27,6 +29,17 @@ export class KeyboardShortcutsService implements OnDestroy {
     const target = event.target as HTMLElement;
     // Ignore if user is typing in an input field
     if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+      return;
+    }
+
+    // Handle current settings drawer shortcuts first
+    if (this.projectSettingsStateService.isSettingsDrawerOpen()) {
+      if (event.key === 'Escape' || event.key === ',') {
+        event.preventDefault();
+        this.projectSettingsStateService.setSettingsDrawerOpen(false);
+      }
+
+      // Block all other shortcuts when the drawer is open
       return;
     }
 

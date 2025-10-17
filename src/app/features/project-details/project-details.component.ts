@@ -5,7 +5,9 @@ import {TimelineEditorComponent} from './timeline-editor/timeline-editor.compone
 import {Button} from 'primeng/button';
 import {Tooltip} from 'primeng/tooltip';
 import {Drawer} from 'primeng/drawer';
-import {KeyboardShortcutsService} from './services/keyboard-shortcuts/keyboard-shortcuts.service';
+import {
+  ProjectKeyboardShortcutsService
+} from './services/project-keyboard-shortcuts/project-keyboard-shortcuts.service';
 import {KeyboardAction, VideoClip} from '../../model/video.types';
 import {ClipsStateService} from '../../state/clips/clips-state.service';
 import {Popover} from 'primeng/popover';
@@ -68,7 +70,7 @@ import {ProjectActionService} from './services/project-action/project-action.ser
   styleUrl: './project-details.component.scss',
   providers: [
     ProjectActionService,
-    KeyboardShortcutsService,
+    ProjectKeyboardShortcutsService,
     SubtitlesHighlighterService,
     ClipsStateService,
     CommandHistoryStateService,
@@ -143,7 +145,6 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     return !nextSubtitledClipExists;
   });
 
-  protected readonly isSettingsVisible = signal(false);
   protected readonly commandHistoryStateService = inject(CommandHistoryStateService);
   protected readonly videoStateService = inject(VideoStateService);
   protected readonly ankiStateService = inject(AnkiStateService);
@@ -195,6 +196,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   protected readonly isContextMenuOpen = signal(false);
   private selectedSubtitleTextForMenu = '';
   private wasPlayingBeforeSettingsOpened = false;
+  private wasSettingsDrawerOpened = false;
   private readonly actionService = inject(ProjectActionService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -215,7 +217,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   private cleanupAddNoteListener: (() => void) | null = null;
 
   constructor() {
-    inject(KeyboardShortcutsService); // start listening
+    inject(ProjectKeyboardShortcutsService); // start listening
     inject(TokenizationService); // start listening
 
     effect(() => {
@@ -627,25 +629,24 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
-  private toggleSettingsRequestListener = effect(() => {
-    if (this.videoStateService.toggleSettingsRequest()) {
-      const isVisible = this.isSettingsVisible();
+  private settingsDrawerListener = effect(() => {
+    const isOpen = this.projectSettingsStateService.isSettingsDrawerOpen();
 
-      if (!isVisible) {
-        this.wasPlayingBeforeSettingsOpened = this.clipsStateService.isPlaying();
-        if (this.wasPlayingBeforeSettingsOpened) {
-          window.electronAPI.mpvSetProperty('pause', true);
-        }
-        this.isSettingsVisible.set(true);
-      } else {
-        if (this.wasPlayingBeforeSettingsOpened) {
-          window.electronAPI.mpvSetProperty('pause', false);
-        }
-        this.isSettingsVisible.set(false);
-        this.wasPlayingBeforeSettingsOpened = false;
+    if (isOpen && !this.wasSettingsDrawerOpened) {
+      // Drawer is opening (was closed before)
+      this.wasPlayingBeforeSettingsOpened = this.clipsStateService.isPlaying();
+      if (this.wasPlayingBeforeSettingsOpened) {
+        window.electronAPI.playbackPause();
       }
-      this.videoStateService.clearToggleSettingsRequest();
+    } else if (!isOpen && this.wasSettingsDrawerOpened) {
+      // Drawer is closing
+      if (this.wasPlayingBeforeSettingsOpened) {
+        window.electronAPI.playbackPlay();
+      }
+      this.wasPlayingBeforeSettingsOpened = false;
     }
+
+    this.wasSettingsDrawerOpened = isOpen;
   });
 
   private editCurrentSubtitlesListener = effect(() => {
