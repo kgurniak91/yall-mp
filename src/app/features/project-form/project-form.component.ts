@@ -234,7 +234,8 @@ export class ProjectFormComponent implements OnInit {
       videoWidth: this.videoWidth(),
       videoHeight: this.videoHeight(),
       detectedLanguage: 'other',
-      ankiTags: [generatedAnkiTag]
+      ankiTags: [generatedAnkiTag],
+      lastAnkiSuspendState: this.globalSettingsStateService.ankiSuspendNewCardsByDefault()
     };
     this.appStateService.createProject(newProject);
     this.router.navigate(['/project', newProject.id]);

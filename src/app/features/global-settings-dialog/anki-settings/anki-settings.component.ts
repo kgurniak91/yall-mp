@@ -12,6 +12,8 @@ import {Tooltip} from 'primeng/tooltip';
 import {v4 as uuidv4} from 'uuid';
 import {TagsInputComponent} from '../../../shared/components/tags-input/tags-input.component';
 import {FormsModule} from '@angular/forms';
+import {GlobalSettingsStateService} from '../../../state/global-settings/global-settings-state.service';
+import {Checkbox} from 'primeng/checkbox';
 
 @Component({
   selector: 'app-anki-settings',
@@ -21,7 +23,8 @@ import {FormsModule} from '@angular/forms';
     TableModule,
     Tooltip,
     TagsInputComponent,
-    FormsModule
+    FormsModule,
+    Checkbox
   ],
   templateUrl: './anki-settings.component.html',
   styleUrl: './anki-settings.component.scss'
@@ -29,6 +32,7 @@ import {FormsModule} from '@angular/forms';
 export class AnkiSettingsComponent {
   protected readonly AnkiConnectStatus = AnkiConnectStatus;
   protected readonly ankiStateService = inject(AnkiStateService);
+  protected readonly globalSettingsStateService = inject(GlobalSettingsStateService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly toastService = inject(ToastService);
   private readonly dialogService = inject(DialogService);
@@ -74,5 +78,9 @@ export class AnkiSettingsComponent {
         this.toastService.success('Template deleted.');
       }
     });
+  }
+
+  protected onSuspendByDefaultChange(value: boolean): void {
+    this.globalSettingsStateService.setAnkiSuspendNewCardsByDefault(value);
   }
 }

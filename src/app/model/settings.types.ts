@@ -49,6 +49,7 @@ export interface GlobalSettings {
   srtBackgroundOpacity: number;
   subtitleLookupServices: SubtitleLookupService[];
   subtitleLookupBrowserType: SubtitleLookupBrowserType;
+  ankiSuspendNewCardsByDefault: boolean;
 }
 
 export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
@@ -101,7 +102,8 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
       browserType: null
     }
   ],
-  subtitleLookupBrowserType: SubtitleLookupBrowserType.BuiltIn
+  subtitleLookupBrowserType: SubtitleLookupBrowserType.BuiltIn,
+  ankiSuspendNewCardsByDefault: false
 };
 
 export interface SettingsPreset {

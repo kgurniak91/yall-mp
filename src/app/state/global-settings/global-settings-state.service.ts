@@ -13,6 +13,7 @@ export class GlobalSettingsStateService {
   public readonly defaultProjectSettings = computed(() => this.appStateService.globalSettings().defaultProjectSettings);
   public readonly subtitleLookupServices = computed(() => this.appStateService.globalSettings().subtitleLookupServices);
   public readonly subtitleLookupBrowserType = computed(() => this.appStateService.globalSettings().subtitleLookupBrowserType);
+  public readonly ankiSuspendNewCardsByDefault = computed(() => this.appStateService.globalSettings().ankiSuspendNewCardsByDefault);
   public readonly srtFontSizePx = computed(() => this.appStateService.globalSettings().srtFontSizePx);
   public readonly srtBackgroundOpacity = computed(() => this.appStateService.globalSettings().srtBackgroundOpacity);
   public readonly srtBackgroundColor = computed(() => `rgba(0, 0, 0, ${this.srtBackgroundOpacity()})`);
@@ -47,5 +48,9 @@ export class GlobalSettingsStateService {
 
   public updateSubtitleLookupServices(services: SubtitleLookupService[]): void {
     this.appStateService.updateGlobalSettings({subtitleLookupServices: services});
+  }
+
+  public setAnkiSuspendNewCardsByDefault(value: boolean): void {
+    this.appStateService.updateGlobalSettings({ankiSuspendNewCardsByDefault: value});
   }
 }

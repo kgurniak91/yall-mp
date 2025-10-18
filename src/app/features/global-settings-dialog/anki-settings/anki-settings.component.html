@@ -35,6 +35,23 @@
     </div>
   </p-fieldset>
 
+  <p-fieldset legend="Default Export Options" [toggleable]="false">
+    <div class="setting-item">
+      <div class="flex align-items-center">
+        <p-checkbox [ngModel]="globalSettingsStateService.ankiSuspendNewCardsByDefault()"
+                    (ngModelChange)="onSuspendByDefaultChange($event)"
+                    [binary]="true"
+                    inputId="suspend-by-default"/>
+        <label for="suspend-by-default" class="ml-2">Suspend new cards by default</label>
+      </div>
+    </div>
+    <small class="block mt-2">
+      Sets the initial state of the "Create card as suspended" checkbox for new projects.
+      <br>
+      You can always change it later in the "Export to Anki" dialog window.
+    </small>
+  </p-fieldset>
+
   <p-fieldset legend="Card templates" [toggleable]="false">
     @if (ankiStateService.status() === AnkiConnectStatus.connected) {
       <div class="mb-3 flex justify-content-end">
