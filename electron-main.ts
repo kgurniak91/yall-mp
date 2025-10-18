@@ -57,6 +57,8 @@ let preMaximizeBounds: Electron.Rectangle | null = null;
 let isFullScreen = false;
 let isFixingMaximize = false;
 let isProgrammaticResize = false;
+let isEnteringFullscreen = false;
+let resizeDebounceTimer: NodeJS.Timeout | null = null;
 let isFFmpegAvailable = false;
 let ffmpegPath = '';
 let ffprobePath = '';
@@ -263,7 +265,31 @@ function createWindow() {
     }, 250);
   };
 
-  mainWindow.on('resize', syncWindowGeometry);
+  mainWindow.on('resize', () => {
+    // Always run the core geometry sync logic immediately
+    syncWindowGeometry();
+
+    // When in the process of entering fullscreen, handle the debounce logic
+    if (isEnteringFullscreen) {
+      if (resizeDebounceTimer) {
+        clearTimeout(resizeDebounceTimer);
+      }
+
+      resizeDebounceTimer = setTimeout(() => {
+        console.log('[Main Process] Fullscreen resize complete. Locking window resize.');
+        if (mainWindow) {
+          mainWindow.setResizable(false);
+        }
+        if (uiWindow) {
+          uiWindow.setResizable(false);
+        }
+
+        // Reset the flag so this logic doesn't run on normal resizes
+        isEnteringFullscreen = false;
+      }, 100);
+    }
+  });
+
   mainWindow.on('move', syncWindowGeometry);
 
   uiWindow.on('resize', () => {
@@ -363,17 +389,28 @@ function createWindow() {
 
   mainWindow.on('enter-full-screen', () => {
     isFullScreen = true;
+    isEnteringFullscreen = true;
+
     if (uiWindow) {
       uiWindow.webContents.send('window:fullscreen-state-changed', true);
     }
+
     updateUiWindowShape();
   });
 
   mainWindow.on('leave-full-screen', () => {
     isFullScreen = false;
+    isEnteringFullscreen = false;
+
+    if (mainWindow) {
+      mainWindow.setResizable(true);
+    }
+
     if (uiWindow) {
+      uiWindow.setResizable(true);
       uiWindow.webContents.send('window:fullscreen-state-changed', false);
     }
+
     updateUiWindowShape();
   });
 
