@@ -10,7 +10,7 @@ import {
   viewChild
 } from '@angular/core';
 import {ConfirmationService, MenuItem} from 'primeng/api';
-import {ActivatedRoute, NavigationEnd, Router} from '@angular/router';
+import {ActivatedRoute, NavigationEnd, NavigationStart, Router} from '@angular/router';
 import {AppStateService} from '../../../state/app/app-state.service';
 import {filter} from 'rxjs';
 import {Project} from '../../../model/project.types';
@@ -55,6 +55,13 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
     this.cleanupFullScreenListener = window.electronAPI.onWindowFullScreenStateChanged((isFullScreen: boolean) => this.isFullScreen.set(isFullScreen));
 
     this.router.events.pipe(
+      filter((event): event is NavigationStart => event instanceof NavigationStart)
+    ).subscribe(() => {
+      // On navigation start, immediately apply a minimal, safe shape to prevent flicker
+      this.updateDraggableShapes(true);
+    });
+
+    this.router.events.pipe(
       filter((event): event is NavigationEnd => event instanceof NavigationEnd)
     ).subscribe(() => {
       let route = this.activatedRoute;
@@ -63,6 +70,8 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
       }
       const isDetailsView = route.snapshot.routeConfig?.path === 'project/:id';
       this.isProjectDetailsView.set(isDetailsView);
+      // After navigation, wait a moment for the DOM to stabilize, then calculate the full shape
+      setTimeout(() => this.updateDraggableShapes(), 100);
     });
   }
 
@@ -71,6 +80,7 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
       this.updateDraggableShapes();
     });
     this.resizeObserver.observe(this.menuWrapper().nativeElement);
+    this.updateDraggableShapes();
   }
 
   ngOnDestroy() {
@@ -179,52 +189,38 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
     return menu;
   }
 
-  private updateDraggableShapes() {
+  private updateDraggableShapes(isMinimal: boolean = false) {
     clearTimeout(this.resizeDebounceTimer);
     this.resizeDebounceTimer = setTimeout(() => {
-      const lastFilenameEl = this.lastFilename()?.nativeElement;
       const dragHandleEl = this.dragHandle().nativeElement;
-
-      // If the last filename div isn't rendered yet, only send the permanent drag handle's shape.
-      if (!lastFilenameEl) {
-        const dragHandleRect = dragHandleEl.getBoundingClientRect();
-        window.electronAPI.windowUpdateDraggableZones([
-          {
-            x: Math.round(dragHandleRect.x),
-            y: Math.round(dragHandleRect.y),
-            width: Math.round(dragHandleRect.width),
-            height: Math.round(dragHandleRect.height),
-          }
-        ]);
-        return;
-      }
-
-      
-      const lastFilenameRect = lastFilenameEl.getBoundingClientRect();
       const dragHandleRect = dragHandleEl.getBoundingClientRect();
 
-      // Calculate the dimensions of the empty space
-      const emptySpaceX = lastFilenameRect.right;
-      const emptySpaceWidth = dragHandleRect.left - emptySpaceX;
-
-      const shapes = [];
-
-      // Shape 1: The permanent, last-resort drag handle
-      shapes.push({
-        x: Math.round(dragHandleRect.x),
-        y: Math.round(dragHandleRect.y),
-        width: Math.round(dragHandleRect.width),
-        height: Math.round(dragHandleRect.height),
-      });
-
-      // Shape 2: The dynamic empty space (only if it's wide enough to be useful)
-      if (emptySpaceWidth > 0) {
-        shapes.push({
-          x: Math.round(emptySpaceX),
+      // Start with the permanent drag handle, which is always present
+      const shapes = [
+        {
+          x: Math.round(dragHandleRect.x),
           y: Math.round(dragHandleRect.y),
-          width: Math.round(emptySpaceWidth),
+          width: Math.round(dragHandleRect.width),
           height: Math.round(dragHandleRect.height),
-        });
+        }
+      ];
+
+      const lastFilenameEl = this.lastFilename()?.nativeElement;
+
+      // In "full" mode, if the filename element exists, calculate the empty space and add it as a second draggable shape.
+      if (!isMinimal && lastFilenameEl) {
+        const lastFilenameRect = lastFilenameEl.getBoundingClientRect();
+        const emptySpaceX = lastFilenameRect.right;
+        const emptySpaceWidth = dragHandleRect.left - emptySpaceX;
+
+        if (emptySpaceWidth > 0) {
+          shapes.push({
+            x: Math.round(emptySpaceX),
+            y: Math.round(dragHandleRect.y),
+            width: Math.round(emptySpaceWidth),
+            height: Math.round(dragHandleRect.height),
+          });
+        }
       }
 
       window.electronAPI.windowUpdateDraggableZones(shapes);
