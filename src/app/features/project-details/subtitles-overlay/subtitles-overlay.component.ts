@@ -281,6 +281,16 @@ export class SubtitlesOverlayComponent implements OnDestroy {
     this.mutationObserver?.disconnect();
   }
 
+  onSubtitleContainerClick(event: MouseEvent): void {
+    // Check if the click event originated on an actual word
+    const wordInfo = this.getWordInfoFromEvent(event);
+
+    if (wordInfo) {
+      // If a word was clicked, stop the event, to prevent it from toggling play/pause
+      event.stopPropagation();
+    }
+  }
+
   private showHighlight(rects: DOMRect | DOMRect[]): void {
     const container = this.videoContainerElement();
     if (!container) {

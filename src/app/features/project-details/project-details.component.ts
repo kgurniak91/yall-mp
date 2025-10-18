@@ -215,6 +215,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   private cleanupInitialSeekListener: (() => void) | null = null;
   private cleanupMpvReadyListener: (() => void) | null = null;
   private cleanupAddNoteListener: (() => void) | null = null;
+  private clickTimeout: any = null;
 
   constructor() {
     inject(ProjectKeyboardShortcutsService); // start listening
@@ -511,8 +512,17 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
-  onVideoAreaDoubleClick(): void {
-    window.electronAPI.windowHandleDoubleClick();
+  onVideoAreaClick(): void {
+    if (this.clickTimeout) {
+      clearTimeout(this.clickTimeout);
+      this.clickTimeout = null;
+      window.electronAPI.windowHandleDoubleClick();
+    } else {
+      this.clickTimeout = setTimeout(() => {
+        this.togglePlayPause();
+        this.clickTimeout = null;
+      }, 200);
+    }
   }
 
   onContextMenu(payload: { event: MouseEvent, text: string }): void {

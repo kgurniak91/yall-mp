@@ -1,5 +1,5 @@
 <div class="content-wrapper">
-  <div class="video-area" (dblclick)="onVideoAreaDoubleClick()">
+  <div class="video-area" (click)="onVideoAreaClick()">
     <app-video-controller #videoController (ready)="onPlayerReady()"/>
     <app-subtitles-overlay [currentClip]="clipsStateService.currentClip()"
                            [rawAssContent]="scopedAssContent()"

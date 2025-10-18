@@ -1,7 +1,8 @@
 <div #subtitleContainer
      class="subtitle-render-container"
      [class.subtitles-hidden]="shouldBeHidden() || videoStateService.isBusy()"
-     [class.word-hover]="isWordHovered()">
+     [class.word-hover]="isWordHovered()"
+     (click)="onSubtitleContainerClick($event)">
 
   @if (!rawAssContent()) {
     @if (currentClip(); as clip) {
