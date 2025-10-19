@@ -68,7 +68,7 @@ let hasRequestedInitialSeek = false;
 let isSaving = false;
 let saveQueue: any[] = [];
 let showVideoTimeout: NodeJS.Timeout | null = null;
-const initialBounds = {width: 1920, height: 1080};
+let initialAppBounds: Electron.Rectangle | null = null;
 const MIN_GAP_DURATION = 0.1;
 const DRAGGABLE_ZONE_PADDING = 3; // 3px on all sides
 
@@ -188,9 +188,27 @@ function tryShowVideoWindowAndNotifyUI() {
 }
 
 function createWindow() {
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const workArea = primaryDisplay.workArea;
+
+  // Calculate 90% of the work area's dimensions
+  const initialWidth = Math.round(workArea.width * 0.9);
+  const initialHeight = Math.round(workArea.height * 0.9);
+
+  // Calculate centered position
+  const initialX = Math.round(workArea.x + (workArea.width - initialWidth) / 2);
+  const initialY = Math.round(workArea.y + (workArea.height - initialHeight) / 2);
+
+  // Store the calculated initial bounds for later use (e.g., restoring from Aero Snap)
+  initialAppBounds = {
+    x: initialX,
+    y: initialY,
+    width: initialWidth,
+    height: initialHeight
+  };
+
   mainWindow = new BrowserWindow({
-    width: initialBounds.width,
-    height: initialBounds.height,
+    ...initialAppBounds,
     transparent: false,
     backgroundColor: '#000000',
     frame: false,
@@ -210,8 +228,7 @@ function createWindow() {
   });
 
   uiWindow = new BrowserWindow({
-    width: initialBounds.width,
-    height: initialBounds.height,
+    ...initialAppBounds,
     transparent: true,
     frame: false,
     parent: mainWindow,
@@ -325,10 +342,16 @@ function createWindow() {
 
   // Handle OS-level maximization when dropping window on screen edges, like Aero Snap on Windows:
   mainWindow.on('maximize', () => {
-    if (!preMaximizeBounds) {
-      preMaximizeBounds = {...initialBounds, x: 50, y: 50};
+    if (!mainWindow) {
+      return;
     }
+
+    if (!preMaximizeBounds) {
+      preMaximizeBounds = initialAppBounds;
+    }
+
     isFixingMaximize = true;
+
     setTimeout(() => {
       if (mainWindow) {
         mainWindow.unmaximize();
@@ -338,6 +361,7 @@ function createWindow() {
       }
       isFixingMaximize = false;
     }, 50);
+
     if (uiWindow) {
       uiWindow.webContents.send('window:maximized-state-changed', true);
     }
@@ -538,12 +562,24 @@ app.whenReady().then(() => {
     const {url, clipSubtitleId, originalSelection} = data;
     currentSubtitlesLookupContext = {clipSubtitleId, originalSelection};
 
+    const parentBounds = mainWindow!.getBounds();
+    const lookupWidth = Math.round(parentBounds.width * 0.8);
+    const lookupHeight = Math.round(parentBounds.height * 0.8);
+    const lookupX = Math.round(parentBounds.x + (parentBounds.width - lookupWidth) / 2);
+    const lookupY = Math.round(parentBounds.y + (parentBounds.height - lookupHeight) / 2);
+
     const TITLE_BAR_HEIGHT = 40; // 2.5rem
     const FOOTER_HEIGHT = 40; // 2.5rem
     const LOOKUP_PARTITION = 'in-memory:lookup_session';
 
     // Create the window and view ONCE, then detach/reattach the view on subsequent loads:
     if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
+      subtitlesLookupWindow.setBounds({
+        x: lookupX,
+        y: lookupY,
+        width: lookupWidth,
+        height: lookupHeight
+      });
       subtitlesLookupWindow.show();
       subtitlesLookupWindow.focus();
 
@@ -565,8 +601,10 @@ app.whenReady().then(() => {
       }
     } else {
       subtitlesLookupWindow = new BrowserWindow({
-        width: 1280,
-        height: 720,
+        x: lookupX,
+        y: lookupY,
+        width: lookupWidth,
+        height: lookupHeight,
         parent: mainWindow!,
         frame: false,
         show: false,
