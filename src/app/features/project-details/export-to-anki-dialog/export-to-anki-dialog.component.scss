@@ -1,5 +1,31 @@
-.subtitle-full-text {
-  white-space: pre-wrap; // respect newlines
+.subtitles-font {
   font-family: var(--app-font-subtitles), sans-serif;
+}
+
+.subtitle-full-text {
+  @extend .subtitles-font;
+  white-space: pre-wrap; // respect newlines
   font-size: 1.5rem;
+}
+
+.note-item {
+  .note-text {
+    word-break: break-word;
+    cursor: default;
+  }
+}
+
+.notes-placeholder {
+  color: var(--p-text-muted-color);
+  border: 1px dashed #444;
+}
+
+:host p-accordion ::ng-deep {
+  .p-accordioncontent-content {
+    padding: 0 !important;
+  }
+
+  p-accordion-header .p-iconwrapper {
+    transform: rotate(180deg); // fix for https://github.com/primefaces/primeng/issues/18444
+  }
 }

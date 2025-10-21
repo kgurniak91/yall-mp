@@ -23,8 +23,9 @@ import {Divider} from 'primeng/divider';
 import {Chip} from 'primeng/chip';
 import {TagsInputComponent} from '../../../shared/components/tags-input/tags-input.component';
 import {Tooltip} from 'primeng/tooltip';
-
-const SAVE_DEBOUNCE_TIME_MS = 500;
+import {Accordion, AccordionContent, AccordionHeader, AccordionPanel} from "primeng/accordion";
+import {Dialog} from "primeng/dialog";
+import {ConfirmationService, PrimeTemplate} from 'primeng/api';
 
 interface NoteViewItem {
   text: string;
@@ -47,7 +48,13 @@ interface SelectionGroupView {
     Divider,
     Chip,
     TagsInputComponent,
-    Tooltip
+    Tooltip,
+    Accordion,
+    Dialog,
+    PrimeTemplate,
+    AccordionPanel,
+    AccordionHeader,
+    AccordionContent
   ],
   templateUrl: './export-to-anki-dialog.component.html',
   styleUrl: './export-to-anki-dialog.component.scss'
@@ -59,6 +66,10 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
   protected readonly manualNote = signal<string>('');
   protected readonly isExporting = signal(false);
   protected readonly selectedSubtitleParts = signal<SubtitlePart[]>([]);
+  protected readonly isEditNoteDialogVisible = signal(false);
+  protected readonly noteToEdit = signal<NoteViewItem | null>(null);
+  protected editedNoteText = '';
+  protected readonly activeNoteAccordionIndices = signal<number[]>([]);
   protected readonly finalTextPreview = computed(() => {
     if (this.data.subtitleData.type === 'srt') {
       return this.data.subtitleData.text;
@@ -109,8 +120,8 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
   private readonly toastService = inject(ToastService);
   private readonly appStateService = inject(AppStateService);
   private readonly dialogOrchestrationService = inject(DialogOrchestrationService);
+  private readonly confirmationService = inject(ConfirmationService);
   private initialNotes: ProjectClipNotes | undefined;
-  private debounceTimeout: any;
 
   constructor() {
     this.data = this.config.data as ExportToAnkiDialogData;
@@ -141,7 +152,6 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.clearDebounceTimeout();
     this.saveNotesIfChanged();
     this.saveSelectedTemplates();
     this.savePostExportActions();
@@ -159,29 +169,63 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
     };
   }
 
-  onNoteChange(noteItem: NoteViewItem, event: Event): void {
-    noteItem.text = (event.target as HTMLTextAreaElement).value;
+  onEditNote(note: NoteViewItem): void {
+    this.noteToEdit.set(note);
+    this.editedNoteText = note.text;
+    this.isEditNoteDialogVisible.set(true);
+  }
 
-    this.clearDebounceTimeout();
-    this.debounceTimeout = setTimeout(() => {
+  saveEditedNote(): void {
+    const note = this.noteToEdit();
+    if (note && this.editedNoteText !== note.text) {
+      this.lookupNotesView.update(currentView => {
+        return currentView.map(group => {
+          const noteIndex = group.notes.findIndex(n => n.originalIndex === note.originalIndex);
+          if (noteIndex > -1) {
+            const newNotes = [...group.notes];
+            newNotes[noteIndex] = {...newNotes[noteIndex], text: this.editedNoteText};
+            return {...group, notes: newNotes};
+          }
+          return group;
+        });
+      });
       this.saveNotesIfChanged();
-    }, SAVE_DEBOUNCE_TIME_MS);
+      this.toastService.success('Note updated.');
+    }
+    this.cancelEditNote();
+  }
+
+  cancelEditNote(): void {
+    this.isEditNoteDialogVisible.set(false);
+    this.noteToEdit.set(null);
+    this.editedNoteText = '';
+  }
+
+  formatNoteText(text: string): string {
+    return escape(text).replace(/\n/g, '<br>');
   }
 
   onDeleteNote(selection: string, noteIndex: number): void {
-    this.lookupNotesView.update(currentView => {
-      return currentView.map(group => {
-        if (group.selection === selection) {
-          return {
-            ...group,
-            notes: group.notes.filter(note => note.originalIndex !== noteIndex)
-          };
-        }
-        return group;
-      }).filter(group => group.notes.length > 0); // Remove the entire group if it's now empty
+    this.confirmationService.confirm({
+      header: 'Confirm deletion',
+      message: `Are you sure you want to delete this note?<br>This action cannot be undone.`,
+      icon: 'fa-solid fa-circle-exclamation',
+      accept: () => {
+        this.lookupNotesView.update(currentView => {
+          return currentView.map(group => {
+            if (group.selection === selection) {
+              return {
+                ...group,
+                notes: group.notes.filter(note => note.originalIndex !== noteIndex)
+              };
+            }
+            return group;
+          }).filter(group => group.notes.length > 0); // Remove the entire group if it's now empty
+        });
+        this.saveNotesIfChanged();
+        this.toastService.success('Note removed');
+      }
     });
-    this.saveNotesIfChanged();
-    this.toastService.success('Note removed');
   }
 
   onClose(): void {
@@ -211,7 +255,6 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.clearDebounceTimeout();
     this.saveNotesIfChanged();
 
     if (!this.finalTextPreview().trim()) {
@@ -346,12 +389,6 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
       this.appStateService.updateProject(project.id, {
         lastAnkiSuspendState: lastSuspendState
       });
-    }
-  }
-
-  private clearDebounceTimeout(): void {
-    if (this.debounceTimeout) {
-      clearTimeout(this.debounceTimeout);
     }
   }
 }

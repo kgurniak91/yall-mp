@@ -107,8 +107,8 @@
               placeholder="Add a personal note for this clip..."></textarea>
   </div>
 
-  <div class="flex flex-column gap-2">
-    <div class="flex align-items-center gap-2 mb-1">
+  <div class="flex flex-column gap-4">
+    <div class="flex align-items-center gap-2">
       <label>Lookup Notes</label>
       <p-button icon="fa-solid fa-circle-question"
                 [text]="true"
@@ -145,34 +145,49 @@
       </p-popover>
     </div>
 
-    <div class="notes-container flex flex-column gap-3">
-      @for (selectionGroup of lookupNotesView(); track selectionGroup.selection) {
-        <div class="selection-group">
-          <b class="selection-header">"{{ selectionGroup.selection }}"</b>
-          <div class="notes-list flex flex-column gap-2 pl-2 pt-2">
-            @for (note of selectionGroup.notes; track note.originalIndex) {
-              <div class="note-item flex align-items-start gap-2">
-                <textarea pInputTextarea
-                          [value]="note.text"
-                          (input)="onNoteChange(note, $event)"
-                          [autoResize]="true"
-                          class="flex-1"
-                          rows="1"></textarea>
-                <p-button icon="fa-solid fa-trash"
-                          severity="danger"
-                          [text]="true"
-                          (onClick)="onDeleteNote(selectionGroup.selection, note.originalIndex)"></p-button>
-              </div>
-            }
-          </div>
-        </div>
-      } @empty {
-        <span class="text-gray-500">No lookup notes for this clip.</span>
-      }
-    </div>
+    @if (lookupNotesView().length > 0) {
+      <p-accordion [multiple]="true" [(value)]="activeNoteAccordionIndices">
+        @for (selectionGroup of lookupNotesView(); track selectionGroup.selection; let i = $index) {
+          <p-accordion-panel [value]="i">
+            <p-accordion-header>
+              <p class="m-0 p-0">
+                &quot;<span class="subtitles-font">{{ selectionGroup.selection }}</span>&quot;
+                ({{ selectionGroup.notes.length }} notes)
+              </p>
+            </p-accordion-header>
+            <p-accordion-content>
+              @if (activeNoteAccordionIndices().includes(i)) {
+                <div class="notes-list-container">
+                  @for (note of selectionGroup.notes; track note.originalIndex; let isLast = $last) {
+                    <div class="note-item flex align-items-center gap-2 py-3 pl-3">
+                      <div class="note-text flex-1" [innerHTML]="formatNoteText(note.text)"></div>
+                      <p-button icon="fa-solid fa-pencil"
+                                severity="info"
+                                [text]="true"
+                                pTooltip="Edit Note"
+                                (onClick)="onEditNote(note)"></p-button>
+                      <p-button icon="fa-solid fa-trash"
+                                severity="danger"
+                                [text]="true"
+                                pTooltip="Delete Note"
+                                (onClick)="onDeleteNote(selectionGroup.selection, note.originalIndex)"></p-button>
+                    </div>
+                    @if (!isLast) {
+                      <p-divider class="my-0"></p-divider>
+                    }
+                  }
+                </div>
+              }
+            </p-accordion-content>
+          </p-accordion-panel>
+        }
+      </p-accordion>
+    } @else {
+      <div class="text-gray-500 p-4 text-center notes-placeholder">No lookup notes for this clip.</div>
+    }
   </div>
 
-  <div class="flex flex-column gap-2">
+  <div class="flex flex-column gap-4">
     <label for="anki-tags">Card-Specific Tags</label>
     <app-tags-input [ngModel]="cardSpecificTags()"
                     (ngModelChange)="cardSpecificTags.set($event)"></app-tags-input>
@@ -197,3 +212,21 @@
     </p-button>
   </div>
 </div>
+
+<p-dialog header="Edit Lookup Note"
+          [(visible)]="isEditNoteDialogVisible"
+          [modal]="true"
+          (onHide)="cancelEditNote()">
+  @if (noteToEdit(); as note) {
+    <div class="flex flex-column gap-4 p-4" style="min-width: 30rem;">
+    <textarea pInputTextarea
+              [(ngModel)]="editedNoteText"
+              [autoResize]="true"
+              rows="5"></textarea>
+    </div>
+  }
+  <ng-template pTemplate="footer">
+    <p-button label="Cancel" severity="secondary" (onClick)="cancelEditNote()"/>
+    <p-button label="Save" (onClick)="saveEditedNote()"/>
+  </ng-template>
+</p-dialog>
