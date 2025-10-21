@@ -489,6 +489,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       focusOnShow: false,
       modal: true,
       closable: true,
+      closeOnEscape: false,
       data
     });
   }
@@ -673,13 +674,14 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
         return;
       }
 
-      const dataForDialog: SubtitleData = this.createSubtitleDataFromVideoClip(currentClip);
+      const data: SubtitleData = this.createSubtitleDataFromVideoClip(currentClip);
 
       this.dialogRef = this.dialogService.open(EditSubtitlesDialogComponent, {
         header: 'Edit Subtitles',
         width: '50vw',
         modal: true,
-        data: dataForDialog
+        closeOnEscape: false,
+        data
       });
 
       this.dialogRef.onClose.pipe(

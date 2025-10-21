@@ -23,6 +23,7 @@ export class DialogOrchestrationService {
       focusOnShow: false,
       closable: true,
       modal: true,
+      closeOnEscape: false,
       data
     });
   }

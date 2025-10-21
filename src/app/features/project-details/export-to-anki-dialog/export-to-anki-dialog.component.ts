@@ -6,7 +6,7 @@ import {
   ExportToAnkiDialogData
 } from '../../../model/anki.types';
 import {AnkiStateService} from '../../../state/anki/anki-state.service';
-import {DynamicDialogConfig, DynamicDialogRef} from 'primeng/dynamicdialog';
+import {DialogService, DynamicDialogConfig, DynamicDialogRef} from 'primeng/dynamicdialog';
 import {ToastService} from '../../../shared/services/toast/toast.service';
 import {FormsModule} from '@angular/forms';
 import {Button} from 'primeng/button';
@@ -24,8 +24,9 @@ import {Chip} from 'primeng/chip';
 import {TagsInputComponent} from '../../../shared/components/tags-input/tags-input.component';
 import {Tooltip} from 'primeng/tooltip';
 import {Accordion, AccordionContent, AccordionHeader, AccordionPanel} from "primeng/accordion";
-import {Dialog} from "primeng/dialog";
-import {ConfirmationService, PrimeTemplate} from 'primeng/api';
+import {ConfirmationService} from 'primeng/api';
+import {EditNoteDialogComponent} from './edit-note-dialog/edit-note-dialog.component';
+import {EditNoteDialogConfig} from './edit-note-dialog/edit-note-dialog.types';
 
 interface NoteViewItem {
   text: string;
@@ -50,8 +51,6 @@ interface SelectionGroupView {
     TagsInputComponent,
     Tooltip,
     Accordion,
-    Dialog,
-    PrimeTemplate,
     AccordionPanel,
     AccordionHeader,
     AccordionContent
@@ -66,9 +65,6 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
   protected readonly manualNote = signal<string>('');
   protected readonly isExporting = signal(false);
   protected readonly selectedSubtitleParts = signal<SubtitlePart[]>([]);
-  protected readonly isEditNoteDialogVisible = signal(false);
-  protected readonly noteToEdit = signal<NoteViewItem | null>(null);
-  protected editedNoteText = '';
   protected readonly activeNoteAccordionIndices = signal<number[]>([]);
   protected readonly finalTextPreview = computed(() => {
     if (this.data.subtitleData.type === 'srt') {
@@ -121,6 +117,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
   private readonly appStateService = inject(AppStateService);
   private readonly dialogOrchestrationService = inject(DialogOrchestrationService);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly dialogService = inject(DialogService);
   private initialNotes: ProjectClipNotes | undefined;
 
   constructor() {
@@ -170,35 +167,36 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
   }
 
   onEditNote(note: NoteViewItem): void {
-    this.noteToEdit.set(note);
-    this.editedNoteText = note.text;
-    this.isEditNoteDialogVisible.set(true);
-  }
+    const data: EditNoteDialogConfig = {
+      noteText: note.text
+    };
 
-  saveEditedNote(): void {
-    const note = this.noteToEdit();
-    if (note && this.editedNoteText !== note.text) {
-      this.lookupNotesView.update(currentView => {
-        return currentView.map(group => {
-          const noteIndex = group.notes.findIndex(n => n.originalIndex === note.originalIndex);
-          if (noteIndex > -1) {
-            const newNotes = [...group.notes];
-            newNotes[noteIndex] = {...newNotes[noteIndex], text: this.editedNoteText};
-            return {...group, notes: newNotes};
-          }
-          return group;
+    const dialogRef = this.dialogService.open(EditNoteDialogComponent, {
+      header: 'Edit Lookup Note',
+      modal: true,
+      width: 'clamp(20rem, 95vw, 30rem)',
+      closeOnEscape: false,
+      data: data
+    });
+
+    dialogRef.onClose.subscribe((newText: string | undefined) => {
+      // Check for undefined in case the dialog was closed without saving
+      if ((typeof newText === 'string') && newText !== note.text) {
+        this.lookupNotesView.update(currentView => {
+          return currentView.map(group => {
+            const noteIndex = group.notes.findIndex(n => n.originalIndex === note.originalIndex);
+            if (noteIndex > -1) {
+              const newNotes = [...group.notes];
+              newNotes[noteIndex] = {...newNotes[noteIndex], text: newText};
+              return {...group, notes: newNotes};
+            }
+            return group;
+          });
         });
-      });
-      this.saveNotesIfChanged();
-      this.toastService.success('Note updated.');
-    }
-    this.cancelEditNote();
-  }
-
-  cancelEditNote(): void {
-    this.isEditNoteDialogVisible.set(false);
-    this.noteToEdit.set(null);
-    this.editedNoteText = '';
+        this.saveNotesIfChanged();
+        this.toastService.success('Note updated.');
+      }
+    });
   }
 
   formatNoteText(text: string): string {

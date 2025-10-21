@@ -208,25 +208,8 @@
               icon="fa-solid fa-upload"
               [disabled]="selectedTemplates().length === 0"
               [loading]="isExporting()"
-              (click)="onExport()">
+              (click)="onExport()"
+              data-primary-action>
     </p-button>
   </div>
 </div>
-
-<p-dialog header="Edit Lookup Note"
-          [(visible)]="isEditNoteDialogVisible"
-          [modal]="true"
-          (onHide)="cancelEditNote()">
-  @if (noteToEdit(); as note) {
-    <div class="flex flex-column gap-4 p-4" style="min-width: 30rem;">
-    <textarea pInputTextarea
-              [(ngModel)]="editedNoteText"
-              [autoResize]="true"
-              rows="5"></textarea>
-    </div>
-  }
-  <ng-template pTemplate="footer">
-    <p-button label="Cancel" severity="secondary" (onClick)="cancelEditNote()"/>
-    <p-button label="Save" (onClick)="saveEditedNote()"/>
-  </ng-template>
-</p-dialog>

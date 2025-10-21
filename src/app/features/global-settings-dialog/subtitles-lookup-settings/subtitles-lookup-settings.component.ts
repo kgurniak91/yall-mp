@@ -1,18 +1,18 @@
-import {Component, computed, inject, signal} from '@angular/core';
+import {Component, inject, signal} from '@angular/core';
 import {Fieldset} from 'primeng/fieldset';
 import {RadioButton} from 'primeng/radiobutton';
 import {FormsModule} from '@angular/forms';
 import {TableModule} from 'primeng/table';
 import {Button} from 'primeng/button';
-import {Dialog} from 'primeng/dialog';
-import {InputText} from 'primeng/inputtext';
 import {GlobalSettingsStateService} from '../../../state/global-settings/global-settings-state.service';
 import {SubtitleLookupBrowserType, SubtitleLookupService} from '../../../model/settings.types';
 import {v4 as uuidv4} from 'uuid';
-import {Select} from 'primeng/select';
 import {Message} from 'primeng/message';
 import {MenuItem} from 'primeng/api';
 import {Menu} from 'primeng/menu';
+import {DialogService} from 'primeng/dynamicdialog';
+import {EditLookupServiceDialogComponent} from './edit-lookup-service-dialog/edit-lookup-service-dialog.component';
+import {EditLookupServiceDialogTypes} from './edit-lookup-service-dialog/edit-lookup-service-dialog.types';
 
 @Component({
   selector: 'app-subtitles-lookup-settings',
@@ -22,9 +22,6 @@ import {Menu} from 'primeng/menu';
     RadioButton,
     TableModule,
     Button,
-    Dialog,
-    InputText,
-    Select,
     Message,
     Menu
   ],
@@ -33,22 +30,9 @@ import {Menu} from 'primeng/menu';
 })
 export class SubtitlesLookupSettingsComponent {
   protected readonly globalSettingsStateService = inject(GlobalSettingsStateService);
-  protected readonly isDialogVisible = signal(false);
-  protected readonly editingService = signal<Partial<SubtitleLookupService> | null>(null);
-  protected readonly dialogMode = signal<'add' | 'edit'>('add');
-  protected readonly dialogHeader = computed(() => this.dialogMode() === 'edit' ? 'Edit Service' : 'Add New Service');
   protected readonly SubtitleLookupBrowserType = SubtitleLookupBrowserType;
   protected actionMenuItems = signal<MenuItem[]>([]);
-  protected browserTypeOptions = computed(() => {
-    const globalDefault = this.globalSettingsStateService.subtitleLookupBrowserType();
-    const defaultLabel = (globalDefault === SubtitleLookupBrowserType.System) ? 'System' : 'Built-in';
-
-    return [
-      {label: `Default (${defaultLabel})`, value: null},
-      {label: 'Built-in Browser', value: SubtitleLookupBrowserType.BuiltIn},
-      {label: 'System Browser', value: SubtitleLookupBrowserType.System}
-    ];
-  });
+  private readonly dialogService = inject(DialogService);
 
   getDisplayBrowserType(service: SubtitleLookupService): string {
     const serviceOverride = service.browserType;
@@ -151,21 +135,18 @@ export class SubtitlesLookupSettingsComponent {
   }
 
   onAddNewService(): void {
-    this.dialogMode.set('add');
-    this.editingService.set({
+    const newService: Partial<SubtitleLookupService> = {
       id: uuidv4(),
       name: '',
       urlTemplate: '',
       isDefault: false,
       browserType: null
-    });
-    this.isDialogVisible.set(true);
+    };
+    this.openEditDialog(newService, 'Add New Lookup Service');
   }
 
   onEditService(service: SubtitleLookupService): void {
-    this.dialogMode.set('edit');
-    this.editingService.set({...service});
-    this.isDialogVisible.set(true);
+    this.openEditDialog(service, 'Edit Lookup Service');
   }
 
   onDeleteService(serviceToDelete: SubtitleLookupService): void {
@@ -189,35 +170,40 @@ export class SubtitlesLookupSettingsComponent {
     this.globalSettingsStateService.updateSubtitleLookupServices(newServices);
   }
 
-  saveService(): void {
-    const serviceToSave = this.editingService();
-    if (!serviceToSave || !serviceToSave.name || !serviceToSave.urlTemplate) {
-      return;
-    }
+  private openEditDialog(subtitleLookupService: Partial<SubtitleLookupService>, header: string): void {
+    const data: EditLookupServiceDialogTypes = {
+      subtitleLookupService
+    };
 
-    let services = this.globalSettingsStateService.subtitleLookupServices();
+    const dialogRef = this.dialogService.open(EditLookupServiceDialogComponent, {
+      header,
+      modal: true,
+      width: 'clamp(30rem, 95vw, 45rem)',
+      closeOnEscape: false,
+      data
+    });
+
+    dialogRef.onClose.subscribe((savedService: SubtitleLookupService | undefined) => {
+      if (savedService) {
+        this.saveLookupService(savedService);
+      }
+    });
+  }
+
+  private saveLookupService(serviceToSave: SubtitleLookupService): void {
+    let lookupServices = this.globalSettingsStateService.subtitleLookupServices();
     let newServices: SubtitleLookupService[];
 
-    if (this.dialogMode() === 'add') {
-      const newService: SubtitleLookupService = {
-        ...serviceToSave,
-        id: uuidv4()
-      } as SubtitleLookupService;
-
-      newServices = [...services, newService];
+    // Check if it's an existing service or a new one
+    if (lookupServices.some(s => s.id === serviceToSave.id)) { // Edit mode
+      newServices = lookupServices.map(s => s.id === serviceToSave.id ? serviceToSave : s);
+    } else { // Add mode
+      newServices = [...lookupServices, serviceToSave];
       if (newServices.length === 1) {
         newServices[0].isDefault = true;
       }
-    } else { // 'edit' mode
-      newServices = services.map(s => s.id === serviceToSave.id ? serviceToSave as SubtitleLookupService : s);
     }
 
     this.globalSettingsStateService.updateSubtitleLookupServices(newServices);
-    this.hideDialog();
-  }
-
-  hideDialog(): void {
-    this.isDialogVisible.set(false);
-    this.editingService.set(null);
   }
 }

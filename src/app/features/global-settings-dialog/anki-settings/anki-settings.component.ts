@@ -41,6 +41,7 @@ export class AnkiSettingsComponent {
     const ref = this.dialogService.open(AnkiTemplateFormDialogComponent, {
       header: 'Add New Anki Template',
       width: 'clamp(20rem, 95vw, 40rem)',
+      closeOnEscape: false,
       modal: true
     });
 
@@ -57,6 +58,7 @@ export class AnkiSettingsComponent {
       header: `Edit "${template.name}"`,
       width: 'clamp(20rem, 95vw, 40rem)',
       modal: true,
+      closeOnEscape: false,
       data: {template}
     });
 

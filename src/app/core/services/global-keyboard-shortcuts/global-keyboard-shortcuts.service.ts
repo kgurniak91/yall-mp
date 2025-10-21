@@ -10,46 +10,112 @@ export class GlobalKeyboardShortcutsService implements OnDestroy {
   private readonly confirmationService = inject(ConfirmationService);
 
   constructor() {
-    document.addEventListener('keydown', this.handleKeyDown);
+    document.addEventListener('keydown', this.handleKeyDown, {capture: true});
   }
 
   ngOnDestroy(): void {
-    document.removeEventListener('keydown', this.handleKeyDown);
+    document.removeEventListener('keydown', this.handleKeyDown, {capture: true});
   }
 
   private readonly handleKeyDown = (event: KeyboardEvent): void => {
-    // Ignore keyboard events from input fields to prevent them from triggering shortcuts
     const target = event.target as HTMLElement;
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+    if (event.key !== 'Escape' && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
       return;
     }
 
+    if (this.isAnyDialogOpen()) {
+      // Stop the event from propagating to other listeners (like the project-specific shortcuts).
+      event.stopPropagation();
+
+      switch (event.key) {
+        case 'Escape':
+          this.handleEscapeKey(event);
+          break;
+        case 'Enter':
+          this.handleEnterKey(event);
+          break;
+      }
+      return;
+    }
+
+    // If no modal is open, only handle the global Escape key if no other service does.
+    // Other events are allowed to propagate to listeners like ProjectKeyboardShortcutsService.
     if (event.key === 'Escape') {
-      event.preventDefault();
-
-      const isProjectSettingsDrawerOpened = document.querySelector('.p-drawer-active app-current-project-settings');
-      if (isProjectSettingsDrawerOpened) {
-        // Handled in ProjectKeyboardShortcutsService
-        return;
-      }
-
-      // Close the confirmation dialog if any
-      const visibleConfirmationDialog = document.querySelector('.p-dialog-mask .p-confirmdialog');
-      if (visibleConfirmationDialog) {
-        this.confirmationService.close();
-        return;
-      }
-
-      // If no confirmation dialog, check for and close the topmost regular dialog
-      if (this.dialogService.dialogComponentRefMap.size > 0) {
-        const dialogRefs = Array.from(this.dialogService.dialogComponentRefMap.keys());
-        const topDialogRef = dialogRefs[dialogRefs.length - 1];
-        topDialogRef.close();
-        return;
-      }
-
-      // If no dialogs nor drawers are open, perform the window action (exit fullscreen or minimize)
-      window.electronAPI.windowEscape();
+      this.handleEscapeKey(event);
     }
   };
+
+  private handleEscapeKey(event: KeyboardEvent): void {
+    if (this.isDrawerOpen()) {
+      // Handled in ProjectKeyboardShortcutsService
+      return;
+    }
+
+    event.stopPropagation();
+    event.preventDefault();
+
+    // Close the confirmation dialog if any
+    if (this.isConfirmDialogOpen()) {
+      this.confirmationService.close();
+      return;
+    }
+
+    // If no confirmation dialog, check for and close the topmost regular dialog
+    if (this.isDynamicDialogOpen()) {
+      const dialogRefs = Array.from(this.dialogService.dialogComponentRefMap.keys());
+      const topDialogRef = dialogRefs[dialogRefs.length - 1];
+      topDialogRef.close();
+      return;
+    }
+
+    // If no dialogs or drawers are open, perform the window action
+    window.electronAPI.windowEscape();
+  }
+
+  private handleEnterKey(event: KeyboardEvent): void {
+    const topDialogMask = this.getTopDialogMask();
+    if (!topDialogMask) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (this.isConfirmDialogOpen()) {
+      const confirmDialog = topDialogMask.querySelector('.p-confirmdialog');
+      const acceptButton = confirmDialog?.querySelector('.p-confirmdialog-accept-button') as HTMLElement;
+      if (acceptButton) {
+        acceptButton.click();
+      }
+      return;
+    }
+
+    if (this.isDynamicDialogOpen()) {
+      const dynamicDialog = topDialogMask.querySelector('.p-dialog');
+      const primaryButton = dynamicDialog?.querySelector('[data-primary-action]') as HTMLElement;
+      if (primaryButton) {
+        primaryButton.click();
+      }
+    }
+  }
+
+  private getTopDialogMask(): HTMLElement | undefined {
+    const dialogs = Array.from(document.querySelectorAll('.p-dialog-mask.p-overlay-mask'));
+    return dialogs[dialogs.length - 1] as HTMLElement | undefined;
+  }
+
+  private isDynamicDialogOpen(): boolean {
+    return this.dialogService.dialogComponentRefMap.size > 0;
+  }
+
+  private isConfirmDialogOpen(): boolean {
+    return Boolean(this.getTopDialogMask()?.querySelector('.p-confirmdialog'));
+  }
+
+  private isAnyDialogOpen(): boolean {
+    return this.isDynamicDialogOpen() || this.isConfirmDialogOpen();
+  }
+
+  private isDrawerOpen(): boolean {
+    return Boolean(document.querySelector('.p-drawer-active app-current-project-settings'));
+  }
 }

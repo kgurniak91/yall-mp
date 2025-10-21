@@ -87,32 +87,3 @@
     </p-table>
   </p-fieldset>
 </div>
-
-<!-- Add/Edit Dialog -->
-<p-dialog [header]="dialogHeader()" [(visible)]="isDialogVisible" [modal]="true" (onHide)="hideDialog()">
-  @if (editingService(); as service) {
-    <div class="flex flex-column gap-4 p-4" style="min-width: 30rem;">
-      <div class="flex flex-column gap-2">
-        <label for="service-name">Name</label>
-        <input pInputText id="service-name" [(ngModel)]="service.name" placeholder="e.g., Google Images"/>
-      </div>
-      <div class="flex flex-column gap-2">
-        <label for="service-url">URL Template</label>
-        <input pInputText id="service-url" [(ngModel)]="service.urlTemplate"
-               placeholder="e.g., https://images.google.com/search?q=%%SS"/>
-        <small>Use <b>%%SS</b> as a placeholder for the selected subtitle text.</small>
-      </div>
-      <div class="flex flex-column gap-2">
-        <label for="service-browser">Browser</label>
-        <p-select id="service-browser"
-                  appendTo="body"
-                  [options]="browserTypeOptions()"
-                  [(ngModel)]="service.browserType"/>
-      </div>
-    </div>
-  }
-  <ng-template pTemplate="footer">
-    <p-button label="Cancel" severity="secondary" (onClick)="hideDialog()"/>
-    <p-button label="Save" (onClick)="saveService()"/>
-  </ng-template>
-</p-dialog>
