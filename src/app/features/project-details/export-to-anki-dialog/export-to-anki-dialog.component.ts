@@ -27,6 +27,10 @@ import {Accordion, AccordionContent, AccordionHeader, AccordionPanel} from "prim
 import {ConfirmationService} from 'primeng/api';
 import {EditNoteDialogComponent} from './edit-note-dialog/edit-note-dialog.component';
 import {EditNoteDialogConfig} from './edit-note-dialog/edit-note-dialog.types';
+import {
+  disableFocusInParentDialog,
+  scheduleRestoreFocus
+} from '../../../shared/utils/disable-focus-in-parent-dialog/disable-focus-in-parent-dialog';
 
 interface NoteViewItem {
   text: string;
@@ -167,6 +171,8 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
   }
 
   onEditNote(note: NoteViewItem): void {
+    const restoreFocusability = disableFocusInParentDialog();
+
     const data: EditNoteDialogConfig = {
       noteText: note.text
     };
@@ -180,6 +186,8 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
     });
 
     dialogRef.onClose.subscribe((newText: string | undefined) => {
+      scheduleRestoreFocus(restoreFocusability);
+
       // Check for undefined in case the dialog was closed without saving
       if ((typeof newText === 'string') && newText !== note.text) {
         this.lookupNotesView.update(currentView => {

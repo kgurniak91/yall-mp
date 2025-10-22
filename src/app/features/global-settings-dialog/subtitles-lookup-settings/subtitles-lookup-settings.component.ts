@@ -13,6 +13,10 @@ import {Menu} from 'primeng/menu';
 import {DialogService} from 'primeng/dynamicdialog';
 import {EditLookupServiceDialogComponent} from './edit-lookup-service-dialog/edit-lookup-service-dialog.component';
 import {EditLookupServiceDialogTypes} from './edit-lookup-service-dialog/edit-lookup-service-dialog.types';
+import {
+  disableFocusInParentDialog,
+  scheduleRestoreFocus
+} from '../../../shared/utils/disable-focus-in-parent-dialog/disable-focus-in-parent-dialog';
 
 @Component({
   selector: 'app-subtitles-lookup-settings',
@@ -171,6 +175,8 @@ export class SubtitlesLookupSettingsComponent {
   }
 
   private openEditDialog(subtitleLookupService: Partial<SubtitleLookupService>, header: string): void {
+    const restoreFocusability = disableFocusInParentDialog();
+
     const data: EditLookupServiceDialogTypes = {
       subtitleLookupService
     };
@@ -184,6 +190,8 @@ export class SubtitlesLookupSettingsComponent {
     });
 
     dialogRef.onClose.subscribe((savedService: SubtitleLookupService | undefined) => {
+      scheduleRestoreFocus(restoreFocusability);
+
       if (savedService) {
         this.saveLookupService(savedService);
       }
