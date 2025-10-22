@@ -206,7 +206,6 @@
 
     <p-button label="Export"
               icon="fa-solid fa-upload"
-              [disabled]="selectedTemplates().length === 0"
               [loading]="isExporting()"
               (click)="onExport()"
               data-primary-action>
