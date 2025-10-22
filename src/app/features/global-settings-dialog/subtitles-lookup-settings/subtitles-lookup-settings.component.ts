@@ -8,7 +8,7 @@ import {GlobalSettingsStateService} from '../../../state/global-settings/global-
 import {SubtitleLookupBrowserType, SubtitleLookupService} from '../../../model/settings.types';
 import {v4 as uuidv4} from 'uuid';
 import {Message} from 'primeng/message';
-import {MenuItem} from 'primeng/api';
+import {ConfirmationService, MenuItem} from 'primeng/api';
 import {Menu} from 'primeng/menu';
 import {DialogService} from 'primeng/dynamicdialog';
 import {EditLookupServiceDialogComponent} from './edit-lookup-service-dialog/edit-lookup-service-dialog.component';
@@ -17,6 +17,7 @@ import {
   disableFocusInParentDialog,
   scheduleRestoreFocus
 } from '../../../shared/utils/disable-focus-in-parent-dialog/disable-focus-in-parent-dialog';
+import {ToastService} from '../../../shared/services/toast/toast.service';
 
 @Component({
   selector: 'app-subtitles-lookup-settings',
@@ -37,6 +38,8 @@ export class SubtitlesLookupSettingsComponent {
   protected readonly SubtitleLookupBrowserType = SubtitleLookupBrowserType;
   protected actionMenuItems = signal<MenuItem[]>([]);
   private readonly dialogService = inject(DialogService);
+  private readonly confirmationService = inject(ConfirmationService);
+  private readonly toastService = inject(ToastService);
 
   getDisplayBrowserType(service: SubtitleLookupService): string {
     const serviceOverride = service.browserType;
@@ -154,15 +157,23 @@ export class SubtitlesLookupSettingsComponent {
   }
 
   onDeleteService(serviceToDelete: SubtitleLookupService): void {
-    let services = this.globalSettingsStateService.subtitleLookupServices();
-    const newServices = services.filter(s => s.id !== serviceToDelete.id);
+    this.confirmationService.confirm({
+      header: 'Confirm deletion',
+      message: `Are you sure you want to delete the lookup service <b>${serviceToDelete.name}</b>?<br>This action cannot be undone.`,
+      icon: 'fa-solid fa-circle-exclamation',
+      accept: () => {
+        let services = this.globalSettingsStateService.subtitleLookupServices();
+        const newServices = services.filter(s => s.id !== serviceToDelete.id);
 
-    // If the deleted service was the default, and there are other services left, make the first one the new default:
-    if (serviceToDelete.isDefault && newServices.length > 0) {
-      newServices[0].isDefault = true;
-    }
+        // If the deleted service was the default, and there are other services left, make the first one the new default:
+        if (serviceToDelete.isDefault && newServices.length > 0) {
+          newServices[0].isDefault = true;
+        }
 
-    this.globalSettingsStateService.updateSubtitleLookupServices(newServices);
+        this.globalSettingsStateService.updateSubtitleLookupServices(newServices);
+        this.toastService.success('Lookup service deleted');
+      }
+    });
   }
 
   onSetAsDefault(serviceToMakeDefault: SubtitleLookupService): void {
