@@ -30,7 +30,7 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
   autoPauseAtStart: false,
   autoPauseAtEnd: false,
   subtitledClipSpeed: 1.0,
-  gapSpeed: 3.0,
+  gapSpeed: 2.0,
   subtitleBehavior: SubtitleBehavior.DoNothing,
   selectedAudioTrackIndex: null,
   useMpvSubtitles: false,
