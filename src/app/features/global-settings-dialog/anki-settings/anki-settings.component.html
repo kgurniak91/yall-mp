@@ -53,7 +53,7 @@
   </p-fieldset>
 
   <p-fieldset legend="Card templates" [toggleable]="false">
-    @if (ankiStateService.status() === AnkiConnectStatus.connected) {
+    @if ((ankiStateService.status() === AnkiConnectStatus.connected) || (ankiStateService.status() === AnkiConnectStatus.checking && ankiStateService.deckNames().length > 0)) {
       <div class="mb-3 flex justify-content-end">
         <p-button label="Add New Template"
                   severity="primary"

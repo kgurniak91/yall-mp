@@ -25,13 +25,11 @@ export class AnkiStateService {
 
   async checkAnkiConnection(): Promise<void> {
     this.status.set(AnkiConnectStatus.checking);
-    this.deckNames.set([]);
-    this.noteTypes.set([]);
 
     try {
       const result = await window.electronAPI.checkAnkiConnection();
 
-      if (result !== null && typeof result === 'number') {
+      if ((result !== null) && (typeof result === 'number')) {
         this.status.set(AnkiConnectStatus.connected);
         await Promise.all([
           this.fetchDeckNames(),
@@ -39,9 +37,13 @@ export class AnkiStateService {
         ]);
       } else {
         this.status.set(AnkiConnectStatus.disconnected);
+        this.deckNames.set([]);
+        this.noteTypes.set([]);
       }
     } catch (e) {
       this.status.set(AnkiConnectStatus.error);
+      this.deckNames.set([]);
+      this.noteTypes.set([]);
     }
   }
 
