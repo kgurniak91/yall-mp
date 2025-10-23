@@ -1,4 +1,20 @@
 <div class="flex flex-column gap-4">
+  <div class="flex flex-column gap-2">
+    <label>Clip duration</label>
+    <span>{{ clipDuration | number:'1.2-2' }} seconds</span>
+  </div>
+
+  <div class="flex flex-column gap-2">
+    <label>Anki Export Status</label>
+    <div>
+      @if (isAlreadyExported) {
+        <p-tag severity="success" value="Exported"/>
+      } @else {
+        <p-tag severity="info" value="Not exported yet"/>
+      }
+    </div>
+  </div>
+
   @if (assSubtitleData && assSubtitleData.parts && assSubtitleData.parts.length > 1) {
     <div class="flex flex-column gap-2">
       <label>Select subtitle parts to include:</label>
@@ -9,7 +25,7 @@
             <p-checkbox [(ngModel)]="selectedSubtitleParts"
                         [value]="part"
                         [inputId]="checkboxId"/>
-            <label [for]="checkboxId" class="ml-2 font-normal">
+            <label [for]="checkboxId" class="ml-2 subtitles-font word-break">
               {{ part.text }}
             </label>
           </div>
@@ -23,7 +39,7 @@
     </div>
   }
 
-  <div class="flex flex-column gap-4">
+  <div class="flex flex-column gap-2">
     <label for="template-select">Export using template(s):</label>
     <div class="flex flex-column gap-2">
       @for (template of ankiService.ankiCardTemplates(); track template.id) {
@@ -31,7 +47,7 @@
           <p-checkbox [value]="template"
                       [inputId]="template.id"
                       [(ngModel)]="selectedTemplates"></p-checkbox>
-          <label [for]="template.id" class="ml-2">{{ template.name }}</label>
+          <label [for]="template.id" class="ml-2 word-break">{{ template.name }}</label>
           <p-button icon="fa-solid fa-tags"
                     [text]="true"
                     size="small"
@@ -97,7 +113,7 @@
     </div>
   </div>
 
-  <div class="flex flex-column gap-4">
+  <div class="flex flex-column gap-2">
     <label for="manual-note">Manual Note</label>
     <textarea id="manual-note"
               pInputTextarea
@@ -108,7 +124,7 @@
               maxlength="5000"></textarea>
   </div>
 
-  <div class="flex flex-column gap-4">
+  <div class="flex flex-column gap-2">
     <div class="flex align-items-center gap-2">
       <label>Lookup Notes</label>
       <p-button icon="fa-solid fa-circle-question"
@@ -188,7 +204,7 @@
     }
   </div>
 
-  <div class="flex flex-column gap-4">
+  <div class="flex flex-column gap-2">
     <label for="anki-tags">Card-Specific Tags</label>
     <app-tags-input [ngModel]="cardSpecificTags()"
                     (ngModelChange)="cardSpecificTags.set($event)"></app-tags-input>

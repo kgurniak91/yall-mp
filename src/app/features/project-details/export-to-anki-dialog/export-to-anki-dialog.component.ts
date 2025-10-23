@@ -31,6 +31,8 @@ import {
   disableFocusInParentDialog,
   scheduleRestoreFocus
 } from '../../../shared/utils/disable-focus-in-parent-dialog/disable-focus-in-parent-dialog';
+import {Tag} from 'primeng/tag';
+import {DecimalPipe} from '@angular/common';
 
 interface NoteViewItem {
   text: string;
@@ -57,7 +59,9 @@ interface SelectionGroupView {
     Accordion,
     AccordionPanel,
     AccordionHeader,
-    AccordionContent
+    AccordionContent,
+    Tag,
+    DecimalPipe
   ],
   templateUrl: './export-to-anki-dialog.component.html',
   styleUrl: './export-to-anki-dialog.component.scss'
@@ -112,6 +116,8 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
     return finalParts.join('');
   });
   protected assSubtitleData: AssSubtitleData | null = null;
+  protected clipDuration!: number;
+  protected isAlreadyExported!: boolean;
   protected readonly exportTags = signal<string[]>([]);
   protected readonly ankiService = inject(AnkiStateService);
   protected readonly suspendCard = signal<boolean>(false);
@@ -129,6 +135,10 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    this.clipDuration = this.data.subtitleData.endTime - this.data.subtitleData.startTime;
+    const history = this.data.project.ankiExportHistory || [];
+    this.isAlreadyExported = history.includes(this.data.subtitleData.id);
+
     if (this.data.subtitleData.type === 'ass') {
       this.assSubtitleData = this.data.subtitleData;
       // Pre-select all parts by default for convenience
@@ -312,6 +322,9 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
         if (result.cardId) {
           this.toastService.success(`Successfully created Anki card for template "${template.name}"`);
           successCount++;
+
+          const subtitleId = this.data.subtitleData.id;
+          this.appStateService.addAnkiExportToHistory(this.data.project.id, subtitleId);
         } else {
           this.toastService.error(result.error || `Failed to create Anki card for template "${template.name}". Is Anki open?`);
         }

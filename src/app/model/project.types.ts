@@ -40,6 +40,7 @@ export interface Project {
   selectedAnkiTemplateIds?: string[];
   ankiTags: string[];
   lastAnkiSuspendState?: boolean;
+  ankiExportHistory?: string[]; // List of SubtitleData IDs
 }
 
 export interface AppData {

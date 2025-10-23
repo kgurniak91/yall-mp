@@ -170,4 +170,38 @@ export class AppStateService {
       return newData;
     });
   }
+
+  public addAnkiExportToHistory(projectId: string, subtitleId: string): void {
+    this._appData.update(currentData => {
+      const projectIndex = currentData.projects.findIndex(p => p.id === projectId);
+      if (projectIndex === -1) {
+        console.error(`Project with ID ${projectId} not found. Cannot update Anki history.`);
+        return currentData;
+      }
+
+      const project = currentData.projects[projectIndex];
+      const currentHistory = project.ankiExportHistory || [];
+
+      // Avoid adding duplicates
+      if (currentHistory.includes(subtitleId)) {
+        return currentData;
+      }
+
+      const updatedProject = {
+        ...project,
+        ankiExportHistory: [...currentHistory, subtitleId]
+      };
+
+      const projectsCopy = [...currentData.projects];
+      projectsCopy[projectIndex] = updatedProject;
+
+      const newData: AppData = {
+        ...currentData,
+        projects: projectsCopy
+      };
+      this.storageService.set(newData);
+      return newData;
+    });
+  }
+
 }
