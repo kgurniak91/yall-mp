@@ -1,8 +1,9 @@
-<div class="flex flex-column gap-4 mb-4">
-      <textarea pInputTextarea
-                [(ngModel)]="editedNoteText"
-                [autoResize]="true"
-                rows="5"></textarea>
+<div class="flex flex-column gap-2 mb-4">
+  <textarea pInputTextarea
+            [formControl]="noteControl"
+            [autoResize]="false"
+            rows="5"></textarea>
+  <app-form-control-error [control]="noteControl"></app-form-control-error>
 </div>
 
 <div class="flex align-items-center justify-content-end gap-2">

@@ -6,7 +6,8 @@
            [(ngModel)]="newTag"
            placeholder="Type a tag and press Enter..."
            (keydown.enter)="addTag(); $event.preventDefault()"
-           [disabled]="disabled"/>
+           [disabled]="disabled"
+           maxlength="100"/>
     <p-button icon="fa-solid fa-plus"
               (onClick)="addTag()"
               [disabled]="disabled || !newTag.trim()">

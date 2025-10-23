@@ -102,9 +102,10 @@
     <textarea id="manual-note"
               pInputTextarea
               [(ngModel)]="manualNote"
-              [autoResize]="true"
-              rows="3"
-              placeholder="Add a personal note for this clip..."></textarea>
+              [autoResize]="false"
+              rows="5"
+              placeholder="Add a personal note for this clip..."
+              maxlength="5000"></textarea>
   </div>
 
   <div class="flex flex-column gap-4">

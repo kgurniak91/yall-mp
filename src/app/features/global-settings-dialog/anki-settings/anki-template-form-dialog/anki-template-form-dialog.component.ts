@@ -12,6 +12,8 @@ import {Divider} from 'primeng/divider';
 import {ankiMappingValidator, APP_ANKI_FIELDS} from './anki-template-form-dialog.types';
 import {Message} from 'primeng/message';
 import {TagsInputComponent} from '../../../../shared/components/tags-input/tags-input.component';
+import {FormControlErrorComponent} from '../../../../shared/components/form-control-error/form-control-error.component';
+import {CustomValidators} from '../../../../shared/validators/validators';
 
 @Component({
   selector: 'app-anki-template-form-dialog',
@@ -23,7 +25,8 @@ import {TagsInputComponent} from '../../../../shared/components/tags-input/tags-
     Fieldset,
     Divider,
     Message,
-    TagsInputComponent
+    TagsInputComponent,
+    FormControlErrorComponent
   ],
   templateUrl: './anki-template-form-dialog.component.html',
   styleUrl: './anki-template-form-dialog.component.scss'
@@ -80,7 +83,7 @@ export class AnkiTemplateFormDialogComponent implements OnInit {
   protected onSave(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.toastService.warn('Please fill out all required fields.');
+      this.toastService.warn('Please fill out all required fields and correct any errors.');
       return;
     }
     const rawValue = this.form.getRawValue();
@@ -116,7 +119,7 @@ export class AnkiTemplateFormDialogComponent implements OnInit {
 
     return this.fb.group({
       id: [template?.id || ''],
-      name: [template?.name || '', Validators.required],
+      name: [template?.name || '', [Validators.required, CustomValidators.notBlank(), Validators.maxLength(255)]],
       ankiDeck: [template?.ankiDeck || null, Validators.required],
       ankiNoteType: [template?.ankiNoteType || null, Validators.required],
       tags: [template?.tags || []],

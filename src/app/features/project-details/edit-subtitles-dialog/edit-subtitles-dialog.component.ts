@@ -1,19 +1,36 @@
 import {Component, inject, OnInit} from '@angular/core';
 import {Button} from 'primeng/button';
-import {FormsModule} from '@angular/forms';
+import {FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
 import {Textarea} from 'primeng/textarea';
 import {DynamicDialogConfig, DynamicDialogRef} from 'primeng/dynamicdialog';
-import {AssSubtitleData, SrtSubtitleData, SubtitleData, SubtitlePart} from '../../../../../shared/types/subtitle.type';
-import {cloneDeep, isEqual} from 'lodash-es';
+import {
+  AssSubtitleData,
+  SrtSubtitleData,
+  SubtitleData,
+  SubtitleFragment,
+  SubtitlePart
+} from '../../../../../shared/types/subtitle.type';
+import {isEqual} from 'lodash-es';
 import {Divider} from 'primeng/divider';
+import {FormControlErrorComponent} from '../../../shared/components/form-control-error/form-control-error.component';
+import {ToastService} from '../../../shared/services/toast/toast.service';
+import {CustomValidators} from '../../../shared/validators/validators';
+
+interface EditedPartFormValue {
+  originalIndex: number;
+  style: string;
+  text: string;
+  fragments: SubtitleFragment[];
+}
 
 @Component({
   selector: 'app-edit-subtitle-dialog',
   imports: [
     Button,
-    FormsModule,
+    ReactiveFormsModule,
     Textarea,
-    Divider
+    Divider,
+    FormControlErrorComponent
   ],
   templateUrl: './edit-subtitles-dialog.component.html',
   styleUrl: './edit-subtitles-dialog.component.scss'
@@ -21,16 +38,36 @@ import {Divider} from 'primeng/divider';
 export class EditSubtitlesDialogComponent implements OnInit {
   protected readonly config = inject(DynamicDialogConfig);
   protected readonly data: SubtitleData = this.config.data;
-  protected text: string = ''; // for .srt
-  protected editableParts: SubtitlePart[] = []; // for .ass
+  protected form!: FormGroup;
   private readonly ref = inject(DynamicDialogRef);
+  private readonly fb = inject(FormBuilder);
+  private readonly toastService = inject(ToastService);
 
   ngOnInit(): void {
     if (this.data.type === 'srt') {
-      this.text = this.data.text;
+      this.form = this.fb.group({
+        text: [this.data.text, [Validators.required, CustomValidators.notBlank(), Validators.maxLength(1000)]]
+      });
     } else { // .ass
-      this.editableParts = cloneDeep(this.data.parts);
+      const visibleParts = this.data.parts
+        .map((part, index) => ({part, index}))
+        .filter(item => item.part.fragments?.some(f => !f.isTag));
+
+      this.form = this.fb.group({
+        parts: this.fb.array(
+          visibleParts.map(item => this.createPartGroup(item.part, item.index)),
+          {validators: [CustomValidators.atLeastOneNotBlank()]}
+        )
+      });
     }
+  }
+
+  get partsFormArray(): FormArray {
+    return this.form.get('parts') as FormArray;
+  }
+
+  getFragmentsArray(partIndex: number): FormArray {
+    return this.partsFormArray.at(partIndex).get('fragments') as FormArray;
   }
 
   protected close(): void {
@@ -38,27 +75,67 @@ export class EditSubtitlesDialogComponent implements OnInit {
   }
 
   protected save(): void {
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      this.toastService.warn('Please correct the errors before saving.');
+      return;
+    }
+
     if (this.data.type === 'srt') {
-      const original = this.data as SrtSubtitleData;
-      if (this.text !== original.text) {
-        this.ref.close({text: this.text});
+      if (this.form.value.text !== (this.data as SrtSubtitleData).text) {
+        this.ref.close({text: this.form.value.text});
       } else {
         this.ref.close();
       }
     } else { // .ass
-      const original = this.data as AssSubtitleData;
+      const originalParts = (this.data as AssSubtitleData).parts;
+      const formValue = this.form.getRawValue();
 
-      // Reconstruct the clean text for each part before comparison and closing
-      const finalParts = this.editableParts.map(p => ({
-        ...p,
-        text: p.fragments?.filter(f => !f.isTag).map(f => f.text).join('') ?? p.text
-      }));
+      // Create a strongly typed map of edited parts from the form for easy lookup
+      const editedPartsMap = new Map<number, EditedPartFormValue>(
+        formValue.parts.map((p: EditedPartFormValue) => [p.originalIndex, p])
+      );
 
-      if (!isEqual(finalParts, original.parts)) {
+      // Reconstruct the full parts array by merging edits into the original structure
+      const finalParts: SubtitlePart[] = originalParts.map((originalPart, index) => {
+        const editedPart = editedPartsMap.get(index);
+
+        if (editedPart) {
+          const reconstructedText = (editedPart.fragments || [])
+            .filter((f) => !f.isTag)
+            .map((f) => f.text)
+            .join('');
+
+          return {
+            ...originalPart,
+            style: editedPart.style,
+            text: reconstructedText,
+            fragments: editedPart.fragments
+          };
+        }
+
+        return originalPart;
+      });
+
+      if (!isEqual(finalParts, originalParts)) {
         this.ref.close({parts: finalParts});
       } else {
         this.ref.close();
       }
     }
+  }
+
+  private createPartGroup(part: SubtitlePart, originalIndex: number): FormGroup {
+    return this.fb.group({
+      originalIndex: [originalIndex],
+      style: [part.style],
+      text: [part.text, [Validators.maxLength(1000)]],
+      fragments: this.fb.array(
+        (part.fragments || []).map(fragment => this.fb.group({
+          text: [fragment.text, !fragment.isTag ? [Validators.maxLength(1000)] : []],
+          isTag: [fragment.isTag]
+        }))
+      )
+    });
   }
 }

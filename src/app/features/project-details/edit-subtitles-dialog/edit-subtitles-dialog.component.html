@@ -1,31 +1,43 @@
 <div class="dialog-content">
-  @if (data.type === 'srt') {
-    <textarea pTextarea [(ngModel)]="text" [autoResize]="true" rows="3"></textarea>
-  } @else {
-    @for (part of editableParts; track $index) {
-      <div class="ass-part-container">
-        <div class="part-content">
-          @if (part.fragments && part.fragments.length > 0) {
-            @for (fragment of part.fragments; track $index) {
-              @if (!fragment.isTag) {
-                <textarea pInputTextarea
-                          class="text-fragment"
-                          [(ngModel)]="fragment.text"
-                          rows="1"
-                          [autoResize]="true"></textarea>
+  <form [formGroup]="form">
+    @if (data.type === 'srt') {
+      <textarea pTextarea formControlName="text" [autoResize]="false" rows="3"></textarea>
+      <app-form-control-error [control]="form.get('text')"></app-form-control-error>
+    } @else {
+      <div formArrayName="parts">
+        @for (partGroup of partsFormArray.controls; track $index) {
+          @let partIndex = $index;
+          <div [formGroupName]="partIndex">
+            <div class="part-content">
+              @if (getFragmentsArray(partIndex).length > 0) {
+                <div formArrayName="fragments">
+                  @for (fragmentGroup of getFragmentsArray(partIndex).controls; track $index) {
+                    @let fragmentIndex = $index;
+                    @if (fragmentGroup.get('isTag')?.value === false) {
+                      <div [formGroupName]="fragmentIndex">
+                         <textarea pInputTextarea
+                                   formControlName="text"
+                                   rows="3"
+                                   [autoResize]="false"></textarea>
+                        <app-form-control-error [control]="fragmentGroup.get('text')"></app-form-control-error>
+                      </div>
+                    }
+                  }
+                </div>
+              } @else {
+                <textarea pInputTextarea formControlName="text" rows="3" [autoResize]="false"></textarea>
+                <app-form-control-error [control]="partGroup.get('text')"></app-form-control-error>
               }
-            }
-          } @else {
-            <textarea pInputTextarea [(ngModel)]="part.text" [rows]="3"></textarea>
+            </div>
+          </div>
+          @if (!$last) {
+            <p-divider/>
           }
-        </div>
+        }
       </div>
-
-      @if(!$last && part.text.trim().length) {
-        <p-divider/>
-      }
+      <app-form-control-error [control]="partsFormArray"></app-form-control-error>
     }
-  }
+  </form>
 
   <div class="dialog-actions">
     <p-button label="Cancel"

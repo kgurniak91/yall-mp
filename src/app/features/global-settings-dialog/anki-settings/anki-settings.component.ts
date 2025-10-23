@@ -14,6 +14,10 @@ import {TagsInputComponent} from '../../../shared/components/tags-input/tags-inp
 import {FormsModule} from '@angular/forms';
 import {GlobalSettingsStateService} from '../../../state/global-settings/global-settings-state.service';
 import {Checkbox} from 'primeng/checkbox';
+import {
+  disableFocusInParentDialog,
+  scheduleRestoreFocus
+} from '../../../shared/utils/disable-focus-in-parent-dialog/disable-focus-in-parent-dialog';
 
 @Component({
   selector: 'app-anki-settings',
@@ -38,6 +42,8 @@ export class AnkiSettingsComponent {
   private readonly dialogService = inject(DialogService);
 
   protected onAddNewTemplate(): void {
+    const restoreFocusability = disableFocusInParentDialog();
+
     const ref = this.dialogService.open(AnkiTemplateFormDialogComponent, {
       header: 'Add New Anki Template',
       width: 'clamp(20rem, 95vw, 40rem)',
@@ -46,6 +52,8 @@ export class AnkiSettingsComponent {
     });
 
     ref.onClose.subscribe((templateData: AnkiCardTemplate) => {
+      scheduleRestoreFocus(restoreFocusability);
+
       if (templateData) {
         this.ankiStateService.addAnkiCardTemplate({...templateData, id: uuidv4()});
         this.toastService.success('Template added successfully.');
@@ -54,6 +62,8 @@ export class AnkiSettingsComponent {
   }
 
   protected onEditTemplate(template: AnkiCardTemplate): void {
+    const restoreFocusability = disableFocusInParentDialog();
+
     const ref = this.dialogService.open(AnkiTemplateFormDialogComponent, {
       header: `Edit "${template.name}"`,
       width: 'clamp(20rem, 95vw, 40rem)',
@@ -63,6 +73,8 @@ export class AnkiSettingsComponent {
     });
 
     ref.onClose.subscribe((templateData: AnkiCardTemplate) => {
+      scheduleRestoreFocus(restoreFocusability);
+
       if (templateData) {
         this.ankiStateService.updateAnkiCardTemplate(template.id, templateData);
         this.toastService.success('Template updated successfully.');

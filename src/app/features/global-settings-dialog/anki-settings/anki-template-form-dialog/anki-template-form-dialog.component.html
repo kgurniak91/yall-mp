@@ -2,6 +2,7 @@
   <div class="flex flex-column gap-2">
     <label for="name" class="required">Template Name</label>
     <input id="name" pInputText formControlName="name" placeholder="e.g., Listening Cards"/>
+    <app-form-control-error [control]="form.get('name')"/>
   </div>
 
   <div class="flex flex-column gap-2">
@@ -11,6 +12,7 @@
               formControlName="ankiDeck"
               placeholder="Select Deck"
               appendTo="body"/>
+    <app-form-control-error [control]="form.get('ankiDeck')"/>
   </div>
 
   <div class="flex flex-column gap-2">
@@ -20,6 +22,7 @@
               formControlName="ankiNoteType"
               placeholder="Select Note Type"
               appendTo="body"/>
+    <app-form-control-error [control]="form.get('ankiNoteType')"></app-form-control-error>
   </div>
 
   <div class="flex flex-column gap-2">
@@ -53,7 +56,7 @@
           }
         }
       </div>
-      @if (form.get('fieldMappings')?.hasError('ankiMappingInvalid') && form.get('fieldMappings')?.touched) {
+      @if (form.get('fieldMappings')?.invalid && form.get('fieldMappings')?.touched) {
         <p-message severity="error" icon="fa-regular fa-circle-xmark">
           <p class="m-0">
             The <b>ID</b> field and at least one other field (e.g., <b>Text</b>, <b>Audio</b>) must be mapped.

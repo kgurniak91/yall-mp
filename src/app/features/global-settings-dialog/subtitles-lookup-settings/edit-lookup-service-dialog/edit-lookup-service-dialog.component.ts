@@ -1,21 +1,24 @@
 import {Component, computed, inject, OnInit} from '@angular/core';
 import {DynamicDialogConfig, DynamicDialogRef} from 'primeng/dynamicdialog';
-import {FormsModule} from '@angular/forms';
+import {FormBuilder, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
 import {Button} from 'primeng/button';
 import {InputText} from 'primeng/inputtext';
 import {Select} from 'primeng/select';
-import {SubtitleLookupBrowserType, SubtitleLookupService} from '../../../../model/settings.types';
+import {SubtitleLookupBrowserType} from '../../../../model/settings.types';
 import {GlobalSettingsStateService} from '../../../../state/global-settings/global-settings-state.service';
-import {EditLookupServiceDialogTypes} from './edit-lookup-service-dialog.types';
+import {EditLookupServiceDialogTypes, urlTemplateValidator} from './edit-lookup-service-dialog.types';
+import {ToastService} from "../../../../shared/services/toast/toast.service";
+import {FormControlErrorComponent} from "../../../../shared/components/form-control-error/form-control-error.component";
+import {CustomValidators} from '../../../../shared/validators/validators';
 
 @Component({
   selector: 'app-edit-lookup-service-dialog',
-  imports: [FormsModule, Button, InputText, Select],
+  imports: [ReactiveFormsModule, Button, InputText, Select, FormControlErrorComponent],
   templateUrl: './edit-lookup-service-dialog.component.html',
   styleUrl: './edit-lookup-service-dialog.component.scss'
 })
 export class EditLookupServiceDialogComponent implements OnInit {
-  protected subtitleLookupService!: Partial<SubtitleLookupService>;
+  protected form!: FormGroup;
   protected browserTypeOptions = computed(() => {
     const globalDefault = this.globalSettingsStateService.subtitleLookupBrowserType();
     const defaultLabel = (globalDefault === SubtitleLookupBrowserType.System) ? 'System' : 'Built-in';
@@ -28,11 +31,21 @@ export class EditLookupServiceDialogComponent implements OnInit {
   });
   private readonly config = inject(DynamicDialogConfig);
   private readonly ref = inject(DynamicDialogRef);
+  private readonly fb = inject(FormBuilder);
+  private readonly toastService = inject(ToastService);
   private readonly globalSettingsStateService = inject(GlobalSettingsStateService);
 
   ngOnInit(): void {
     const data = this.config.data as EditLookupServiceDialogTypes;
-    this.subtitleLookupService = {...data.subtitleLookupService};
+    const service = data.subtitleLookupService;
+
+    this.form = this.fb.group({
+      id: [service.id],
+      name: [service.name || '', [Validators.required, CustomValidators.notBlank(), Validators.maxLength(255)]],
+      urlTemplate: [service.urlTemplate || '', [Validators.required, CustomValidators.notBlank(), urlTemplateValidator(), Validators.maxLength(255)]],
+      browserType: [service.browserType || null],
+      isDefault: [service.isDefault]
+    });
   }
 
   onCancel(): void {
@@ -40,10 +53,11 @@ export class EditLookupServiceDialogComponent implements OnInit {
   }
 
   onSave(): void {
-    if (!this.subtitleLookupService || !this.subtitleLookupService.name || !this.subtitleLookupService.urlTemplate) {
-      // TODO better validation
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      this.toastService.warn('Please fill out all required fields and correct any errors.');
       return;
     }
-    this.ref.close(this.subtitleLookupService);
+    this.ref.close(this.form.value);
   }
 }

@@ -1,0 +1,17 @@
+@if (control()?.invalid && (control()?.dirty || control()?.touched)) {
+  <div class="mt-1">
+    @if (control()?.hasError('required')) {
+      <p-tag severity="danger" value="This field is required."/>
+    } @else if (control()?.hasError('notBlank')) {
+      <p-tag severity="danger" value="This field cannot be blank."/>
+    } @else if (control()?.hasError('maxlength')) {
+      <p-tag severity="danger" value="Exceeds maximum length of {{ control()?.getError('maxlength').requiredLength }}."/>
+    } @else if (control()?.hasError('invalidUrl')) {
+      <p-tag severity="danger" value="Please enter a valid URL format."/>
+    } @else if (control()?.hasError('missingPlaceholder')) {
+      <p-tag severity="danger" value="URL must contain the %%SS placeholder."/>
+    } @else if (control()?.hasError('atLeastOneNotBlank')) {
+      <p-tag severity="danger" value="At least one subtitle part must contain text." [rounded]="true"/>
+    }
+  </div>
+}

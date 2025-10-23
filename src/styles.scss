@@ -46,6 +46,7 @@
   --p-textarea-focus-ring-color: var(--p-sky-600) !important;
   --p-menu-item-focus-background: var(--p-sky-600) !important;
   --p-slider-track-size: 6px !important;
+  --p-message-error-background: #dc2626 !important;
 }
 
 html, body {
@@ -155,4 +156,8 @@ label.required::after {
 p-badge {
   white-space: nowrap;
   min-width: auto !important;
+}
+
+textarea {
+  resize: none;
 }
