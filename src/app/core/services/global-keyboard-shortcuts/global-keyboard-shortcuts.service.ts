@@ -1,6 +1,7 @@
 import {inject, Injectable, OnDestroy} from '@angular/core';
 import {DialogService} from 'primeng/dynamicdialog';
 import {ConfirmationService} from 'primeng/api';
+import {DialogOrchestrationService} from '../dialog-orchestration/dialog-orchestration.service';
 
 @Injectable({
   providedIn: 'root'
@@ -8,6 +9,7 @@ import {ConfirmationService} from 'primeng/api';
 export class GlobalKeyboardShortcutsService implements OnDestroy {
   private readonly dialogService = inject(DialogService);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly dialogOrchestrationService = inject(DialogOrchestrationService);
 
   constructor() {
     document.addEventListener('keydown', this.handleKeyDown, {capture: true});
@@ -38,10 +40,14 @@ export class GlobalKeyboardShortcutsService implements OnDestroy {
       return;
     }
 
-    // If no modal is open, only handle the global Escape key if no other service does.
-    // Other events are allowed to propagate to listeners like ProjectKeyboardShortcutsService.
+    // Handle global shortcuts that are only active when no dialogs are open
+    // Other events are allowed to propagate to listeners like ProjectKeyboardShortcutsService
     if (event.key === 'Escape') {
       this.handleEscapeKey(event);
+    } else if (event.key.toLowerCase() === 'o' && !event.ctrlKey && !event.altKey && !event.shiftKey) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.dialogOrchestrationService.openGlobalSettingsDialog();
     }
   };
 

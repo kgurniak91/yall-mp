@@ -174,12 +174,12 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
         separator: true
       },
       {
-        label: 'Global settings',
+        label: 'Global settings (O)',
         icon: 'fa-solid fa-gear',
         command: () => this.dialogOrchestrationService.openGlobalSettingsDialog()
       },
       {
-        label: 'Help & Shortcuts',
+        label: 'Help & Shortcuts (F1)',
         icon: 'fa-solid fa-circle-question',
         command: () => {
           /* TODO */
