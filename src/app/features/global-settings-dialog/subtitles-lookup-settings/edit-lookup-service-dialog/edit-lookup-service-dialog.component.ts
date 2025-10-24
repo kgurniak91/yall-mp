@@ -7,9 +7,9 @@ import {Select} from 'primeng/select';
 import {SubtitleLookupBrowserType} from '../../../../model/settings.types';
 import {GlobalSettingsStateService} from '../../../../state/global-settings/global-settings-state.service';
 import {EditLookupServiceDialogTypes, urlTemplateValidator} from './edit-lookup-service-dialog.types';
-import {ToastService} from "../../../../shared/services/toast/toast.service";
 import {FormControlErrorComponent} from "../../../../shared/components/form-control-error/form-control-error.component";
 import {CustomValidators} from '../../../../shared/validators/validators';
+import {FormValidationService} from '../../../../core/services/form-validation/form-validation.service';
 
 @Component({
   selector: 'app-edit-lookup-service-dialog',
@@ -32,7 +32,7 @@ export class EditLookupServiceDialogComponent implements OnInit {
   private readonly config = inject(DynamicDialogConfig);
   private readonly ref = inject(DynamicDialogRef);
   private readonly fb = inject(FormBuilder);
-  private readonly toastService = inject(ToastService);
+  private readonly formValidationService = inject(FormValidationService);
   private readonly globalSettingsStateService = inject(GlobalSettingsStateService);
 
   ngOnInit(): void {
@@ -53,11 +53,10 @@ export class EditLookupServiceDialogComponent implements OnInit {
   }
 
   onSave(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      this.toastService.warn('Please fill out all required fields and correct any errors.');
+    if (!this.formValidationService.isFormValid(this.form)) {
       return;
     }
+
     this.ref.close(this.form.value);
   }
 }

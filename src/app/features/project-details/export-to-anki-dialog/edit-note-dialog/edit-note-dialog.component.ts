@@ -1,12 +1,12 @@
 import {Component, inject, OnInit} from '@angular/core';
 import {Textarea} from 'primeng/textarea';
-import {FormControl, ReactiveFormsModule, Validators} from '@angular/forms';
+import {FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
 import {Button} from 'primeng/button';
 import {DynamicDialogConfig, DynamicDialogRef} from 'primeng/dynamicdialog';
 import {EditNoteDialogConfig} from './edit-note-dialog.types';
-import {ToastService} from "../../../../shared/services/toast/toast.service";
 import {FormControlErrorComponent} from "../../../../shared/components/form-control-error/form-control-error.component";
 import {CustomValidators} from '../../../../shared/validators/validators';
+import {FormValidationService} from '../../../../core/services/form-validation/form-validation.service';
 
 @Component({
   selector: 'app-edit-note-dialog',
@@ -20,18 +20,25 @@ import {CustomValidators} from '../../../../shared/validators/validators';
   styleUrl: './edit-note-dialog.component.scss'
 })
 export class EditNoteDialogComponent implements OnInit {
-  protected noteControl!: FormControl<string>;
+  protected form!: FormGroup;
   private originalText = '';
   private readonly config = inject(DynamicDialogConfig);
   private readonly ref = inject(DynamicDialogRef);
-  private readonly toastService = inject(ToastService);
+  private readonly fb = inject(FormBuilder);
+  private readonly formValidationService = inject(FormValidationService);
+
+  get noteControl(): FormControl {
+    return this.form.get('note') as FormControl;
+  }
 
   ngOnInit(): void {
     const data = this.config.data as EditNoteDialogConfig;
     this.originalText = data?.noteText || '';
-    this.noteControl = new FormControl(this.originalText, {
-      nonNullable: true,
-      validators: [Validators.required, CustomValidators.notBlank(), Validators.maxLength(5000)]
+    this.form = this.fb.group({
+      note: [this.originalText, {
+        nonNullable: true,
+        validators: [Validators.required, CustomValidators.notBlank(), Validators.maxLength(5000)]
+      }]
     });
   }
 
@@ -40,14 +47,13 @@ export class EditNoteDialogComponent implements OnInit {
   }
 
   onSave(): void {
-    if (this.noteControl.invalid) {
-      this.noteControl.markAsTouched();
-      this.toastService.warn('Note cannot be empty or exceed 5000 characters.');
+    if (!this.formValidationService.isFormValid(this.form)) {
       return;
     }
 
-    if (this.noteControl.value !== this.originalText) {
-      this.ref.close(this.noteControl.value);
+    const newNoteValue = this.form.value.note;
+    if (newNoteValue !== this.originalText) {
+      this.ref.close(newNoteValue);
     } else {
       this.ref.close();
     }

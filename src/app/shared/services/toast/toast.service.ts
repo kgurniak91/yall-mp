@@ -27,7 +27,8 @@ export class ToastService {
     this.messageService.add({
       severity: 'warn',
       summary: 'Warning',
-      detail: message
+      detail: message,
+      life: 5000
     });
   }
 
@@ -35,7 +36,8 @@ export class ToastService {
     this.messageService.add({
       severity: 'error',
       summary: 'Error',
-      detail: message
+      detail: message,
+      life: 5000
     });
   }
 }

@@ -13,8 +13,8 @@ import {
 import {isEqual} from 'lodash-es';
 import {Divider} from 'primeng/divider';
 import {FormControlErrorComponent} from '../../../shared/components/form-control-error/form-control-error.component';
-import {ToastService} from '../../../shared/services/toast/toast.service';
 import {CustomValidators} from '../../../shared/validators/validators';
+import {FormValidationService} from '../../../core/services/form-validation/form-validation.service';
 
 interface EditedPartFormValue {
   originalIndex: number;
@@ -41,7 +41,7 @@ export class EditSubtitlesDialogComponent implements OnInit {
   protected form!: FormGroup;
   private readonly ref = inject(DynamicDialogRef);
   private readonly fb = inject(FormBuilder);
-  private readonly toastService = inject(ToastService);
+  private readonly formValidationService = inject(FormValidationService);
 
   ngOnInit(): void {
     if (this.data.type === 'srt') {
@@ -75,9 +75,7 @@ export class EditSubtitlesDialogComponent implements OnInit {
   }
 
   protected save(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      this.toastService.warn('Please correct the errors before saving.');
+    if (!this.formValidationService.isFormValid(this.form)) {
       return;
     }
 

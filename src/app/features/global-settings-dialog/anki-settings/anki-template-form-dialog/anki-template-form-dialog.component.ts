@@ -7,13 +7,13 @@ import {Button} from 'primeng/button';
 import {InputText} from 'primeng/inputtext';
 import {Select} from 'primeng/select';
 import {Fieldset} from 'primeng/fieldset';
-import {ToastService} from '../../../../shared/services/toast/toast.service';
 import {Divider} from 'primeng/divider';
 import {ankiMappingValidator, APP_ANKI_FIELDS} from './anki-template-form-dialog.types';
 import {Message} from 'primeng/message';
 import {TagsInputComponent} from '../../../../shared/components/tags-input/tags-input.component';
 import {FormControlErrorComponent} from '../../../../shared/components/form-control-error/form-control-error.component';
 import {CustomValidators} from '../../../../shared/validators/validators';
+import {FormValidationService} from '../../../../core/services/form-validation/form-validation.service';
 
 @Component({
   selector: 'app-anki-template-form-dialog',
@@ -38,7 +38,7 @@ export class AnkiTemplateFormDialogComponent implements OnInit {
   private readonly dialogRef = inject(DynamicDialogRef);
   private readonly dialogConfig = inject(DynamicDialogConfig);
   private readonly fb = inject(FormBuilder);
-  private readonly toastService = inject(ToastService);
+  private readonly formValidationService = inject(FormValidationService);
   private allAnkiFieldsForNoteType: string[] = [];
 
   constructor() {
@@ -81,11 +81,10 @@ export class AnkiTemplateFormDialogComponent implements OnInit {
   }
 
   protected onSave(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      this.toastService.warn('Please fill out all required fields and correct any errors.');
+    if (!this.formValidationService.isFormValid(this.form)) {
       return;
     }
+
     const rawValue = this.form.getRawValue();
     const mappingsObject = rawValue.fieldMappings;
 
