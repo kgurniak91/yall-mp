@@ -6,6 +6,7 @@ import {
   HostListener,
   inject,
   OnDestroy,
+  output,
   signal,
   untracked,
   viewChild
@@ -31,6 +32,8 @@ const ZOOM_FACTOR = 1.2;
   styleUrl: './timeline-editor.component.scss'
 })
 export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
+  public readonly contextMenuRequested = output<{ event: MouseEvent, clipId: string }>();
+  public readonly hideContextMenuRequested = output<void>();
   protected readonly timelineContainer = viewChild.required<ElementRef<HTMLDivElement>>('timeline');
   protected readonly loading = signal(true);
   private readonly isWaveSurferReady = signal(false);
@@ -45,6 +48,7 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
   private activeGlowStyle!: string;
   private inactiveSubtitleBg!: string;
   private gapBg!: string;
+  private mustIgnoreNextScroll = false;
 
   ngAfterViewInit(): void {
     const computedStyles = getComputedStyle(this.elementRef.nativeElement);
@@ -58,7 +62,7 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
     this.wavesurfer?.un('scroll', this.handleWaveSurferScroll);
     this.wavesurfer?.un('ready', this.handleWaveSurferReady);
     this.wsRegions?.un('region-updated', this.handleRegionUpdated);
-    this.wsRegions?.un('region-clicked', this.handleRegionClicked);
+    this.wsRegions?.un('region-clicked', this.handleRegionLeftClicked);
     this.wsRegions?.un('region-created', this.handleRegionCreated);
     this.wavesurfer?.destroy();
   }
@@ -78,9 +82,14 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
     }
   }
 
+  public setAutoScroll(enabled: boolean): void {
+    this.wavesurfer?.setOptions({autoScroll: enabled});
+  }
+
   public onWheel(event: WheelEvent): void {
     if (!this.wavesurfer || event.shiftKey) return;
     event.preventDefault();
+    this.hideContextMenuRequested.emit();
     if (event.deltaY < 0) {
       this.zoomIn();
     } else {
@@ -115,17 +124,6 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
     }
   }
 
-  private syncTimelineListener = effect(() => {
-    const isReady = this.isWaveSurferReady();
-    const syncRequest = this.videoStateService.syncTimelineRequest();
-
-    if (isReady && syncRequest && !this.hasPerformedInitialSync()) {
-      const timeToScroll = untracked(() => this.videoStateService.currentTime());
-      this.wavesurfer?.setScrollTime(timeToScroll);
-      this.hasPerformedInitialSync.set(true);
-    }
-  });
-
   private timelineRenderer = effect(() => {
     const clips = this.clipsStateService.clips();
     const mediaPath = this.videoStateService.mediaPath();
@@ -151,6 +149,13 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
     if (this.loading()) {
       setTimeout(() => {
         this.loading.set(false);
+
+        // Scroll the timeline to the initial playback position automatically:
+        if (!this.hasPerformedInitialSync()) {
+          const initialTime = untracked(() => this.videoStateService.currentTime());
+          this.wavesurfer?.setScrollTime(initialTime);
+          this.hasPerformedInitialSync.set(true);
+        }
       }, 0);
     }
 
@@ -197,7 +202,7 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
   private setupWsRegionsEventListeners() {
     if (!this.wsRegions) return;
     this.wsRegions.on('region-updated', this.handleRegionUpdated);
-    this.wsRegions.on('region-clicked', this.handleRegionClicked);
+    this.wsRegions.on('region-clicked', this.handleRegionLeftClicked);
     this.wsRegions.on('region-created', this.handleRegionCreated);
   }
 
@@ -224,7 +229,42 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
     }
   };
 
-  private handleRegionClicked = (region: Region, e: MouseEvent) => {
+  private handleRegionLeftClicked = (region: Region, e: MouseEvent) => {
+    if (e.button !== 0) {
+      return;
+    }
+
+    e.stopPropagation();
+    this.performSeekFromMouseEvent(region, e);
+    this.hideContextMenuRequested.emit();
+  }
+
+  private handleRegionCreated = (region: Region) => {
+    const regionEl = region.element as HTMLElement;
+
+    // Apply active clip glow if needed
+    const activeClipId = this.clipsStateService.currentClip()?.id || null;
+    if (region.id === activeClipId) {
+      regionEl.style.boxShadow = this.activeGlowStyle;
+    }
+
+    // Attach right-click listener
+    regionEl.addEventListener('contextmenu', (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (!this.videoStateService.isPaused()) {
+        this.videoStateService.togglePlayPause();
+      }
+
+      this.performSeekFromMouseEvent(region, e);
+
+      // Notify the parent to show the menu
+      this.contextMenuRequested.emit({event: e, clipId: region.id});
+    });
+  };
+
+  private performSeekFromMouseEvent(region: Region, e: MouseEvent): void {
     e.stopPropagation();
     const wrapper = this.wavesurfer?.getWrapper();
     if (wrapper) {
@@ -237,15 +277,12 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
     }
   }
 
-  private handleRegionCreated = (region: Region) => {
-    // When a region's DOM element is first created, check if it should be highlighted.
-    const activeClipId = this.clipsStateService.currentClip()?.id || null;
-    if (region.id === activeClipId) {
-      (region.element as HTMLElement).style.boxShadow = this.activeGlowStyle;
-    }
-  };
-
   private handleWaveSurferScroll = () => {
+    if (this.mustIgnoreNextScroll) {
+      this.mustIgnoreNextScroll = false;
+      return;
+    }
+    this.hideContextMenuRequested.emit();
     this.syncHighlight();
   };
 

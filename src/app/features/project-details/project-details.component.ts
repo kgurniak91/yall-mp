@@ -192,8 +192,11 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   });
 
   protected readonly subtitlesContextMenu = viewChild.required<ContextMenu>('subtitlesContextMenu');
+  protected readonly timelineContextMenu = viewChild.required<ContextMenu>('timelineContextMenu');
+  protected readonly timelineEditor = viewChild.required<TimelineEditorComponent>('timelineEditor');
   protected readonly subtitlesMenuItems = signal<MenuItem[]>([]);
-  protected readonly isContextMenuOpen = signal(false);
+  protected readonly timelineMenuItems = signal<MenuItem[]>([]);
+  protected readonly isSubtitlesContextMenuOpen = signal(false);
   private selectedSubtitleTextForMenu = '';
   private wasPlayingBeforeSettingsOpened = false;
   private wasSettingsDrawerOpened = false;
@@ -264,6 +267,13 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
         const settings = this.projectSettingsStateService.settings();
         window.electronAPI.playbackLoadProject(clips, settings, project.lastPlaybackTime);
         this.startPlaybackSequence();
+      }
+    });
+
+    effect(() => {
+      if (!this.videoStateService.isPaused()) {
+        this.timelineContextMenu().hide();
+        this.subtitlesContextMenu().hide();
       }
     });
 
@@ -526,13 +536,15 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
-  onContextMenu(payload: { event: MouseEvent, text: string }): void {
-    if (this.isContextMenuOpen()) {
+  onSubtitlesContextMenu(payload: { event: MouseEvent, text: string }): void {
+    this.timelineContextMenu().hide();
+
+    if (this.isSubtitlesContextMenuOpen()) {
       return;
     }
 
     this.subtitlesHighlighterService.hide();
-    this.isContextMenuOpen.set(true);
+    this.isSubtitlesContextMenuOpen.set(true);
     this.selectedSubtitleTextForMenu = payload.text;
 
     const projectSettings = this.projectSettingsStateService.settings();
@@ -589,8 +601,144 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     this.subtitlesContextMenu().show(payload.event);
   }
 
-  onContextMenuHide(): void {
-    this.isContextMenuOpen.set(false);
+  onSubtitlesContextMenuHide(): void {
+    this.isSubtitlesContextMenuOpen.set(false);
+  }
+
+  onHideTimelineContextMenu(): void {
+    this.timelineContextMenu().hide();
+  }
+
+  onTimelineContextMenu(payload: { event: MouseEvent, clipId: string }): void {
+    this.subtitlesContextMenu().hide();
+
+    // Disable WaveSurfer's auto-scrolling to prevent the race condition with the menu
+    this.timelineEditor().setAutoScroll(false);
+
+    const clip = this.clipsStateService.clips().find(c => c.id === payload.clipId);
+    if (!clip) {
+      return;
+    }
+
+    const items: MenuItem[] = [];
+
+    // Header (Clip Type)
+    items.push({
+      label: clip.hasSubtitle ? 'Subtitled Clip' : 'Gap',
+      disabled: true,
+      styleClass: 'opacity-100 font-bold text-primary'
+    });
+
+    items.push({separator: true});
+
+    // Duration Info
+    items.push({
+      label: `Duration: ${clip.duration.toFixed(2)}s`,
+      icon: 'fa-solid fa-clock',
+      disabled: true,
+      styleClass: 'opacity-70'
+    });
+
+    if (clip.hasSubtitle) {
+      const project = this.project();
+      if (project) {
+        const subtitleId = clip.sourceSubtitles[0]?.id;
+        const clipNotes = project.notes?.[subtitleId];
+
+        // Lookup Notes Info
+        let lookupNotesCount = 0;
+        if (clipNotes?.lookupNotes) {
+          lookupNotesCount = Object.values(clipNotes.lookupNotes).reduce((acc, notes) => acc + notes.length, 0);
+        }
+        items.push({
+          label: `${lookupNotesCount} lookup note(s)`,
+          icon: 'fa-solid fa-clipboard-list',
+          disabled: true,
+          styleClass: 'opacity-70'
+        });
+
+        // Manual Note Info
+        const hasManualNote = (clipNotes?.manualNote?.trim()?.length || 0) > 0;
+        items.push({
+          label: hasManualNote ? 'Manual note present' : 'No manual note',
+          icon: hasManualNote ? 'fa-solid fa-check text-green-500' : 'fa-solid fa-xmark',
+          disabled: true,
+          styleClass: 'opacity-70'
+        });
+
+        // Anki Export Status
+        const isExported = project.ankiExportHistory?.includes(subtitleId);
+        items.push({
+          label: isExported ? 'Exported to Anki' : 'Not exported to Anki',
+          icon: isExported ? 'fa-solid fa-check text-green-500' : 'fa-solid fa-xmark',
+          disabled: true,
+          styleClass: 'opacity-70'
+        });
+      }
+
+      items.push({separator: true});
+
+      // Actions for Subtitled Clip
+      items.push(
+        {
+          label: 'Edit subtitles',
+          icon: 'fa-solid fa-file-pen',
+          disabled: (this.isAssProject() && this.projectSettingsStateService.useMpvSubtitles()),
+          command: () => this.openEditSubtitlesDialog()
+        },
+        {
+          label: 'Export to Anki',
+          icon: 'fa-solid fa-e',
+          disabled: !this.ankiStateService.isAnkiExportAvailable(),
+          command: () => this.openAnkiExportDialog()
+        },
+        {
+          label: 'Split clip',
+          icon: 'fa-solid fa-divide',
+          command: () => this.splitCurrentSubtitledClip()
+        },
+        {
+          label: 'Delete clip',
+          icon: 'fa-solid fa-eraser',
+          command: () => this.deleteCurrentClip()
+        }
+      );
+    } else {
+      // Actions for Gap
+      items.push({separator: true});
+      items.push({
+        label: 'Create subtitled clip here',
+        icon: 'fa-regular fa-square-plus',
+        command: () => this.createNewSubtitledClipAtCurrentTime()
+      });
+    }
+
+    this.timelineMenuItems.set(items);
+    this.timelineContextMenu().show(payload.event);
+
+    // Reposition menu after it renders to prevent being cut off
+    setTimeout(() => {
+      const menuEl = this.timelineContextMenu().container;
+      if (menuEl) {
+        const menuHeight = menuEl.offsetHeight;
+        let newTop = payload.event.clientY - menuHeight;
+        let newLeft = payload.event.clientX;
+
+        if (newTop < 0) newTop = 5;
+        const menuWidth = menuEl.offsetWidth;
+        if (newLeft + menuWidth > window.innerWidth) {
+          newLeft = window.innerWidth - menuWidth - 5;
+        }
+
+        menuEl.style.top = `${newTop}px`;
+        menuEl.style.left = `${newLeft}px`;
+      }
+    }, 10);
+  }
+
+  onTimelineContextMenuHide(): void {
+    // Re-enable WaveSurfer's auto-scrolling for normal behavior once the menu is closed
+    this.timelineEditor().setAutoScroll(true);
   }
 
   onDefaultAction(text: string): void {

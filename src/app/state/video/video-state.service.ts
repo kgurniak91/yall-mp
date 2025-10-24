@@ -16,7 +16,6 @@ export class VideoStateService implements OnDestroy {
   private readonly _repeatRequest = signal<number | null>(null);
   private readonly _forceContinueRequest = signal<number | null>(null);
   private readonly _editSubtitlesRequest = signal<number | null>(null);
-  private readonly _syncTimelineRequest = signal<number | null>(null);
   private readonly _ankiExportRequest = signal<number | null>(null);
   private readonly _forceResizeRequest = signal<number | null>(null);
   private readonly _isPaused = signal(true);
@@ -41,7 +40,6 @@ export class VideoStateService implements OnDestroy {
   public readonly repeatRequest = this._repeatRequest.asReadonly();
   public readonly forceContinueRequest = this._forceContinueRequest.asReadonly();
   public readonly editSubtitlesRequest = this._editSubtitlesRequest.asReadonly();
-  public readonly syncTimelineRequest = this._syncTimelineRequest.asReadonly();
   public readonly ankiExportRequest = this._ankiExportRequest.asReadonly();
   public readonly forceResizeRequest = this._forceResizeRequest.asReadonly();
   public readonly isPaused = this._isPaused.asReadonly();
@@ -145,13 +143,11 @@ export class VideoStateService implements OnDestroy {
     targetTime = Math.max(0, Math.min(targetTime, duration - 0.01));
 
     this._seekRequest.set({time, type: SeekType.Relative});
-    this._syncTimelineRequest.set(Date.now());
     this.saveCurrentPlaybackTime(targetTime);
   }
 
   public seekAbsolute(time: number): void {
     this._seekRequest.set({time, type: SeekType.Absolute});
-    this._syncTimelineRequest.set(Date.now());
     this.saveCurrentPlaybackTime(time);
   }
 

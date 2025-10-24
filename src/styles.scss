@@ -165,3 +165,7 @@ textarea {
 .word-break {
   word-break: break-word;
 }
+
+.p-contextmenu.timeline-context-menu {
+  z-index: 9999 !important;
+}

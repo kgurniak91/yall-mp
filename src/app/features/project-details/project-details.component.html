@@ -6,8 +6,8 @@
                            [videoWidth]="project()?.videoWidth"
                            [videoHeight]="project()?.videoHeight"
                            [videoContainerElement]="videoController.videoContainerElement()"
-                           [isContextMenuOpen]="isContextMenuOpen()"
-                           (contextMenuRequested)="onContextMenu($event)"
+                           [isContextMenuOpen]="isSubtitlesContextMenuOpen()"
+                           (contextMenuRequested)="onSubtitlesContextMenu($event)"
                            (defaultActionRequested)="onDefaultAction($event)"/>
   </div>
 
@@ -143,7 +143,9 @@
   </div>
 
   <div class="timeline-area">
-    <app-timeline-editor/>
+    <app-timeline-editor #timelineEditor
+                         (contextMenuRequested)="onTimelineContextMenu($event)"
+                         (hideContextMenuRequested)="onHideTimelineContextMenu()"/>
   </div>
 
   <p-drawer [visible]="projectSettingsStateService.isSettingsDrawerOpen()"
@@ -169,4 +171,10 @@
 <p-contextMenu #subtitlesContextMenu
                [model]="subtitlesMenuItems()"
                styleClass="subtitles-context-menu"
-               (onHide)="onContextMenuHide()"></p-contextMenu>
+               (onHide)="onSubtitlesContextMenuHide()"></p-contextMenu>
+
+<p-contextMenu #timelineContextMenu
+               [model]="timelineMenuItems()"
+               appendTo="body"
+               styleClass="timeline-context-menu"
+               (onHide)="onTimelineContextMenuHide()"></p-contextMenu>
