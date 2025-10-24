@@ -83,3 +83,11 @@ p-button.window-control:hover ::ng-deep button .p-button-icon {
     font-size: 1.25rem;
   }
 }
+
+.menu-backdrop {
+  position: fixed;
+  inset: 0; // shorthand for top: 0, right: 0, bottom: 0, left: 0
+  z-index: 999; // Below the menu overlay but above everything else
+  background-color: transparent;
+  cursor: default;
+}

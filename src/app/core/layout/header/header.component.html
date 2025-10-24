@@ -1,7 +1,11 @@
 <div class="header-wrapper">
   <div #menuWrapper class="menu-wrapper">
     <div class="menu-button-wrapper">
-      <p-menu #projectMenu [model]="menuItems()" [popup]="true"/>
+      <p-menu #projectMenu
+              [model]="menuItems()"
+              [popup]="true"
+              (onShow)="isMenuOpen.set(true)"
+              (onHide)="isMenuOpen.set(false)"/>
       <p-button icon="fa-solid fa-bars"
                 severity="secondary"
                 size="small"
@@ -73,3 +77,7 @@
               text/>
   </div>
 </div>
+
+@if (isMenuOpen()) {
+  <div class="menu-backdrop" (click)="projectMenu.hide()"></div>
+}

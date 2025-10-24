@@ -33,6 +33,7 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
   protected readonly isProjectDetailsView = signal(false);
   protected readonly isMaximized = signal(false);
   protected readonly isFullScreen = signal(false);
+  protected readonly isMenuOpen = signal(false);
   protected readonly currentProject = computed(() => this.computeCurrentProject());
   protected readonly mediaFileName = computed(() => this.currentProject()?.mediaFileName || 'Loading media...');
   protected readonly subtitleFileName = computed(() => this.currentProject()?.subtitleFileName || 'Loading subtitles...');
