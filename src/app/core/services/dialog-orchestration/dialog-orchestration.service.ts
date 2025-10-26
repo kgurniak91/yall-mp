@@ -14,6 +14,8 @@ export class DialogOrchestrationService {
   private readonly dialogService = inject(DialogService);
 
   openGlobalSettingsDialog(tabIndex: GlobalSettingsTab = GlobalSettingsTab.General): void {
+    window.electronAPI.playbackPause();
+
     const data: GlobalSettingsDialogConfig = {
       activeTabIndex: tabIndex
     };
@@ -30,6 +32,8 @@ export class DialogOrchestrationService {
   }
 
   openHelpDialog(): void {
+    window.electronAPI.playbackPause();
+
     this.dialogService.open(HelpDialogComponent, {
       header: 'Help & About',
       width: 'clamp(20rem, 95vw, 55rem)',
