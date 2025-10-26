@@ -6,8 +6,11 @@ import {CommandHistoryStateService} from '../../../../state/command-history/comm
 import {GlobalSettingsStateService} from '../../../../state/global-settings/global-settings-state.service';
 import {filter, Subject, throttleTime} from 'rxjs';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {CONTINUOUS_ACTIONS, SINGLE_SHOT_ACTIONS} from './project-action.types';
 import {ProjectSettingsStateService} from '../../../../state/project-settings/project-settings-state.service';
+import {
+  KeyboardShortcutsHelperService
+} from '../../../../core/services/keyboard-shortcuts-helper/keyboard-shortcuts-helper.service';
+import {ActionType} from '../../../../model/keyboard-shortcuts.types';
 
 @Injectable()
 export class ProjectActionService {
@@ -16,6 +19,7 @@ export class ProjectActionService {
   private globalSettingsStateService = inject(GlobalSettingsStateService);
   private projectSettingsStateService = inject(ProjectSettingsStateService);
   private commandHistoryStateService = inject(CommandHistoryStateService);
+  private keyboardShortcutsHelperService = inject(KeyboardShortcutsHelperService);
   private action$ = new Subject<KeyboardAction>();
   private readonly destroyRef = inject(DestroyRef);
 
@@ -24,7 +28,7 @@ export class ProjectActionService {
     // throttleTime(250ms) ensures that rapid clicking on UI buttons doesn't spam.
     // leading: true executes immediately. trailing: false ignores subsequent triggers within 250ms.
     this.action$.pipe(
-      filter(action => SINGLE_SHOT_ACTIONS.has(action)),
+      filter(action => this.keyboardShortcutsHelperService.getActionType(action) === ActionType.SingleShot),
       throttleTime(250, undefined, {leading: true, trailing: false}),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe(action => this.executeAction(action));
@@ -33,7 +37,7 @@ export class ProjectActionService {
     // throttleTime(150ms) regulates the speed of seeking/adjusting.
     // leading: true executes immediately. trailing: true ensures the final inputs aren't lost.
     this.action$.pipe(
-      filter(action => CONTINUOUS_ACTIONS.has(action)),
+      filter(action => this.keyboardShortcutsHelperService.getActionType(action) === ActionType.Continuous),
       throttleTime(150, undefined, {leading: true, trailing: true}),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe(action => this.executeAction(action));
@@ -104,6 +108,12 @@ export class ProjectActionService {
         break;
       case KeyboardAction.ExportToAnki:
         this.videoStateService.requestAnkiExport();
+        break;
+      case KeyboardAction.ZoomIn:
+        this.videoStateService.requestZoomIn();
+        break;
+      case KeyboardAction.ZoomOut:
+        this.videoStateService.requestZoomOut();
         break;
     }
   }

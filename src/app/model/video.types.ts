@@ -31,7 +31,14 @@ export enum KeyboardAction {
   SplitClip = 'SplitClip',
   DeleteClip = 'DeleteClip',
   CreateClip = 'CreateClip',
-  ExportToAnki = 'ExportToAnki'
+  ExportToAnki = 'ExportToAnki',
+  ZoomIn = 'ZoomIn',
+  ZoomOut = 'ZoomOut',
+  OpenHelpDialog = 'OpenHelpDialog',
+  OpenGlobalSettings = 'OpenGlobalSettings',
+  CloseDialogOrEsc = 'CloseDialogOrEsc',
+  ConfirmDialog = 'ConfirmDialog',
+  AddNote = 'AddNote',
 }
 
 export enum SeekType {

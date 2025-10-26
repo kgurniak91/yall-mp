@@ -5,6 +5,7 @@ import {
   GlobalSettingsDialogConfig,
   GlobalSettingsTab
 } from '../../../features/global-settings-dialog/global-settings-dialog.types';
+import {HelpDialogComponent} from '../../../features/help-dialog/help-dialog.component';
 
 @Injectable({
   providedIn: 'root'
@@ -25,6 +26,17 @@ export class DialogOrchestrationService {
       modal: true,
       closeOnEscape: false,
       data
+    });
+  }
+
+  openHelpDialog(): void {
+    this.dialogService.open(HelpDialogComponent, {
+      header: 'Help & About',
+      width: 'clamp(20rem, 95vw, 55rem)',
+      focusOnShow: false,
+      closable: true,
+      modal: true,
+      closeOnEscape: false,
     });
   }
 }

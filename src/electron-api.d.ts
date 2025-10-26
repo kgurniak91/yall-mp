@@ -19,6 +19,8 @@ export interface ParsedSubtitlesData {
 }
 
 export interface IElectronAPI {
+  // --- App
+  getAppVersion: () => Promise<string>;
   // --- Window control
   windowMinimize: () => void;
   windowToggleMaximize: () => void;

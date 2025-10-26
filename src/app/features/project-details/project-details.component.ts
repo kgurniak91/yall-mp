@@ -810,14 +810,15 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
   private editCurrentSubtitlesListener = effect(() => {
     if (this.videoStateService.editSubtitlesRequest()) {
-      if (!this.canEditSubtitles()) {
-        this.toastService.info('Subtitle editing is only available in the "Interactive (ASS.js)" renderer mode.');
+      const currentClip = this.clipsStateService.currentClip();
+      if (!currentClip || !currentClip.hasSubtitle) {
+        this.toastService.info('Subtitle editing is not available for gaps.');
         this.videoStateService.clearEditSubtitlesRequest();
         return;
       }
 
-      const currentClip = this.clipsStateService.currentClip();
-      if (!currentClip || !currentClip.hasSubtitle) {
+      if (!this.canEditSubtitles()) {
+        this.toastService.info('Subtitle editing is only available in the "Interactive (ASS.js)" renderer mode.');
         this.videoStateService.clearEditSubtitlesRequest();
         return;
       }

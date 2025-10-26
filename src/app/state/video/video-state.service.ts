@@ -22,6 +22,8 @@ export class VideoStateService implements OnDestroy {
   private readonly _isBusy = signal(true);
   private readonly _assRendererSyncRequest = signal<number | null>(null);
   private readonly _toggleSubtitlesRequest = signal<number | null>(null);
+  private readonly _zoomInRequest = signal<number | null>(null);
+  private readonly _zoomOutRequest = signal<number | null>(null);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly appStateService = inject(AppStateService);
@@ -46,6 +48,8 @@ export class VideoStateService implements OnDestroy {
   public readonly isBusy = this._isBusy.asReadonly();
   public readonly assRendererSyncRequest = this._assRendererSyncRequest.asReadonly();
   public readonly toggleSubtitlesRequest = this._toggleSubtitlesRequest.asReadonly();
+  public readonly zoomInRequest = this._zoomInRequest.asReadonly();
+  public readonly zoomOutRequest = this._zoomOutRequest.asReadonly();
 
   constructor() {
     this.cleanupMpvListener = window.electronAPI.onMpvEvent((status) => {
@@ -153,6 +157,22 @@ export class VideoStateService implements OnDestroy {
 
   public requestAssRendererSync(): void {
     this._assRendererSyncRequest.set(Date.now());
+  }
+
+  public requestZoomIn(): void {
+    this._zoomInRequest.set(Date.now());
+  }
+
+  public clearZoomInRequest(): void {
+    this._zoomInRequest.set(null);
+  }
+
+  public requestZoomOut(): void {
+    this._zoomOutRequest.set(Date.now());
+  }
+
+  public clearZoomOutRequest(): void {
+    this._zoomOutRequest.set(null);
   }
 
   public clearAssRendererSyncRequest(): void {

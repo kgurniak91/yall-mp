@@ -180,11 +180,9 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
         command: () => this.dialogOrchestrationService.openGlobalSettingsDialog()
       },
       {
-        label: 'Help & Shortcuts (F1)',
+        label: 'Help & About (F1)',
         icon: 'fa-solid fa-circle-question',
-        command: () => {
-          /* TODO */
-        }
+        command: () => this.dialogOrchestrationService.openHelpDialog()
       });
 
     return menu;

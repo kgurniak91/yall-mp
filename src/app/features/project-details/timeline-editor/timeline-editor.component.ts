@@ -3,7 +3,6 @@ import {
   Component,
   effect,
   ElementRef,
-  HostListener,
   inject,
   OnDestroy,
   output,
@@ -50,6 +49,22 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
   private gapBg!: string;
   private mustIgnoreNextScroll = false;
 
+  constructor() {
+    effect(() => {
+      if (this.videoStateService.zoomInRequest()) {
+        this.zoomIn();
+        this.videoStateService.clearZoomInRequest();
+      }
+    });
+
+    effect(() => {
+      if (this.videoStateService.zoomOutRequest()) {
+        this.zoomOut();
+        this.videoStateService.clearZoomOutRequest();
+      }
+    });
+  }
+
   ngAfterViewInit(): void {
     const computedStyles = getComputedStyle(this.elementRef.nativeElement);
     const glowColor = computedStyles.getPropertyValue('--app-primary').trim();
@@ -65,21 +80,6 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
     this.wsRegions?.un('region-clicked', this.handleRegionLeftClicked);
     this.wsRegions?.un('region-created', this.handleRegionCreated);
     this.wavesurfer?.destroy();
-  }
-
-  @HostListener('window:keydown', ['$event'])
-  onKeydown(event: KeyboardEvent) {
-    if ((event.target as HTMLElement).tagName === 'INPUT' || (event.target as HTMLElement).tagName === 'TEXTAREA') {
-      return;
-    }
-    if (event.key === '=') {
-      event.preventDefault();
-      this.zoomIn();
-    }
-    if (event.key === '-') {
-      event.preventDefault();
-      this.zoomOut();
-    }
   }
 
   public setAutoScroll(enabled: boolean): void {
