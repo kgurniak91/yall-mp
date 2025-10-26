@@ -153,16 +153,18 @@
             header="Settings"
             position="right"
             [style]="{width: '30rem'}">
-    <app-current-project-settings [settings]="projectSettingsStateService.settings()"
-                                  [audioTracks]="project()?.audioTracks || []"
-                                  [settingsPresets]="settingsPresets()"
-                                  [isAssProject]="isAssProject()"
-                                  [selectedSettingsPreset]="selectedSettingsPreset()"
-                                  [detectedLanguage]="project()?.detectedLanguage"
-                                  [ankiTags]="project()?.ankiTags || []"
-                                  (settingsChange)="projectSettingsStateService.setSettings($event)"
-                                  (selectedSettingsPresetChange)="onSettingsPresetChange($event)"
-                                  (ankiTagsChange)="onAnkiTagsChange($event)"/>
+    <ng-template pTemplate="content">
+      <app-current-project-settings [settings]="projectSettingsStateService.settings()"
+                                    [audioTracks]="project()?.audioTracks || []"
+                                    [settingsPresets]="settingsPresets()"
+                                    [isAssProject]="isAssProject()"
+                                    [selectedSettingsPreset]="selectedSettingsPreset()"
+                                    [detectedLanguage]="project()?.detectedLanguage"
+                                    [ankiTags]="project()?.ankiTags || []"
+                                    (settingsChange)="projectSettingsStateService.setSettings($event)"
+                                    (selectedSettingsPresetChange)="onSettingsPresetChange($event)"
+                                    (ankiTagsChange)="onAnkiTagsChange($event)"/>
+    </ng-template>
   </p-drawer>
 </div>
 
