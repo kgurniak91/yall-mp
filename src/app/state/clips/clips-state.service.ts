@@ -139,119 +139,119 @@ export class ClipsStateService implements OnDestroy {
       return;
     }
 
-    const command = new SplitSubtitledClipCommand(this, currentClip.id);
+    const project = this.appStateService.getProjectById(this._projectId!);
+    const command = new SplitSubtitledClipCommand(this, currentClip.id, project?.rawAssContent);
     this.commandHistoryStateService.execute(command);
   }
 
-  public splitSubtitledClip(clipId: string, onSplitCallback?: (originalSubtitles: SubtitleData[], newSubtitleIds: string[]) => void): void {
+  public splitSubtitledClip(clipId: string, onSplitCallback?: (originalSubtitles: SubtitleData[], createdAndModifiedIds: string[]) => void): void {
     const clipToSplit = this.clips().find(c => c.id === clipId);
     if (!clipToSplit) return;
 
-    // Get the current playback time as the desired split point.
-    let splitPoint = this.videoStateService.currentTime();
+    const currentTime = this.videoStateService.currentTime();
 
-    // If the playhead is outside the clip, fall back to splitting in the middle.
+    let splitPoint = currentTime;
     if (splitPoint <= clipToSplit.startTime || splitPoint >= clipToSplit.endTime) {
       splitPoint = clipToSplit.startTime + (clipToSplit.duration / 2);
     }
 
-    // Enforce minimum duration for both resulting clips.
     const minPossibleSplitPoint = clipToSplit.startTime + MIN_SUBTITLE_DURATION;
-    const maxPossibleSplitPoint = clipToSplit.endTime - MIN_SUBTITLE_DURATION;
+    const maxPossibleSplitPoint = clipToSplit.endTime - MIN_SUBTITLE_DURATION - MIN_GAP_DURATION;
+    splitPoint = AssSubtitlesUtils.roundToAssPrecision(Math.max(minPossibleSplitPoint, Math.min(splitPoint, maxPossibleSplitPoint)));
 
-    // Clamp the split point to the valid range.
-    splitPoint = Math.max(minPossibleSplitPoint, Math.min(splitPoint, maxPossibleSplitPoint));
+    const originalSubtitlesForUndo = cloneDeep(clipToSplit.sourceSubtitles);
+    const createdAndModifiedIds: string[] = [];
+    const subtitlesToUpdate = new Map<string, SubtitleData>();
+    const subtitlesToCreate: SubtitleData[] = [];
+    const subtitlesToRemove = new Set<string>();
+    const newSecondHalvesForAss: AssSubtitleData[] = [];
 
-    const originalSubtitles = cloneDeep(clipToSplit.sourceSubtitles);
-    const newSubtitleIds: string[] = [];
-    const newSubtitles = [...this._subtitles()];
-    const subtitlesToDuplicate = new Map<string, SubtitleData>();
+    for (const sub of clipToSplit.sourceSubtitles) {
+      if (sub.startTime >= splitPoint) {
+        const newId = uuidv4();
+        createdAndModifiedIds.push(newId);
+        const newSub = {
+          ...cloneDeep(sub),
+          id: newId,
+          startTime: Math.max(sub.startTime, splitPoint + MIN_GAP_DURATION)
+        };
+        subtitlesToCreate.push(newSub);
+        if (newSub.type === 'ass') {
+          newSecondHalvesForAss.push(newSub);
+        }
+        subtitlesToRemove.add(sub.id);
+      } else if (sub.startTime < splitPoint && sub.endTime > splitPoint) {
+        createdAndModifiedIds.push(sub.id);
+        const firstHalf = {...cloneDeep(sub), endTime: splitPoint};
+        subtitlesToUpdate.set(firstHalf.id, firstHalf);
 
-    // First, update the end time of all original subtitles in the clip
-    for (const sourceSub of clipToSplit.sourceSubtitles) {
-      const subToUpdate = newSubtitles.find(s => s.id === sourceSub.id);
-      if (subToUpdate) {
-        subToUpdate.endTime = splitPoint;
-        subtitlesToDuplicate.set(sourceSub.id, subToUpdate);
+        const newId = uuidv4();
+        createdAndModifiedIds.push(newId);
+        const secondHalf = {...cloneDeep(sub), id: newId, startTime: splitPoint + MIN_GAP_DURATION};
+        subtitlesToCreate.push(secondHalf);
+        if (secondHalf.type === 'ass') {
+          newSecondHalvesForAss.push(secondHalf);
+        }
       }
     }
 
-    const newSecondPartSubs: SubtitleData[] = [];
-    // Then, create new subtitles for the second part
-    for (const originalSub of clipToSplit.sourceSubtitles) {
-      const newId = uuidv4();
-      newSubtitleIds.push(newId);
+    onSplitCallback?.(originalSubtitlesForUndo, createdAndModifiedIds);
 
-      let secondPartSubtitle: SubtitleData;
-      if (originalSub.type === 'ass') {
-        secondPartSubtitle = {
-          ...cloneDeep(originalSub),
-          id: newId,
-          startTime: splitPoint + MIN_GAP_DURATION,
-          endTime: clipToSplit.endTime,
-        };
-      } else { // 'srt'
-        secondPartSubtitle = {
-          ...cloneDeep(originalSub),
-          id: newId,
-          startTime: splitPoint + MIN_GAP_DURATION,
-          endTime: clipToSplit.endTime,
-        };
-      }
-      newSecondPartSubs.push(secondPartSubtitle);
-    }
+    let finalSubtitles = this._subtitles()
+      .filter(s => !subtitlesToRemove.has(s.id))
+      .map(sub => subtitlesToUpdate.get(sub.id) || sub)
+      .concat(subtitlesToCreate);
 
-    newSubtitles.push(...newSecondPartSubs);
-    newSubtitles.sort((a, b) => a.startTime - b.startTime);
-
-    onSplitCallback?.(originalSubtitles, newSubtitleIds);
+    finalSubtitles.sort((a, b) => a.startTime - b.startTime);
 
     const project = this.appStateService.getProjectById(this._projectId!);
     if (!project) return;
-    const updates: Partial<Project> = {subtitles: newSubtitles};
+    const updates: Partial<Project> = {subtitles: finalSubtitles};
 
     if (project.rawAssContent) {
       updates.rawAssContent = this.assEditService.splitDialogueLines(
         project.rawAssContent,
-        originalSubtitles as AssSubtitleData[],
+        originalSubtitlesForUndo as AssSubtitleData[],
         splitPoint,
-        newSecondPartSubs as AssSubtitleData[]
+        newSecondHalvesForAss
       );
     }
 
     this.appStateService.updateProject(this._projectId!, updates);
-    this._subtitles.set(newSubtitles);
+    this._subtitles.set(finalSubtitles);
+    this.synchronizeStateAfterSplit(clipToSplit, splitPoint, currentTime);
   }
 
-  public unsplitClip(originalSubtitles: SubtitleData[], secondSubtitleIds: string[]): void {
+  public unsplitClip(originalSubtitles: SubtitleData[], createdAndModifiedIds: string[], originalRawAssContent?: string): void {
     const project = this.appStateService.getProjectById(this._projectId!);
     if (!project) return;
 
-    const idsToRemove = new Set(secondSubtitleIds);
-    const subtitlesToRemove = this._subtitles().filter(s => idsToRemove.has(s.id));
+    const idsToRemove = new Set(createdAndModifiedIds);
 
-    const idsToRestore = new Set(originalSubtitles.map(s => s.id));
-    const subtitlesToExtend = this._subtitles().filter(s => idsToRestore.has(s.id));
+    const restoredSubtitles = this._subtitles()
+      .filter(s => !idsToRemove.has(s.id))
+      .concat(originalSubtitles)
+      .sort((a, b) => a.startTime - b.startTime);
 
-    const newSubtitles = this._subtitles()
-      .filter(s => !idsToRemove.has(s.id) && !idsToRestore.has(s.id));
+    const updates: Partial<Project> = {subtitles: restoredSubtitles};
 
-    newSubtitles.push(...originalSubtitles);
-    newSubtitles.sort((a, b) => a.startTime - b.startTime);
-
-    const updates: Partial<Project> = {subtitles: newSubtitles};
-
-    if (project.rawAssContent) {
-      updates.rawAssContent = this.assEditService.unsplitDialogueLines(
-        project.rawAssContent,
-        subtitlesToExtend as AssSubtitleData[],
-        subtitlesToRemove as AssSubtitleData[],
-        originalSubtitles as AssSubtitleData[]
-      );
+    if (originalRawAssContent !== undefined) {
+      updates.rawAssContent = originalRawAssContent;
     }
 
     this.appStateService.updateProject(this._projectId!, updates);
-    this._subtitles.set(newSubtitles);
+    this._subtitles.set(restoredSubtitles);
+
+    // Re-sync active clip after undo:
+    const currentTime = this.videoStateService.currentTime();
+    const newClipsArray = this.clips();
+    const newCorrectIndex = newClipsArray.findIndex(c =>
+      currentTime >= c.startTime && currentTime < c.endTime
+    );
+
+    if (newCorrectIndex !== -1) {
+      this.setCurrentClipByIndex(newCorrectIndex);
+    }
   }
 
   public deleteCurrentClip(): void {
@@ -357,7 +357,6 @@ export class ClipsStateService implements OnDestroy {
 
     const updates: Partial<Project> = {subtitles: restoredSubtitles};
 
-    // TODO A perfect undo for rawAssContent would require storing its original state.
     if (project.rawAssContent) {
       const updatedSubs: AssSubtitleData[] = [];
       const originalSubs: AssSubtitleData[] = [];
@@ -1089,4 +1088,33 @@ export class ClipsStateService implements OnDestroy {
 
     return idsA === idsB;
   };
+
+  private synchronizeStateAfterSplit(originalClip: VideoClip, splitPoint: number, currentTime: number): void {
+    const newClipsArray = this.clips();
+    let newActiveClip: VideoClip | undefined;
+
+    if (currentTime < (originalClip.startTime + MIN_SUBTITLE_DURATION - 0.01)) {
+      // Case 1: Split was clamped near the START of the original clip.
+      // User intended to split early, so keep focus on the first part and don't move the playhead.
+      newActiveClip = newClipsArray.find(c => c.endTime === splitPoint);
+    } else if (currentTime > (originalClip.endTime - MIN_SUBTITLE_DURATION)) {
+      // Case 2: Split was clamped near the END of the original clip.
+      // User intended to split late, so switch focus to the second part and don't move the playhead.
+      newActiveClip = newClipsArray.find(c => c.startTime === splitPoint + MIN_GAP_DURATION);
+    } else {
+      // Case 3: Normal split in the middle.
+      // Focus on the first part and nudge the playhead to its end for a smooth workflow.
+      newActiveClip = newClipsArray.find(c => c.endTime === splitPoint);
+      if (newActiveClip) {
+        this.videoStateService.seekAbsolute(splitPoint - 0.01);
+      }
+    }
+
+    if (newActiveClip) {
+      const newIndex = newClipsArray.indexOf(newActiveClip);
+      if (newIndex !== -1) {
+        this.setCurrentClipByIndex(newIndex);
+      }
+    }
+  }
 }

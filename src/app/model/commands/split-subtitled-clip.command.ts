@@ -5,11 +5,14 @@ import {SubtitleData} from '../../../../shared/types/subtitle.type';
 export class SplitSubtitledClipCommand implements Command {
   private originalSubtitles: SubtitleData[] | undefined;
   private newSubtitleIds: string[] | undefined;
+  private originalRawAssContent: string | undefined;
 
   constructor(
     private clipsStateService: ClipsStateService,
-    private clipIdToSplit: string
+    private clipIdToSplit: string,
+    rawAssContent?: string
   ) {
+    this.originalRawAssContent = rawAssContent;
   }
 
   execute(): void {
@@ -30,7 +33,8 @@ export class SplitSubtitledClipCommand implements Command {
 
     this.clipsStateService.unsplitClip(
       this.originalSubtitles,
-      this.newSubtitleIds
+      this.newSubtitleIds,
+      this.originalRawAssContent
     );
   }
 }

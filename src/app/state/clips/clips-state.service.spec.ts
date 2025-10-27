@@ -833,51 +833,29 @@ Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,Clip B
       videoStateService.setCurrentTime(8);
 
       const clipToSplit = service.clips().find(c => c.id === 'subtitle-5')!;
-      const splitCommand = new SplitSubtitledClipCommand(service, clipToSplit.id);
+      const command = new SplitSubtitledClipCommand(service, clipToSplit.id, projectState.rawAssContent);
 
       // ACT
-      commandHistoryService.execute(splitCommand);
+      commandHistoryService.execute(command);
 
       // ASSERT
       const clipsAfterSplit = service.clips();
       const subtitledClips = clipsAfterSplit.filter(c => c.hasSubtitle);
-      expect(subtitledClips.length).toBe(3);
+      // Started with 2 subtitled clips (A and B). Then A was split. The result should be 3 clips: A1, A2, B.
+      expect(subtitledClips.length).withContext('After splitting one of two clips, there should be three').toBe(3);
 
       const splitPoint = 8;
+      // First part of the split original clip (originally clip index 1)
       expect(subtitledClips[0].endTime).toBeCloseTo(splitPoint);
+      // Second part of the split original clip
       expect(subtitledClips[1].startTime).toBeCloseTo(splitPoint + MIN_GAP_DURATION);
 
       // UNDO/REDO
       commandHistoryService.undo();
-      expect(service.clips().filter(c => c.hasSubtitle).length).toBe(2);
+      expect(service.clips().filter(c => c.hasSubtitle).length).withContext('After undo, should be back to two clips').toBe(2);
 
       commandHistoryService.redo();
-      expect(service.clips().filter(c => c.hasSubtitle).length).toBe(3);
-      videoStateService.setCurrentTime(0); // Reset just in case
-    });
-
-    it('clamps the split point to respect minimum clip duration', () => {
-      // ARRANGE: Set the playback time very close to the end of the clip (19.8s in a 15-20s clip)
-      videoStateService.setCurrentTime(19.8);
-      const clipToSplit = service.clips().find(c => c.id === 'subtitle-15')!; // Target the second clip
-      const splitCommand = new SplitSubtitledClipCommand(service, clipToSplit.id);
-
-      // ACT
-      commandHistoryService.execute(splitCommand);
-
-      // ASSERT
-      const clipsAfterSplit = service.clips();
-      const subtitledClips = clipsAfterSplit.filter(c => c.hasSubtitle);
-      expect(subtitledClips.length).toBe(3);
-
-      // The split point should be clamped to 20s (end time) - 0.5s (min duration) = 19.5s
-      const expectedSplitPoint = 19.5;
-      const secondClip = subtitledClips[1]; // This is the first part of the split original
-      const thirdClip = subtitledClips[2]; // This is the second part
-
-      expect(secondClip.endTime).toBeCloseTo(expectedSplitPoint);
-      expect(thirdClip.startTime).toBeCloseTo(expectedSplitPoint + MIN_GAP_DURATION);
-      expect(thirdClip.endTime).toBe(20); // End time of original clip should be preserved
+      expect(service.clips().filter(c => c.hasSubtitle).length).withContext('After redo, should be back to three clips').toBe(3);
       videoStateService.setCurrentTime(0); // Reset just in case
     });
 
@@ -902,6 +880,160 @@ Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,Clip B
       expect(service.clips().filter(c => c.hasSubtitle).length).toBe(1);
       // The user should be warned with the correct minimum duration.
       expect(toastService.warn).toHaveBeenCalledWith('Selected clip is too short to split. Minimum required duration is 1.1s.');
+    });
+
+    it('clamps the split point to respect minimum clip duration when splitting near the end', () => {
+      // ARRANGE: Set the playback time very close to the end of the clip (19.8s in a 15-20s clip)
+      videoStateService.setCurrentTime(19.8);
+      const clipToSplit = service.clips().find(c => c.id === 'subtitle-15')!;
+      const command = new SplitSubtitledClipCommand(service, clipToSplit.id, projectState.rawAssContent);
+
+      // ACT
+      commandHistoryService.execute(command);
+
+      // ASSERT
+      const clipsAfterSplit = service.clips();
+      const subtitledClips = clipsAfterSplit.filter(c => c.hasSubtitle);
+      expect(subtitledClips.length).toBe(3); // Original 'subtitle-5' + the two new pieces
+
+      // The logic is: max split point = end - min_duration - min_gap
+      const expectedSplitPoint = 19.4; // 20 - 0.5 - 0.1 = 19.4
+      const firstClipPart = subtitledClips[1];
+      const secondClipPart = subtitledClips[2];
+
+      expect(firstClipPart.endTime).toBeCloseTo(expectedSplitPoint);
+      expect(secondClipPart.startTime).toBeCloseTo(expectedSplitPoint + MIN_GAP_DURATION);
+      expect(secondClipPart.endTime).toBe(20);
+      expect(secondClipPart.duration).toBeCloseTo(0.5);
+      videoStateService.setCurrentTime(0);
+    });
+
+    it('clamps the split point to respect minimum clip duration when splitting near the beginning', () => {
+      // ARRANGE: Set the playback time very close to the start of the clip (15.2s in a 15-20s clip)
+      videoStateService.setCurrentTime(15.2);
+      const clipToSplit = service.clips().find(c => c.id === 'subtitle-15')!;
+      const command = new SplitSubtitledClipCommand(service, clipToSplit.id, projectState.rawAssContent);
+
+      // ACT
+      commandHistoryService.execute(command);
+
+      // ASSERT
+      const clipsAfterSplit = service.clips();
+      const subtitledClips = clipsAfterSplit.filter(c => c.hasSubtitle);
+      expect(subtitledClips.length).toBe(3);
+
+      // The logic is: min split point = start + min_duration
+      const expectedSplitPoint = 15.5; // 15 + 0.5 = 15.5
+      const firstClipPart = subtitledClips[1];
+      const secondClipPart = subtitledClips[2];
+
+      expect(firstClipPart.startTime).toBe(15);
+      expect(firstClipPart.endTime).toBeCloseTo(expectedSplitPoint);
+      expect(firstClipPart.duration).toBeCloseTo(0.5);
+      expect(secondClipPart.startTime).toBeCloseTo(expectedSplitPoint + MIN_GAP_DURATION);
+      expect(secondClipPart.endTime).toBe(20);
+      videoStateService.setCurrentTime(0);
+    });
+
+    it('correctly performs a second split without affecting the first split', () => {
+      // ARRANGE: First split near the end
+      videoStateService.setCurrentTime(19.0);
+      const clipToSplit1 = service.clips().find(c => c.id === 'subtitle-15')!;
+      const command1 = new SplitSubtitledClipCommand(service, clipToSplit1.id, projectState.rawAssContent);
+      commandHistoryService.execute(command1);
+
+      let clipsAfterFirstSplit = service.clips();
+      const subtitledClips1 = clipsAfterFirstSplit.filter(c => c.hasSubtitle);
+      expect(subtitledClips1.length).withContext('After 1st split').toBe(3);
+
+      // ACT: Second split near the beginning of the project
+      videoStateService.setCurrentTime(6.0);
+      const clipToSplit2 = service.clips().find(c => c.id === 'subtitle-5')!;
+      const command2 = new SplitSubtitledClipCommand(service, clipToSplit2.id, projectState.rawAssContent);
+      commandHistoryService.execute(command2);
+
+      // ASSERT
+      const clipsAfterSecondSplit = service.clips();
+      const subtitledClips2 = clipsAfterSecondSplit.filter(c => c.hasSubtitle);
+      expect(subtitledClips2.length).withContext('After 2nd split').toBe(4);
+      const firstGap = clipsAfterSecondSplit.find(c => c.startTime === 19.0 && c.endTime === 19.1);
+      expect(firstGap).withContext('Gap from first split should still exist').toBeDefined();
+    });
+
+    it('sets the first new clip as active and nudges the playhead back when splitting in the middle', () => {
+      // ARRANGE: Split the 5-10s clip at 7.5s
+      videoStateService.setCurrentTime(7.5);
+      const clipToSplit = service.clips().find(c => c.id === 'subtitle-5')!;
+      const command = new SplitSubtitledClipCommand(service, clipToSplit.id, projectState.rawAssContent);
+
+      // ACT
+      commandHistoryService.execute(command);
+
+      // ASSERT
+      const newClips = service.clips();
+      const firstPart = newClips.find(c => c.startTime === 5 && c.endTime === 7.5)!;
+      const indexOfFirstPart = newClips.indexOf(firstPart);
+
+      expect(service.currentClipIndex()).withContext('The first part of the split clip should be active').toBe(indexOfFirstPart);
+      expect(videoStateService.seekAbsolute).toHaveBeenCalledWith(7.5 - 0.01);
+    });
+
+    it('sets the second new clip as active and preserves playhead position when splitting near the end', () => {
+      // ARRANGE: Split the 15-20s clip at 19.8s. The split point will be clamped to 19.4s.
+      videoStateService.setCurrentTime(19.8);
+      const clipToSplit = service.clips().find(c => c.id === 'subtitle-15')!;
+      const command = new SplitSubtitledClipCommand(service, clipToSplit.id, projectState.rawAssContent);
+
+      // ACT
+      commandHistoryService.execute(command);
+
+      // ASSERT
+      const newClips = service.clips();
+      const clampedSplitPoint = 20 - MIN_SUBTITLE_DURATION - MIN_GAP_DURATION; // 19.4
+      const secondPart = newClips.find(c => c.startTime === clampedSplitPoint + MIN_GAP_DURATION)!;
+      const indexOfSecondPart = newClips.indexOf(secondPart);
+
+      expect(service.currentClipIndex()).withContext('The second part of the split clip should be active').toBe(indexOfSecondPart);
+      expect(videoStateService.seekAbsolute).not.toHaveBeenCalled();
+    });
+
+    it('sets the first new clip as active and preserves playhead position when splitting near the beginning', () => {
+      // ARRANGE: Split the 15-20s clip at 15.2s. The split point will be clamped to 15.5s.
+      videoStateService.setCurrentTime(15.2);
+      const clipToSplit = service.clips().find(c => c.id === 'subtitle-15')!;
+      const command = new SplitSubtitledClipCommand(service, clipToSplit.id, projectState.rawAssContent);
+
+      // ACT
+      commandHistoryService.execute(command);
+
+      // ASSERT
+      const newClips = service.clips();
+      const clampedSplitPoint = 15 + MIN_SUBTITLE_DURATION; // 15.5
+      const firstPart = newClips.find(c => c.startTime === 15 && c.endTime === clampedSplitPoint)!;
+      const indexOfFirstPart = newClips.indexOf(firstPart);
+
+      expect(service.currentClipIndex()).withContext('The first part of the split clip should be active').toBe(indexOfFirstPart);
+      expect(videoStateService.seekAbsolute).not.toHaveBeenCalled();
+    });
+
+    it('correctly restores the active clip after undoing a split', () => {
+      // ARRANGE: Split the 5-10s clip at 8s. The playhead will be nudged to 7.99s.
+      videoStateService.setCurrentTime(8);
+      const clipToSplit = service.clips().find(c => c.id === 'subtitle-5')!;
+      const command = new SplitSubtitledClipCommand(service, clipToSplit.id, projectState.rawAssContent);
+      commandHistoryService.execute(command);
+      expect(service.clips().filter(c => c.hasSubtitle).length).toBe(3);
+
+      // ACT: Undo the split
+      commandHistoryService.undo();
+
+      // ASSERT
+      const restoredClips = service.clips();
+      const restoredOriginalClip = restoredClips.find(c => c.startTime === 5 && c.endTime === 10)!;
+      const indexOfRestoredClip = restoredClips.indexOf(restoredOriginalClip);
+
+      expect(restoredClips.filter(c => c.hasSubtitle).length).withContext('Should be back to 2 subtitled clips').toBe(2);
+      expect(service.currentClipIndex()).withContext('The restored original clip should be active').toBe(indexOfRestoredClip);
     });
   });
 
@@ -984,33 +1116,99 @@ Dialogue: 0,0:00:15.00,0:00:20.00,Top,,0,0,0,,Subtitle B Top
       expect(service.clips().length).toBe(4);
     });
 
-    it('correctly splits a subtitle, and then undo/redo', () => {
-      const splitPoint = 17.5;
-      const clipToSplit = service.clips().find(c => c.startTime === 15)!;
-      videoStateService.setCurrentTime(splitPoint); // Set split point
-      const splitCommand = new SplitSubtitledClipCommand(service, clipToSplit.id);
+    it('correctly splits a complex animated clip, and then undo/redo', () => {
+      // ARRANGE: An animation with two parts that are merged into a single logical clip
+      projectState.rawAssContent = `
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:10.00,0:00:12.00,Default,,0,0,0,,Animated Text
+Dialogue: 0,0:00:12.00,0:00:14.00,Default,,0,0,0,,Animated Text
+    `.trim();
+      projectState.subtitles = [
+        {type: 'ass', id: 'ass-a', startTime: 10, endTime: 12, parts: [{text: 'Animated Text', style: 'Default'}]},
+        {type: 'ass', id: 'ass-b', startTime: 12, endTime: 14, parts: [{text: 'Animated Text', style: 'Default'}]},
+      ];
+      service.setSubtitles(projectState.subtitles);
 
-      // Execute
+      const initialClips = service.clips();
+      expect(initialClips.filter(c => c.hasSubtitle).length).withContext('Pre-condition failed: should be one merged clip').toBe(1);
+      const clipToSplit = initialClips.find(c => c.hasSubtitle)!;
+      const splitPoint = 11.5;
+      videoStateService.setCurrentTime(splitPoint);
+      const splitCommand = new SplitSubtitledClipCommand(service, clipToSplit.id, projectState.rawAssContent);
+
       commandHistoryService.execute(splitCommand);
-      const subtitledClips = service.clips().filter(c => c.hasSubtitle);
-      expect(subtitledClips.length).toBe(3);
-      expect(subtitledClips[1].endTime).toBeCloseTo(splitPoint);
-      expect(subtitledClips[2].startTime).toBeCloseTo(splitPoint + 0.1);
+
+      // ASSERT AFTER EXECUTE
+      const clipsAfterSplit = service.clips();
+      const subtitledClips = clipsAfterSplit.filter(c => c.hasSubtitle);
+      expect(subtitledClips.length).withContext('Should have 2 subtitled clips after split').toBe(2);
+      // The timeline should be: [gap, sub, gap, sub, gap]
+      expect(clipsAfterSplit.length).withContext('Should be 5 total clips (gap, sub, gap, sub, gap)').toBe(5);
+
+      expect(subtitledClips[0].startTime).toBe(10);
+      expect(subtitledClips[0].endTime).toBeCloseTo(11.5);
+      expect(subtitledClips[1].startTime).toBeCloseTo(11.5 + MIN_GAP_DURATION);
+      expect(subtitledClips[1].endTime).toBeCloseTo(14);
 
       let updatedContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
-      expect(updatedContent.split('Dialogue:').length - 1).toBe(5); // 1 original + 2 for first part + 2 for second part
+      expect(updatedContent.split('Dialogue:').length - 1).withContext('ASS should have 3 lines after split').toBe(3);
 
-      // Undo
+      // UNDO
       commandHistoryService.undo();
-      expect(service.clips().filter(c => c.hasSubtitle).length).toBe(2);
-      updatedContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
-      expect(updatedContent.split('Dialogue:').length - 1).toBe(3);
 
-      // Redo
-      commandHistoryService.redo();
-      expect(service.clips().filter(c => c.hasSubtitle).length).toBe(3);
+      // ASSERT AFTER UNDO
+      expect(service.clips().filter(c => c.hasSubtitle).length).withContext('Should be 1 clip after undo').toBe(1);
       updatedContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
-      expect(updatedContent.split('Dialogue:').length - 1).toBe(5);
+      expect(updatedContent.split('Dialogue:').length - 1).withContext('ASS should have 2 lines after undo').toBe(2);
+
+      // REDO
+      commandHistoryService.redo();
+
+      // ASSERT AFTER REDO
+      expect(service.clips().filter(c => c.hasSubtitle).length).withContext('Should be 2 subtitled clips after redo').toBe(2);
+      updatedContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
+      expect(updatedContent.split('Dialogue:').length - 1).withContext('ASS should have 3 lines after redo').toBe(3);
+    });
+
+    it('should correctly perform sequential splits on the same initial ASS clip without corruption', () => {
+      // ARRANGE: First split near the end of the second subtitled clip ('subtitle-15', from 15s-20s)
+      videoStateService.setCurrentTime(19.0);
+      const clipToSplit1 = service.clips().find(c => c.id === 'subtitle-15')!;
+      const command1 = new SplitSubtitledClipCommand(service, clipToSplit1.id, projectState.rawAssContent);
+      commandHistoryService.execute(command1);
+
+      // ASSERT 1: The first split should result in 3 total subtitled clips
+      let clipsAfterFirstSplit = service.clips();
+      const subtitledClips1 = clipsAfterFirstSplit.filter(c => c.hasSubtitle);
+      expect(subtitledClips1.length).withContext('After 1st split, should have 3 subtitled clips').toBe(3);
+      expect(clipsAfterFirstSplit.length).withContext('After 1st split, should have 7 total clips').toBe(7);
+
+      // ARRANGE 2: Now, split the first part of the previously split clip.
+      // The original 'subtitle-15' (15s-20s) became two clips: (15s - 19s) and (19.1s - 20s).
+      // Target the first one by setting the time to 16s:
+      videoStateService.setCurrentTime(16.0);
+      // Find the new clip dynamically as its ID has changed:
+      const clipToSplit2 = service.clips().find(c => c.startTime === 15.0)!;
+      expect(clipToSplit2).withContext('Could not find the first part of the previous split').toBeDefined();
+
+      // ACT 2: Execute the second split
+      const command2 = new SplitSubtitledClipCommand(service, clipToSplit2.id, projectState.rawAssContent);
+      commandHistoryService.execute(command2);
+
+      // ASSERT 2: The final state should be correct
+      const clipsAfterSecondSplit = service.clips();
+      const subtitledClips2 = clipsAfterSecondSplit.filter(c => c.hasSubtitle);
+      expect(subtitledClips2.length).withContext('After 2nd split, should have 4 subtitled clips').toBe(4);
+      expect(clipsAfterSecondSplit.length).withContext('After 2nd split, should have 9 total clips').toBe(9);
+
+      // Crucially, verify that the gap from the *first* split still exists and wasn't corrupted:
+      const firstGap = clipsAfterSecondSplit.find(c => c.startTime === 19.0 && c.endTime === 19.1);
+      expect(firstGap).withContext('Gap from first split should still exist').toBeDefined();
+
+      // And verify the new gap from the second split also exists:
+      const secondGap = clipsAfterSecondSplit.find(c => c.startTime === 16.0 && c.endTime === 16.1);
+      expect(secondGap).withContext('Gap from second split should exist').toBeDefined();
     });
   });
 });

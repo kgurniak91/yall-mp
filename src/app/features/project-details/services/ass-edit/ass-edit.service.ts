@@ -3,6 +3,7 @@ import {VideoClip} from '../../../../model/video.types';
 import {ClipContent} from '../../../../model/commands/update-clip-text.command';
 import {AssSubtitlesUtils} from '../../../../shared/utils/ass-subtitles/ass-subtitles.utils';
 import {AssSubtitleData, SubtitlePart} from '../../../../../../shared/types/subtitle.type';
+import {MIN_GAP_DURATION} from '../../../../state/clips/clips-state.service';
 
 @Injectable()
 export class AssEditService {
@@ -254,17 +255,14 @@ export class AssEditService {
       return rawAssContent;
     }
 
-    const {header, formatLine, dialogueLines, formatSpec} = parsedEvents;
+    const {header, formatLine, formatSpec} = parsedEvents;
+    let dialogueLines = [...parsedEvents.dialogueLines];
     const startIdx = formatSpec.get('Start')!;
     const endIdx = formatSpec.get('End')!;
-    const newDialogueLines: string[] = [];
-    const lineIndexesToModify = new Set<number>();
-    const modifiedLines: { [index: number]: string } = {};
+    const originalDialogueLineIndexes = new Set<number>();
 
-    for (let i = 0; i < originalSourceSubtitles.length; i++) {
-      const sourceSub = originalSourceSubtitles[i];
-      const newSub = newSecondPartSubs[i];
-
+    // First, find all unique line indexes that belong to the original subtitles:
+    for (const sourceSub of originalSourceSubtitles) {
       for (const part of sourceSub.parts) {
         let searchStartIndex = 0;
         while (searchStartIndex < dialogueLines.length) {
@@ -274,41 +272,54 @@ export class AssEditService {
             {startTime: sourceSub.startTime, endTime: sourceSub.endTime, style: part.style, text: part.text},
             searchStartIndex
           );
-
-          if (lineIndex === -1) {
-            break;
-          }
-
-          if (!lineIndexesToModify.has(lineIndex)) {
-            lineIndexesToModify.add(lineIndex);
-            const originalLineParts = dialogueLines[lineIndex].split(',');
-
-            const newLineParts = [...originalLineParts];
-            newLineParts[startIdx] = AssSubtitlesUtils.formatTime(newSub.startTime);
-            newLineParts[endIdx] = AssSubtitlesUtils.formatTime(newSub.endTime);
-            newDialogueLines.push(newLineParts.join(','));
-
-            originalLineParts[endIdx] = AssSubtitlesUtils.formatTime(splitPoint);
-            modifiedLines[lineIndex] = originalLineParts.join(',');
-          }
-
+          if (lineIndex === -1) break;
+          originalDialogueLineIndexes.add(lineIndex);
           searchStartIndex = lineIndex + 1;
         }
       }
     }
 
-    const finalLines = dialogueLines
-      .map((line, index) => modifiedLines[index] || line)
-      .concat(newDialogueLines)
-      .sort((a, b) => {
-        const partsA = a.split(',');
-        const partsB = b.split(',');
-        const startTimeA = AssSubtitlesUtils.timeToSeconds(partsA[startIdx]);
-        const startTimeB = AssSubtitlesUtils.timeToSeconds(partsB[startIdx]);
-        return startTimeA - startTimeB;
-      });
+    const linesToAdd: string[] = [];
+    const linesToModify: { index: number, newLine: string }[] = [];
 
-    return `${header}[Events]\n${formatLine}\n${finalLines.join('\r\n')}`;
+    // Now, process only those unique lines:
+    for (const lineIndex of Array.from(originalDialogueLineIndexes)) {
+      const line = dialogueLines[lineIndex];
+      const parts = line.split(',');
+      const lineStartTime = AssSubtitlesUtils.timeToSeconds(parts[startIdx]);
+      const lineEndTime = AssSubtitlesUtils.timeToSeconds(parts[endIdx]);
+
+      // Only lines that cross the split point need to be physically split.
+      if (lineStartTime < splitPoint && lineEndTime > splitPoint) {
+        // Create the new line for the second part (truncated)
+        const secondPartParts = [...parts];
+        secondPartParts[startIdx] = AssSubtitlesUtils.formatTime(splitPoint + MIN_GAP_DURATION);
+        secondPartParts[endIdx] = AssSubtitlesUtils.formatTime(lineEndTime);
+        linesToAdd.push(secondPartParts.join(','));
+
+        // Shorten the original line
+        const firstPartParts = [...parts];
+        firstPartParts[endIdx] = AssSubtitlesUtils.formatTime(splitPoint);
+        linesToModify.push({index: lineIndex, newLine: firstPartParts.join(',')});
+      }
+    }
+
+    // Apply modifications in reverse index order to avoid conflicts
+    linesToModify.sort((a, b) => b.index - a.index).forEach(({index, newLine}) => {
+      dialogueLines[index] = newLine;
+    });
+
+    // Add all the newly created line parts
+    dialogueLines.push(...linesToAdd);
+
+    // Re-sort all dialogue lines by their new start times
+    dialogueLines.sort((a, b) => {
+      const startTimeA = AssSubtitlesUtils.timeToSeconds(a.split(',')[startIdx]);
+      const startTimeB = AssSubtitlesUtils.timeToSeconds(b.split(',')[startIdx]);
+      return startTimeA - startTimeB;
+    });
+
+    return `${header}[Events]\n${formatLine}\n${dialogueLines.join('\r\n')}`;
   }
 
   public unsplitDialogueLines(
