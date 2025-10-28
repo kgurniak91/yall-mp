@@ -86,35 +86,18 @@ export class ClipsStateService implements OnDestroy {
     return this._subtitles();
   }
 
-  public restoreSubtitles(originalSubtitles: SubtitleData[]): void {
+  public restoreSubtitles(originalSubtitles: SubtitleData[], originalRawAssContent?: string): void {
     const project = this.appStateService.getProjectById(this._projectId!);
-    if (!project) return;
+    if (!project) {
+      return;
+    }
 
-    const currentSubtitles = this._subtitles();
     const updates: Partial<Project> = {subtitles: originalSubtitles};
 
-    if (project.rawAssContent) {
-      const subsToUpdate: AssSubtitleData[] = [];
-      const originalSubsToRestore: AssSubtitleData[] = [];
-
-      // Find all subtitles that have changed between current and original
-      for (const originalSub of originalSubtitles) {
-        const currentSub = currentSubtitles.find(s => s.id === originalSub.id);
-        if (currentSub && (currentSub.startTime !== originalSub.startTime || currentSub.endTime !== originalSub.endTime)) {
-          if (originalSub.type === 'ass' && currentSub.type === 'ass') {
-            subsToUpdate.push(currentSub);
-            originalSubsToRestore.push(originalSub);
-          }
-        }
-      }
-      if (subsToUpdate.length > 0) {
-        updates.rawAssContent = this.assEditService.stretchClipTimings(
-          subsToUpdate,
-          originalSubsToRestore,
-          project.rawAssContent
-        );
-      }
+    if (originalRawAssContent) {
+      updates.rawAssContent = originalRawAssContent;
     }
+
     this.appStateService.updateProject(this._projectId!, updates);
     this._subtitles.set(originalSubtitles);
   }
@@ -259,12 +242,8 @@ export class ClipsStateService implements OnDestroy {
     if (!currentClip) return;
 
     if (currentClip.hasSubtitle) {
-      // The id of a subtitled VideoClip is `subtitle-${startTime}`, but the source subtitle's ID is required.
-      const sourceSubtitleId = currentClip.sourceSubtitles[0]?.id;
-      if (sourceSubtitleId) {
-        const command = new DeleteSubtitledClipCommand(this, [sourceSubtitleId]);
-        this.commandHistoryStateService.execute(command);
-      }
+      const command = new DeleteSubtitledClipCommand(this, currentClip);
+      this.commandHistoryStateService.execute(command);
     } else {
       const clips = this.clips();
       const currentIndex = this.currentClipIndex();
@@ -279,6 +258,74 @@ export class ClipsStateService implements OnDestroy {
       const command = new MergeSubtitledClipsCommand(this, prevClip.id, nextClip.id);
       this.commandHistoryStateService.execute(command);
     }
+  }
+
+  public deleteClip(clipToDelete: VideoClip): {
+    originalSubtitles: SubtitleData[],
+    originalRawAssContent?: string
+  } | null {
+    const project = this.appStateService.getProjectById(this._projectId!);
+    if (!project) {
+      return null;
+    }
+
+    const originalSubtitles = cloneDeep(this._subtitles());
+    const originalRawAssContent = project.rawAssContent;
+    const timeBeforeDelete = this.videoStateService.currentTime();
+
+    let newSubtitles: SubtitleData[];
+    const updates: Partial<Project> = {};
+
+    if (project.rawAssContent) {
+      updates.rawAssContent = this.assEditService.deleteAssClipAndSplitSpanningLines(project.rawAssContent, clipToDelete);
+
+      const clipStart = clipToDelete.startTime;
+      const clipEnd = clipToDelete.endTime;
+      newSubtitles = [];
+
+      for (const sub of originalSubtitles) {
+        if (sub.endTime <= clipStart || sub.startTime >= clipEnd) {
+          // Keep: Subtitle is completely outside the deleted clip's range
+          newSubtitles.push(sub);
+        } else if (sub.startTime >= clipStart && sub.endTime <= clipEnd) {
+          // Remove: Subtitle is completely inside the deleted clip
+        } else if (sub.startTime < clipStart && sub.endTime > clipEnd) {
+          // Split: Subtitle spans the entire deleted clip
+          newSubtitles.push({...sub, endTime: clipStart});
+          newSubtitles.push({...cloneDeep(sub), id: uuidv4(), startTime: clipEnd});
+        } else if (sub.startTime < clipStart) {
+          // Truncate: Subtitle overlaps the start of the deleted clip
+          newSubtitles.push({...sub, endTime: clipStart});
+        } else { // sub.endTime > clipEnd
+          // Shift: Subtitle overlaps the end of the deleted clip
+          newSubtitles.push({...sub, startTime: clipEnd});
+        }
+      }
+      newSubtitles.sort((a, b) => a.startTime - b.startTime);
+      updates.subtitles = newSubtitles;
+    } else {
+      const sourceIdsToDelete = new Set(clipToDelete.sourceSubtitles.map(s => s.id));
+      newSubtitles = originalSubtitles.filter(sub => !sourceIdsToDelete.has(sub.id));
+      updates.subtitles = newSubtitles;
+    }
+
+    this.appStateService.updateProject(this._projectId!, updates);
+    this._subtitles.set(newSubtitles);
+
+    const newClipsArray = this.clips();
+    let newCorrectIndex = newClipsArray.findIndex(c =>
+      timeBeforeDelete >= c.startTime && timeBeforeDelete < c.endTime
+    );
+    if (newCorrectIndex === -1 && newClipsArray.length > 0) {
+      newCorrectIndex = newClipsArray.findIndex(c => c.startTime >= timeBeforeDelete) - 1;
+      if (newCorrectIndex < 0) newCorrectIndex = newClipsArray.length - 1;
+    }
+
+    if (newCorrectIndex !== -1) {
+      this._currentClipIndex.set(newCorrectIndex);
+    }
+
+    return {originalSubtitles, originalRawAssContent};
   }
 
   public mergeClips(
@@ -512,40 +559,6 @@ export class ClipsStateService implements OnDestroy {
     }
 
     return {deletedSubtitles, originalIndexes};
-  }
-
-  public insertSubtitle(subtitles: SubtitleData[], indexes: number[]): void {
-    if (subtitles.length !== indexes.length) {
-      return;
-    }
-
-    const project = this.appStateService.getProjectById(this._projectId!);
-    if (!project) {
-      return;
-    }
-
-    const newSubtitles = [...this._subtitles()];
-    const sortedSubtitlesWithIndexes = subtitles
-      .map((sub, i) => ({sub, index: indexes[i]}))
-      .sort((a, b) => a.index - b.index);
-
-    sortedSubtitlesWithIndexes.forEach(({sub, index}) => {
-      newSubtitles.splice(index, 0, sub);
-    });
-
-    const updates: Partial<Project> = {subtitles: newSubtitles};
-    if (project.rawAssContent) {
-      let newRawContent = project.rawAssContent;
-      for (const sub of subtitles) {
-        if (sub.type === 'ass') {
-          newRawContent = this.assEditService.createNewDialogueLine(newRawContent, sub);
-        }
-      }
-      updates.rawAssContent = newRawContent;
-    }
-
-    this.appStateService.updateProject(this._projectId!, updates);
-    this._subtitles.set(newSubtitles);
   }
 
   public updateClipText(projectId: string, clip: VideoClip, newContent: ClipContent): void {

@@ -498,4 +498,111 @@ Dialogue: 0,0:00:12.60,0:00:15.00,Default,,0,0,0,,This is a test
       expect(result.split('Dialogue:').length - 1).toBe(1);
     });
   });
+
+  describe('deleteAssClipAndSplitSpanningLines', () => {
+    it('removes a line fully contained within the clip but keeps lines outside', () => {
+      const dialogueLines = `
+Dialogue: 0,0:00:05.00,0:00:08.00,Default,,0,0,0,,Keep Before
+Dialogue: 0,0:00:12.00,0:00:15.00,Default,,0,0,0,,Delete Me
+Dialogue: 0,0:00:22.00,0:00:25.00,Default,,0,0,0,,Keep After
+      `.trim();
+      const rawAssContent = assFileTemplate(dialogueLines);
+      const clipToRemove: Partial<VideoClip> = {startTime: 10, endTime: 20};
+
+      const result = service.deleteAssClipAndSplitSpanningLines(rawAssContent, clipToRemove as VideoClip);
+
+      expect(result).toContain('Keep Before');
+      expect(result).toContain('Keep After');
+      expect(result).not.toContain('Delete Me');
+      expect(result.split('Dialogue:').length - 1).toBe(2);
+    });
+
+    it('splits a line that spans the entire clip', () => {
+      const dialogueLines = 'Dialogue: 0,0:00:10.00,0:00:20.00,Default,,0,0,0,,Split Me';
+      const rawAssContent = assFileTemplate(dialogueLines);
+      const clipToRemove: Partial<VideoClip> = {startTime: 12, endTime: 18};
+
+      const result = service.deleteAssClipAndSplitSpanningLines(rawAssContent, clipToRemove as VideoClip);
+
+      const expectedLine1 = 'Dialogue: 0,0:00:10.00,0:00:12.00,Default,,0,0,0,,Split Me';
+      const expectedLine2 = 'Dialogue: 0,0:00:18.00,0:00:20.00,Default,,0,0,0,,Split Me';
+
+      expect(result).toContain(expectedLine1);
+      expect(result).toContain(expectedLine2);
+      expect(result.split('Dialogue:').length - 1).toBe(2);
+    });
+
+    it('truncates a line that overlaps the start of the clip', () => {
+      const dialogueLine = 'Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,Truncate End';
+      const rawAssContent = assFileTemplate(dialogueLine);
+      const clipToRemove: Partial<VideoClip> = {startTime: 12, endTime: 18};
+
+      const result = service.deleteAssClipAndSplitSpanningLines(rawAssContent, clipToRemove as VideoClip);
+      const expectedLine = 'Dialogue: 0,0:00:10.00,0:00:12.00,Default,,0,0,0,,Truncate End';
+
+      expect(result).toContain(expectedLine);
+      expect(result.split('Dialogue:').length - 1).toBe(1);
+    });
+
+    it('shifts the start time of a line that overlaps the end of the clip', () => {
+      const dialogueLine = 'Dialogue: 0,0:00:15.00,0:00:20.00,Default,,0,0,0,,Shift Start';
+      const rawAssContent = assFileTemplate(dialogueLine);
+      const clipToRemove: Partial<VideoClip> = {startTime: 12, endTime: 18};
+
+      const result = service.deleteAssClipAndSplitSpanningLines(rawAssContent, clipToRemove as VideoClip);
+      const expectedLine = 'Dialogue: 0,0:00:18.00,0:00:20.00,Default,,0,0,0,,Shift Start';
+
+      expect(result).toContain(expectedLine);
+      expect(result.split('Dialogue:').length - 1).toBe(1);
+    });
+
+    it('keeps lines that are completely outside the clip range', () => {
+      const dialogueLines = `
+Dialogue: 0,0:00:05.00,0:00:08.00,Default,,0,0,0,,Keep Before
+Dialogue: 0,0:00:22.00,0:00:25.00,Default,,0,0,0,,Keep After
+      `.trim();
+      const rawAssContent = assFileTemplate(dialogueLines);
+      const clipToRemove: Partial<VideoClip> = {startTime: 10, endTime: 20};
+
+      const result = service.deleteAssClipAndSplitSpanningLines(rawAssContent, clipToRemove as VideoClip);
+
+      expect(result).toContain('Keep Before');
+      expect(result).toContain('Keep After');
+      expect(result.split('Dialogue:').length - 1).toBe(2);
+    });
+
+    it('removes a contained line and splits two spanning lines', () => {
+      const dialogueLines = `
+Dialogue: 0,0:00:25.58,0:00:29.96,Sign-Default,,0,0,0,,Not Edible
+Dialogue: 1,0:00:25.58,0:00:29.96,Sign-Default,,0,0,0,,Not Edible
+Dialogue: 10,0:00:26.77,0:00:29.34,Default,,0,0,0,,Strike!
+      `.trim();
+      const rawAssContent = assFileTemplate(dialogueLines);
+
+      const clipToRemove: Partial<VideoClip> = {
+        startTime: 26.77,
+        endTime: 29.34
+      };
+
+      const result = service.deleteAssClipAndSplitSpanningLines(rawAssContent, clipToRemove as VideoClip);
+
+      const expectedLines = [
+        'Dialogue: 0,0:00:25.58,0:00:26.77,Sign-Default,,0,0,0,,Not Edible',
+        'Dialogue: 1,0:00:25.58,0:00:26.77,Sign-Default,,0,0,0,,Not Edible',
+        'Dialogue: 0,0:00:29.34,0:00:29.96,Sign-Default,,0,0,0,,Not Edible',
+        'Dialogue: 1,0:00:29.34,0:00:29.96,Sign-Default,,0,0,0,,Not Edible',
+      ];
+
+      // Check that "Strike!" is gone
+      expect(result).not.toContain('Strike!');
+
+      // Check that all expected split/truncated lines are present
+      for (const line of expectedLines) {
+        expect(result).toContain(line);
+      }
+
+      // Check that the total number of dialogue lines is correct
+      expect(result.split('Dialogue:').length - 1).toBe(4);
+    });
+  });
 });

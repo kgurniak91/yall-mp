@@ -796,7 +796,8 @@ Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,Clip B
     });
 
     it('correctly deletes a subtitle, and then undo/redo the deletion', () => {
-      const deleteCommand = new DeleteSubtitledClipCommand(service, ['srt-1']);
+      const clipToDelete = service.clips().find(c => c.sourceSubtitles.some(s => s.id === 'srt-1'))!;
+      const deleteCommand = new DeleteSubtitledClipCommand(service, clipToDelete);
 
       commandHistoryService.execute(deleteCommand);
       let subtitledClips = service.clips().filter(c => c.hasSubtitle);
@@ -1082,8 +1083,9 @@ Dialogue: 0,0:00:15.00,0:00:20.00,Top,,0,0,0,,Subtitle B Top
       expect(service.clips().filter(c => c.hasSubtitle).length).toBe(3);
     });
 
-    it('correctly deletes a subtitle, and then undo/redo', () => {
-      const command = new DeleteSubtitledClipCommand(service, ['ass-2']);
+    it('correctly deletes a subtitle, and then undo/redo the deletion', () => {
+      const clipToDelete = service.clips().find(c => c.sourceSubtitles.some(s => s.id === 'ass-2'))!;
+      const command = new DeleteSubtitledClipCommand(service, clipToDelete);
 
       commandHistoryService.execute(command);
       expect(service.clips().filter(c => c.hasSubtitle).length).toBe(1);
@@ -1209,6 +1211,74 @@ Dialogue: 0,0:00:12.00,0:00:14.00,Default,,0,0,0,,Animated Text
       // And verify the new gap from the second split also exists:
       const secondGap = clipsAfterSecondSplit.find(c => c.startTime === 16.0 && c.endTime === 16.1);
       expect(secondGap).withContext('Gap from second split should exist').toBeDefined();
+    });
+  });
+
+  describe('Complex ASS Clip Deletion', () => {
+    beforeEach(() => {
+      projectState.rawAssContent = `
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:25.58,0:00:29.96,Sign-Default,,0,0,0,,Not Edible
+Dialogue: 1,0:00:25.58,0:00:29.96,Sign-Default,,0,0,0,,Not Edible
+Dialogue: 10,0:00:26.77,0:00:29.34,Default,,0,0,0,,Strike!
+      `.trim();
+
+      projectState.subtitles = [
+        {
+          type: 'ass', id: 'ass-ne-1', startTime: 25.58, endTime: 29.96,
+          parts: [{text: 'Not Edible', style: 'Sign-Default', fragments: [{text: 'Not Edible', isTag: false}]}]
+        },
+        {
+          type: 'ass', id: 'ass-ne-2', startTime: 25.58, endTime: 29.96,
+          parts: [{text: 'Not Edible', style: 'Sign-Default', fragments: [{text: 'Not Edible', isTag: false}]}]
+        },
+        {
+          type: 'ass', id: 'ass-strike', startTime: 26.77, endTime: 29.34,
+          parts: [{text: 'Strike!', style: 'Default', fragments: [{text: 'Strike!', isTag: false}]}]
+        }
+      ];
+      service.setSubtitles(projectState.subtitles);
+    });
+
+    it('should remove a contained clip and split spanning clips, then correctly undo', () => {
+      // ARRANGE: Should have 3 clips: "Not Edible" (25.58-26.77), "Not Edible" + "Strike!" (26.77-29.34), "Not Edible" (29.34-29.96)
+      let clips = service.clips();
+      expect(clips.filter(c => c.hasSubtitle).length).withContext('Pre-condition: should have 3 subtitled clips').toBe(3);
+      const middleClip = clips.find(c => c.startTime === 26.77)!;
+      expect(middleClip).toBeDefined();
+
+      const command = new DeleteSubtitledClipCommand(service, middleClip);
+
+      // ACT: Execute deletion
+      commandHistoryService.execute(command);
+
+      // ASSERT:
+      clips = service.clips();
+      const subtitledClips = clips.filter(c => c.hasSubtitle);
+      // The two remaining "Not Edible" parts should be separate clips because of the new gap.
+      expect(subtitledClips.length).withContext('Post-delete: should have 2 separate subtitled clips').toBe(2);
+      expect(subtitledClips[0].startTime).toBe(25.58);
+      expect(subtitledClips[0].endTime).toBe(26.77);
+      expect(subtitledClips[1].startTime).toBe(29.34);
+      expect(subtitledClips[1].endTime).toBe(29.96);
+
+      // The clips should be [gap, sub, gap, sub, gap]
+      expect(clips.length).withContext('Post-delete: should have 5 total clips').toBe(5);
+
+      const updatedRawContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
+      expect(updatedRawContent).not.toContain('Strike!');
+      expect(updatedRawContent.split('Dialogue:').length - 1).toBe(4); // 2 lines before split, 2 lines after
+
+      // ACT 2: Undo
+      commandHistoryService.undo();
+
+      // ASSERT 2:
+      clips = service.clips();
+      expect(clips.filter(c => c.hasSubtitle).length).withContext('Post-undo: should have 3 subtitled clips again').toBe(3);
+      const finalRawContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
+      expect(finalRawContent).toContain('Strike!');
+      expect(finalRawContent.split('Dialogue:').length - 1).toBe(3);
     });
   });
 });

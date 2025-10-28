@@ -1,30 +1,31 @@
 import {Command} from './commands.types';
 import {ClipsStateService} from '../../state/clips/clips-state.service';
 import type {SubtitleData} from '../../../../shared/types/subtitle.type';
+import type {VideoClip} from '../video.types';
 
 export class DeleteSubtitledClipCommand implements Command {
-  private deletedSubtitles: SubtitleData[] = [];
-  private originalIndexes: number[] = [];
+  private originalSubtitles: SubtitleData[] = [];
+  private originalRawAssContent?: string;
 
   constructor(
     private clipsStateService: ClipsStateService,
-    private subtitleIdsToDelete: string[]
+    private clipToDelete: VideoClip
   ) {
   }
 
   execute(): void {
-    const result = this.clipsStateService.deleteSubtitles(this.subtitleIdsToDelete);
-    if (result) {
-      this.deletedSubtitles = result.deletedSubtitles;
-      this.originalIndexes = result.originalIndexes;
+    const originalState = this.clipsStateService.deleteClip(this.clipToDelete);
+    if (originalState) {
+      this.originalSubtitles = originalState.originalSubtitles;
+      this.originalRawAssContent = originalState.originalRawAssContent;
     }
   }
 
   undo(): void {
-    if (this.deletedSubtitles.length > 0 && this.originalIndexes.length > 0) {
-      this.clipsStateService.insertSubtitle(this.deletedSubtitles, this.originalIndexes);
+    if (this.originalSubtitles.length > 0) {
+      this.clipsStateService.restoreSubtitles(this.originalSubtitles, this.originalRawAssContent);
     } else {
-      console.error("Cannot undo delete: original subtitle data was not captured.");
+      console.error('Cannot undo delete: original state was not captured.');
     }
   }
 }

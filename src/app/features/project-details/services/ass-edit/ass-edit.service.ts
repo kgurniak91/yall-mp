@@ -88,6 +88,75 @@ export class AssEditService {
     return `${header}[Events]\n${formatLine}\n${filteredLines.join('\r\n')}`;
   }
 
+  public deleteAssClipAndSplitSpanningLines(rawAssContent: string, clipToRemove: VideoClip): string {
+    const parsedEvents = AssSubtitlesUtils.parseEvents(rawAssContent);
+    if (!parsedEvents) {
+      return rawAssContent;
+    }
+
+    const {header, formatLine, dialogueLines, formatSpec} = parsedEvents;
+    const startIdx = formatSpec.get('Start')!;
+    const endIdx = formatSpec.get('End')!;
+    const newDialogueLines: string[] = [];
+
+    const clipStart = clipToRemove.startTime;
+    const clipEnd = clipToRemove.endTime;
+
+    for (const line of dialogueLines) {
+      const parts = line.split(',');
+      const lineStart = AssSubtitlesUtils.timeToSeconds(parts[startIdx]);
+      const lineEnd = AssSubtitlesUtils.timeToSeconds(parts[endIdx]);
+
+      // Case 1: Line is completely outside the clip's range. Keep it.
+      if (lineEnd <= clipStart || lineStart >= clipEnd) {
+        newDialogueLines.push(line);
+        continue;
+      }
+
+      // Case 2: Line is completely inside the clip's range. Remove it.
+      if (lineStart >= clipStart && lineEnd <= clipEnd) {
+        continue;
+      }
+
+      // Case 3: Line spans the entire clip. Split it into two parts.
+      if (lineStart < clipStart && lineEnd > clipEnd) {
+        // First part
+        const firstPart = [...parts];
+        firstPart[endIdx] = AssSubtitlesUtils.formatTime(clipStart);
+        newDialogueLines.push(firstPart.join(','));
+        // Second part
+        const secondPart = [...parts];
+        secondPart[startIdx] = AssSubtitlesUtils.formatTime(clipEnd);
+        newDialogueLines.push(secondPart.join(','));
+        continue;
+      }
+
+      // Case 4: Line overlaps with the start of the clip. Truncate it.
+      if (lineStart < clipStart && lineEnd <= clipEnd) {
+        const truncatedLine = [...parts];
+        truncatedLine[endIdx] = AssSubtitlesUtils.formatTime(clipStart);
+        newDialogueLines.push(truncatedLine.join(','));
+        continue;
+      }
+
+      // Case 5: Line overlaps with the end of the clip. Shift its start.
+      if (lineStart >= clipStart && lineEnd > clipEnd) {
+        const shiftedLine = [...parts];
+        shiftedLine[startIdx] = AssSubtitlesUtils.formatTime(clipEnd);
+        newDialogueLines.push(shiftedLine.join(','));
+      }
+    }
+
+    // Re-sort all dialogue lines by their new start times
+    newDialogueLines.sort((a, b) => {
+      const startTimeA = AssSubtitlesUtils.timeToSeconds(a.split(',')[startIdx]);
+      const startTimeB = AssSubtitlesUtils.timeToSeconds(b.split(',')[startIdx]);
+      return startTimeA - startTimeB;
+    });
+
+    return `${header}[Events]\n${formatLine}\n${newDialogueLines.join('\r\n')}`;
+  }
+
   public mergeDialogueLines(rawAssContent: string, firstClip: VideoClip, secondClip: VideoClip): string {
     const allSourceSubs = [...firstClip.sourceSubtitles, ...secondClip.sourceSubtitles] as AssSubtitleData[];
     const gapStartTime = firstClip.endTime;
