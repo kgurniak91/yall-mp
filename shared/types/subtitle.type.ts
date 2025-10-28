@@ -7,6 +7,7 @@ export interface SubtitlePart {
   text: string;
   style: string;
   fragments?: SubtitleFragment[];
+  y?: number; // Vertical position on the screen
 }
 
 interface BaseSubtitleData {

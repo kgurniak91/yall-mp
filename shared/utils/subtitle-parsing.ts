@@ -1,4 +1,4 @@
-import type {Dialogue, DialogueSlice} from 'ass-compiler';
+import {CompiledASSStyle, Dialogue, DialogueSlice} from 'ass-compiler';
 import type {AssSubtitleData, SubtitleData, SubtitleFragment} from '../types/subtitle.type';
 import {v4 as uuidv4} from 'uuid';
 import {CompiledTag} from 'ass-compiler/types/tags';
@@ -49,16 +49,23 @@ export function parseDialogueSlice(slice: DialogueSlice): { cleanText: string, f
   };
 }
 
-export function dialoguesToAssSubtitleData(dialogues: Dialogue[]): AssSubtitleData[] {
+export function dialoguesToAssSubtitleData(
+  dialogues: Dialogue[],
+  styles: { [styleName: string]: CompiledASSStyle },
+  playResY: number
+): AssSubtitleData[] {
   const subtitles: AssSubtitleData[] = [];
 
   for (const dialogue of dialogues) {
+    const yPos = calculateYPosition(dialogue, styles, playResY);
+
     const parts = dialogue.slices.map(slice => {
       const {cleanText, fragments} = parseDialogueSlice(slice);
       return {
         text: cleanText,
         style: slice.style,
-        fragments
+        fragments,
+        y: yPos
       };
     }).filter(part => part.text.trim() || part.fragments.some(f => f.isTag));
 
@@ -138,4 +145,51 @@ export function mergeIdenticalConsecutiveSubtitles(subtitles: SubtitleData[]): S
   merged.push(current);
 
   return merged;
+}
+
+export function calculateYPosition(
+  dialogue: Dialogue,
+  styles: { [styleName: string]: CompiledASSStyle },
+  playResY: number
+): number {
+  // Absolute position from a \pos(x,y) tag
+  if (dialogue.pos?.y !== undefined) {
+    return dialogue.pos.y;
+  }
+
+  // Absolute start position from a \move tag
+  if (dialogue.move?.y1 !== undefined) {
+    return dialogue.move.y1;
+  }
+
+  // If no absolute position, calculate based on alignment
+  let alignment: number | undefined;
+  const styleInfo = styles[dialogue.style];
+
+  // An override tag like {\an8} in the dialogue line takes precedence.
+  if (dialogue.alignment) {
+    alignment = dialogue.alignment;
+  }
+  // Otherwise, get the alignment from the style definition.
+  else if (styleInfo) {
+    alignment = styleInfo.style.Alignment;
+  }
+
+  if (alignment !== undefined) {
+    const verticalMargin = dialogue.margin.vertical;
+
+    // Calculate position using alignment and vertical margin.
+    if ([7, 8, 9].includes(alignment)) { // Top alignment
+      return verticalMargin;
+    }
+    if ([1, 2, 3].includes(alignment)) { // Bottom alignment
+      return playResY - verticalMargin;
+    }
+    if ([4, 5, 6].includes(alignment)) { // Middle alignment
+      return playResY / 2;
+    }
+  }
+
+  // Final fallback: If no alignment info, assume it's a standard bottom-aligned dialogue.
+  return playResY;
 }

@@ -49,13 +49,22 @@ export class EditSubtitlesDialogComponent implements OnInit {
         text: [this.data.text, [Validators.required, CustomValidators.notBlank(), Validators.maxLength(1000)]]
       });
     } else { // .ass
-      const visibleParts = this.data.parts
-        .map((part, index) => ({part, index}))
+      // Map parts to include their original index BEFORE sorting
+      const partsWithOriginalIndex = this.data.parts.map((part, index) => ({
+        part,
+        originalIndex: index
+      }));
+
+      // Sort based on their y-coordinate on the screen
+      partsWithOriginalIndex.sort((a, b) => (a.part.y ?? Infinity) - (b.part.y ?? Infinity));
+
+      // Filter for parts that are actually visible and editable
+      const visibleParts = partsWithOriginalIndex
         .filter(item => item.part.fragments?.some(f => !f.isTag));
 
       this.form = this.fb.group({
         parts: this.fb.array(
-          visibleParts.map(item => this.createPartGroup(item.part, item.index)),
+          visibleParts.map(item => this.createPartGroup(item.part, item.originalIndex)),
           {validators: [CustomValidators.atLeastOneNotBlank()]}
         )
       });

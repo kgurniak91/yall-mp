@@ -971,7 +971,8 @@ async function handleSubtitleParse(projectId: string, filePath: string): Promise
       await fs.mkdir(FONT_CACHE_DIR, {recursive: true});
 
       const compiled = compile(content, {});
-      const granularTimeline = dialoguesToAssSubtitleData(compiled.dialogues);
+      const playResY = compiled.info.PlayResY ? parseInt(compiled.info.PlayResY, 10) : 1080;
+      const granularTimeline = dialoguesToAssSubtitleData(compiled.dialogues, compiled.styles, playResY);
       const finalTimeline = mergeIdenticalConsecutiveSubtitles(granularTimeline);
       const requiredFonts = getRequiredFontsFromAss(content);
       const fonts = await loadFontData(requiredFonts, undefined, filePath);
@@ -1356,7 +1357,8 @@ async function handleExtractSubtitleTrack(projectId: string, mediaPath: string, 
             await fs.mkdir(FONT_CACHE_DIR, {recursive: true});
 
             const compiled = compile(subtitleContent, {});
-            const granularTimeline = dialoguesToAssSubtitleData(compiled.dialogues);
+            const playResY = compiled.info.PlayResY ? parseInt(compiled.info.PlayResY, 10) : 1080;
+            const granularTimeline = dialoguesToAssSubtitleData(compiled.dialogues, compiled.styles, playResY);
             const finalTimeline = mergeIdenticalConsecutiveSubtitles(granularTimeline);
             const requiredFonts = getRequiredFontsFromAss(subtitleContent);
             const fonts = await loadFontData(requiredFonts, mediaPath, undefined);

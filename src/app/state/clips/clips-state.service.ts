@@ -860,7 +860,7 @@ export class ClipsStateService implements OnDestroy {
             }
           });
           const sortedAssParts = Array.from(assParts.values()).sort((a, b) => a.style.localeCompare(b.style) || a.text.localeCompare(b.text));
-          const assKey = JSON.stringify(sortedAssParts);
+          const assKey = sortedAssParts.map(p => `${p.style}::${p.text}`).join('||');
 
           // For SRT, the key is the combined text content
           const srtKey = seg.sourceSubtitles
