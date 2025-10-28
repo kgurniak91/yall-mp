@@ -1280,5 +1280,41 @@ Dialogue: 10,0:00:26.77,0:00:29.34,Default,,0,0,0,,Strike!
       expect(finalRawContent).toContain('Strike!');
       expect(finalRawContent.split('Dialogue:').length - 1).toBe(3);
     });
+
+    it('restores the active clip index after undoing a deletion', () => {
+      // ARRANGE: Set playhead inside the middle clip
+      const initialTime = 28.0;
+      videoStateService.setCurrentTime(initialTime);
+
+      // Manually sync index based on initial time to establish a clear starting state
+      let clips = service.clips();
+      const initialClipIndex = clips.findIndex(c => initialTime >= c.startTime && initialTime < c.endTime);
+      service.setCurrentClipByIndex(initialClipIndex);
+
+      const middleClip = clips.find(c => c.startTime === 26.77)!;
+      expect(service.currentClipIndex()).withContext('Pre-condition: middle clip should be active').toBe(initialClipIndex);
+      expect(clips[initialClipIndex].id).toBe(middleClip.id);
+
+      const command = new DeleteSubtitledClipCommand(service, middleClip);
+
+      // ACT 1: Execute deletion
+      commandHistoryService.execute(command);
+
+      // ASSERT 1: After deletion, the playhead is in the new gap, which should be the active clip
+      clips = service.clips();
+      const newActiveClipIndex = clips.findIndex(c => initialTime >= c.startTime && initialTime < c.endTime);
+      expect(service.currentClipIndex()).withContext('Post-delete: The new gap should be the active clip').toBe(newActiveClipIndex);
+      expect(clips[newActiveClipIndex].hasSubtitle).toBe(false);
+
+      // ACT 2: Undo the deletion
+      commandHistoryService.undo();
+
+      // ASSERT 2: After undo, the playhead is back in the restored middle clip, which should now be active again
+      clips = service.clips();
+      const finalActiveClipIndex = clips.findIndex(c => initialTime >= c.startTime && initialTime < c.endTime);
+      expect(service.currentClipIndex()).withContext('Post-undo: The restored middle clip should be active again').toBe(finalActiveClipIndex);
+      expect(clips[finalActiveClipIndex].hasSubtitle).withContext('Post-undo: Active clip should have subtitles').toBe(true);
+      expect(clips[finalActiveClipIndex].startTime).withContext('Post-undo: Active clip should be the correct one').toBe(26.77);
+    });
   });
 });

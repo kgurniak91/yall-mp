@@ -100,6 +100,17 @@ export class ClipsStateService implements OnDestroy {
 
     this.appStateService.updateProject(this._projectId!, updates);
     this._subtitles.set(originalSubtitles);
+
+    // Re-sync active clip after undo
+    const currentTime = this.videoStateService.currentTime();
+    const newClipsArray = this.clips();
+    const newCorrectIndex = newClipsArray.findIndex(c =>
+      currentTime >= c.startTime && currentTime < c.endTime
+    );
+
+    if (newCorrectIndex !== -1) {
+      this.setCurrentClipByIndex(newCorrectIndex);
+    }
   }
 
   public setCurrentClipByIndex(index: number): void {
