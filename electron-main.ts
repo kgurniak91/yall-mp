@@ -13,7 +13,7 @@ import {MpvManager} from './mpv-manager';
 import {FontData, ParsedSubtitlesData} from './src/electron-api';
 import ffprobeStatic from 'ffprobe-static';
 import languages from '@cospired/i18n-iso-languages';
-import {compile} from 'ass-compiler';
+import {compile, parse} from 'ass-compiler';
 import fontScanner from 'font-scanner';
 import {Decoder} from 'ts-ebml';
 import fontkit from 'fontkit';
@@ -970,9 +970,10 @@ async function handleSubtitleParse(projectId: string, filePath: string): Promise
       // Ensure the font cache directory exists
       await fs.mkdir(FONT_CACHE_DIR, {recursive: true});
 
+      const parsed = parse(content);
       const compiled = compile(content, {});
       const playResY = compiled.info.PlayResY ? parseInt(compiled.info.PlayResY, 10) : 1080;
-      const granularTimeline = dialoguesToAssSubtitleData(compiled.dialogues, compiled.styles, playResY);
+      const granularTimeline = dialoguesToAssSubtitleData(compiled.dialogues, parsed.events.dialogue, compiled.styles, playResY);
       const finalTimeline = mergeIdenticalConsecutiveSubtitles(granularTimeline);
       const requiredFonts = getRequiredFontsFromAss(content);
       const fonts = await loadFontData(requiredFonts, undefined, filePath);
@@ -1356,9 +1357,10 @@ async function handleExtractSubtitleTrack(projectId: string, mediaPath: string, 
             // Ensure the font cache directory exists
             await fs.mkdir(FONT_CACHE_DIR, {recursive: true});
 
+            const parsed = parse(subtitleContent);
             const compiled = compile(subtitleContent, {});
             const playResY = compiled.info.PlayResY ? parseInt(compiled.info.PlayResY, 10) : 1080;
-            const granularTimeline = dialoguesToAssSubtitleData(compiled.dialogues, compiled.styles, playResY);
+            const granularTimeline = dialoguesToAssSubtitleData(compiled.dialogues, parsed.events.dialogue, compiled.styles, playResY);
             const finalTimeline = mergeIdenticalConsecutiveSubtitles(granularTimeline);
             const requiredFonts = getRequiredFontsFromAss(subtitleContent);
             const fonts = await loadFontData(requiredFonts, mediaPath, undefined);

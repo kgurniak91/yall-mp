@@ -20,7 +20,7 @@ import {ClipContent} from '../../model/commands/update-clip-text.command';
 import {AssEditService} from '../../features/project-details/services/ass-edit/ass-edit.service';
 import {Project} from '../../model/project.types';
 import {AssSubtitlesUtils} from '../../shared/utils/ass-subtitles/ass-subtitles.utils';
-import {cloneDeep} from 'lodash-es';
+import {cloneDeep, isEqual} from 'lodash-es';
 import {v4 as uuidv4} from 'uuid';
 
 export const ADJUST_DEBOUNCE_MS = 50;
@@ -572,36 +572,48 @@ export class ClipsStateService implements OnDestroy {
     return {deletedSubtitles, originalIndexes};
   }
 
-  public updateClipText(projectId: string, clip: VideoClip, newContent: ClipContent): void {
+  public updateClipText(projectId: string, clipId: string, newContent: ClipContent): void {
     const project = this.appStateService.getProjectById(projectId);
+    const clip = this.clips().find(c => c.id === clipId);
 
-    if (project?.rawAssContent && newContent.parts) { // ASS
-      const newRawAssContent = this.assEditService.updateClipText(
+    if (!project || !clip) {
+      console.error('Could not update clip text: project or clip not found.');
+      return;
+    }
+
+    if (project.rawAssContent && newContent.parts) { // ASS
+      const newRawAssContent = this.assEditService.modifyAssText(
         clip,
         newContent,
         project.rawAssContent
       );
 
-      const newSubtitles = [...this._subtitles()];
+      const newSubtitles = cloneDeep(this._subtitles());
 
       // For each part that was edited in the UI...
       for (let i = 0; i < clip.parts.length; i++) {
         const oldPart = clip.parts[i];
         const newPart = newContent.parts[i];
 
-        if (oldPart.text !== newPart.text) {
+        // Failsafe in case of mismatched arrays
+        if (!newPart) {
+          console.error('Mismatch in parts array length during update. Aborting update for this part.');
+          continue;
+        }
+
+        if (!isEqual(oldPart, newPart)) {
           // ...find EVERY subtitle object that is a source for the current clip...
           for (const sourceSub of clip.sourceSubtitles) {
-            // Find the main subtitle by ID to ensure the correct one is updated
             const subtitleToUpdate = newSubtitles.find(s => s.id === sourceSub.id);
             if (subtitleToUpdate?.type === 'ass') {
-              const partIndex = subtitleToUpdate.parts.findIndex(p => p.style === oldPart.style && p.text === oldPart.text);
-              if (partIndex !== -1) {
-                // ...and update it with the new part:
-                const updatedParts = [...subtitleToUpdate.parts];
-                updatedParts[partIndex] = newPart;
-                (subtitleToUpdate as AssSubtitleData).parts = updatedParts;
-              }
+              let partHasBeenReplaced = false; // Ensure only one part per source subtitle is replaced, even if multiple are identical
+              subtitleToUpdate.parts = subtitleToUpdate.parts.map(currentPartInState => {
+                if (!partHasBeenReplaced && currentPartInState.style === oldPart.style && currentPartInState.text === oldPart.text) {
+                  partHasBeenReplaced = true;
+                  return newPart; // Replace the found part with the new part from the command
+                }
+                return currentPartInState;
+              });
             }
           }
         }

@@ -18,20 +18,10 @@ export class UpdateClipTextCommand implements Command {
   }
 
   execute(): void {
-    const clip = this.getClip();
-    if (clip) {
-      this.clipsStateService.updateClipText(this.projectId, clip, this.newContent);
-    }
+    this.clipsStateService.updateClipText(this.projectId, this.clipId, this.newContent);
   }
 
   undo(): void {
-    const clip = this.getClip();
-    if (clip) {
-      this.clipsStateService.updateClipText(this.projectId, clip, this.oldContent);
-    }
-  }
-
-  private getClip() {
-    return this.clipsStateService.clips().find(c => c.id === this.clipId);
+    this.clipsStateService.updateClipText(this.projectId, this.clipId, this.oldContent);
   }
 }

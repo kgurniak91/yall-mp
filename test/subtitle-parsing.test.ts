@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {compile, Dialogue} from 'ass-compiler';
+import {compile, Dialogue, parse} from 'ass-compiler';
 import type {AssSubtitleData, SubtitlePart} from '../shared/types/subtitle.type';
 import {dialoguesToAssSubtitleData} from '../shared/utils/subtitle-parsing';
 import {TEST_CASES, TestCase} from './test-cases';
@@ -24,8 +24,9 @@ ${eventLines.trim()}
   `.trim();
 }
 
-function processAndNormalize(dialogues: Dialogue[]): AssSubtitleData[] {
-  const realOutput = dialoguesToAssSubtitleData(dialogues, {}, 1080);
+function processAndNormalize(dialogues: Dialogue[], rawAssContent: string): AssSubtitleData[] {
+  const parsedEvents = parse(rawAssContent).events.dialogue;
+  const realOutput = dialoguesToAssSubtitleData(dialogues, parsedEvents, {}, 1080);
   realOutput.sort((a, b) => a.startTime - b.startTime || a.endTime - b.endTime || a.parts[0].style.localeCompare(b.parts[0].style));
 
   // Normalize the unpredictable parts (the UUIDs) and remove the 'y' property as it's irrelevant in this context:
@@ -47,10 +48,33 @@ describe('Subtitle Parsing', () => {
       const expected = testCase.expectedSubtitleData;
 
       const compiled = compile(assContent, {});
-      const actual = processAndNormalize(compiled.dialogues);
+      const actual = processAndNormalize(compiled.dialogues, assContent);
 
       expect(actual).toEqual(expected);
     });
+  });
+
+  it('ignores 0ms duration dialogue lines used as markers', () => {
+    const dialogueLines = `
+        Dialogue: 10,0:00:00.00,0:00:00.00,Default,,0,0,0,,{Segment 1}
+        Dialogue: 10,0:00:03.41,0:00:04.51,Default,,0,0,0,,Sniff. Sniff. Sniff.
+        Dialogue: 10,0:00:04.51,0:00:05.33,Default,,0,0,0,,Sniff. Sniff.
+        Dialogue: 10,0:00:40.47,0:00:40.47,Default,,0,0,0,,{Segment 2}
+      `;
+    const assContent = buildAssFile(dialogueLines);
+    const compiled = compile(assContent, {});
+    const parsed = parse(assContent);
+
+    const result = dialoguesToAssSubtitleData(compiled.dialogues, parsed.events.dialogue, compiled.styles, 1080);
+
+    // The result should only contain the 2 real subtitles, not the 2 markers
+    expect(result.length).toBe(2);
+
+    // Verify the content of the remaining subtitles to ensure they are the correct ones
+    expect(result[0].parts[0].text).toBe('Sniff. Sniff. Sniff.');
+    expect(result[0].startTime).toBe(3.41);
+    expect(result[1].parts[0].text).toBe('Sniff. Sniff.');
+    expect(result[1].startTime).toBe(4.51);
   });
 });
 
@@ -61,8 +85,9 @@ describe('Subtitle Parsing - Positional Logic (calculateYPosition)', () => {
   const getFirstPart = (eventLines: string): SubtitlePart | undefined => {
     const assContent = buildAssFile(eventLines);
     const compiled = compile(assContent, {});
+    const parsed = parse(assContent);
     const playResY = parseInt(compiled.info.PlayResY, 10);
-    const result = dialoguesToAssSubtitleData(compiled.dialogues, compiled.styles, playResY);
+    const result = dialoguesToAssSubtitleData(compiled.dialogues, parsed.events.dialogue, compiled.styles, playResY);
     return result[0]?.parts[0];
   };
 

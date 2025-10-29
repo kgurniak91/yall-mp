@@ -30,7 +30,7 @@ describe('AssEditService', () => {
     service = spectator.inject(AssEditService);
   });
 
-  describe('updateClipText', () => {
+  describe('modifyAssText', () => {
     it('edits the text of a clip consisting of a single, simple dialogue line', () => {
       const dialogueLine = 'Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello World';
       const rawAssContent = assFileTemplate(dialogueLine);
@@ -58,7 +58,7 @@ describe('AssEditService', () => {
 
       const expectedLine = 'Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Goodbye World';
 
-      const result = service.updateClipText(clip, newContent, rawAssContent);
+      const result = service.modifyAssText(clip, newContent, rawAssContent);
 
       expect(result).toContain(expectedLine);
       expect(result).not.toContain(dialogueLine);
@@ -94,7 +94,7 @@ describe('AssEditService', () => {
         'Dialogue: 0,0:00:03.00,0:00:04.00,Default,,0,0,0,,Unique Text'
       ];
 
-      const result = service.updateClipText(clip, newContent, rawAssContent);
+      const result = service.modifyAssText(clip, newContent, rawAssContent);
 
       expect(result).not.toContain('Duplicate Text');
       expect(result).toContain(expectedLines[0]);
@@ -142,7 +142,7 @@ describe('AssEditService', () => {
         ]
       };
 
-      const result = service.updateClipText(clip, newContent, rawAssContent);
+      const result = service.modifyAssText(clip, newContent, rawAssContent);
 
       const expectedEditedLines = [
         'Dialogue: 0,0:00:59.53,0:00:59.58,Sign-Default,,150,0,0,,{\\an7\\3c&HF4F3F2&\\3a&HD7&\\4c&H000000&\\4a&HFF&\\fnKozuka Mincho Pr6N Toaru B\\fs65\\c&HF4F3F2&\\blur9\\bord5\\pos(861.820,-332.345)\\1a&HFF&}Fake Unusable',
@@ -209,10 +209,246 @@ describe('AssEditService', () => {
 
       const expectedLine = 'Dialogue: 0,0:00:10.00,0:00:12.00,Default,,0,0,0,,{\\i1}You{\\i0} look like you are good at {\\i1}English{\\i0}.';
 
-      const result = service.updateClipText(clip, newContent, rawAssContent);
+      const result = service.modifyAssText(clip, newContent, rawAssContent);
 
       expect(result).toContain(expectedLine);
       expect(result).not.toContain(dialogueLine);
+    });
+
+    it('moves text between fragments of a line with inline tags', () => {
+      const dialogueLine = 'Dialogue: 0,0:00:10.00,0:00:12.00,Default,,0,0,0,,{\\i1}A{\\i0} and {\\i1}B{\\i0}.';
+      const rawAssContent = assFileTemplate(dialogueLine);
+
+      const clip: VideoClip = {
+        id: 'subtitle-guid-4',
+        startTime: 10,
+        endTime: 12,
+        duration: 2,
+        hasSubtitle: true,
+        parts: [{
+          text: 'A and B.',
+          style: 'Default',
+          fragments: [
+            {text: '{\\i1}', isTag: true}, {text: 'A', isTag: false}, {text: '{\\i0}', isTag: true},
+            {text: ' and ', isTag: false},
+            {text: '{\\i1}', isTag: true}, {text: 'B', isTag: false}, {text: '{\\i0}', isTag: true},
+            {text: '.', isTag: false},
+          ]
+        }],
+        sourceSubtitles: []
+      };
+
+      const newContent: ClipContent = {
+        parts: [{
+          text: 'A and B.',
+          style: 'Default',
+          fragments: [
+            // 'A' is now gone from the first part
+            {text: '{\\i1}', isTag: true}, {text: '', isTag: false}, {text: '{\\i0}', isTag: true},
+            // and has been moved to the second part
+            {text: ' A and ', isTag: false},
+            {text: '{\\i1}', isTag: true}, {text: 'B', isTag: false}, {text: '{\\i0}', isTag: true},
+            {text: '.', isTag: false},
+          ]
+        }]
+      };
+
+      const expectedLine = 'Dialogue: 0,0:00:10.00,0:00:12.00,Default,,0,0,0,,{\\i1}{\\i0} A and {\\i1}B{\\i0}.';
+
+      const result = service.modifyAssText(clip, newContent, rawAssContent);
+
+      expect(result).toContain(expectedLine);
+      expect(result).not.toContain(dialogueLine);
+    });
+
+    it('correctly simulates an edit and subsequent undo on a line with complex inline tags and an apostrophe', () => {
+      const originalDialogueLine = "Dialogue: 0,0:00:53.48,0:00:57.14,Default,,0,0,0,,{\\i1}Atashi'll oshieru{\\i0} you real usable {\\i1}Eigo{\\i0}.";
+      const originalRawContent = assFileTemplate(originalDialogueLine);
+
+      const originalClip: VideoClip = {
+        id: 'clip-guid-7',
+        startTime: 53.48,
+        endTime: 57.14,
+        duration: 3.66,
+        hasSubtitle: true,
+        parts: [{
+          text: "Atashi'll oshieru you real usable Eigo.",
+          style: 'Default',
+          fragments: [
+            {text: '{\\i1}', isTag: true},
+            {text: "Atashi'll oshieru", isTag: false},
+            {text: '{\\i0}', isTag: true},
+            {text: ' you real usable ', isTag: false},
+            {text: '{\\i1}', isTag: true},
+            {text: 'Eigo', isTag: false},
+            {text: '{\\i0}', isTag: true},
+            {text: '.', isTag: false}
+          ]
+        }],
+        sourceSubtitles: []
+      };
+
+      const editedContent: ClipContent = {
+        parts: [{
+          text: '.',
+          style: 'Default',
+          fragments: [
+            {text: '{\\i1}', isTag: true}, {text: '', isTag: false}, {text: '{\\i0}', isTag: true},
+            {text: '', isTag: false},
+            {text: '{\\i1}', isTag: true}, {text: '', isTag: false}, {text: '{\\i0}', isTag: true},
+            {text: '.', isTag: false}
+          ]
+        }]
+      };
+
+      const clipBeforeUndo: VideoClip = {
+        ...originalClip,
+        parts: editedContent.parts!,
+      };
+
+      // Perform the initial edit
+      const contentAfterEdit = service.modifyAssText(originalClip, editedContent, originalRawContent);
+
+      // Verify the file was correctly simplified
+      const expectedSimplifiedLine = 'Dialogue: 0,0:00:53.48,0:00:57.14,Default,,0,0,0,,{\\i1}{\\i0}{\\i1}{\\i0}.';
+      expect(contentAfterEdit).withContext('After the first edit, the line should be simplified.').toContain(expectedSimplifiedLine);
+      expect(contentAfterEdit).withContext("After the first edit, the original text should be gone.").not.toContain("Atashi'll oshieru");
+
+      // Perform the undo operation
+      const contentToRestore: ClipContent = {parts: originalClip.parts};
+      const finalRestoredContent = service.modifyAssText(clipBeforeUndo, contentToRestore, contentAfterEdit);
+
+      // Verify the file was restored perfectly
+      const normalize = (str: string) => str.trim().replace(/\r\n/g, '\n');
+      expect(normalize(finalRestoredContent)).withContext('After undo, the content should be perfectly restored to its original state.').toEqual(normalize(originalRawContent));
+
+      // Also check for specific content for clarity
+      expect(finalRestoredContent).withContext('After undo, the original line should be present.').toContain(originalDialogueLine);
+      expect(finalRestoredContent).withContext('After undo, the simplified line should be gone.').not.toContain(expectedSimplifiedLine);
+    });
+
+    it('correctly handles edits and undos on lines with mixed animation and inline tags', () => {
+      // Two dialogue lines with different border/blur tags but the same text content:
+      const originalDialogueLines = `Dialogue: 0,0:01:26.52,0:01:30.52,mmr3title,,0,0,0,,{\\fnA-OTF Jun Pro MMR3 34\\fs19\\an7\\bord9\\blur7\\fsp6\\c&H3974E9&\\4c&H000000&\\4a&HFF&\\3c&HFFFFFF&\\pos(1454,838)}Much More Railgun{\\fscx60} {\\fs16\\fscx100}Ⅲ\r\nDialogue: 1,0:01:26.52,0:01:30.52,mmr3title,,0,0,0,,{\\fnA-OTF Jun Pro MMR3 34\\fs19\\an7\\bord1.8\\blur0\\fsp6\\c&H3974E9&\\4c&H000000&\\4a&HFF&\\3c&H423A80&\\pos(1454,838)}Much More Railgun{\\fscx60} {\\fs16\\fscx100}Ⅲ`;
+      const originalRawContent = assFileTemplate(originalDialogueLines);
+
+      // This represents the correctly parsed, merged view of the two lines above:
+      const originalClip: VideoClip = {
+        id: 'clip-guid-8', startTime: 86.52, endTime: 90.52, duration: 4, hasSubtitle: true,
+        parts: [{
+          text: 'Much More Railgun Ⅲ', style: 'mmr3title',
+          fragments: [
+            {
+              text: '{\\fnA-OTF Jun Pro MMR3 34\\fs19\\an7\\bord9\\blur7\\fsp6\\c&H3974E9&\\4c&H000000&\\4a&HFF&\\3c&HFFFFFF&\\pos(1454,838)}',
+              isTag: true
+            },
+            {text: 'Much More Railgun', isTag: false},
+            {text: '{\\fscx60}', isTag: true},
+            {text: ' ', isTag: false},
+            {text: '{\\fs16\\fscx100}', isTag: true},
+            {text: 'Ⅲ', isTag: false}
+          ]
+        }],
+        sourceSubtitles: []
+      };
+
+      const editedContent: ClipContent = {
+        parts: [{
+          text: 'Mux More Railgun Ⅲ', // Changed "Much" to "Mux"
+          style: 'mmr3title',
+          fragments: [
+            {
+              text: '{\\fnA-OTF Jun Pro MMR3 34\\fs19\\an7\\bord9\\blur7\\fsp6\\c&H3974E9&\\4c&H000000&\\4a&HFF&\\3c&HFFFFFF&\\pos(1454,838)}',
+              isTag: true
+            },
+            {text: 'Mux More Railgun', isTag: false},
+            {text: '{\\fscx60}', isTag: true},
+            {text: ' ', isTag: false},
+            {text: '{\\fs16\\fscx100}', isTag: true},
+            {text: 'Ⅲ', isTag: false}
+          ]
+        }]
+      };
+
+      // Perform the initial edit
+      const contentAfterEdit = service.modifyAssText(originalClip, editedContent, originalRawContent);
+
+      // Check that both lines were updated correctly, preserving their unique tags
+      const expectedEditedContent = `Dialogue: 0,0:01:26.52,0:01:30.52,mmr3title,,0,0,0,,{\\fnA-OTF Jun Pro MMR3 34\\fs19\\an7\\bord9\\blur7\\fsp6\\c&H3974E9&\\4c&H000000&\\4a&HFF&\\3c&HFFFFFF&\\pos(1454,838)}Mux More Railgun{\\fscx60} {\\fs16\\fscx100}Ⅲ\r\nDialogue: 1,0:01:26.52,0:01:30.52,mmr3title,,0,0,0,,{\\fnA-OTF Jun Pro MMR3 34\\fs19\\an7\\bord1.8\\blur0\\fsp6\\c&H3974E9&\\4c&H000000&\\4a&HFF&\\3c&H423A80&\\pos(1454,838)}Mux More Railgun{\\fscx60} {\\fs16\\fscx100}Ⅲ`;
+
+      // Check if the final output contains the exact expected block of text
+      expect(contentAfterEdit).withContext('The edited content block should be present and correct').toContain(expectedEditedContent);
+      expect(contentAfterEdit).withContext('The original text should be gone').not.toContain('}Much More Railgun{');
+
+      // Perform the undo operation
+      const clipBeforeUndo: VideoClip = {...originalClip, parts: editedContent.parts!};
+      const contentToRestore: ClipContent = {parts: originalClip.parts};
+      const finalRestoredContent = service.modifyAssText(clipBeforeUndo, contentToRestore, contentAfterEdit);
+
+      // Check that the content is perfectly restored
+      const normalize = (str: string) => str.trim().replace(/\r\n/g, '\n');
+      expect(normalize(finalRestoredContent)).withContext('After undo, the content should be perfectly restored').toEqual(normalize(originalRawContent));
+    });
+
+    it('correctly reverts an edit on a multi-line animation during an undo operation', () => {
+      const originalRawContent = assFileTemplate(`
+Dialogue: 0,0:00:25.58,0:00:29.96,Sign-Default,,0,0,0,,{\\fnDFPMaruGothic-W6-Kami\\fs150\\c&HFFFFFF&\\3c&HFFFFFF&\\blur0.5\\bord6\\4c&H000000&\\4a&HFF&\\pos(974,758)}Not Edible
+Dialogue: 1,0:00:25.58,0:00:29.96,Sign-Default,,0,0,0,,{\\fnDFPMaruGothic-W6-Kami\\fs150\\c&H181818&\\3c&HFFFFFF&\\bord0\\blur0.5\\4c&H000000&\\4a&HFF&\\pos(974,758)}Not Edible
+      `);
+
+      const clip: VideoClip = {
+        id: 'clip-to-edit', startTime: 25.58, endTime: 29.96, hasSubtitle: true, duration: 4.38,
+        parts: [{
+          text: 'Not Edible', style: 'Sign-Default',
+          fragments: [
+            {
+              text: '{\\fnDFPMaruGothic-W6-Kami\\fs150\\c&HFFFFFF&\\3c&HFFFFFF&\\blur0.5\\bord6\\4c&H000000&\\4a&HFF&\\pos(974,758)}',
+              isTag: true
+            },
+            {text: 'Not Edible', isTag: false}
+          ]
+        }],
+        sourceSubtitles: []
+      };
+
+      // Perform the initial edit to "Not Edible2".
+      const editContent: ClipContent = {
+        parts: [{
+          text: 'Not Edible2', style: 'Sign-Default',
+          fragments: [
+            // The new fragments are based on the old ones, preserving the tags
+            {
+              text: '{\\fnDFPMaruGothic-W6-Kami\\fs150\\c&HFFFFFF&\\3c&HFFFFFF&\\blur0.5\\bord6\\4c&H000000&\\4a&HFF&\\pos(974,758)}',
+              isTag: true
+            },
+            {text: 'Not Edible2', isTag: false}
+          ]
+        }]
+      };
+      const contentAfterEdit = service.modifyAssText(clip, editContent, originalRawContent);
+
+      // Verify that BOTH lines were updated correctly
+      const expectedEditedLine1 = 'Dialogue: 0,0:00:25.58,0:00:29.96,Sign-Default,,0,0,0,,{\\fnDFPMaruGothic-W6-Kami\\fs150\\c&HFFFFFF&\\3c&HFFFFFF&\\blur0.5\\bord6\\4c&H000000&\\4a&HFF&\\pos(974,758)}Not Edible2';
+      const expectedEditedLine2 = 'Dialogue: 1,0:00:25.58,0:00:29.96,Sign-Default,,0,0,0,,{\\fnDFPMaruGothic-W6-Kami\\fs150\\c&H181818&\\3c&HFFFFFF&\\bord0\\blur0.5\\4c&H000000&\\4a&HFF&\\pos(974,758)}Not Edible2';
+
+      expect(contentAfterEdit).withContext('The first dialogue line should be updated').toContain(expectedEditedLine1);
+      expect(contentAfterEdit).withContext('The second dialogue line should also be updated').toContain(expectedEditedLine2);
+
+      // Undo logic
+      const clipBeforeUndo: VideoClip = {
+        ...clip,
+        parts: editContent.parts!
+      };
+      const contentToRestore: ClipContent = {
+        parts: clip.parts
+      };
+
+      // Perform the undo
+      const finalRestoredContent = service.modifyAssText(clipBeforeUndo, contentToRestore, contentAfterEdit);
+
+      // Normalize line endings on both strings before comparison to fix test-runner inconsistencies
+      const normalize = (str: string) => str.trim().replace(/\r\n/g, '\n');
+      expect(normalize(finalRestoredContent)).toEqual(normalize(originalRawContent));
     });
   });
 

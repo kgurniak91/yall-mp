@@ -1,81 +1,81 @@
-import {CompiledASSStyle, Dialogue, DialogueSlice} from 'ass-compiler';
+import {CompiledASSStyle, Dialogue, ParsedASSEvent} from 'ass-compiler';
 import type {AssSubtitleData, SubtitleData, SubtitleFragment} from '../types/subtitle.type';
 import {v4 as uuidv4} from 'uuid';
-import {CompiledTag} from 'ass-compiler/types/tags';
 
-function stringifyTagObject(tag: CompiledTag): string {
-  const parts = Object.entries(tag).map(([key, value]) => {
-    if (value === null || value === undefined) return '';
-
-    // Handle color and alpha tags which have special syntax
-    if (key === 'c1' || key === 'c') return `\\c&H${value}&`;
-    if (key === 'c2') return `\\2c&H${value}&`;
-    if (key === 'c3') return `\\3c&H${value}&`;
-    if (key === 'c4') return `\\4c&H${value}&`;
-    if (key === 'a1') return `\\1a&H${value}&`;
-    if (key === 'a2') return `\\2a&H${value}&`;
-    if (key === 'a3') return `\\3a&H${value}&`;
-    if (key === 'a4') return `\\4a&H${value}&`;
-
-    // Handle other simple tags like \i1, \b0, \fnArial
-    return `\\${key}${value}`;
-  });
-
-  if (parts.every(p => p === '')) return '';
-  return `{${parts.join('')}}`;
-}
-
-export function parseDialogueSlice(slice: DialogueSlice): { cleanText: string, fragments: SubtitleFragment[] } {
+/**
+ * Parses a raw ASS dialogue text string (e.g., "{\pos(10,10)}Hello \N{\i1}World{\i0}")
+ * into an array of fragments and a clean text representation.
+ */
+function parseDialogueTextToFragments(text: string): { cleanText: string; fragments: SubtitleFragment[] } {
   const fragments: SubtitleFragment[] = [];
   const cleanTextParts: string[] = [];
+  // This regex captures: 1. Tag blocks `{}`, 2. Newline markers `\N`, 3. Plain text content
+  const regex = /({[^}]+})|(\\N)|([^{}\\]+)/g;
+  let match;
 
-  for (const fragment of slice.fragments) {
-    const tagString = stringifyTagObject(fragment.tag);
+  while ((match = regex.exec(text)) !== null) {
+    const [fullMatch, tag, newline, plainText] = match;
 
-    if (tagString) {
-      fragments.push({text: tagString, isTag: true});
-    }
-
-    if (fragment.text) {
-      const normalizedText = fragment.text.replace(/\\N/g, '\n');
-      fragments.push({text: normalizedText, isTag: false});
-      cleanTextParts.push(normalizedText);
+    if (tag) {
+      fragments.push({text: tag, isTag: true});
+    } else if (newline) {
+      // For clean text, replace \N with a space. For fragments, store it as a newline in the text part.
+      fragments.push({text: '\n', isTag: false});
+      cleanTextParts.push(' ');
+    } else if (plainText) {
+      fragments.push({text: plainText, isTag: false});
+      cleanTextParts.push(plainText);
     }
   }
 
   return {
-    cleanText: cleanTextParts.join(''),
-    fragments: fragments
+    // Join parts and replace any literal newlines that might have slipped in.
+    cleanText: cleanTextParts.join('').replace(/\n/g, ' ').trim(),
+    fragments
   };
 }
 
 export function dialoguesToAssSubtitleData(
-  dialogues: Dialogue[],
+  compiledDialogues: Dialogue[],
+  parsedDialogues: ParsedASSEvent[],
   styles: { [styleName: string]: CompiledASSStyle },
   playResY: number
 ): AssSubtitleData[] {
   const subtitles: AssSubtitleData[] = [];
 
-  for (const dialogue of dialogues) {
-    const yPos = calculateYPosition(dialogue, styles, playResY);
+  // Pre-filter the parsed dialogues to remove 0-duration lines,
+  // ensuring it aligns perfectly with the compiledDialogues array.
+  const alignedParsedDialogues = parsedDialogues.filter(p => p.Start !== p.End);
 
-    const parts = dialogue.slices.map(slice => {
-      const {cleanText, fragments} = parseDialogueSlice(slice);
-      return {
+  // Now, both arrays have the same length and their indices correspond
+  for (let i = 0; i < compiledDialogues.length; i++) {
+    const compiledDialogue = compiledDialogues[i];
+    const parsedDialogue = alignedParsedDialogues[i];
+
+    // This check is redundant but kept as a safeguard
+    if (!parsedDialogue || compiledDialogue.start !== parsedDialogue.Start) {
+      console.error('ASS parsing alignment error. Skipping a dialogue line.', compiledDialogue);
+      continue;
+    }
+
+    const rawText = parsedDialogue.Text.raw;
+    const yPos = calculateYPosition(compiledDialogue, styles, playResY);
+    const {cleanText, fragments} = parseDialogueTextToFragments(rawText);
+
+    if (cleanText.trim() || fragments.some(f => f.isTag)) {
+      const part = {
         text: cleanText,
-        style: slice.style,
+        style: compiledDialogue.style,
         fragments,
         y: yPos
       };
-    }).filter(part => part.text.trim() || part.fragments.some(f => f.isTag));
 
-    if (parts.length > 0) {
       subtitles.push({
         type: 'ass',
         id: uuidv4(),
-        startTime: dialogue.start,
-        endTime: dialogue.end,
-        parts: parts
+        startTime: compiledDialogue.start,
+        endTime: compiledDialogue.end,
+        parts: [part]
       });
     }
   }

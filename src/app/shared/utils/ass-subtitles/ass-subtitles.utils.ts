@@ -1,3 +1,5 @@
+import {SubtitleFragment} from '../../../../../shared/types/subtitle.type';
+
 interface ParsedAssEvents {
   header: string; // Everything before and including "[Events]"
   formatLine: string;
@@ -97,5 +99,31 @@ export class AssSubtitlesUtils {
    */
   static roundToAssPrecision(seconds: number): number {
     return Math.round(seconds * 100) / 100;
+  }
+
+  /**
+   * Converts an array of subtitle fragments back into a single raw ASS text string.
+   */
+  static fragmentsToText(fragments: SubtitleFragment[] | undefined): string {
+    if (!fragments || fragments.length === 0) {
+      return '';
+    }
+    return fragments.map(f => f.text.replace(/\n/g, '\\N')).join('');
+  }
+
+  /**
+   * Strips a single leading ASS tag block `{\...}` from a string.
+   */
+  static stripLeadingTags(text: string): string {
+    const tagRegex = /^{[^}]*}/;
+    const match = text.match(tagRegex);
+
+    // If a leading tag block is found, return the rest of the string
+    if (match) {
+      return text.substring(match[0].length);
+    }
+
+    // Otherwise, return the original string
+    return text;
   }
 }

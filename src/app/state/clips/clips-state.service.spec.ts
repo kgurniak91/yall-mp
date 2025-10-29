@@ -146,7 +146,7 @@ describe('ClipsStateService', () => {
         ]
       };
 
-      service.updateClipText('proj-1', clipBeforeEdit, newContent);
+      service.updateClipText('proj-1', clipBeforeEdit.id, newContent);
 
       const expectedNewRawContent = [
         '[Events]',
@@ -174,7 +174,7 @@ describe('ClipsStateService', () => {
       service.setSubtitles(initialSrtSubtitle);
       const srtClipBeforeEdit: VideoClip = service.clips().find(c => c.hasSubtitle)!;
       const newSrtContent = {text: 'New SRT text'};
-      service.updateClipText('proj-1', srtClipBeforeEdit, newSrtContent);
+      service.updateClipText('proj-1', srtClipBeforeEdit.id, newSrtContent);
 
       const finalClip = service.clips().find(c => c.hasSubtitle)!;
       const finalSubtitles = finalClip.sourceSubtitles as SrtSubtitleData[];

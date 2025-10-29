@@ -4,6 +4,7 @@ import {ClipContent} from '../../../../model/commands/update-clip-text.command';
 import {AssSubtitlesUtils} from '../../../../shared/utils/ass-subtitles/ass-subtitles.utils';
 import {AssSubtitleData, SubtitlePart} from '../../../../../../shared/types/subtitle.type';
 import {MIN_GAP_DURATION} from '../../../../state/clips/clips-state.service';
+import {isEqual} from 'lodash-es';
 
 @Injectable()
 export class AssEditService {
@@ -237,7 +238,7 @@ export class AssEditService {
     return lines.join('\r\n');
   }
 
-  public updateClipText(
+  public modifyAssText(
     clip: VideoClip,
     newContent: ClipContent,
     rawAssContent: string
@@ -248,7 +249,7 @@ export class AssEditService {
 
     const parsedEvents = AssSubtitlesUtils.parseEvents(rawAssContent);
     if (!parsedEvents) {
-      console.error('Failed to parse ASS [Events] in updateClipText.');
+      console.error('Failed to parse ASS [Events] in modifyAssText.');
       return rawAssContent;
     }
     const {formatSpec} = parsedEvents;
@@ -263,12 +264,13 @@ export class AssEditService {
       return rawAssContent;
     }
 
-    const editsMap = new Map<string, SubtitlePart>();
+    const editsMap = new Map<string, { oldPart: SubtitlePart, newPart: SubtitlePart }>();
     for (let i = 0; i < clip.parts.length; i++) {
       const oldPart = clip.parts[i];
       const newPart = newContent.parts[i];
-      if (oldPart.text !== newPart.text) {
-        editsMap.set(oldPart.text, newPart);
+      if (!isEqual(oldPart, newPart)) {
+        const key = `${oldPart.style}::${oldPart.text}`;
+        editsMap.set(key, {oldPart, newPart});
       }
     }
 
@@ -297,11 +299,38 @@ export class AssEditService {
 
       const rawTextSegment = parts.slice(textIdx).join(',');
       const cleanText = rawTextSegment.replace(/{[^}]*}/g, '').replace(/\\N/g, '\n');
-      const newPart = editsMap.get(cleanText);
       const lineStyle = parts[styleIdx];
+      const lookupKey = `${lineStyle}::${cleanText}`;
+      const editInfo = editsMap.get(lookupKey);
 
-      if (newPart && newPart.style === lineStyle) {
-        const newTextSegment = this.reconstructTextSegment(rawTextSegment, newPart);
+      if (editInfo) {
+        const newPayload = AssSubtitlesUtils.fragmentsToText(editInfo.newPart.fragments)
+          || (editInfo.newPart.text || '').replace(/\n/g, '\\N');
+        const oldPayload = AssSubtitlesUtils.fragmentsToText(editInfo.oldPart.fragments)
+          || (editInfo.oldPart.text || '').replace(/\n/g, '\\N');
+
+        let newTextSegment;
+
+        if (rawTextSegment === oldPayload) {
+          newTextSegment = newPayload;
+        } else {
+          // This logic handles lines that have unique animation tags but share the same text content
+          const rawContentPart = AssSubtitlesUtils.stripLeadingTags(rawTextSegment);
+          const oldContentPart = AssSubtitlesUtils.stripLeadingTags(oldPayload);
+
+          if (rawContentPart === oldContentPart) {
+            // The content (text + inline tags) is the same, so only the leading animation tags differ.
+            // Preserve the line's unique leading tags and append the new content part.
+            const leadingTags = rawTextSegment.substring(0, rawTextSegment.length - rawContentPart.length);
+            const newContentPart = AssSubtitlesUtils.stripLeadingTags(newPayload);
+            newTextSegment = leadingTags + newContentPart;
+          } else {
+            // Failsafe for complex cases where the content parts don't match, like undoing an edit
+            // involving apostrophes or other structural changes. A full replacement is the safest bet.
+            newTextSegment = newPayload;
+          }
+        }
+
         parts.splice(textIdx, parts.length - textIdx, newTextSegment);
         return parts.join(',');
       } else {
@@ -444,40 +473,6 @@ export class AssEditService {
     });
 
     return `${header}[Events]\n${formatLine}\n${finalLines.join('\r\n')}`;
-  }
-
-  private reconstructTextSegment(
-    originalRawText: string,
-    newPart: SubtitlePart
-  ): string {
-    const getTextFromFragments = (p: SubtitlePart) =>
-      p.fragments?.filter(f => !f.isTag).map(f => f.text).join('') ?? p.text;
-
-    // Determine if the original line was a simple animation (all tags at the start).
-    const textWithoutLeadingTags = originalRawText.replace(/^({[^}]*})+/, '');
-    const wasSimpleAnimation = !textWithoutLeadingTags.includes('{');
-
-    if (wasSimpleAnimation) {
-      // It's a simple animation line. Preserve its unique leading tags.
-      // Then, append the new clean text content (derived from the new part).
-      const tagBlockMatch = originalRawText.match(/^({[^}]*})+/);
-      const leadingTags = tagBlockMatch ? tagBlockMatch[0] : '';
-      const newText = getTextFromFragments(newPart).replace(/\n/g, '\\N');
-      return leadingTags + newText;
-    } else {
-      // It's a line with complex inline styling.
-      // The new fragments from the UI are the absolute source of truth for the entire segment.
-      if (newPart.fragments && newPart.fragments.length > 0) {
-        return newPart.fragments.map(f => f.text.replace(/\n/g, '\\N')).join('');
-      } else {
-        // Fallback: If for some reason there is a complex line but no new fragments,
-        // just append the new text to preserve the original leading tags. This may not be perfect.
-        const lastTagIndex = originalRawText.lastIndexOf('}');
-        const tags = lastTagIndex === -1 ? '' : originalRawText.substring(0, lastTagIndex + 1);
-        const newText = newPart.text.replace(/\n/g, '\\N');
-        return tags + newText;
-      }
-    }
   }
 
   private findOriginalDialogueLineIndex(

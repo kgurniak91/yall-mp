@@ -345,5 +345,83 @@ export const TEST_CASES: TestCase[] = [
       },
       {id: 'gap-53.48', startTime: 53.48, endTime: MOCK_VIDEO_DURATION, hasSubtitle: false},
     ]
-  }
+  },
+  {
+    description: 'Correctly parses complex line with mixed animation and inline tags',
+    dialogueLines: `
+Dialogue: 0,0:01:26.52,0:01:30.52,mmr3title,,0,0,0,,{\\fnA-OTF Jun Pro MMR3 34\\fs19\\an7\\bord9\\blur7\\fsp6\\c&H3974E9&\\4c&H000000&\\4a&HFF&\\3c&HFFFFFF&\\pos(1454,838)}Much More Railgun{\\fscx60} {\\fs16\\fscx100}Ⅲ
+Dialogue: 1,0:01:26.52,0:01:30.52,mmr3title,,0,0,0,,{\\fnA-OTF Jun Pro MMR3 34\\fs19\\an7\\bord1.8\\blur0\\fsp6\\c&H3974E9&\\4c&H000000&\\4a&HFF&\\3c&H423A80&\\pos(1454,838)}Much More Railgun{\\fscx60} {\\fs16\\fscx100}Ⅲ
+    `,
+    expectedSubtitleData: [
+      {
+        type: 'ass',
+        id: 'test-id-0',
+        startTime: 86.52,
+        endTime: 90.52,
+        parts: [{
+          text: 'Much More Railgun Ⅲ',
+          style: 'mmr3title',
+          fragments: [
+            {
+              text: '{\\fnA-OTF Jun Pro MMR3 34\\fs19\\an7\\bord9\\blur7\\fsp6\\c&H3974E9&\\4c&H000000&\\4a&HFF&\\3c&HFFFFFF&\\pos(1454,838)}',
+              isTag: true
+            },
+            {text: 'Much More Railgun', isTag: false},
+            {text: '{\\fscx60}', isTag: true},
+            {text: ' ', isTag: false},
+            {text: '{\\fs16\\fscx100}', isTag: true},
+            {text: 'Ⅲ', isTag: false}
+          ]
+        }]
+      },
+      {
+        type: 'ass',
+        id: 'test-id-1',
+        startTime: 86.52,
+        endTime: 90.52,
+        parts: [{
+          text: 'Much More Railgun Ⅲ',
+          style: 'mmr3title',
+          fragments: [
+            {
+              text: '{\\fnA-OTF Jun Pro MMR3 34\\fs19\\an7\\bord1.8\\blur0\\fsp6\\c&H3974E9&\\4c&H000000&\\4a&HFF&\\3c&H423A80&\\pos(1454,838)}',
+              isTag: true
+            },
+            {text: 'Much More Railgun', isTag: false},
+            {text: '{\\fscx60}', isTag: true},
+            {text: ' ', isTag: false},
+            {text: '{\\fs16\\fscx100}', isTag: true},
+            {text: 'Ⅲ', isTag: false}
+          ]
+        }]
+      }
+    ],
+    expectedVideoClips: [
+      {id: 'gap-0', startTime: 0, endTime: 86.52, hasSubtitle: false},
+      {
+        id: 'subtitle-86.52',
+        startTime: 86.52,
+        endTime: 90.52,
+        hasSubtitle: true,
+        parts: [
+          {
+            text: 'Much More Railgun Ⅲ',
+            style: 'mmr3title',
+            fragments: [
+              {
+                text: '{\\fnA-OTF Jun Pro MMR3 34\\fs19\\an7\\bord9\\blur7\\fsp6\\c&H3974E9&\\4c&H000000&\\4a&HFF&\\3c&HFFFFFF&\\pos(1454,838)}',
+                isTag: true
+              },
+              {text: 'Much More Railgun', isTag: false},
+              {text: '{\\fscx60}', isTag: true},
+              {text: ' ', isTag: false},
+              {text: '{\\fs16\\fscx100}', isTag: true},
+              {text: 'Ⅲ', isTag: false}
+            ]
+          }
+        ]
+      },
+      {id: 'gap-90.52', startTime: 90.52, endTime: MOCK_VIDEO_DURATION, hasSubtitle: false},
+    ]
+  },
 ];
