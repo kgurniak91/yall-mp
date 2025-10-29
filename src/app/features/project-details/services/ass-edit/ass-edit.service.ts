@@ -298,7 +298,7 @@ export class AssEditService {
       }
 
       const rawTextSegment = parts.slice(textIdx).join(',');
-      const cleanText = rawTextSegment.replace(/{[^}]*}/g, '').replace(/\\N/g, '\n');
+      const cleanText = rawTextSegment.replace(/{[^}]*}/g, '').replace(/\\N/g, '\n').trim();
       const lineStyle = parts[styleIdx];
       const lookupKey = `${lineStyle}::${cleanText}`;
       const editInfo = editsMap.get(lookupKey);

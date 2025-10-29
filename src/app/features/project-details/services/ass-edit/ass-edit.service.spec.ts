@@ -450,6 +450,40 @@ Dialogue: 1,0:00:25.58,0:00:29.96,Sign-Default,,0,0,0,,{\\fnDFPMaruGothic-W6-Kam
       const normalize = (str: string) => str.trim().replace(/\r\n/g, '\n');
       expect(normalize(finalRestoredContent)).toEqual(normalize(originalRawContent));
     });
+
+    it('edits a multi-line subtitle containing a newline (\\N) character', () => {
+      const dialogueLine = 'Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,First line.\\NSecond line.';
+      const rawAssContent = assFileTemplate(dialogueLine);
+
+      const clip: VideoClip = {
+        id: 'multi-line-clip',
+        startTime: 10,
+        endTime: 15,
+        duration: 5,
+        hasSubtitle: true,
+        parts: [{
+          text: 'First line.\nSecond line.',
+          style: 'Default',
+          fragments: [{text: 'First line.\nSecond line.', isTag: false}]
+        }],
+        sourceSubtitles: []
+      };
+
+      const newContent: ClipContent = {
+        parts: [{
+          text: 'First line.\nEdited second line.',
+          style: 'Default',
+          fragments: [{text: 'First line.\nEdited second line.', isTag: false}]
+        }]
+      };
+
+      const expectedLine = 'Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,First line.\\NEdited second line.';
+
+      const result = service.modifyAssText(clip, newContent, rawAssContent);
+
+      expect(result).toContain(expectedLine);
+      expect(result).not.toContain(dialogueLine);
+    });
   });
 
   describe('stretchClipTimings', () => {

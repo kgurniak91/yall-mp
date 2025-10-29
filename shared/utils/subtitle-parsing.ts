@@ -8,30 +8,40 @@ import {v4 as uuidv4} from 'uuid';
  */
 function parseDialogueTextToFragments(text: string): { cleanText: string; fragments: SubtitleFragment[] } {
   const fragments: SubtitleFragment[] = [];
-  const cleanTextParts: string[] = [];
-  // This regex captures: 1. Tag blocks `{}`, 2. Newline markers `\N`, 3. Plain text content
-  const regex = /({[^}]+})|(\\N)|([^{}\\]+)/g;
+  const regex = /({[^}]+})|([^{}]+)/g; // Capture either a tag block or a sequence of non-tag characters
   let match;
 
   while ((match = regex.exec(text)) !== null) {
-    const [fullMatch, tag, newline, plainText] = match;
+    const [, tag, plainText] = match;
 
     if (tag) {
       fragments.push({text: tag, isTag: true});
-    } else if (newline) {
-      // For clean text, replace \N with a space. For fragments, store it as a newline in the text part.
-      fragments.push({text: '\n', isTag: false});
-      cleanTextParts.push(' ');
     } else if (plainText) {
-      fragments.push({text: plainText, isTag: false});
-      cleanTextParts.push(plainText);
+      const fragmentText = plainText.replace(/\\N/g, '\n');
+      fragments.push({text: fragmentText, isTag: false});
     }
   }
 
+  const mergedFragments: SubtitleFragment[] = [];
+  for (const fragment of fragments) {
+    const last = mergedFragments[mergedFragments.length - 1];
+    if (last && !last.isTag && !fragment.isTag) {
+      // If the last fragment and the current one are both text, merge them.
+      last.text += fragment.text;
+    } else {
+      mergedFragments.push(fragment);
+    }
+  }
+
+  const cleanText = mergedFragments
+    .filter(f => !f.isTag)
+    .map(f => f.text)
+    .join('')
+    .trim();
+
   return {
-    // Join parts and replace any literal newlines that might have slipped in.
-    cleanText: cleanTextParts.join('').replace(/\n/g, ' ').trim(),
-    fragments
+    cleanText,
+    fragments: mergedFragments
   };
 }
 
@@ -50,6 +60,16 @@ export function dialoguesToAssSubtitleData(
   // Now, both arrays have the same length and their indices correspond
   for (let i = 0; i < compiledDialogues.length; i++) {
     const compiledDialogue = compiledDialogues[i];
+
+    // Check if any fragment in the dialogue is a drawing command
+    const isDrawing = compiledDialogue.slices.some(slice =>
+      slice.fragments.some(fragment => fragment.drawing)
+    );
+
+    if (isDrawing) {
+      continue; // Skip this dialogue entirely as it's a drawing command.
+    }
+
     const parsedDialogue = alignedParsedDialogues[i];
 
     // This check is redundant but kept as a safeguard

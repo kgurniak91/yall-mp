@@ -424,4 +424,81 @@ Dialogue: 1,0:01:26.52,0:01:30.52,mmr3title,,0,0,0,,{\\fnA-OTF Jun Pro MMR3 34\\
       {id: 'gap-90.52', startTime: 90.52, endTime: MOCK_VIDEO_DURATION, hasSubtitle: false},
     ]
   },
+  {
+    description: 'Ignores ASS drawing commands',
+    dialogueLines: `
+      Dialogue: 0,0:00:29.96,0:00:33.97,Sign-Default,,150,0,0,,{\\p1}m -63 -24 l -63 21 l 51 21 l 51 -24
+      Dialogue: 1,0:00:29.96,0:00:33.97,Sign-Default,,150,0,0,,{\\an4}Real subtitle text.
+    `,
+    expectedSubtitleData: [
+      {
+        type: 'ass',
+        id: 'test-id-0',
+        startTime: 29.96,
+        endTime: 33.97,
+        parts: [{
+          text: 'Real subtitle text.',
+          style: 'Sign-Default',
+          fragments: [
+            {text: '{\\an4}', isTag: true},
+            {text: 'Real subtitle text.', isTag: false}
+          ]
+        }]
+      }
+    ],
+    expectedVideoClips: [
+      {id: 'gap-0', startTime: 0, endTime: 29.96, hasSubtitle: false},
+      {
+        id: 'subtitle-29.96',
+        startTime: 29.96,
+        endTime: 33.97,
+        hasSubtitle: true,
+        parts: [{
+          text: 'Real subtitle text.',
+          style: 'Sign-Default',
+          fragments: [
+            {text: '{\\an4}', isTag: true},
+            {text: 'Real subtitle text.', isTag: false}
+          ]
+        }]
+      },
+      {id: 'gap-33.97', startTime: 33.97, endTime: MOCK_VIDEO_DURATION, hasSubtitle: false},
+    ]
+  },
+  {
+    description: 'Handles newlines (\\N) within a single fragment',
+    dialogueLines: `Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,First line.\\NSecond line.`,
+    expectedSubtitleData: [
+      {
+        type: 'ass',
+        id: 'test-id-0',
+        startTime: 10.00,
+        endTime: 15.00,
+        parts: [{
+          text: 'First line.\nSecond line.',
+          style: 'Default',
+          fragments: [
+            {text: 'First line.\nSecond line.', isTag: false}
+          ]
+        }]
+      }
+    ],
+    expectedVideoClips: [
+      {id: 'gap-0', startTime: 0, endTime: 10.00, hasSubtitle: false},
+      {
+        id: 'subtitle-10',
+        startTime: 10.00,
+        endTime: 15.00,
+        hasSubtitle: true,
+        parts: [{
+          text: 'First line.\nSecond line.',
+          style: 'Default',
+          fragments: [
+            {text: 'First line.\nSecond line.', isTag: false}
+          ]
+        }]
+      },
+      {id: 'gap-15', startTime: 15.00, endTime: MOCK_VIDEO_DURATION, hasSubtitle: false},
+    ]
+  }
 ];
