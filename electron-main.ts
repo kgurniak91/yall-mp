@@ -19,7 +19,11 @@ import {Decoder} from 'ts-ebml';
 import fontkit from 'fontkit';
 import Levenshtein from 'fast-levenshtein';
 import {SubtitleSelection, SupportedLanguage} from './src/app/model/project.types';
-import {dialoguesToAssSubtitleData, mergeIdenticalConsecutiveSubtitles} from './shared/utils/subtitle-parsing';
+import {
+  dialoguesToAssSubtitleData,
+  mergeIdenticalConsecutiveSubtitles,
+  mergeKaraokeSubtitles
+} from './shared/utils/subtitle-parsing';
 import {PlaybackManager} from './playback-manager';
 import {francAll} from 'franc-all';
 
@@ -974,7 +978,8 @@ async function handleSubtitleParse(projectId: string, filePath: string): Promise
       const compiled = compile(content, {});
       const playResY = compiled.info.PlayResY ? parseInt(compiled.info.PlayResY, 10) : 1080;
       const granularTimeline = dialoguesToAssSubtitleData(compiled.dialogues, parsed.events.dialogue, compiled.styles, playResY);
-      const finalTimeline = mergeIdenticalConsecutiveSubtitles(granularTimeline);
+      const karaokeMergedTimeline = mergeKaraokeSubtitles(granularTimeline, parsed.events);
+      const finalTimeline = mergeIdenticalConsecutiveSubtitles(karaokeMergedTimeline);
       const requiredFonts = getRequiredFontsFromAss(content);
       const fonts = await loadFontData(requiredFonts, undefined, filePath);
       const fullText = getFullTextFromSubtitles(finalTimeline);
@@ -1361,7 +1366,8 @@ async function handleExtractSubtitleTrack(projectId: string, mediaPath: string, 
             const compiled = compile(subtitleContent, {});
             const playResY = compiled.info.PlayResY ? parseInt(compiled.info.PlayResY, 10) : 1080;
             const granularTimeline = dialoguesToAssSubtitleData(compiled.dialogues, parsed.events.dialogue, compiled.styles, playResY);
-            const finalTimeline = mergeIdenticalConsecutiveSubtitles(granularTimeline);
+            const karaokeMergedTimeline = mergeKaraokeSubtitles(granularTimeline, parsed.events);
+            const finalTimeline = mergeIdenticalConsecutiveSubtitles(karaokeMergedTimeline);
             const requiredFonts = getRequiredFontsFromAss(subtitleContent);
             const fonts = await loadFontData(requiredFonts, mediaPath, undefined);
             const fullText = getFullTextFromSubtitles(finalTimeline);

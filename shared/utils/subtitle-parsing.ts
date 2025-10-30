@@ -1,4 +1,4 @@
-import {CompiledASSStyle, Dialogue, ParsedASSEvent} from 'ass-compiler';
+import {CompiledASSStyle, Dialogue, ParsedASSEvent, ParsedASSEvents} from 'ass-compiler';
 import type {AssSubtitleData, SubtitleData, SubtitleFragment} from '../types/subtitle.type';
 import {v4 as uuidv4} from 'uuid';
 
@@ -52,50 +52,61 @@ export function dialoguesToAssSubtitleData(
   playResY: number
 ): AssSubtitleData[] {
   const subtitles: AssSubtitleData[] = [];
+  const availableParsedDialogues = new Set(parsedDialogues.filter(p => p.Start !== p.End));
 
-  // Pre-filter the parsed dialogues to remove 0-duration lines,
-  // ensuring it aligns perfectly with the compiledDialogues array.
-  const alignedParsedDialogues = parsedDialogues.filter(p => p.Start !== p.End);
-
-  // Now, both arrays have the same length and their indices correspond
-  for (let i = 0; i < compiledDialogues.length; i++) {
-    const compiledDialogue = compiledDialogues[i];
-
-    // Check if any fragment in the dialogue is a drawing command
+  for (const compiledDialogue of compiledDialogues) {
     const isDrawing = compiledDialogue.slices.some(slice =>
       slice.fragments.some(fragment => fragment.drawing)
     );
 
     if (isDrawing) {
-      continue; // Skip this dialogue entirely as it's a drawing command.
-    }
-
-    const parsedDialogue = alignedParsedDialogues[i];
-
-    // This check is redundant but kept as a safeguard
-    if (!parsedDialogue || compiledDialogue.start !== parsedDialogue.Start) {
-      console.error('ASS parsing alignment error. Skipping a dialogue line.', compiledDialogue);
       continue;
     }
 
-    const rawText = parsedDialogue.Text.raw;
+    // Reconstruct the clean text from the compiled dialogue to create a reliable matching key
+    const compiledCleanText = compiledDialogue.slices
+      .flatMap(slice => slice.fragments.map(f => f.text))
+      .join('')
+      .replace(/\\N/g, '\n')
+      .trim();
+
+    let foundParsedDialogue: ParsedASSEvent | undefined;
+    for (const p of availableParsedDialogues) {
+      // Generate the clean text from the parsed dialogue's raw text
+      const {cleanText: parsedCleanText} = parseDialogueTextToFragments(p.Text.raw);
+
+      // Match on timing AND the actual text content
+      if (p.Start === compiledDialogue.start && p.End === compiledDialogue.end && parsedCleanText === compiledCleanText) {
+        foundParsedDialogue = p;
+        break;
+      }
+    }
+
+    if (!foundParsedDialogue) {
+      if (compiledDialogue.start !== compiledDialogue.end) {
+        console.error('ASS parsing alignment error. Could not find a matching parsed event for compiled dialogue:', compiledDialogue);
+      }
+      continue;
+    }
+
+    availableParsedDialogues.delete(foundParsedDialogue);
+
+    const rawText = foundParsedDialogue.Text.raw;
     const yPos = calculateYPosition(compiledDialogue, styles, playResY);
     const {cleanText, fragments} = parseDialogueTextToFragments(rawText);
 
     if (cleanText.trim() || fragments.some(f => f.isTag)) {
-      const part = {
-        text: cleanText,
-        style: compiledDialogue.style,
-        fragments,
-        y: yPos
-      };
-
       subtitles.push({
         type: 'ass',
         id: uuidv4(),
         startTime: compiledDialogue.start,
         endTime: compiledDialogue.end,
-        parts: [part]
+        parts: [{
+          text: cleanText,
+          style: compiledDialogue.style,
+          fragments,
+          y: yPos
+        }]
       });
     }
   }
@@ -212,4 +223,108 @@ export function calculateYPosition(
 
   // Final fallback: If no alignment info, assume it's a standard bottom-aligned dialogue.
   return playResY;
+}
+
+export function mergeKaraokeSubtitles(
+  subtitles: AssSubtitleData[],
+  parsedEvents: ParsedASSEvents,
+): AssSubtitleData[] {
+  const karaokeMasterComments = parsedEvents.comment.filter(
+    (event) => event.Effect?.name === 'karaoke',
+  );
+
+  if (karaokeMasterComments.length === 0) {
+    return subtitles;
+  }
+
+  // Group master comments that represent the same karaoke line (e.g., Romaji + Translation)
+  const masterCommentGroups: ParsedASSEvent[][] = [];
+  const sortedMasters = [...karaokeMasterComments].sort((a, b) => a.Start - b.Start);
+
+  if (sortedMasters.length > 0) {
+    let currentGroup = [sortedMasters[0]];
+    for (let i = 1; i < sortedMasters.length; i++) {
+      const current = sortedMasters[i];
+      const groupMaxEnd = Math.max(...currentGroup.map(c => c.End));
+      // If the current comment starts before the latest end time in the group, it's part of the same group
+      if (current.Start < groupMaxEnd) {
+        currentGroup.push(current);
+      } else {
+        masterCommentGroups.push(currentGroup);
+        currentGroup = [current];
+      }
+    }
+    masterCommentGroups.push(currentGroup);
+  }
+
+  const processedSubtitleIds = new Set<string>();
+  const mergedSubtitles: AssSubtitleData[] = [];
+  let totalConstituents = 0;
+
+  for (const group of masterCommentGroups) {
+    const groupStartTime = Math.min(...group.map(c => c.Start));
+    const groupEndTime = Math.max(...group.map(c => c.End));
+    const groupStyles = new Set(group.map(c => c.Style));
+
+    // A subtitle is a constituent if it has a matching style and its midpoint falls within the group's time range,
+    // OR if it's a short intro animation that is contiguous with the start of the group.
+    const constituentSubtitles = subtitles.filter((sub) => {
+      if (processedSubtitleIds.has(sub.id) || !sub.parts.some(p => groupStyles.has(p.style))) {
+        return false;
+      }
+
+      const midPoint = sub.startTime + ((sub.endTime - sub.startTime) / 2);
+      const isCenteredInGroup = midPoint >= groupStartTime && midPoint < groupEndTime;
+
+      // Also catch brief intro animations that end exactly where the master comment starts
+      const isContiguousAtStart = Math.abs(sub.endTime - groupStartTime) < 0.02;
+
+      return isCenteredInGroup || isContiguousAtStart;
+    });
+
+    if (constituentSubtitles.length === 0 && group.length === 0) {
+      continue;
+    }
+
+    constituentSubtitles.forEach((sub) => processedSubtitleIds.add(sub.id));
+    totalConstituents += constituentSubtitles.length;
+
+    const earliestStartTime = constituentSubtitles.length > 0
+      ? Math.min(groupStartTime, ...constituentSubtitles.map((s) => s.startTime))
+      : groupStartTime;
+
+    const allParts = group.flatMap(masterComment => {
+      const {cleanText, fragments} = parseDialogueTextToFragments(masterComment.Text.raw);
+
+      // Find a real subtitle part to inherit Y-position from, prioritizing one with a defined 'y'
+      const correspondingConstituent = constituentSubtitles
+        .filter(c => c.parts.some(p => p.style === masterComment.Style))
+        .sort((a, b) => a.startTime - b.startTime)
+        .find(c => c.parts[0]?.y !== undefined);
+
+      return {
+        text: cleanText,
+        style: masterComment.Style,
+        fragments,
+        y: correspondingConstituent?.parts[0]?.y,
+      };
+    });
+
+    if (allParts.length > 0) {
+      mergedSubtitles.push({
+        type: 'ass',
+        id: uuidv4(),
+        startTime: earliestStartTime,
+        endTime: groupEndTime,
+        parts: allParts,
+      });
+    }
+  }
+
+  const remainingSubtitles = subtitles.filter((sub) => !processedSubtitleIds.has(sub.id));
+  const finalSubtitles = [...remainingSubtitles, ...mergedSubtitles];
+
+  finalSubtitles.sort((a, b) => a.startTime - b.startTime);
+
+  return finalSubtitles;
 }
