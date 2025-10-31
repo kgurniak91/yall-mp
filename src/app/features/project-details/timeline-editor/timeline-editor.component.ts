@@ -107,21 +107,19 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
     if (!this.wavesurfer) return;
     const newZoom = Math.max(this.currentZoom() / ZOOM_FACTOR, MIN_ZOOM);
     this.updateZoom(newZoom);
+
+    // After zooming out, perform a tiny scroll nudge to force WaveSurfer to re-render all regions
+    const currentTime = this.videoStateService.currentTime();
+    this.wavesurfer.setScrollTime(currentTime + 0.1);
+    this.wavesurfer.setScrollTime(currentTime);
   }
 
   private updateZoom(newZoom: number): void {
     if (!this.wavesurfer || newZoom === this.currentZoom()) {
       return;
     }
-
-    const previousZoom = this.currentZoom();
     this.currentZoom.set(newZoom);
     this.wavesurfer.zoom(newZoom);
-
-    if (!this.clipsStateService.isPlaying()) {
-      this.wavesurfer.zoom(previousZoom);
-      this.wavesurfer.zoom(newZoom);
-    }
   }
 
   private timelineRenderer = effect(() => {
@@ -287,11 +285,7 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
   };
 
   private handleWaveSurferReady = () => {
-    // refresh editor after init just in case
     if (this.wavesurfer) {
-      const currentZoom = this.currentZoom();
-      this.wavesurfer.zoom(currentZoom + 1);
-      this.wavesurfer.zoom(currentZoom);
       this.isWaveSurferReady.set(true);
     }
   };
