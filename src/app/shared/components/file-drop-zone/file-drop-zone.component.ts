@@ -16,6 +16,7 @@ export class FileDropZoneComponent {
   protected isFileSelected = computed(() => !!(this.newFileName() || this.existingFileName()));
   protected isDragging = false;
   protected newFileName = signal<string | null>(null);
+  private isFileDialogOpen = false;
 
   protected onDragOver(event: DragEvent): void {
     event.preventDefault();
@@ -54,18 +55,28 @@ export class FileDropZoneComponent {
   }
 
   protected async onZoneClicked() {
-    const dialogFilters = [{name: 'Allowed Files', extensions: this.accept()}];
+    if (this.isFileDialogOpen) {
+      return;
+    }
 
-    const filePaths = await window.electronAPI.openFileDialog({
-      title: 'Select a file',
-      properties: ['openFile'],
-      filters: dialogFilters
-    });
+    this.isFileDialogOpen = true;
 
-    if (filePaths && filePaths.length > 0) {
-      const filePath = filePaths[0];
-      this.newFileName.set(this.getBaseName(filePath));
-      this.filePathChange.emit(filePath);
+    try {
+      const dialogFilters = [{name: 'Allowed Files', extensions: this.accept()}];
+
+      const filePaths = await window.electronAPI.openFileDialog({
+        title: 'Select a file',
+        properties: ['openFile'],
+        filters: dialogFilters
+      });
+
+      if (filePaths && filePaths.length > 0) {
+        const filePath = filePaths[0];
+        this.newFileName.set(this.getBaseName(filePath));
+        this.filePathChange.emit(filePath);
+      }
+    } finally {
+      this.isFileDialogOpen = false;
     }
   }
 
