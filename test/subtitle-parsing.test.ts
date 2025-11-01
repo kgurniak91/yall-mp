@@ -82,6 +82,7 @@ describe('Subtitle Parsing', () => {
 
 describe('Subtitle Parsing - Positional Logic (calculateYPosition)', () => {
   const PLAY_RES_Y = 1080;
+  const DEFAULT_STYLE_FONT_SIZE = 84;
 
   // Helper to get the first parsed subtitle part from a dialogue line
   const getFirstPart = (eventLines: string): SubtitlePart | undefined => {
@@ -96,19 +97,19 @@ describe('Subtitle Parsing - Positional Logic (calculateYPosition)', () => {
   it('prioritizes the y-coordinate from a \\pos tag', () => {
     const line = `Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,{\\pos(100,250)}Text`;
     const part = getFirstPart(line);
-    expect(part?.y).toBe(250);
+    expect(part?.y).toBe(250 - DEFAULT_STYLE_FONT_SIZE);
   });
 
   it('uses the y1-coordinate from a \\move tag if \\pos is not present', () => {
     const line = `Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,{\\move(100,300,200,400)}Text`;
     const part = getFirstPart(line);
-    expect(part?.y).toBe(300);
+    expect(part?.y).toBe(300 - DEFAULT_STYLE_FONT_SIZE);
   });
 
   it('prioritizes \\pos over \\move', () => {
     const line = `Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,{\\pos(100,250)\\move(100,300,200,400)}Text`;
     const part = getFirstPart(line);
-    expect(part?.y).toBe(250);
+    expect(part?.y).toBe(250 - DEFAULT_STYLE_FONT_SIZE);
   });
 
   it('uses an alignment override tag (\\an) over the style definition', () => {
@@ -126,10 +127,12 @@ describe('Subtitle Parsing - Positional Logic (calculateYPosition)', () => {
   });
 
   it('calculates bottom position from style alignment and MarginV', () => {
-    // The 'Default' style has Alignment: 2 (bottom) and MarginV: 63
+    // The 'Default' style has Alignment: 2 (bottom), Fontsize: 84, and MarginV: 63
     const line = `Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Text`;
     const part = getFirstPart(line);
-    expect(part?.y).toBe(PLAY_RES_Y - 63);
+    const expectedAnchorY = PLAY_RES_Y - 63; // 1017
+    const expectedTopY = expectedAnchorY - DEFAULT_STYLE_FONT_SIZE; // 933
+    expect(part?.y).toBe(expectedTopY);
   });
 
   it('uses the "Default" style if the specified style is not found', () => {
@@ -137,8 +140,9 @@ describe('Subtitle Parsing - Positional Logic (calculateYPosition)', () => {
     const line = `Dialogue: 0,0:00:01.00,0:00:02.00,NonExistentStyle,,0,0,0,,Text`;
     const part = getFirstPart(line);
     // The compiler falls back to the 'Default' style, which has Alignment: 2 (bottom) and MarginV: 63.
-    const expectedY = PLAY_RES_Y - 63;
-    expect(part?.y).toBe(expectedY); // 1080 - 63 = 1017
+    const expectedAnchorY = PLAY_RES_Y - 63;
+    const expectedTopY = expectedAnchorY - DEFAULT_STYLE_FONT_SIZE; // 933
+    expect(part?.y).toBe(expectedTopY);
   });
 
   it('respects MarginV override on a Dialogue line even if the style is not found', () => {
@@ -146,14 +150,38 @@ describe('Subtitle Parsing - Positional Logic (calculateYPosition)', () => {
     const line = `Dialogue: 0,0:00:01.00,0:00:02.00,NonExistentStyle,,0,0,50,,Text`;
     const part = getFirstPart(line);
     // The compiler still falls back to the 'Default' style for Alignment (2), but uses the line's MarginV.
-    const expectedY = PLAY_RES_Y - 50;
-    expect(part?.y).toBe(expectedY); // 1080 - 50 = 1030
+    const expectedAnchorY = PLAY_RES_Y - 50;
+    const expectedTopY = expectedAnchorY - DEFAULT_STYLE_FONT_SIZE; // 946
+    expect(part?.y).toBe(expectedTopY);
   });
 
   it('uses alignment override tag when style does not exist', () => {
     const line = `Dialogue: 0,0:00:01.00,0:00:02.00,NonExistentStyle,,0,0,25,,{\\an7}Text`;
     const part = getFirstPart(line);
     expect(part?.y).toBe(25);
+  });
+
+  it('correctly calculates top Y for large, bottom-aligned font vs smaller bottom-aligned font', () => {
+    const eventLines = `
+      Dialogue: 10,0:01:02.58,0:01:04.24,Default,,0,0,0,,Oops.
+      Dialogue: 1,0:01:02.58,0:01:07.21,Sign-Default,,0,0,0,,{\\fnFrom Where You Are\\fs500\\pos(953,1047)\\blur0.7\\c&HFFFEFF&\\b1}Oops
+    `;
+    const assContent = buildAssFile(eventLines);
+    const compiled = compile(assContent, {});
+    const parsed = parse(assContent);
+    const subtitles = dialoguesToAssSubtitleData(compiled.dialogues, parsed.events.dialogue, compiled.styles, 1080);
+
+    const smallOopsPart = subtitles.find(s => s.parts.some(p => p.style === 'Default'))!.parts[0];
+    const largeOopsPart = subtitles.find(s => s.parts.some(p => p.style === 'Sign-Default'))!.parts[0];
+
+    // Default style: Alignment 2 (bottom), Fontsize 84, MarginV 63. Anchor = 1080 - 63 = 1017. Top = 1017 - 84 = 933.
+    expect(smallOopsPart.y).toBe(933);
+
+    // Sign-Default style is overridden by \pos(953, 1047) and \fs500. Anchor = 1047. Alignment is from style (2, bottom). Top = 1047 - 500 = 547.
+    expect(largeOopsPart.y).toBe(547);
+
+    // The large font subtitle should be considered "higher" on the screen
+    expect(largeOopsPart.y!).toBeLessThan(smallOopsPart.y!);
   });
 });
 

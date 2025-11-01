@@ -183,46 +183,75 @@ export function calculateYPosition(
   styles: { [styleName: string]: CompiledASSStyle },
   playResY: number
 ): number {
+  // Step 1: Calculate the anchor Y position
+  let anchorY: number;
+
   // Absolute position from a \pos(x,y) tag
   if (dialogue.pos?.y !== undefined) {
-    return dialogue.pos.y;
+    anchorY = dialogue.pos.y;
   }
-
   // Absolute start position from a \move tag
-  if (dialogue.move?.y1 !== undefined) {
-    return dialogue.move.y1;
+  else if (dialogue.move?.y1 !== undefined) {
+    anchorY = dialogue.move.y1;
   }
-
   // If no absolute position, calculate based on alignment
-  let alignment: number | undefined;
-  const styleInfo = styles[dialogue.style];
+  else {
+    let alignment: number | undefined;
+    const styleInfo = styles[dialogue.style] || styles['Default'];
 
-  // An override tag like {\an8} in the dialogue line takes precedence.
-  if (dialogue.alignment) {
-    alignment = dialogue.alignment;
-  }
-  // Otherwise, get the alignment from the style definition.
-  else if (styleInfo) {
-    alignment = styleInfo.style.Alignment;
-  }
-
-  if (alignment !== undefined) {
-    const verticalMargin = dialogue.margin.vertical;
-
-    // Calculate position using alignment and vertical margin.
-    if ([7, 8, 9].includes(alignment)) { // Top alignment
-      return verticalMargin;
+    // An override tag like {\an8} in the dialogue line takes precedence
+    if (dialogue.alignment) {
+      alignment = dialogue.alignment;
     }
-    if ([1, 2, 3].includes(alignment)) { // Bottom alignment
-      return playResY - verticalMargin;
+    // Otherwise, get the alignment from the style definition
+    else if (styleInfo) {
+      alignment = styleInfo.style.Alignment;
     }
+
+    if (alignment !== undefined) {
+      const verticalMargin = dialogue.margin.vertical;
+
+      // Calculate position using alignment and vertical margin.
+      if ([7, 8, 9].includes(alignment)) { // Top alignment
+        anchorY = verticalMargin;
+      } else if ([1, 2, 3].includes(alignment)) { // Bottom alignment
+        anchorY = playResY - verticalMargin;
+      } else if ([4, 5, 6].includes(alignment)) { // Middle alignment
+        anchorY = playResY / 2;
+      } else {
+        // Fallback for unknown alignment values
+        anchorY = playResY;
+      }
+    } else {
+      // Final fallback: If no alignment info, assume it's a standard bottom-aligned dialogue
+      anchorY = playResY;
+    }
+  }
+
+  // Step 2: Adjust anchor to approximate the top edge based on font size
+  let finalY = anchorY;
+  const styleInfo = styles[dialogue.style] || styles['Default']; // Fallback to default style
+  if (styleInfo) {
+    // Check for a font size override tag (\fs) within the dialogue's fragments
+    const fsOverride = dialogue.slices
+      .flatMap(slice => slice.fragments)
+      .map(fragment => fragment.tag.fs)
+      .find(fs => fs !== undefined);
+
+    const fontSize = fsOverride ?? styleInfo.style.Fontsize;
+    const alignment = dialogue.alignment || styleInfo.style.Alignment;
+
     if ([4, 5, 6].includes(alignment)) { // Middle alignment
-      return playResY / 2;
+      // The anchor is the vertical center - the top edge is half the font size above that
+      finalY = anchorY - (fontSize / 2);
+    } else if ([1, 2, 3].includes(alignment)) { // Bottom alignment
+      // The anchor is the baseline at the bottom - the top edge is roughly one font size above that
+      finalY = anchorY - fontSize;
     }
+    // For top alignment ([7, 8, 9]), the anchor is already at the top, so no change is needed
   }
 
-  // Final fallback: If no alignment info, assume it's a standard bottom-aligned dialogue.
-  return playResY;
+  return finalY;
 }
 
 export function mergeKaraokeSubtitles(
