@@ -18,7 +18,7 @@ import fontScanner from 'font-scanner';
 import {Decoder} from 'ts-ebml';
 import fontkit from 'fontkit';
 import Levenshtein from 'fast-levenshtein';
-import {SubtitleSelection, SupportedLanguage} from './src/app/model/project.types';
+import {AppData, CoreConfig, Project, SubtitleSelection, SupportedLanguage} from './src/app/model/project.types';
 import {
   dialoguesToAssSubtitleData,
   mergeIdenticalConsecutiveSubtitles,
@@ -44,6 +44,7 @@ interface RequiredFont {
 
 const APP_DATA_KEY = 'yall-mp-app-data';
 const APP_DATA_PATH = path.join(app.getPath('userData'), `${APP_DATA_KEY}.json`);
+const PROJECTS_DIR = path.join(app.getPath('userData'), 'projects');
 const FONT_CACHE_DIR = path.join(app.getPath('userData'), 'font-cache');
 const USER_AGENT_OPTIONS = {
   userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
@@ -70,7 +71,8 @@ let draggableHeaderZones: Rectangle[] = [];
 let isInitialResizeComplete = false;
 let hasRequestedInitialSeek = false;
 let isSaving = false;
-let saveQueue: any[] = [];
+let coreConfigToSave: CoreConfig | null = null;
+const projectsToSave = new Map<string, Project>();
 let showVideoTimeout: NodeJS.Timeout | null = null;
 let initialAppBounds: Electron.Rectangle | null = null;
 const MIN_GAP_DURATION = 0.1;
@@ -460,6 +462,7 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  ensureProjectsDirExists();
   ipcMain.handle('dialog:openFile', (_, options) => handleFileOpen(options));
   ipcMain.handle('subtitle:parse', (_, projectId, filePath) => handleSubtitleParse(projectId, filePath));
   ipcMain.handle('media:getMetadata', (_, filePath) => handleGetMediaMetadata(filePath));
@@ -471,7 +474,25 @@ app.whenReady().then(() => {
   ipcMain.handle('anki:exportAnkiCard', (_, exportRquest: AnkiExportRequest) => handleAnkiExport(exportRquest));
   ipcMain.handle('ffmpeg:check', () => isFFmpegAvailable);
   ipcMain.handle('app:get-data', readAppData);
-  ipcMain.handle('app:set-data', saveAppData);
+
+  ipcMain.handle('core-config:save', (_, coreConfig) => {
+    coreConfigToSave = coreConfig;
+    processSaveQueue();
+  });
+
+  ipcMain.handle('project:save', (_, project: Project) => {
+    projectsToSave.set(project.id, project); // Map automatically handles overwriting with the latest data
+    processSaveQueue();
+  });
+
+  ipcMain.handle('project:delete-file', async (_, projectId: string) => {
+    const projectPath = path.join(PROJECTS_DIR, `${projectId}.json`);
+    try {
+      await fs.unlink(projectPath);
+    } catch (error) {
+      console.error(`Failed to delete project file for ${projectId}:`, error);
+    }
+  });
 
   ipcMain.on('window:minimize', () => {
     mainWindow?.minimize();
@@ -1443,40 +1464,71 @@ function getLanguageInfo(track: Omit<MediaTrack, 'label' | 'code'>): { label: st
   return {label: displayLabel, code: standardCode};
 }
 
-async function readAppData() {
+async function readAppData(): Promise<AppData | null> {
   try {
-    const data = await fs.readFile(APP_DATA_PATH, 'utf-8');
-    return JSON.parse(data);
-  } catch (error) {
-    if (error instanceof SyntaxError) {
-      console.error('Error parsing JSON, the app data file might be corrupted:', error);
-    } else {
-      console.log('Could not read app data (file might not exist yet)');
+    const coreConfigFile = await fs.readFile(APP_DATA_PATH, 'utf-8');
+    const coreConfig = JSON.parse(coreConfigFile);
+
+    if (!coreConfig || !coreConfig.projectIds) {
+      return coreConfig;
     }
+
+    const projects: Project[] = [];
+    for (const projectId of coreConfig.projectIds) {
+      const projectPath = path.join(PROJECTS_DIR, `${projectId}.json`);
+      try {
+        const projectFile = await fs.readFile(projectPath, 'utf-8');
+        projects.push(JSON.parse(projectFile));
+      } catch (e) {
+        console.warn(`Could not load project file for ID ${projectId}. It may have been deleted.`);
+      }
+    }
+
+    return {...coreConfig, projects};
+  } catch (error) {
+    console.log('Could not read app data (file might not exist yet). Returning null.');
     return null;
   }
 }
 
-async function saveAppData(_: any, data: any) {
-  saveQueue.push(data);
-  processSaveQueue();
+async function ensureProjectsDirExists() {
+  try {
+    await fs.mkdir(PROJECTS_DIR, {recursive: true});
+  } catch (error) {
+    console.error('Failed to create projects directory:', error);
+  }
 }
 
 async function processSaveQueue() {
-  if (isSaving || saveQueue.length === 0) {
+  if (isSaving) {
     return;
   }
 
   isSaving = true;
-  const dataToSave = saveQueue.shift();
 
   try {
-    await fs.writeFile(APP_DATA_PATH, JSON.stringify(dataToSave, null, 2), 'utf-8');
+    // Prioritize saving core config
+    if (coreConfigToSave) {
+      const configData = coreConfigToSave;
+      coreConfigToSave = null; // Clear before await
+      await fs.writeFile(APP_DATA_PATH, JSON.stringify(configData, null, 2), 'utf-8');
+    }
+
+    // Save one project from the queue
+    if (projectsToSave.size > 0) {
+      const [[projectId, projectData]] = projectsToSave; // Destructure 1st entry from map of projects
+      projectsToSave.delete(projectId); // Clear before await
+      const projectPath = path.join(PROJECTS_DIR, `${projectId}.json`);
+      await fs.writeFile(projectPath, JSON.stringify(projectData, null, 2), 'utf-8');
+    }
   } catch (error) {
-    console.error('Failed to save app data:', error);
+    console.error('Failed during save operation:', error);
   } finally {
     isSaving = false;
-    processSaveQueue();
+    // If there are more items, process them in the next tick
+    if (coreConfigToSave || projectsToSave.size > 0) {
+      process.nextTick(processSaveQueue);
+    }
   }
 }
 

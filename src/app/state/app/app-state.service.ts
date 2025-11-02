@@ -1,9 +1,11 @@
-import {computed, inject, Injectable, signal} from '@angular/core';
-import {AppData, Project} from '../../model/project.types';
+import {computed, DestroyRef, inject, Injectable, Injector, signal} from '@angular/core';
+import {AppData, CoreConfig, Project} from '../../model/project.types';
 import {DEFAULT_GLOBAL_SETTINGS, DEFAULT_PROJECT_SETTINGS, GlobalSettings} from '../../model/settings.types';
 import {AnkiSettings} from '../../model/anki.types';
 import {StorageService} from '../../core/services/storage/storage.service';
 import {merge} from 'lodash-es';
+import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
+import {debounceTime, skip} from 'rxjs';
 
 const defaults: AppData = {
   projects: [],
@@ -21,6 +23,15 @@ const defaults: AppData = {
 export class AppStateService {
   private readonly storageService = inject(StorageService);
   private readonly _appData = signal<AppData>(defaults);
+  private readonly injector = inject(Injector);
+  private readonly destroyRef = inject(DestroyRef);
+
+  private readonly coreConfig = computed<CoreConfig>(() => ({
+    projectIds: this._appData().projects.map(p => p.id),
+    lastOpenedProjectId: this._appData().lastOpenedProjectId,
+    globalSettings: this._appData().globalSettings,
+    ankiSettings: this._appData().ankiSettings,
+  }));
 
   public readonly projects = computed(() => {
     return this._appData().projects.sort((a, b) => b.lastOpenedDate - a.lastOpenedDate);
@@ -34,6 +45,16 @@ export class AppStateService {
 
   public readonly globalSettings = computed(() => this._appData().globalSettings);
   public readonly ankiSettings = computed(() => this._appData().ankiSettings);
+
+  constructor() {
+    toObservable(this.coreConfig, {injector: this.injector}).pipe(
+      skip(1), // Skip the initial value on app load to prevent an unnecessary write
+      debounceTime(500),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(configToSave => {
+      this.storageService.saveCoreConfig(configToSave);
+    });
+  }
 
   public async loadAppData(): Promise<void> {
     const data = await this.storageService.get();
@@ -67,17 +88,16 @@ export class AppStateService {
     this._appData.update(data => {
       const projectExists = data.projects.some(p => p.id === project.id);
       if (projectExists) {
-        return data; // Project already exists, do nothing
+        return data;
       }
 
-      const updatedProjects = [...data.projects, project];
-      const newData: AppData = {
+      this.storageService.saveProject(project);
+
+      return {
         ...data,
-        projects: updatedProjects,
-        lastOpenedProjectId: project.id // Make the new project the active one
+        projects: [...data.projects, project],
+        lastOpenedProjectId: project.id
       };
-      this.storageService.set(newData);
-      return newData;
     });
   }
 
@@ -89,19 +109,21 @@ export class AppStateService {
         return currentData;
       }
 
+      const projectToUpdate = currentData.projects[projectIndex];
       const updatedProject = {
-        ...currentData.projects[projectIndex],
+        ...projectToUpdate,
         ...updates
       };
+
       const projectsCopy = [...currentData.projects];
       projectsCopy[projectIndex] = updatedProject;
 
-      const newData: AppData = {
+      this.storageService.saveProject(updatedProject);
+
+      return {
         ...currentData,
         projects: projectsCopy
       };
-      this.storageService.set(newData);
-      return newData;
     });
   }
 
@@ -109,7 +131,7 @@ export class AppStateService {
     this._appData.update(currentData => {
       const projectIndex = currentData.projects.findIndex(p => p.id === projectId);
       if (projectIndex === -1) {
-        return currentData; // Project not found
+        return currentData;
       }
 
       const projectToUpdate = {
@@ -119,18 +141,19 @@ export class AppStateService {
       const projectsCopy = [...currentData.projects];
       projectsCopy[projectIndex] = projectToUpdate;
 
-      const newData: AppData = {
+      this.storageService.saveProject(projectToUpdate);
+
+      return {
         ...currentData,
         projects: projectsCopy,
         lastOpenedProjectId: projectId
       };
-      this.storageService.set(newData);
-      return newData;
     });
   }
 
   public deleteProject(projectId: string): void {
     window.electronAPI.deleteProjectFonts(projectId);
+    this.storageService.deleteProjectFile(projectId);
 
     this._appData.update(data => {
       const updatedProjects = data.projects.filter(p => p.id !== projectId);
@@ -142,33 +165,26 @@ export class AppStateService {
         newLastOpenedProjectId = sortedRemaining.length > 0 ? sortedRemaining[0].id : null;
       }
 
-      const newData: AppData = {
+      return {
         ...data,
         projects: updatedProjects,
         lastOpenedProjectId: newLastOpenedProjectId
       };
-      this.storageService.set(newData);
-
-      return newData;
     });
   }
 
   public updateGlobalSettings(updates: Partial<GlobalSettings>): void {
-    this._appData.update(currentData => {
-      const newGlobalSettings = {...currentData.globalSettings, ...updates};
-      const newData = {...currentData, globalSettings: newGlobalSettings};
-      this.storageService.set(newData);
-      return newData;
-    });
+    this._appData.update(currentData => ({
+      ...currentData,
+      globalSettings: {...currentData.globalSettings, ...updates}
+    }));
   }
 
   public updateAnkiSettings(updates: Partial<AnkiSettings>): void {
-    this._appData.update(currentData => {
-      const newAnkiSettings = {...currentData.ankiSettings, ...updates};
-      const newData = {...currentData, ankiSettings: newAnkiSettings};
-      this.storageService.set(newData);
-      return newData;
-    });
+    this._appData.update(currentData => ({
+      ...currentData,
+      ankiSettings: {...currentData.ankiSettings, ...updates}
+    }));
   }
 
   public addAnkiExportToHistory(projectId: string, subtitleId: string): void {
@@ -195,12 +211,12 @@ export class AppStateService {
       const projectsCopy = [...currentData.projects];
       projectsCopy[projectIndex] = updatedProject;
 
-      const newData: AppData = {
+      this.storageService.saveProject(updatedProject);
+
+      return {
         ...currentData,
         projects: projectsCopy
       };
-      this.storageService.set(newData);
-      return newData;
     });
   }
 

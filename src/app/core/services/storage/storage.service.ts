@@ -1,17 +1,29 @@
 import {Injectable} from '@angular/core';
-import {AppData} from '../../../model/project.types';
+import {AppData, CoreConfig, Project} from '../../../model/project.types';
 
 @Injectable({
   providedIn: 'root'
 })
 export class StorageService {
-  set(newData: AppData): void {
-    window.electronAPI.setAppData(newData).catch(err => {
-      console.error('Failed to save data through Electron API', err);
+  get(): Promise<AppData | null> {
+    return window.electronAPI.getAppData();
+  }
+
+  saveProject(project: Project): void {
+    window.electronAPI.saveProject(project).catch(err => {
+      console.error(`Failed to save project ${project.id} through Electron API`, err);
     });
   }
 
-  get(): Promise<AppData | null> {
-    return window.electronAPI.getAppData();
+  deleteProjectFile(projectId: string): void {
+    window.electronAPI.deleteProjectFile(projectId).catch(err => {
+      console.error(`Failed to delete project file ${projectId} through Electron API`, err);
+    });
+  }
+
+  saveCoreConfig(config: CoreConfig): void {
+    window.electronAPI.saveCoreConfig(config).catch(err => {
+      console.error('Failed to save core config through Electron API', err);
+    });
   }
 }

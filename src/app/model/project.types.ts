@@ -43,8 +43,21 @@ export interface Project {
   ankiExportHistory?: string[]; // List of SubtitleData IDs
 }
 
+/**
+ * Represents in-memory app state (combined from yall-mp-app-data.json and /projects folder)
+ */
 export interface AppData {
   projects: Project[];
+  lastOpenedProjectId: string | null;
+  globalSettings: GlobalSettings;
+  ankiSettings: AnkiSettings;
+}
+
+/**
+ * Represents on-disk app state (stored in yall-mp-app-data.json)
+ */
+export interface CoreConfig {
+  projectIds: string[];
   lastOpenedProjectId: string | null;
   globalSettings: GlobalSettings;
   ankiSettings: AnkiSettings;

@@ -84,7 +84,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   // --- Storage
   getAppData: () => ipcRenderer.invoke('app:get-data'),
-  setAppData: (data) => ipcRenderer.invoke('app:set-data', data),
+  saveProject: (project) => ipcRenderer.invoke('project:save', project),
+  deleteProjectFile: (projectId) => ipcRenderer.invoke('project:delete-file', projectId),
+  saveCoreConfig: (config) => ipcRenderer.invoke('core-config:save', config),
   // --- Playback
   playbackPlay: () => ipcRenderer.send('playback:play'),
   playbackPause: () => ipcRenderer.send('playback:pause'),

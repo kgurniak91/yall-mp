@@ -1,5 +1,5 @@
 import {AnkiExportRequest} from './app/model/anki.types';
-import {AppData, SubtitleSelection, SupportedLanguage} from './app/model/project.types';
+import {AppData, CoreConfig, Project, SubtitleSelection, SupportedLanguage} from './app/model/project.types';
 import {VideoClip} from './app/model/video.types';
 import {ProjectSettings} from './app/model/settings.types';
 import {SubtitleData} from '../shared/types/subtitle.type';
@@ -84,7 +84,9 @@ export interface IElectronAPI {
   onMpvInitialSeekComplete: (callback: () => void) => (() => void);
   // --- Storage
   getAppData: () => Promise<AppData | null>;
-  setAppData: (data: AppData) => Promise<void>;
+  saveProject: (project: Project) => Promise<void>;
+  deleteProjectFile: (projectId: string) => Promise<void>;
+  saveCoreConfig: (config: CoreConfig) => Promise<void>;
   // --- Playback
   playbackPlay: () => void;
   playbackPause: () => void;
