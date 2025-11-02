@@ -49,6 +49,10 @@ import {DialogOrchestrationService} from '../../core/services/dialog-orchestrati
 import {cloneDeep} from 'lodash-es';
 import {GlobalSettingsTab} from '../global-settings-dialog/global-settings-dialog.types';
 import {ProjectActionService} from './services/project-action/project-action.service';
+import {
+  HeaderCurrentProjectActionBridgeService
+} from '../../core/services/header-current-project-action-bridge/header-current-project-action-bridge.service';
+import {DatePipe} from '@angular/common';
 
 @Component({
   selector: 'app-project-details',
@@ -64,7 +68,8 @@ import {ProjectActionService} from './services/project-action/project-action.ser
     CurrentProjectSettingsComponent,
     SubtitlesOverlayComponent,
     SubtitlesHighlighterComponent,
-    ContextMenu
+    ContextMenu,
+    DatePipe
   ],
   templateUrl: './project-details.component.html',
   styleUrl: './project-details.component.scss',
@@ -210,6 +215,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   private readonly globalSettingsStateService = inject(GlobalSettingsStateService);
   private readonly dialogOrchestrationService = inject(DialogOrchestrationService);
   private readonly subtitlesHighlighterService = inject(SubtitlesHighlighterService);
+  private readonly headerCurrentProjectActionBridgeService = inject(HeaderCurrentProjectActionBridgeService);
   private dialogRef: DynamicDialogRef | undefined;
   private isMpvReady = signal(false);
   private isUiReady = signal(false);
@@ -223,6 +229,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   constructor() {
     inject(ProjectKeyboardShortcutsService); // start listening
     inject(TokenizationService); // start listening
+    this.headerCurrentProjectActionBridgeService.register(this.commandHistoryStateService);
 
     effect(() => {
       const subtitlesVisible = this.videoStateService.subtitlesVisible();
@@ -395,6 +402,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     this.fontInjectionService.clearFonts();
     window.electronAPI.mpvHideSubtitles();
     window.electronAPI.onMpvDestroyViewport();
+    this.headerCurrentProjectActionBridgeService.clear();
   }
 
   onPlayerReady(): void {

@@ -35,34 +35,40 @@
 .toolbar {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  padding: 1rem;
+  justify-content: space-between;
   background-color: #2a2a2a;
   flex-shrink: 0;
+  border: 1px solid black;
 
-  .history-wrapper {
+  .toolbar-actions-wrapper {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 1rem;
-    position: absolute;
-    left: 1rem;
   }
 
-  .settings-wrapper {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-    position: absolute;
-    right: 1rem;
+  .toolbar-actions-wrapper:last-of-type p-button:first-of-type {
+    border-left: 1px solid black !important; // first button of 2nd toolbar-actions-wrapper
   }
 
   p-button ::ng-deep button {
     padding: 0;
     width: 2.5rem;
     height: 2.5rem;
+    border-radius: 0;
+    background-color: var(--app-surface) !important;
+    border: none !important;
+
+    &:hover {
+      background-color: var(--app-surface-hover) !important;
+    }
+
+    .p-button-icon {
+      color: var(--app-text-secondary);
+    }
+  }
+
+  p-button {
+    border-right: 1px solid black !important;
   }
 }
 

@@ -18,6 +18,9 @@ import {Button} from 'primeng/button';
 import {Menu} from 'primeng/menu';
 import {Tooltip} from 'primeng/tooltip';
 import {DialogOrchestrationService} from '../../services/dialog-orchestration/dialog-orchestration.service';
+import {
+  HeaderCurrentProjectActionBridgeService
+} from '../../services/header-current-project-action-bridge/header-current-project-action-bridge.service';
 
 @Component({
   selector: 'app-header',
@@ -46,6 +49,7 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly appStateService = inject(AppStateService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly dialogOrchestrationService = inject(DialogOrchestrationService);
+  private readonly headerCurrentProjectActionBridgeService = inject(HeaderCurrentProjectActionBridgeService);
   private resizeObserver: ResizeObserver | undefined;
   private resizeDebounceTimer: any;
   private cleanupMaximizedListener: (() => void) | null = null;
@@ -159,6 +163,20 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
         label: 'Edit current project',
         icon: 'fa-solid fa-pencil',
         command: () => this.router.navigate(['/project/edit', project.id])
+      });
+
+      menu.push({
+        separator: true
+      }, {
+        label: 'Undo (Ctrl+Z)',
+        icon: 'fa-solid fa-rotate-left',
+        command: () => this.headerCurrentProjectActionBridgeService.undo(),
+        disabled: !this.headerCurrentProjectActionBridgeService.canUndo()
+      }, {
+        label: 'Redo (Ctrl+Y)',
+        icon: 'fa-solid fa-rotate-right',
+        command: () => this.headerCurrentProjectActionBridgeService.redo(),
+        disabled: !this.headerCurrentProjectActionBridgeService.canRedo()
       });
 
       menu.push({

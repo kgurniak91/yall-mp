@@ -169,3 +169,12 @@ textarea {
 .p-contextmenu.timeline-context-menu {
   z-index: 9999 !important;
 }
+
+.p-tooltip.tooltip-one-line {
+  width: fit-content;
+  max-width: initial !important;
+
+  .p-tooltip-text {
+    white-space: nowrap;
+  }
+}

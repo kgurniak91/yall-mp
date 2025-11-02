@@ -12,29 +12,41 @@
   </div>
 
   <div class="toolbar">
-    <div class="history-wrapper">
-      <p-button icon="fa-solid fa-rotate-left"
-                pTooltip="Undo (Ctrl + Z)"
-                tooltipPosition="right"
+    <div class="toolbar-actions-wrapper">
+      <p-button icon="fa-solid {{clipsStateService.isPlaying() ? 'fa-pause' : 'fa-play'}}"
+                [pTooltip]="(clipsStateService.isPlaying() ? 'Pause' : 'Play') + ' (Space)'"
+                tooltipPosition="bottom"
                 severity="secondary"
-                [disabled]="!commandHistoryStateService.canUndo()"
-                (onClick)="undo()"/>
+                (onClick)="togglePlayPause()"/>
 
-      <p-button icon="fa-solid fa-rotate-right"
-                pTooltip="Redo (Ctrl + Y)"
-                tooltipPosition="right"
+      <p-button icon="fa-solid fa-repeat"
+                pTooltip="Repeat current clip (↑)"
+                tooltipStyleClass="tooltip-one-line"
+                tooltipPosition="bottom"
                 severity="secondary"
-                [disabled]="!commandHistoryStateService.canRedo()"
-                (onClick)="redo()"/>
-    </div>
+                (onClick)="repeatCurrentClip()"/>
 
-    <div>
+      <p-button icon="fa-solid fa-arrow-left"
+                pTooltip="Previous subtitled clip (Ctrl + ←)"
+                tooltipStyleClass="tooltip-one-line"
+                tooltipPosition="bottom"
+                severity="secondary"
+                [disabled]="isGoToPreviousSubtitledClipActionDisabled()"
+                (onClick)="goToPreviousSubtitledClip()"/>
+
+      <p-button icon="fa-solid fa-arrow-right"
+                pTooltip="Next subtitled clip (Ctrl + →)"
+                tooltipStyleClass="tooltip-one-line"
+                tooltipPosition="bottom"
+                severity="secondary"
+                [disabled]="isGoToNextSubtitledClipActionDisabled()"
+                (onClick)="goToNextSubtitledClip()"/>
+
       <p-button (click)="opStart.toggle($event)"
-                icon="fa-solid fa-arrows-down-to-line"
-                class="rotate-90"
-                tooltipPosition="left"
+                icon="fa-solid fa-arrows-down-to-line fa-rotate-90"
                 severity="secondary"
                 pTooltip="Adjust Clip Start"
+                tooltipPosition="bottom"
                 [disabled]="isFirstClip()"/>
 
       <p-popover #opStart>
@@ -45,41 +57,12 @@
                     tooltipPosition="right" pTooltip="Adjust Right (Ctrl+[)"/>
         </div>
       </p-popover>
-    </div>
 
-    <p-button icon="fa-solid fa-arrow-left"
-              pTooltip="Previous subtitled clip (Ctrl + ←)"
-              tooltipPosition="left"
-              severity="secondary"
-              [disabled]="isGoToPreviousSubtitledClipActionDisabled()"
-              (onClick)="goToPreviousSubtitledClip()"/>
-
-    <p-button icon="fa-solid {{clipsStateService.isPlaying() ? 'fa-pause' : 'fa-play'}}"
-              [pTooltip]="(clipsStateService.isPlaying() ? 'Pause' : 'Play') + ' (Space)'"
-              tooltipPosition="top"
-              severity="secondary"
-              (onClick)="togglePlayPause()"/>
-
-    <p-button icon="fa-solid fa-repeat"
-              pTooltip="Repeat current clip (↑)"
-              tooltipPosition="top"
-              severity="secondary"
-              (onClick)="repeatCurrentClip()"/>
-
-    <p-button icon="fa-solid fa-arrow-right"
-              pTooltip="Next subtitled clip (Ctrl + →)"
-              tooltipPosition="right"
-              severity="secondary"
-              [disabled]="isGoToNextSubtitledClipActionDisabled()"
-              (onClick)="goToNextSubtitledClip()"/>
-
-    <div>
       <p-button (click)="opEnd.toggle($event)"
-                icon="fa-solid fa-arrows-up-to-line"
-                class="rotate-90"
-                tooltipPosition="right"
+                icon="fa-solid fa-arrows-up-to-line fa-rotate-90"
                 severity="secondary"
                 pTooltip="Adjust Clip End"
+                tooltipPosition="bottom"
                 [disabled]="isLastClip()"/>
 
       <p-popover #opEnd>
@@ -92,40 +75,12 @@
       </p-popover>
     </div>
 
-    <div class="settings-wrapper">
-      <p-button icon="fa-solid fa-eraser"
-                (click)="deleteCurrentClip()"
-                pTooltip="Delete clip (Delete)"
-                tooltipPosition="left"
-                severity="secondary"/>
-
-      @if (currentClipHasSubtitles()) {
-        <p-button icon="fa-solid fa-divide rotate-90"
-                  (click)="splitCurrentSubtitledClip()"
-                  pTooltip="Split subtitled clip (\)"
-                  tooltipPosition="left"
-                  severity="secondary"/>
-      } @else {
-        <p-button icon="fa-regular fa-square-plus"
-                  (click)="createNewSubtitledClipAtCurrentTime()"
-                  pTooltip="Create subtitled clip (Insert)"
-                  tooltipPosition="left"
-                  severity="secondary"/>
-      }
-
-      <p-button icon="fa-solid fa-file-pen"
-                (click)="openEditSubtitlesDialog()"
-                pTooltip="Edit subtitles (S)"
-                tooltipPosition="left"
-                severity="secondary"
-                [disabled]="!canEditSubtitles()"/>
-
-      <p-button icon="fa-solid fa-e"
-                (click)="openAnkiExportDialog()"
-                pTooltip="Export to Anki (E)"
-                tooltipPosition="left"
-                severity="secondary"
-                [disabled]="!ankiStateService.isAnkiExportAvailable() || !currentClipHasSubtitles()"/>
+    <div class="toolbar-actions-wrapper">
+      <div class="mr-2">
+        <span>{{ videoStateService.currentTime() * 1000 | date:'HH:mm:ss':'UTC' }}</span>
+        <span class="text-gray-500 mx-1">/</span>
+        <span class="text-gray-400">{{ videoStateService.duration() * 1000 | date:'HH:mm:ss':'UTC' }}</span>
+      </div>
 
       @let subtitlesVisible = videoStateService.subtitlesVisible();
       <p-button icon="{{subtitlesVisible ? 'fa-solid' : 'fa-regular'}} fa-closed-captioning"
@@ -135,7 +90,8 @@
                 severity="secondary"/>
 
       <p-button icon="fa-solid fa-gear"
-                pTooltip="Settings (,)"
+                pTooltip="Project settings (,)"
+                tooltipStyleClass="tooltip-one-line"
                 tooltipPosition="left"
                 severity="secondary"
                 (onClick)="toggleSettings()"/>
