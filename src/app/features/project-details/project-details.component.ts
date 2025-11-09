@@ -27,7 +27,7 @@ import {EditSubtitlesDialogComponent} from './edit-subtitles-dialog/edit-subtitl
 import {ClipContent, UpdateClipTextCommand} from '../../model/commands/update-clip-text.command';
 import {take} from 'rxjs';
 import {ToastService} from '../../shared/services/toast/toast.service';
-import type {SubtitleData} from '../../../../shared/types/subtitle.type';
+import type {DialogSubtitlePart, SubtitleData} from '../../../../shared/types/subtitle.type';
 import {DropdownModule} from 'primeng/dropdown';
 import {FormsModule} from '@angular/forms';
 import {AnkiStateService} from '../../state/anki/anki-state.service';
@@ -39,7 +39,6 @@ import {ParsedSubtitlesData} from '../../../electron-api';
 import {SubtitlesHighlighterService} from './services/subtitles-highlighter/subtitles-highlighter.service';
 import {SubtitlesHighlighterComponent} from './subtitles-highlighter/subtitles-highlighter.component';
 import {FontInjectionService} from './services/font-injection/font-injection.service';
-import {AssSubtitlesUtils} from '../../shared/utils/ass-subtitles/ass-subtitles.utils';
 import {AssEditService} from './services/ass-edit/ass-edit.service';
 import {TokenizationService} from './services/tokenization/tokenization.service';
 import {ContextMenu} from 'primeng/contextmenu';
@@ -53,6 +52,7 @@ import {
   HeaderCurrentProjectActionBridgeService
 } from '../../core/services/header-current-project-action-bridge/header-current-project-action-bridge.service';
 import {DatePipe} from '@angular/common';
+import {AssSubtitlesUtils} from '../../../../shared/utils/ass-subtitles.utils';
 
 @Component({
   selector: 'app-project-details',
@@ -87,7 +87,25 @@ import {DatePipe} from '@angular/common';
   ]
 })
 export class ProjectDetailsComponent implements OnInit, OnDestroy {
-  protected currentClipHasSubtitles = computed(() => !!this.clipsStateService.currentClip()?.hasSubtitle);
+  protected readonly subtitlesAtCurrentTime = computed(() => this.clipsStateService.subtitlesAtCurrentTime());
+
+  protected readonly trackIndexes = computed(() => {
+    const count = this.clipsStateService.totalTracks();
+    return Array.from({length: count}, (_, i) => i);
+  });
+
+  protected readonly trackHasContent = computed(() => {
+    const activeTrack = this.clipsStateService.activeTrack();
+    const activeSubs = this.subtitlesAtCurrentTime();
+    const trackBooleans = Array(this.clipsStateService.totalTracks()).fill(false);
+
+    for (const sub of activeSubs) {
+      if (sub.track !== activeTrack) {
+        trackBooleans[sub.track] = true;
+      }
+    }
+    return trackBooleans;
+  });
 
   protected readonly canEditSubtitles = computed(() => {
     const clip = this.clipsStateService.currentClip();
@@ -104,49 +122,39 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   });
 
   protected isFirstClip = computed(() => {
-    const clips = this.clipsStateService.clips();
-    if (clips.length === 0) {
-      return true; // No clips, so it's the "first"
-    }
-    return this.clipsStateService.currentClipIndex() === 0;
+    return this.clipsStateService.masterClipIndex() <= 0;
   });
 
   protected isLastClip = computed(() => {
-    const clips = this.clipsStateService.clips();
+    const clips = this.clipsStateService.clipsForAllTracks();
     if (clips.length === 0) {
-      return true; // No clips, so it's the "last"
+      return true;
     }
-    return this.clipsStateService.currentClipIndex() === (clips.length - 1);
+
+    return this.clipsStateService.masterClipIndex() >= (clips.length - 1);
   });
 
   protected isGoToPreviousSubtitledClipActionDisabled = computed(() => {
-    const clips = this.clipsStateService.clips();
-    const currentIndex = this.clipsStateService.currentClipIndex();
-    const currentClip = this.clipsStateService.currentClip();
+    const allClips = this.clipsStateService.clipsForAllTracks();
+    const currentIndex = this.clipsStateService.masterClipIndex();
+    const currentClip = this.clipsStateService.currentClipForAllTracks();
 
     if (!currentClip) {
       return true;
     }
 
-    const previousSubtitledClipExists = clips.some((clip, index) => (index < currentIndex) && clip.hasSubtitle);
+    const previousSubtitledClipExists = allClips.some((clip, index) => (index < currentIndex) && clip.hasSubtitle);
     if (previousSubtitledClipExists) {
       return false;
     }
 
-    // Playback indicator is either at the 1st gap or 1st subtitled clip
-    // If it is at the gap and there are no subtitled clips before, disable the action:
-    if (!currentClip.hasSubtitle) {
-      return true;
-    }
-
-    // Otherwise, it is at the 1st subtitled clip - enable action to allow rewinding to the beginning of it:
-    return false;
+    return !currentClip.hasSubtitle;
   });
 
   protected isGoToNextSubtitledClipActionDisabled = computed(() => {
-    const clips = this.clipsStateService.clips();
-    const currentIndex = this.clipsStateService.currentClipIndex();
-    const nextSubtitledClipExists = clips.some((clip, index) => (index > currentIndex) && clip.hasSubtitle);
+    const allClips = this.clipsStateService.clipsForAllTracks();
+    const currentIndex = this.clipsStateService.masterClipIndex();
+    const nextSubtitledClipExists = allClips.some((clip, index) => (index > currentIndex) && clip.hasSubtitle);
     return !nextSubtitledClipExists;
   });
 
@@ -183,7 +191,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
   protected readonly scopedAssContent = computed<string | undefined>(() => {
     const project = this.project();
-    const currentClip = this.clipsStateService.currentClip();
+    const currentClip = this.clipsStateService.currentClipForAllTracks();
 
     if (!project?.rawAssContent || !currentClip?.hasSubtitle) {
       return undefined;
@@ -253,26 +261,24 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     });
 
     effect(() => {
-      const clips = this.clipsStateService.clips();
       const project = this.project();
+      const allClips = this.clipsStateService.clipsForAllTracks();
 
-      // Once the clips array is populated for the first time, find and set the correct starting index.
-      if (clips.length > 0 && project && !this.hasSetInitialClip) {
-        const initialClipIndex = clips.findIndex(
+      if (allClips.length > 0 && project && !this.hasSetInitialClip) {
+        const initialClipIndex = allClips.findIndex(
           c => project.lastPlaybackTime >= c.startTime && project.lastPlaybackTime < c.endTime
         );
 
         if (initialClipIndex !== -1) {
           this.clipsStateService.setCurrentClipByIndex(initialClipIndex);
-          this.hasSetInitialClip = true; // Ensure this only runs once
+          this.hasSetInitialClip = true;
         }
       }
 
-      // Wait until UI and MPV are ready, and clips have been generated from the video's duration.
-      if (this.isUiReady() && this.isMpvReady() && clips.length > 0 && !this.hasFiredStartupSequence && project) {
+      if (this.isUiReady() && this.isMpvReady() && allClips.length > 0 && !this.hasFiredStartupSequence && project) {
         this.hasFiredStartupSequence = true;
         const settings = this.projectSettingsStateService.settings();
-        window.electronAPI.playbackLoadProject(clips, settings, project.lastPlaybackTime);
+        window.electronAPI.playbackLoadProject(allClips, settings, project.lastPlaybackTime);
         this.startPlaybackSequence();
       }
     });
@@ -487,7 +493,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const currentClip = this.clipsStateService.currentClip();
+    const currentClip = this.clipsStateService.currentClipForAllTracks();
     if (!currentClip || !currentClip.hasSubtitle) {
       this.toastService.info('Anki export is only available for subtitled clips.');
       return;
@@ -638,6 +644,22 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     });
 
     items.push({separator: true});
+
+    if (clip.hasSubtitle) {
+      const clipText = this.isAssProject()
+        ? clip.parts.map(p => p.text).join('\n')
+        : clip.text || '';
+
+      if (clipText) {
+        items.push({
+          label: `"${clipText}"`,
+          disabled: true,
+          styleClass: 'context-menu-subtitle-text'
+        });
+
+        items.push({separator: true});
+      }
+    }
 
     // Duration Info
     items.push({
@@ -818,7 +840,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
   private editCurrentSubtitlesListener = effect(() => {
     if (this.videoStateService.editSubtitlesRequest()) {
-      const currentClip = this.clipsStateService.currentClip();
+      const currentClip = this.clipsStateService.currentClipForAllTracks();
       if (!currentClip || !currentClip.hasSubtitle) {
         this.toastService.info('Subtitle editing is not available for gaps.');
         this.videoStateService.clearEditSubtitlesRequest();
@@ -928,26 +950,49 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   }
 
   private createSubtitleDataFromVideoClip(clip: VideoClip): SubtitleData {
-    const sourceId = clip.sourceSubtitles[0]?.id; // Get the ID of the first source subtitle
-    if (!sourceId) {
+    // Use the ID of the first source subtitle as a stable, representative identifier for the virtual clip
+    const representativeSourceId = clip.sourceSubtitles[0]?.id;
+    if (!representativeSourceId) {
       throw new Error('Cannot create subtitle data from a clip with no source subtitles.');
     }
 
+    const virtualTrackNumber = -1;
+
     if (this.isAssProject()) {
+      // Flatten all source parts, stamping each with its parent's track number
+      const allPartsWithTracks = clip.sourceSubtitles.flatMap(sub =>
+        sub.type === 'ass'
+          ? sub.parts.map(part => ({...part, track: sub.track}))
+          : []
+      );
+
+      // De-duplicate the list based on visual content (style + text).
+      // This correctly groups identical animation lines into one entry.
+      const uniquePartsMap = new Map<string, DialogSubtitlePart>();
+      for (const part of allPartsWithTracks) {
+        const key = `${part.style}::${part.text}`;
+        if (!uniquePartsMap.has(key)) {
+          uniquePartsMap.set(key, part);
+        }
+      }
+      const finalParts = Array.from(uniquePartsMap.values());
+
       return {
         type: 'ass',
-        id: sourceId,
+        id: representativeSourceId,
         startTime: clip.startTime,
         endTime: clip.endTime,
-        parts: clip.parts
+        parts: finalParts,
+        track: virtualTrackNumber
       };
     } else { // srt
       return {
         type: 'srt',
-        id: sourceId,
+        id: representativeSourceId,
         startTime: clip.startTime,
         endTime: clip.endTime,
-        text: clip.text || ''
+        text: clip.text || '',
+        track: virtualTrackNumber
       };
     }
   }

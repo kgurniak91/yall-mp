@@ -1,10 +1,10 @@
 import {Injectable} from '@angular/core';
 import {VideoClip} from '../../../../model/video.types';
-import {ClipContent} from '../../../../model/commands/update-clip-text.command';
-import {AssSubtitlesUtils} from '../../../../shared/utils/ass-subtitles/ass-subtitles.utils';
 import {AssSubtitleData, SubtitlePart} from '../../../../../../shared/types/subtitle.type';
 import {MIN_GAP_DURATION} from '../../../../state/clips/clips-state.service';
 import {isEqual} from 'lodash-es';
+import {ClipContent} from '../../../../model/commands/update-clip-text.command';
+import {AssSubtitlesUtils} from '../../../../../../shared/utils/ass-subtitles.utils';
 
 @Injectable()
 export class AssEditService {
@@ -87,75 +87,6 @@ export class AssEditService {
     });
 
     return `${header}[Events]\n${formatLine}\n${filteredLines.join('\r\n')}`;
-  }
-
-  public deleteAssClipAndSplitSpanningLines(rawAssContent: string, clipToRemove: VideoClip): string {
-    const parsedEvents = AssSubtitlesUtils.parseEvents(rawAssContent);
-    if (!parsedEvents) {
-      return rawAssContent;
-    }
-
-    const {header, formatLine, dialogueLines, formatSpec} = parsedEvents;
-    const startIdx = formatSpec.get('Start')!;
-    const endIdx = formatSpec.get('End')!;
-    const newDialogueLines: string[] = [];
-
-    const clipStart = clipToRemove.startTime;
-    const clipEnd = clipToRemove.endTime;
-
-    for (const line of dialogueLines) {
-      const parts = line.split(',');
-      const lineStart = AssSubtitlesUtils.timeToSeconds(parts[startIdx]);
-      const lineEnd = AssSubtitlesUtils.timeToSeconds(parts[endIdx]);
-
-      // Case 1: Line is completely outside the clip's range. Keep it.
-      if (lineEnd <= clipStart || lineStart >= clipEnd) {
-        newDialogueLines.push(line);
-        continue;
-      }
-
-      // Case 2: Line is completely inside the clip's range. Remove it.
-      if (lineStart >= clipStart && lineEnd <= clipEnd) {
-        continue;
-      }
-
-      // Case 3: Line spans the entire clip. Split it into two parts.
-      if (lineStart < clipStart && lineEnd > clipEnd) {
-        // First part
-        const firstPart = [...parts];
-        firstPart[endIdx] = AssSubtitlesUtils.formatTime(clipStart);
-        newDialogueLines.push(firstPart.join(','));
-        // Second part
-        const secondPart = [...parts];
-        secondPart[startIdx] = AssSubtitlesUtils.formatTime(clipEnd);
-        newDialogueLines.push(secondPart.join(','));
-        continue;
-      }
-
-      // Case 4: Line overlaps with the start of the clip. Truncate it.
-      if (lineStart < clipStart && lineEnd <= clipEnd) {
-        const truncatedLine = [...parts];
-        truncatedLine[endIdx] = AssSubtitlesUtils.formatTime(clipStart);
-        newDialogueLines.push(truncatedLine.join(','));
-        continue;
-      }
-
-      // Case 5: Line overlaps with the end of the clip. Shift its start.
-      if (lineStart >= clipStart && lineEnd > clipEnd) {
-        const shiftedLine = [...parts];
-        shiftedLine[startIdx] = AssSubtitlesUtils.formatTime(clipEnd);
-        newDialogueLines.push(shiftedLine.join(','));
-      }
-    }
-
-    // Re-sort all dialogue lines by their new start times
-    newDialogueLines.sort((a, b) => {
-      const startTimeA = AssSubtitlesUtils.timeToSeconds(a.split(',')[startIdx]);
-      const startTimeB = AssSubtitlesUtils.timeToSeconds(b.split(',')[startIdx]);
-      return startTimeA - startTimeB;
-    });
-
-    return `${header}[Events]\n${formatLine}\n${newDialogueLines.join('\r\n')}`;
   }
 
   public mergeDialogueLines(rawAssContent: string, firstClip: VideoClip, secondClip: VideoClip): string {
@@ -253,92 +184,114 @@ export class AssEditService {
       return rawAssContent;
     }
     const {formatSpec} = parsedEvents;
-
-    const startIdx = formatSpec.get('Start');
-    const endIdx = formatSpec.get('End');
-    const styleIdx = formatSpec.get('Style');
     const textIdx = formatSpec.get('Text');
-
-    if (startIdx === undefined || endIdx === undefined || styleIdx === undefined || textIdx === undefined) {
+    if (textIdx === undefined) {
       console.error("ASS 'Format' line is missing required fields.");
       return rawAssContent;
     }
 
-    const editsMap = new Map<string, { oldPart: SubtitlePart, newPart: SubtitlePart }>();
+    const edits = new Map<string, { oldPart: SubtitlePart, newPart: SubtitlePart }>();
     for (let i = 0; i < clip.parts.length; i++) {
       const oldPart = clip.parts[i];
       const newPart = newContent.parts[i];
-      if (!isEqual(oldPart, newPart)) {
+      if (oldPart && newPart && !isEqual(oldPart, newPart)) {
         const key = `${oldPart.style}::${oldPart.text}`;
-        editsMap.set(key, {oldPart, newPart});
+        edits.set(key, {oldPart, newPart});
       }
     }
 
-    if (editsMap.size === 0) {
+    if (edits.size === 0) {
       return rawAssContent;
     }
 
     const lines = rawAssContent.split(/\r?\n/);
-    const updatedLines = lines.map(line => {
-      if (!line.toLowerCase().startsWith('dialogue:')) {
-        return line;
+    const updatedLineIndexes = new Set<number>();
+
+    const getLeafSubtitles = (sub: AssSubtitleData): AssSubtitleData[] => {
+      if (sub.sourceDialogues && sub.sourceDialogues.length > 0) {
+        return sub.sourceDialogues.flatMap(getLeafSubtitles);
       }
+      return [sub];
+    };
 
-      const parts = line.split(',');
-      if (parts.length <= Math.max(startIdx, endIdx, styleIdx, textIdx)) {
-        return line;
-      }
+    const allSourceDialogues = (clip.sourceSubtitles as AssSubtitleData[]).flatMap(getLeafSubtitles);
 
-      const lineStartTime = AssSubtitlesUtils.timeToSeconds(parts[startIdx]);
-      const lineEndTime = AssSubtitlesUtils.timeToSeconds(parts[endIdx]);
-      const isTimeOverlap = lineStartTime < clip.endTime && lineEndTime > clip.startTime;
+    for (const sourceSub of allSourceDialogues) {
+      for (const sourcePart of sourceSub.parts) {
+        const lookupKey = `${sourcePart.style}::${sourcePart.text}`;
+        const editInfo = edits.get(lookupKey);
 
-      if (!isTimeOverlap) {
-        return line;
-      }
+        if (editInfo) {
+          let searchStartIndex = 0;
+          while (searchStartIndex < lines.length) {
+            const lineIndex = this.findOriginalDialogueLineIndex(lines, formatSpec, {
+              startTime: sourceSub.startTime,
+              endTime: sourceSub.endTime,
+              style: sourcePart.style,
+              text: sourcePart.text,
+            }, searchStartIndex);
 
-      const rawTextSegment = parts.slice(textIdx).join(',');
-      const cleanText = rawTextSegment.replace(/{[^}]*}/g, '').replace(/\\N/g, '\n').trim();
-      const lineStyle = parts[styleIdx];
-      const lookupKey = `${lineStyle}::${cleanText}`;
-      const editInfo = editsMap.get(lookupKey);
+            if (lineIndex === -1) {
+              break;
+            }
 
-      if (editInfo) {
-        const newPayload = AssSubtitlesUtils.fragmentsToText(editInfo.newPart.fragments)
-          || (editInfo.newPart.text || '').replace(/\n/g, '\\N');
-        const oldPayload = AssSubtitlesUtils.fragmentsToText(editInfo.oldPart.fragments)
-          || (editInfo.oldPart.text || '').replace(/\n/g, '\\N');
+            if (updatedLineIndexes.has(lineIndex)) {
+              searchStartIndex = lineIndex + 1;
+              continue;
+            }
 
-        let newTextSegment;
+            const lineToUpdate = lines[lineIndex];
+            const parts = lineToUpdate.split(',');
+            const rawTextSegment = parts.slice(textIdx).join(',');
+            const {fragments: fragmentsFromFileLine} = AssSubtitlesUtils.parseDialogueTextToFragments(rawTextSegment);
 
-        if (rawTextSegment === oldPayload) {
-          newTextSegment = newPayload;
-        } else {
-          // This logic handles lines that have unique animation tags but share the same text content
-          const rawContentPart = AssSubtitlesUtils.stripLeadingTags(rawTextSegment);
-          const oldContentPart = AssSubtitlesUtils.stripLeadingTags(oldPayload);
+            const newPart = editInfo.newPart;
+            const newFragmentsFromModel = newPart.fragments || [];
 
-          if (rawContentPart === oldContentPart) {
-            // The content (text + inline tags) is the same, so only the leading animation tags differ.
-            // Preserve the line's unique leading tags and append the new content part.
-            const leadingTags = rawTextSegment.substring(0, rawTextSegment.length - rawContentPart.length);
-            const newContentPart = AssSubtitlesUtils.stripLeadingTags(newPayload);
-            newTextSegment = leadingTags + newContentPart;
-          } else {
-            // Failsafe for complex cases where the content parts don't match, like undoing an edit
-            // involving apostrophes or other structural changes. A full replacement is the safest bet.
-            newTextSegment = newPayload;
+            const finalFragments = [];
+            let fileTagIndex = 0;
+
+            if (newFragmentsFromModel.length > 0) {
+              for (const newFrag of newFragmentsFromModel) {
+                if (newFrag.isTag) {
+                  let foundTag = false;
+                  while (fileTagIndex < fragmentsFromFileLine.length) {
+                    const fileFrag = fragmentsFromFileLine[fileTagIndex];
+                    fileTagIndex++;
+                    if (fileFrag.isTag) {
+                      finalFragments.push(fileFrag);
+                      foundTag = true;
+                      break;
+                    }
+                  }
+                  if (!foundTag) {
+                    finalFragments.push(newFrag);
+                  }
+                } else {
+                  finalFragments.push(newFrag);
+                }
+              }
+            } else {
+              fragmentsFromFileLine.forEach(frag => {
+                if (frag.isTag) {
+                  finalFragments.push(frag);
+                }
+              });
+              finalFragments.push({text: newPart.text, isTag: false});
+            }
+
+            const newTextSegment = AssSubtitlesUtils.fragmentsToText(finalFragments);
+            parts.splice(textIdx, parts.length - textIdx, newTextSegment);
+            lines[lineIndex] = parts.join(',');
+            updatedLineIndexes.add(lineIndex);
+
+            searchStartIndex = lineIndex + 1;
           }
         }
-
-        parts.splice(textIdx, parts.length - textIdx, newTextSegment);
-        return parts.join(',');
-      } else {
-        return line;
       }
-    });
+    }
 
-    return updatedLines.join('\r\n');
+    return lines.join('\r\n');
   }
 
   public splitDialogueLines(
@@ -486,20 +439,24 @@ export class AssEditService {
       const line = lines[i];
       if (!line.toLowerCase().startsWith('dialogue:')) continue;
 
-      const parts = line.split(',');
+      const prefixEndIndex = line.indexOf(':') + 1;
+      const data = line.substring(prefixEndIndex).trim();
+      const parts = data.split(',');
+
       if (parts.length <= textIndex) continue;
 
       const style = parts[formatSpec.get('Style')!];
       const start = parts[formatSpec.get('Start')!];
       const end = parts[formatSpec.get('End')!];
       const rawTextSegment = parts.slice(textIndex).join(',');
-      const cleanTextFromFile = rawTextSegment.replace(/{[^}]*}/g, '').replace(/\\N/g, '\n');
+      const {cleanText: cleanTextFromFile} = AssSubtitlesUtils.parseDialogueTextToFragments(rawTextSegment);
+      const criteriaText = criteria.text.trim();
 
       if (
         style === criteria.style &&
         start === AssSubtitlesUtils.formatTime(criteria.startTime) &&
         end === AssSubtitlesUtils.formatTime(criteria.endTime) &&
-        cleanTextFromFile === criteria.text
+        cleanTextFromFile === criteriaText
       ) {
         return i;
       }

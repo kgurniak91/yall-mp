@@ -1,7 +1,7 @@
 <div class="content-wrapper">
   <div class="video-area" (click)="onVideoAreaClick()">
     <app-video-controller #videoController (ready)="onPlayerReady()"/>
-    <app-subtitles-overlay [currentClip]="clipsStateService.currentClip()"
+    <app-subtitles-overlay [currentClip]="clipsStateService.currentClipForAllTracks()"
                            [rawAssContent]="scopedAssContent()"
                            [videoWidth]="project()?.videoWidth"
                            [videoHeight]="project()?.videoHeight"
@@ -96,6 +96,23 @@
                 severity="secondary"
                 (onClick)="toggleSettings()"/>
     </div>
+  </div>
+
+  <div class="tracks">
+    @for (trackIndex of trackIndexes(); track trackIndex) {
+      @let hasContent = trackHasContent()[trackIndex];
+      @let isActive = clipsStateService.activeTrack() === trackIndex;
+
+      <p-button [label]="'Track ' + (trackIndex + 1)"
+                [outlined]="!isActive"
+                (onClick)="clipsStateService.setActiveTrack(trackIndex)"
+                iconPos="right"
+                [class.active-track]="isActive"
+                [icon]="hasContent ? 'fa-solid fa-circle fa-2xs' : undefined"
+                [pTooltip]="hasContent ? 'Contains parallel clip' : undefined"
+                tooltipPosition="bottom">
+      </p-button>
+    }
   </div>
 
   <div class="timeline-area">

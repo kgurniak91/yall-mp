@@ -10,7 +10,12 @@ import {DialogService, DynamicDialogConfig, DynamicDialogRef} from 'primeng/dyna
 import {ToastService} from '../../../shared/services/toast/toast.service';
 import {FormsModule} from '@angular/forms';
 import {Button} from 'primeng/button';
-import {AssSubtitleData, SubtitleData, SubtitlePart} from '../../../../../shared/types/subtitle.type';
+import {
+  AssSubtitleData,
+  DialogSubtitlePart,
+  SubtitleData,
+  SubtitlePart
+} from '../../../../../shared/types/subtitle.type';
 import {Checkbox} from 'primeng/checkbox';
 import {Textarea} from 'primeng/textarea';
 import {LookupNotes, ProjectClipNotes} from '../../../model/project.types';
@@ -140,8 +145,25 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
     this.isAlreadyExported = history.includes(this.data.subtitleData.id);
 
     if (this.data.subtitleData.type === 'ass') {
-      this.assSubtitleData = this.data.subtitleData;
-      // Pre-select all parts by default for convenience
+      const assData = this.data.subtitleData as AssSubtitleData & { parts: DialogSubtitlePart[] };
+
+      // Sort the parts before assigning them
+      const sortedParts = [...assData.parts].sort((a, b) => {
+        // Primary sort: by track number, DESCENDING (e.g., Track 2 before Track 1)
+        if (a.track !== b.track) {
+          return b.track - a.track;
+        }
+        // Secondary sort: by y-coordinate, ASCENDING (higher on screen comes first)
+        return (a.y ?? Infinity) - (b.y ?? Infinity);
+      });
+
+      // Create a new AssSubtitleData object with the sorted parts
+      this.assSubtitleData = {
+        ...assData,
+        parts: sortedParts
+      };
+
+      // Pre-select all parts (from the now sorted list) by default
       this.selectedSubtitleParts.set([...this.assSubtitleData.parts]);
     }
 
@@ -157,7 +179,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
     }
 
     const projectNotes = this.data.project.notes?.[this.data.subtitleData.id];
-    this.initialNotes = cloneDeep(projectNotes); // Store initial state for comparison when saving
+    this.initialNotes = cloneDeep(projectNotes);
     this.manualNote.set(projectNotes?.manualNote || '');
     this.buildNotesView(projectNotes?.lookupNotes);
   }

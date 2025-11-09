@@ -72,7 +72,52 @@
   }
 }
 
+.tracks {
+  display: flex;
+  align-items: center;
+  background-color: #2a2a2a;
+  flex-shrink: 0;
+  border: 1px solid black;
+  border-top: 0;
+
+  p-button ::ng-deep button {
+    padding-top: 0;
+    padding-bottom: 0;
+    height: 2.5rem;
+    border-radius: 0;
+    background-color: var(--app-surface) !important;
+    border: none !important;
+
+    &:hover {
+      background-color: var(--app-surface-hover) !important;
+    }
+
+    .p-button-icon {
+      color: var(--p-blue-500);
+    }
+  }
+
+  p-button {
+    border-right: 1px solid black !important;
+  }
+
+  p-button.active-track ::ng-deep button {
+    color: white !important;
+    background-color: var(--app-surface-dark) !important;
+  }
+
+  p-button:not(.active-track) ::ng-deep button {
+    color: var(--app-text-secondary) !important;
+  }
+}
+
 
 app-timeline-editor {
   flex-shrink: 0;
+}
+
+:host p-button ::ng-deep button {
+  &:focus {
+    outline: none !important;
+  }
 }

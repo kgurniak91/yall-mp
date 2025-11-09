@@ -13,7 +13,7 @@ import {
   viewChild
 } from '@angular/core';
 import {VideoStateService} from '../../../state/video/video-state.service';
-import {VideoClip} from '../../../model/video.types';
+import {PlayerState, VideoClip} from '../../../model/video.types';
 import {ProjectSettingsStateService} from '../../../state/project-settings/project-settings-state.service';
 import ASS from 'assjs';
 import {SubtitlesHighlighterService} from '../services/subtitles-highlighter/subtitles-highlighter.service';
@@ -41,6 +41,10 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   public readonly defaultActionRequested = output<string>();
 
   protected readonly shouldBeHidden = computed(() => {
+    if (this.videoStateService.playerState() === PlayerState.Seeking) {
+      return true;
+    }
+
     if (!this.currentClip()?.hasSubtitle) {
       return true;
     }
@@ -370,7 +374,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       resampling: resamplingMode
     });
 
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       this.fakeVideo?.dispatchEvent(new Event('playing'));
 
       // Give ass.js enough time to finish its own internal async CSS variables updates:
@@ -380,10 +384,16 @@ export class SubtitlesOverlayComponent implements OnDestroy {
           const newBaseScale = parseFloat(getComputedStyle(assBox).getPropertyValue('--ass-scale'));
           if (!isNaN(newBaseScale) && newBaseScale > 0) {
             this.baseAssScale.set(newBaseScale);
+          } else {
+            this.isScaleApplied.set(true);
+            this.subtitleContainer().nativeElement.classList.remove('subtitles-initializing');
           }
+        } else {
+          this.isScaleApplied.set(true);
+          this.subtitleContainer().nativeElement.classList.remove('subtitles-initializing');
         }
       });
-    }, 0);
+    });
   }
 
   private destroyAssRenderer(): void {

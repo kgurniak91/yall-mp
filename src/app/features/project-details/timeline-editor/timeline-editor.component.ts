@@ -126,7 +126,7 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
     const clips = this.clipsStateService.clips();
     const mediaPath = this.videoStateService.mediaPath();
     const container = this.timelineContainer()?.nativeElement;
-    this.clipsStateService.currentClipIndex(); // Refresh effect when current clip changes
+    this.clipsStateService.activeTrackClipIndex(); // Refresh effect when current clip changes
 
     if (!this.wavesurfer && mediaPath && container) {
       this.initializeWaveSurfer(mediaPath, container);
@@ -291,7 +291,8 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
   };
 
   private syncHighlight(): void {
-    const activeClipId = this.clipsStateService.currentClip()?.id || null;
+    const activeClip = this.clipsStateService.currentClip();
+    const activeClipId = activeClip?.id || null;
     const container = this.timelineContainer()?.nativeElement;
     const shadowRoot = container?.querySelector('div')?.shadowRoot;
     if (!shadowRoot) return;

@@ -1,7 +1,11 @@
 import {describe, expect, it} from 'vitest';
 import {compile, Dialogue, parse} from 'ass-compiler';
 import type {AssSubtitleData, SubtitlePart} from '../shared/types/subtitle.type';
-import {dialoguesToAssSubtitleData, mergeKaraokeSubtitles} from '../shared/utils/subtitle-parsing';
+import {
+  assignTracksToSubtitles,
+  dialoguesToAssSubtitleData,
+  mergeKaraokeSubtitles
+} from '../shared/utils/subtitle-parsing';
 import {TEST_CASES, TestCase} from './test-cases';
 
 function buildAssFile(eventLines: string): string {
@@ -26,15 +30,30 @@ ${eventLines.trim()}
   `.trim();
 }
 
-function processAndNormalize(dialogues: Dialogue[], rawAssContent: string): AssSubtitleData[] {
+function processAndNormalize(dialogues: Dialogue[], rawAssContent: string): Omit<AssSubtitleData, 'track'>[] {
   const parsedEvents = parse(rawAssContent).events.dialogue;
   const realOutput = dialoguesToAssSubtitleData(dialogues, parsedEvents, {}, 1080);
-  realOutput.sort((a, b) => a.startTime - b.startTime || a.endTime - b.endTime || a.parts[0].style.localeCompare(b.parts[0].style));
+  const groupedByTimeAndStyle = new Map<string, AssSubtitleData>();
 
-  // Normalize the unpredictable parts (the UUIDs) and remove the 'y' property as it's irrelevant in this context:
-  return realOutput.map((subtitle, index) => {
-    const {parts, ...rest} = subtitle;
+  for (const subtitle of realOutput) {
+    const key = `${subtitle.startTime}:${subtitle.endTime}`;
+    if (groupedByTimeAndStyle.has(key)) {
+      const existing = groupedByTimeAndStyle.get(key)!;
+      existing.parts.push(...subtitle.parts);
+    } else {
+      groupedByTimeAndStyle.set(key, {...subtitle});
+    }
+  }
+
+  const sortedOutput = Array.from(groupedByTimeAndStyle.values())
+    .sort((a, b) => a.startTime - b.startTime || a.endTime - b.endTime || a.parts[0].style.localeCompare(b.parts[0].style));
+
+  // Normalize the unpredictable parts (the UUIDs) and remove properties irrelevant to this test.
+  return sortedOutput.map((subtitle, index) => {
+    const {parts, track, ...rest} = subtitle;
     const partsWithoutY = parts.map(({y, ...partRest}) => partRest);
+    // Sort parts to ensure consistent order for comparison
+    partsWithoutY.sort((a, b) => (a.style + a.text).localeCompare(b.style + b.text));
     return {
       ...rest,
       id: `test-id-${index}`,
@@ -47,7 +66,34 @@ describe('Subtitle Parsing', () => {
   TEST_CASES.forEach((testCase: TestCase) => {
     it(`correctly parses: "${testCase.description}"`, () => {
       const assContent = buildAssFile(testCase.dialogueLines);
-      const expected = testCase.expectedSubtitleData;
+
+      // Manually process the "expected" data to match what `dialoguesToAssSubtitleData` actually outputs.
+      // This involves grouping by time and merging parts, just like the real function does.
+      const expectedGrouped = new Map<string, Omit<AssSubtitleData, 'track'>>();
+      for (const sub of testCase.expectedSubtitleData) {
+        const key = `${sub.startTime}:${sub.endTime}`;
+        if (expectedGrouped.has(key)) {
+          const existing = expectedGrouped.get(key)!;
+          existing.parts.push(...sub.parts);
+        } else {
+          const {track, ...rest} = sub;
+          expectedGrouped.set(key, {...rest});
+        }
+      }
+
+      // Finalize the expected data for comparison: sort and normalize.
+      const expected = Array.from(expectedGrouped.values())
+        .sort((a, b) => a.startTime - b.startTime)
+        .map((subtitle, index) => {
+          const {parts, ...rest} = subtitle;
+          const partsWithoutY = parts.map(({y, ...partRest}) => partRest);
+          partsWithoutY.sort((a, b) => (a.style + a.text).localeCompare(b.style + b.text));
+          return {
+            ...rest,
+            id: `test-id-${index}`,
+            parts: partsWithoutY
+          };
+        });
 
       const compiled = compile(assContent, {});
       const actual = processAndNormalize(compiled.dialogues, assContent);
@@ -296,5 +342,112 @@ describe('mergeKaraokeSubtitles', () => {
     expect(result).toHaveLength(2);
     expect(result[0].parts[0].text).toBe('Line 1');
     expect(result[1].parts[0].text).toBe('Line 2');
+  });
+});
+
+describe('assignTracksToSubtitles', () => {
+  it('should assign a lower track to a subtitle that is lower on screen, even if it starts later', () => {
+    // ARRANGE:
+    const dialogueLines = `
+      Dialogue: 0,0:00:25.58,0:00:29.96,Sign-Default,,0,0,0,,{\\fnDFPMaruGothic-W6-Kami\\fs150\\pos(974,758)}Not Edible
+      Dialogue: 1,0:00:25.58,0:00:29.96,Sign-Default,,0,0,0,,{\\fnDFPMaruGothic-W6-Kami\\fs150\\c&H181818\\pos(974,758)}Not Edible
+      Dialogue: 10,0:00:26.77,0:00:29.34,Default,,0,0,0,,Strike!
+    `;
+    const assContent = buildAssFile(dialogueLines);
+    const compiled = compile(assContent, {});
+    const parsed = parse(assContent);
+    const subtitlesWithoutTracks = dialoguesToAssSubtitleData(compiled.dialogues, parsed.events.dialogue, compiled.styles, 1080);
+
+    // ACT
+    const subtitlesWithTracks = assignTracksToSubtitles(subtitlesWithoutTracks);
+
+    // ASSERT
+    const notEdibleSubtitle = subtitlesWithTracks.find(s => s.type === 'ass' && s.parts.some(p => p.text === 'Not Edible')) as AssSubtitleData | undefined;
+    const strikeSubtitle = subtitlesWithTracks.find(s => s.type === 'ass' && s.parts.some(p => p.text === 'Strike!')) as AssSubtitleData | undefined;
+
+    expect(notEdibleSubtitle).toBeDefined();
+    expect(strikeSubtitle).toBeDefined();
+
+    expect(notEdibleSubtitle!.parts[0].y).toBe(608);
+    expect(strikeSubtitle!.parts[0].y).toBe(933);
+
+    expect(strikeSubtitle!.track).toBe(0);
+    expect(notEdibleSubtitle!.track).toBe(1);
+  });
+
+  it('should place two non-overlapping subtitles on the same track', () => {
+    const subtitles: AssSubtitleData[] = [
+      {type: 'ass', id: 'a', startTime: 10, endTime: 12, parts: [{text: 'A', style: 's', y: 900}], track: -1},
+      {type: 'ass', id: 'b', startTime: 14, endTime: 16, parts: [{text: 'B', style: 's', y: 900}], track: -1},
+    ];
+    const result = assignTracksToSubtitles(subtitles);
+    expect(result.find(s => s.id === 'a')!.track).toBe(0);
+    expect(result.find(s => s.id === 'b')!.track).toBe(0);
+  });
+
+  it('should place simple overlapping subtitles on different tracks based on start time', () => {
+    const subtitles: AssSubtitleData[] = [
+      {type: 'ass', id: 'a', startTime: 10, endTime: 14, parts: [{text: 'A', style: 's'}], track: -1},
+      {type: 'ass', id: 'b', startTime: 12, endTime: 16, parts: [{text: 'B', style: 's'}], track: -1},
+    ];
+    const result = assignTracksToSubtitles(subtitles);
+    expect(result.find(s => s.id === 'a')!.track).toBe(0);
+    expect(result.find(s => s.id === 'b')!.track).toBe(1);
+  });
+
+  it('should reuse a track once it becomes available', () => {
+    const subtitles: AssSubtitleData[] = [
+      {type: 'ass', id: 'a', startTime: 10, endTime: 14, parts: [{text: 'A', style: 's', y: 900}], track: -1},
+      {type: 'ass', id: 'b', startTime: 12, endTime: 16, parts: [{text: 'B', style: 's', y: 800}], track: -1},
+      {type: 'ass', id: 'c', startTime: 15, endTime: 18, parts: [{text: 'C', style: 's', y: 900}], track: -1},
+    ];
+    const result = assignTracksToSubtitles(subtitles);
+    expect(result.find(s => s.id === 'a')!.track).toBe(0);
+    expect(result.find(s => s.id === 'b')!.track).toBe(1);
+    expect(result.find(s => s.id === 'c')!.track).toBe(0);
+  });
+
+  it('should prioritize the lower subtitle when two start simultaneously', () => {
+    const subtitles: AssSubtitleData[] = [
+      {type: 'ass', id: 'higher', startTime: 10, endTime: 15, parts: [{text: 'Higher', style: 's', y: 800}], track: -1},
+      {type: 'ass', id: 'lower', startTime: 10, endTime: 15, parts: [{text: 'Lower', style: 's', y: 900}], track: -1},
+    ];
+    const result = assignTracksToSubtitles(subtitles);
+    expect(result.find(s => s.id === 'lower')!.track).toBe(0);
+    expect(result.find(s => s.id === 'higher')!.track).toBe(1);
+  });
+
+  it('should place perfectly adjacent subtitles on the same track', () => {
+    const subtitles: AssSubtitleData[] = [
+      {type: 'ass', id: 'a', startTime: 10, endTime: 12, parts: [{text: 'A', style: 's', y: 900}], track: -1},
+      {type: 'ass', id: 'b', startTime: 12, endTime: 14, parts: [{text: 'B', style: 's', y: 900}], track: -1},
+    ];
+    const result = assignTracksToSubtitles(subtitles);
+    expect(result.find(s => s.id === 'a')!.track).toBe(0);
+    expect(result.find(s => s.id === 'b')!.track).toBe(0);
+  });
+
+  it('should assign tracks correctly for a fully contained subtitle based on y-position', () => {
+    const subtitles: AssSubtitleData[] = [
+      {
+        type: 'ass',
+        id: 'longer_higher',
+        startTime: 10,
+        endTime: 20,
+        parts: [{text: 'A', style: 's', y: 800}],
+        track: -1
+      },
+      {
+        type: 'ass',
+        id: 'shorter_lower',
+        startTime: 12,
+        endTime: 15,
+        parts: [{text: 'B', style: 's', y: 900}],
+        track: -1
+      },
+    ];
+    const result = assignTracksToSubtitles(subtitles);
+    expect(result.find(s => s.id === 'shorter_lower')!.track).toBe(0);
+    expect(result.find(s => s.id === 'longer_higher')!.track).toBe(1);
   });
 });

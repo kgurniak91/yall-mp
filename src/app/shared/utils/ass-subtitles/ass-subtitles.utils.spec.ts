@@ -1,4 +1,4 @@
-import {AssSubtitlesUtils} from './ass-subtitles.utils';
+import {AssSubtitlesUtils} from "../../../../../shared/utils/ass-subtitles.utils";
 
 const ASS_SUBTITLES = `
 [Script Info]

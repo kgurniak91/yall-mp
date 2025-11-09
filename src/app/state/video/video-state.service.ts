@@ -1,5 +1,5 @@
 import {DestroyRef, inject, Injectable, Injector, OnDestroy, Signal, signal} from '@angular/core';
-import {SeekType} from '../../model/video.types';
+import {PlayerState, SeekType} from '../../model/video.types';
 import {AppStateService} from '../app/app-state.service';
 import {auditTime, filter} from 'rxjs';
 import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
@@ -24,6 +24,7 @@ export class VideoStateService implements OnDestroy {
   private readonly _toggleSubtitlesRequest = signal<number | null>(null);
   private readonly _zoomInRequest = signal<number | null>(null);
   private readonly _zoomOutRequest = signal<number | null>(null);
+  private readonly _playerState = signal<PlayerState>(PlayerState.Idle);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly appStateService = inject(AppStateService);
@@ -50,6 +51,7 @@ export class VideoStateService implements OnDestroy {
   public readonly toggleSubtitlesRequest = this._toggleSubtitlesRequest.asReadonly();
   public readonly zoomInRequest = this._zoomInRequest.asReadonly();
   public readonly zoomOutRequest = this._zoomOutRequest.asReadonly();
+  public readonly playerState = this._playerState.asReadonly();
 
   constructor() {
     this.cleanupMpvListener = window.electronAPI.onMpvEvent((status) => {
@@ -62,6 +64,7 @@ export class VideoStateService implements OnDestroy {
       this._currentTime.set(update.currentTime);
       this._isPaused.set(update.isPaused);
       this._subtitlesVisible.set(update.subtitlesVisible);
+      this._playerState.set(update.playerState);
     });
   }
 

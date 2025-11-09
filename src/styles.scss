@@ -143,6 +143,15 @@ p-contextmenu {
   }
 }
 
+p-contextmenu-sub {
+  .context-menu-subtitle-text .p-contextmenu-item-label {
+    font-family: var(--app-font-subtitles), sans-serif !important;
+    color: var(--p-contextmenu-color) !important;
+    word-break: break-word;
+    max-width: 25rem !important;
+  }
+}
+
 .context-menu-selected-text {
   font-family: var(--app-font-subtitles), sans-serif !important;
   width: fit-content !important;

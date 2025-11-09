@@ -14,6 +14,7 @@ interface BaseSubtitleData {
   id: string;
   startTime: number;
   endTime: number;
+  track: number;
 }
 
 export interface SrtSubtitleData extends BaseSubtitleData {
@@ -24,6 +25,14 @@ export interface SrtSubtitleData extends BaseSubtitleData {
 export interface AssSubtitleData extends BaseSubtitleData {
   type: 'ass';
   parts: SubtitlePart[];
+  sourceDialogues?: AssSubtitleData[];
 }
 
 export type SubtitleData = SrtSubtitleData | AssSubtitleData;
+
+/**
+ * Type used by edit-subtitles-dialog and export-to-anki-dialog to asssign track number for each part of merged subtitled clip
+ */
+export interface DialogSubtitlePart extends SubtitlePart {
+  track: number;
+}

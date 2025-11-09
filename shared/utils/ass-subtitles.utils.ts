@@ -1,4 +1,4 @@
-import {SubtitleFragment} from '../../../../../shared/types/subtitle.type';
+import {SubtitleFragment} from '../types/subtitle.type';
 
 interface ParsedAssEvents {
   header: string; // Everything before and including "[Events]"
@@ -37,6 +37,49 @@ export class AssSubtitlesUtils {
     });
 
     return {header, formatLine, dialogueLines, formatSpec};
+  }
+
+  /**
+   * Parses a raw ASS dialogue text string (e.g., "{\pos(10,10)}Hello \N{\i1}World{\i0}")
+   * into an array of fragments and a clean text representation.
+   */
+  static parseDialogueTextToFragments(text: string): { cleanText: string; fragments: SubtitleFragment[] } {
+    const fragments: SubtitleFragment[] = [];
+    const regex = /({[^}]+})|([^{}]+)/g; // Capture either a tag block or a sequence of non-tag characters
+    let match;
+
+    while ((match = regex.exec(text)) !== null) {
+      const [, tag, plainText] = match;
+
+      if (tag) {
+        fragments.push({text: tag, isTag: true});
+      } else if (plainText) {
+        const fragmentText = plainText.replace(/\\N/g, '\n');
+        fragments.push({text: fragmentText, isTag: false});
+      }
+    }
+
+    const mergedFragments: SubtitleFragment[] = [];
+    for (const fragment of fragments) {
+      const last = mergedFragments[mergedFragments.length - 1];
+      if (last && !last.isTag && !fragment.isTag) {
+        // If the last fragment and the current one are both text, merge them.
+        last.text += fragment.text;
+      } else {
+        mergedFragments.push(fragment);
+      }
+    }
+
+    const cleanText = mergedFragments
+      .filter(f => !f.isTag)
+      .map(f => f.text)
+      .join('')
+      .trim();
+
+    return {
+      cleanText,
+      fragments: mergedFragments
+    };
   }
 
   /**
@@ -109,21 +152,5 @@ export class AssSubtitlesUtils {
       return '';
     }
     return fragments.map(f => f.text.replace(/\n/g, '\\N')).join('');
-  }
-
-  /**
-   * Strips a single leading ASS tag block `{\...}` from a string.
-   */
-  static stripLeadingTags(text: string): string {
-    const tagRegex = /^{[^}]*}/;
-    const match = text.match(tagRegex);
-
-    // If a leading tag block is found, return the rest of the string
-    if (match) {
-      return text.substring(match[0].length);
-    }
-
-    // Otherwise, return the original string
-    return text;
   }
 }

@@ -1,49 +1,7 @@
 import {CompiledASSStyle, Dialogue, ParsedASSEvent, ParsedASSEvents} from 'ass-compiler';
-import type {AssSubtitleData, SubtitleData, SubtitleFragment} from '../types/subtitle.type';
+import type {AssSubtitleData, SubtitleData} from '../types/subtitle.type';
 import {v4 as uuidv4} from 'uuid';
-
-/**
- * Parses a raw ASS dialogue text string (e.g., "{\pos(10,10)}Hello \N{\i1}World{\i0}")
- * into an array of fragments and a clean text representation.
- */
-function parseDialogueTextToFragments(text: string): { cleanText: string; fragments: SubtitleFragment[] } {
-  const fragments: SubtitleFragment[] = [];
-  const regex = /({[^}]+})|([^{}]+)/g; // Capture either a tag block or a sequence of non-tag characters
-  let match;
-
-  while ((match = regex.exec(text)) !== null) {
-    const [, tag, plainText] = match;
-
-    if (tag) {
-      fragments.push({text: tag, isTag: true});
-    } else if (plainText) {
-      const fragmentText = plainText.replace(/\\N/g, '\n');
-      fragments.push({text: fragmentText, isTag: false});
-    }
-  }
-
-  const mergedFragments: SubtitleFragment[] = [];
-  for (const fragment of fragments) {
-    const last = mergedFragments[mergedFragments.length - 1];
-    if (last && !last.isTag && !fragment.isTag) {
-      // If the last fragment and the current one are both text, merge them.
-      last.text += fragment.text;
-    } else {
-      mergedFragments.push(fragment);
-    }
-  }
-
-  const cleanText = mergedFragments
-    .filter(f => !f.isTag)
-    .map(f => f.text)
-    .join('')
-    .trim();
-
-  return {
-    cleanText,
-    fragments: mergedFragments
-  };
-}
+import {AssSubtitlesUtils} from './ass-subtitles.utils';
 
 export function dialoguesToAssSubtitleData(
   compiledDialogues: Dialogue[],
@@ -51,62 +9,83 @@ export function dialoguesToAssSubtitleData(
   styles: { [styleName: string]: CompiledASSStyle },
   playResY: number
 ): AssSubtitleData[] {
+  // Group all dialogues by their exact start and end times.
+  // This is the key to bundling visual effect layers together.
+  const dialogueGroups = new Map<string, Dialogue[]>();
+
+  for (const compiledDialogue of compiledDialogues) {
+    const key = `${compiledDialogue.start}:${compiledDialogue.end}`;
+    if (!dialogueGroups.has(key)) {
+      dialogueGroups.set(key, []);
+    }
+    dialogueGroups.get(key)!.push(compiledDialogue);
+  }
+
   const subtitles: AssSubtitleData[] = [];
   const availableParsedDialogues = new Set(parsedDialogues.filter(p => p.Start !== p.End));
 
-  for (const compiledDialogue of compiledDialogues) {
-    const isDrawing = compiledDialogue.slices.some(slice =>
-      slice.fragments.some(fragment => fragment.drawing)
-    );
+  // Iterate over the groups, creating one subtitle object per group.
+  for (const group of dialogueGroups.values()) {
+    // All dialogues in a group have the same timing.
+    const {start, end} = group[0];
 
-    if (isDrawing) {
-      continue;
-    }
+    const parts = group.flatMap(compiledDialogue => {
+      const isDrawing = compiledDialogue.slices.some(slice =>
+        slice.fragments.some(fragment => fragment.drawing)
+      );
+      if (isDrawing) return [];
 
-    // Reconstruct the clean text from the compiled dialogue to create a reliable matching key
-    const compiledCleanText = compiledDialogue.slices
-      .flatMap(slice => slice.fragments.map(f => f.text))
-      .join('')
-      .replace(/\\N/g, '\n')
-      .trim();
+      // Reconstruct the clean text from the compiled dialogue to create a reliable matching key
+      const compiledCleanText = compiledDialogue.slices
+        .flatMap(slice => slice.fragments.map(f => f.text))
+        .join('')
+        .replace(/\\N/g, '\n')
+        .trim();
 
-    let foundParsedDialogue: ParsedASSEvent | undefined;
-    for (const p of availableParsedDialogues) {
-      // Generate the clean text from the parsed dialogue's raw text
-      const {cleanText: parsedCleanText} = parseDialogueTextToFragments(p.Text.raw);
+      let foundParsedDialogue: ParsedASSEvent | undefined;
+      for (const p of availableParsedDialogues) {
+        // Generate the clean text from the parsed dialogue's raw text
+        const {cleanText: parsedCleanText} = AssSubtitlesUtils.parseDialogueTextToFragments(p.Text.raw);
 
-      // Match on timing AND the actual text content
-      if (p.Start === compiledDialogue.start && p.End === compiledDialogue.end && parsedCleanText === compiledCleanText) {
-        foundParsedDialogue = p;
-        break;
+        // Match on timing AND the actual text content
+        if (p.Start === start && p.End === end && parsedCleanText === compiledCleanText) {
+          foundParsedDialogue = p;
+          break;
+        }
       }
-    }
 
-    if (!foundParsedDialogue) {
-      if (compiledDialogue.start !== compiledDialogue.end) {
-        console.error('ASS parsing alignment error. Could not find a matching parsed event for compiled dialogue:', compiledDialogue);
+      if (!foundParsedDialogue) {
+        if (start !== end) {
+          console.error('ASS parsing alignment error. Could not find a matching parsed event for compiled dialogue:', compiledDialogue);
+        }
+        return [];
       }
-      continue;
-    }
 
-    availableParsedDialogues.delete(foundParsedDialogue);
+      availableParsedDialogues.delete(foundParsedDialogue);
 
-    const rawText = foundParsedDialogue.Text.raw;
-    const yPos = calculateYPosition(compiledDialogue, styles, playResY);
-    const {cleanText, fragments} = parseDialogueTextToFragments(rawText);
+      const rawText = foundParsedDialogue.Text.raw;
+      const yPos = calculateYPosition(compiledDialogue, styles, playResY);
+      const {cleanText, fragments} = AssSubtitlesUtils.parseDialogueTextToFragments(rawText);
 
-    if (cleanText.trim() || fragments.some(f => f.isTag)) {
-      subtitles.push({
-        type: 'ass',
-        id: uuidv4(),
-        startTime: compiledDialogue.start,
-        endTime: compiledDialogue.end,
-        parts: [{
+      if (cleanText.trim() || fragments.some(f => f.isTag)) {
+        return {
           text: cleanText,
           style: compiledDialogue.style,
           fragments,
           y: yPos
-        }]
+        };
+      }
+      return [];
+    });
+
+    if (parts.length > 0) {
+      subtitles.push({
+        type: 'ass',
+        id: uuidv4(),
+        startTime: start,
+        endTime: end,
+        track: -1, // Placeholder: Will be overwritten by track assignment logic.
+        parts: parts
       });
     }
   }
@@ -161,10 +140,18 @@ export function mergeIdenticalConsecutiveSubtitles(subtitles: SubtitleData[]): S
   for (let i = 1; i < subtitles.length; i++) {
     const next = subtitles[i];
 
-    // Check if the next subtitle is consecutive and has the exact same content.
-    if (Math.abs(next.startTime - current.endTime) < 0.01 && arePartsEqual(current, next)) {
-      // If they are identical, just extend the end time of the current subtitle.
+    if (Math.abs(next.startTime - current.endTime) < 0.01 && arePartsEqual(current, next) && current.type === 'ass' && next.type === 'ass') {
+      // It's a consecutive, identical ASS subtitle. Merge it.
       current.endTime = next.endTime;
+
+      // Preserve the original, un-merged dialogues for accurate file editing later.
+      const originalCurrent = {...current, sourceDialogues: undefined}; // Avoid deep nesting
+      const originalNext = {...next, sourceDialogues: undefined};
+      current.sourceDialogues = [
+        ...(current.sourceDialogues || [originalCurrent]),
+        originalNext
+      ];
+
     } else {
       // If they are different, push the completed current subtitle and start a new one.
       merged.push(current);
@@ -323,7 +310,7 @@ export function mergeKaraokeSubtitles(
       : groupStartTime;
 
     const allParts = group.flatMap(masterComment => {
-      const {cleanText, fragments} = parseDialogueTextToFragments(masterComment.Text.raw);
+      const {cleanText, fragments} = AssSubtitlesUtils.parseDialogueTextToFragments(masterComment.Text.raw);
 
       // Find a real subtitle part to inherit Y-position from, prioritizing one with a defined 'y'
       const correspondingConstituent = constituentSubtitles
@@ -346,6 +333,8 @@ export function mergeKaraokeSubtitles(
         startTime: earliestStartTime,
         endTime: groupEndTime,
         parts: allParts,
+        track: -1, // Placeholder: Will be overwritten by track assignment logic in electron-main.ts
+        sourceDialogues: constituentSubtitles.map(sub => ({...sub, sourceDialogues: undefined}))
       });
     }
   }
@@ -356,4 +345,71 @@ export function mergeKaraokeSubtitles(
   finalSubtitles.sort((a, b) => a.startTime - b.startTime);
 
   return finalSubtitles;
+}
+
+/**
+ * Calculates the average vertical position of a subtitle's parts.
+ */
+export function getAverageY(subtitle: SubtitleData): number | null {
+  if (subtitle.type === 'ass' && subtitle.parts.length > 0) {
+    const partsWithY = subtitle.parts.filter(p => typeof p.y === 'number');
+    if (partsWithY.length > 0) {
+      return partsWithY.reduce((sum, part) => sum + part.y!, 0) / partsWithY.length;
+    }
+  }
+  return null;
+}
+
+/**
+ * Assigns a track number to each subtitle based on temporal overlap and vertical position.
+ * Subtitles that are lower on the screen are given priority for lower track numbers.
+ */
+export function assignTracksToSubtitles(subtitles: SubtitleData[]): SubtitleData[] {
+  if (subtitles.length === 0) {
+    return [];
+  }
+
+  const sortedSubtitles = [...subtitles].sort((a, b) => {
+    // Check if the subtitles overlap in time.
+    const doTheyOverlap = (a.startTime < b.endTime) && (a.endTime > b.startTime);
+
+    if (doTheyOverlap) {
+      // If they overlap, prioritize by Y-position (lower on screen comes first).
+      const yA = getAverageY(a) ?? Infinity;
+      const yB = getAverageY(b) ?? Infinity;
+      if (Math.abs(yA - yB) > 1) { // Use a small tolerance for Y comparison
+        return yB - yA; // Higher 'y' value means lower on screen, so it gets sorted first.
+      }
+      // If Y is the same or non-existent, fall back to start time.
+      return a.startTime - b.startTime;
+    } else {
+      // If they do not overlap, simply sort chronologically.
+      return a.startTime - b.startTime;
+    }
+  });
+
+  const trackEndTimes: number[] = [];
+
+  const assignedSubtitles = sortedSubtitles.map(subtitle => {
+    const epsilon = 0.001; // Small tolerance for float comparisons
+    const availableTrackIndex = trackEndTimes.findIndex(endTime => subtitle.startTime >= endTime - epsilon);
+
+    let assignedTrack: number;
+
+    if (availableTrackIndex !== -1) {
+      assignedTrack = availableTrackIndex;
+      trackEndTimes[availableTrackIndex] = subtitle.endTime;
+    } else {
+      assignedTrack = trackEndTimes.length;
+      trackEndTimes.push(subtitle.endTime);
+    }
+
+    return {
+      ...subtitle,
+      track: assignedTrack,
+    };
+  });
+
+  // Re-sort the final array by start time for UI consistency, as the initial sort was for priority.
+  return assignedSubtitles.sort((a, b) => a.startTime - b.startTime || a.track - b.track);
 }

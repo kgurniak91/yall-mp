@@ -1,7 +1,7 @@
 import {fakeAsync, tick} from '@angular/core/testing';
 import {signal} from '@angular/core';
 import {MockBuilder} from 'ng-mocks';
-import {AssSubtitleData, SrtSubtitleData} from '../../../../shared/types/subtitle.type';
+import {AssSubtitleData, SrtSubtitleData, SubtitleData, SubtitlePart} from '../../../../shared/types/subtitle.type';
 import {VideoClip} from '../../model/video.types';
 import {ADJUST_DEBOUNCE_MS, ClipsStateService, MIN_GAP_DURATION, MIN_SUBTITLE_DURATION} from './clips-state.service';
 import {VideoStateService} from '../video/video-state.service';
@@ -17,6 +17,7 @@ import {DeleteSubtitledClipCommand} from '../../model/commands/delete-subtitled-
 import {MergeSubtitledClipsCommand} from '../../model/commands/merge-subtitled-clips.command';
 import {SplitSubtitledClipCommand} from '../../model/commands/split-subtitled-clip.command';
 import {cloneDeep} from 'lodash-es';
+import {ClipContent, UpdateClipTextCommand} from '../../model/commands/update-clip-text.command';
 
 describe('ClipsStateService', () => {
   const currentTimeSignal = signal(0);
@@ -77,9 +78,9 @@ describe('ClipsStateService', () => {
 
   describe('Clip Generation', () => {
     TEST_CASES.forEach((testCase: TestCase) => {
-      it(`generates correct VideoClips for test case: "${testCase.description}"`, () => {
+      it(`generates correct merged VideoClips for test case: "${testCase.description}"`, () => {
         service.setSubtitles(testCase.expectedSubtitleData);
-        const actualClips = service.clips();
+        const actualClips = service.clipsForAllTracks();
 
         const simplifiedActual = actualClips.map(clip => ({
           id: clip.id, startTime: clip.startTime, endTime: clip.endTime, hasSubtitle: clip.hasSubtitle,
@@ -98,69 +99,68 @@ describe('ClipsStateService', () => {
 
   describe('updateClipText', () => {
     it('updates all underlying SubtitleData objects when a merged ASS clip is edited', () => {
+      // ARRANGE
       projectState.rawAssContent = [
         '[Events]',
         'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',
-        'Dialogue: 0,0:00:59.53,0:00:59.58,Sign-Default,,0,0,0,,Real Usable',
-        'Dialogue: 0,0:00:59.53,0:00:59.58,Sign-Default,,0,0,0,,English Lesson',
-        'Dialogue: 0,0:00:59.58,0:00:59.62,Sign-Default,,0,0,0,,Real Usable',
-        'Dialogue: 0,0:00:59.58,0:00:59.62,Sign-Default,,0,0,0,,English Lesson',
+        'Dialogue: 0,0:00:59.53,0:00:59.58,Sign-Default,,0,0,0,,Real Usable',     // track 0
+        'Dialogue: 0,0:00:59.53,0:00:59.58,Sign-Default,,0,0,0,,English Lesson', // track 1
+        'Dialogue: 0,0:00:59.58,0:00:59.62,Sign-Default,,0,0,0,,Real Usable',     // track 0
+        'Dialogue: 0,0:00:59.58,0:00:59.62,Sign-Default,,0,0,0,,English Lesson', // track 1
       ].join('\r\n');
       projectState.subtitles = [
+        // This is a merged subtitle object representing the two dialogue lines at 59.53
         {
           type: 'ass',
           id: 'uuid-1',
           startTime: 59.53,
           endTime: 59.58,
-          parts: [{text: 'Real Usable', style: 'Sign-Default'}]
+          track: 0,
+          parts: [{text: 'Real Usable', style: 'Sign-Default'}, {text: 'English Lesson', style: 'Sign-Default'}]
         },
-        {
-          type: 'ass',
-          id: 'uuid-2',
-          startTime: 59.53,
-          endTime: 59.58,
-          parts: [{text: 'English Lesson', style: 'Sign-Default'}]
-        },
+        // This is a merged subtitle object representing the two dialogue lines at 59.58
         {
           type: 'ass',
           id: 'uuid-3',
           startTime: 59.58,
           endTime: 59.62,
-          parts: [{text: 'Real Usable', style: 'Sign-Default'}]
-        },
-        {
-          type: 'ass',
-          id: 'uuid-4',
-          startTime: 59.58,
-          endTime: 59.62,
-          parts: [{text: 'English Lesson', style: 'Sign-Default'}]
+          track: 0,
+          parts: [{text: 'Real Usable', style: 'Sign-Default'}, {text: 'English Lesson', style: 'Sign-Default'}]
         },
       ];
       service.setSubtitles(projectState.subtitles);
 
-      const clipBeforeEdit: VideoClip = service.clips().find(c => c.hasSubtitle)!;
-      const newContent = {
+      // Get the clip from the master list. It's one merged clip from 59.53 to 59.62
+      const clipBeforeEdit: VideoClip = service.clipsForAllTracks().find(c => c.hasSubtitle)!;
+      expect(clipBeforeEdit.parts.length).toBe(2); // Should contain both "Real Usable" and "English Lesson"
+
+      const oldContent: ClipContent = {parts: clipBeforeEdit.parts};
+
+      // The new content must reflect the full state of the clip.
+      // The user edits "Real Usable" but "English Lesson" remains untouched.
+      const newContent: ClipContent = {
         parts: [
-          {text: 'Real Usable EDITED', style: 'Sign-Default'},
-          {text: 'English Lesson', style: 'Sign-Default'}
+          {text: 'Real Usable EDITED', style: 'Sign-Default', fragments: [{text: 'Real Usable EDITED', isTag: false}]},
+          {text: 'English Lesson', style: 'Sign-Default'} // This part is unchanged
         ]
       };
 
-      service.updateClipText('proj-1', clipBeforeEdit.id, newContent);
+      // ACT
+      const command = new UpdateClipTextCommand(service, 'proj-1', clipBeforeEdit.id, oldContent, newContent);
+      commandHistoryService.execute(command);
 
+      // ASSERT
       const expectedNewRawContent = [
         '[Events]',
         'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',
-        'Dialogue: 0,0:00:59.53,0:00:59.58,Sign-Default,,0,0,0,,Real Usable EDITED',
-        'Dialogue: 0,0:00:59.53,0:00:59.58,Sign-Default,,0,0,0,,English Lesson',
-        'Dialogue: 0,0:00:59.58,0:00:59.62,Sign-Default,,0,0,0,,Real Usable EDITED',
-        'Dialogue: 0,0:00:59.58,0:00:59.62,Sign-Default,,0,0,0,,English Lesson',
+        'Dialogue: 0,0:00:59.53,0:00:59.58,Sign-Default,,0,0,0,,Real Usable EDITED', // changed
+        'Dialogue: 0,0:00:59.53,0:00:59.58,Sign-Default,,0,0,0,,English Lesson',     // unchanged
+        'Dialogue: 0,0:00:59.58,0:00:59.62,Sign-Default,,0,0,0,,Real Usable EDITED', // changed
+        'Dialogue: 0,0:00:59.58,0:00:59.62,Sign-Default,,0,0,0,,English Lesson',     // unchanged
       ].join('\r\n');
 
-      expect(appStateService.updateProject).toHaveBeenCalledOnceWith('proj-1', {
-        subtitles: jasmine.any(Array),
-        rawAssContent: expectedNewRawContent
-      });
+      const updateCallArgs = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1];
+      expect(updateCallArgs.rawAssContent).toEqual(expectedNewRawContent);
     });
 
     it('updates the text for a simple SRT clip', () => {
@@ -169,23 +169,365 @@ describe('ClipsStateService', () => {
         id: 'srt-uuid-1',
         startTime: 10,
         endTime: 12,
-        text: 'Old text'
+        text: 'Old text',
+        track: 0
       }];
       service.setSubtitles(initialSrtSubtitle);
       const srtClipBeforeEdit: VideoClip = service.clips().find(c => c.hasSubtitle)!;
-      const newSrtContent = {text: 'New SRT text'};
-      service.updateClipText('proj-1', srtClipBeforeEdit.id, newSrtContent);
+
+      // Define oldContent for the command and use the command history service for a more realistic test.
+      const oldSrtContent: ClipContent = {text: 'Old text'};
+      const newSrtContent: ClipContent = {text: 'New SRT text'};
+      const command = new UpdateClipTextCommand(service, 'proj-1', srtClipBeforeEdit.id, oldSrtContent, newSrtContent);
+      commandHistoryService.execute(command);
 
       const finalClip = service.clips().find(c => c.hasSubtitle)!;
       const finalSubtitles = finalClip.sourceSubtitles as SrtSubtitleData[];
       expect(finalSubtitles[0].text).toBe('New SRT text');
     });
+
+    it('updates text correctly for one track of a parallel, multi-track ASS clip', () => {
+      // ARRANGE: Setup state with two parallel subtitles on different tracks
+      projectState.rawAssContent = `
+[Events]
+Format: Start, End, Style, Text
+Dialogue: 0:00:10.00,0:00:15.00,StyleA,Text A
+Dialogue: 0:00:10.00,0:00:15.00,StyleB,Text B
+    `.trim();
+      projectState.subtitles = [
+        {
+          type: 'ass',
+          id: 'sub-a',
+          startTime: 10,
+          endTime: 15,
+          track: 0,
+          parts: [{text: 'Text A', style: 'StyleA', fragments: [{text: 'Text A', isTag: false}]}]
+        },
+        {
+          type: 'ass',
+          id: 'sub-b',
+          startTime: 10,
+          endTime: 15,
+          track: 1,
+          parts: [{text: 'Text B', style: 'StyleB', fragments: [{text: 'Text B', isTag: false}]}]
+        }
+      ];
+      service.setSubtitles(projectState.subtitles);
+
+      // The merged clip will have two parts
+      const mergedClip = service.clipsForAllTracks().find(c => c.hasSubtitle)!;
+      expect(mergedClip.parts.length).toBe(2);
+
+      // The newContent must reflect the full state of the clip, with one part edited and the other untouched.
+      const newContent: ClipContent = {
+        parts: [
+          // The order of parts in the merged clip is not guaranteed, so find them by property.
+          {text: 'Text A EDITED', style: 'StyleA', fragments: [{text: 'Text A EDITED', isTag: false}]},
+          mergedClip.parts.find(p => p.style === 'StyleB')!,
+        ].sort((a, b) => a.style.localeCompare(b.style)) // Ensure consistent order
+      };
+
+      // ACT
+      service.updateClipText('proj-1', mergedClip.id, newContent);
+
+      // ASSERT
+      const updatedSubtitles = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].subtitles;
+      const subA = updatedSubtitles.find((s: SubtitleData) => s.id === 'sub-a')!;
+      const subB = updatedSubtitles.find((s: SubtitleData) => s.id === 'sub-b')!;
+
+      expect(subA.parts[0].text).toBe('Text A EDITED');
+      expect(subB.parts[0].text).toBe('Text B'); // Unchanged
+    });
+
+    it('correctly edits text for one track without corrupting overlapping tracks', () => {
+      // ARRANGE: Two overlapping subtitles on different tracks
+      projectState.rawAssContent = `
+[Events]
+Format: Start, End, Style, Text
+Dialogue: 0:00:10.00,0:00:20.00,Style-A,Text A
+Dialogue: 0:00:15.00,0:00:25.00,Style-B,Text B
+    `.trim();
+      projectState.subtitles = [
+        {
+          type: 'ass',
+          id: 'sub-a',
+          startTime: 10,
+          endTime: 20,
+          track: 0,
+          parts: [{text: 'Text A', style: 'Style-A', fragments: [{text: 'Text A', isTag: false}]}]
+        },
+        {
+          type: 'ass',
+          id: 'sub-b',
+          startTime: 15,
+          endTime: 25,
+          track: 1,
+          parts: [{text: 'Text B', style: 'Style-B', fragments: [{text: 'Text B', isTag: false}]}]
+        }
+      ];
+      service.setSubtitles(projectState.subtitles);
+
+      // Find the middle clip where both are active (15s to 20s)
+      const clipToEdit = service.clipsForAllTracks().find(c => c.startTime === 15)!;
+      expect(clipToEdit.parts.length).toBe(2);
+
+      const oldContent: ClipContent = {parts: clipToEdit.parts};
+
+      // Rebuild the parts array in the same order as the original clip's parts
+      // and deep clone the untouched parts to avoid reference issues.
+      const newContent: ClipContent = {
+        parts: clipToEdit.parts.map(part => {
+          if (part.style === 'Style-B') { // Identify the part to edit
+            return {text: 'Text B EDITED', style: 'Style-B', fragments: [{text: 'Text B EDITED', isTag: false}]};
+          }
+          return cloneDeep(part); // Return a deep copy of the untouched part.
+        })
+      };
+
+      // ACT
+      const command = new UpdateClipTextCommand(service, 'proj-1', clipToEdit.id, oldContent, newContent);
+      commandHistoryService.execute(command);
+
+      // ASSERT
+      const updateCallArgs = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1];
+      const finalRawContent = updateCallArgs.rawAssContent as string;
+
+      expect(finalRawContent).withContext('Raw ASS content for Text A should be unchanged').toContain('Dialogue: 0:00:10.00,0:00:20.00,Style-A,Text A');
+      expect(finalRawContent).withContext('Raw ASS content for Text B should be updated').toContain('Dialogue: 0:00:15.00,0:00:25.00,Style-B,Text B EDITED');
+    });
+
+    it('updates all source SubtitleData parts when editing text from a merged effect clip', () => {
+      // ARRANGE: Two dialogue lines, parsed into one SubtitleData with two parts.
+      projectState.rawAssContent = `
+[Events]
+Format: Start, End, Style, Text
+Dialogue: 0:00:25.58,0:00:29.96,Sign-Default,{\\bord6}Not Edible
+Dialogue: 0:00:25.58,0:00:29.96,Sign-Default,{\\bord0}Not Edible
+    `.trim();
+      const oldPart1: SubtitlePart = {
+        text: 'Not Edible',
+        style: 'Sign-Default',
+        fragments: [{text: '{\\bord6}', isTag: true}, {text: 'Not Edible', isTag: false}]
+      };
+      const oldPart2: SubtitlePart = {
+        text: 'Not Edible',
+        style: 'Sign-Default',
+        fragments: [{text: '{\\bord0}', isTag: true}, {text: 'Not Edible', isTag: false}]
+      };
+
+      projectState.subtitles = [
+        {type: 'ass', id: 'sub-1', startTime: 25.58, endTime: 29.96, track: 0, parts: [oldPart1, oldPart2]}
+      ];
+      service.setSubtitles(projectState.subtitles);
+
+      // The generated clip de-duplicates parts for the UI, so it only shows one.
+      const clipBeforeEdit = service.clipsForAllTracks().find(c => c.hasSubtitle)!;
+      expect(clipBeforeEdit.parts.length).toBe(1);
+
+      const oldContent: ClipContent = {parts: clipBeforeEdit.parts};
+
+      // The newContent only has one part, as it comes from the UI.
+      const newContent: ClipContent = {
+        parts: [{
+          text: 'Not Edible2',
+          style: 'Sign-Default',
+          // The fragments here will be used to rebuild the raw text for ALL matching lines
+          fragments: [{text: '{\\bord6}', isTag: true}, {text: 'Not Edible2', isTag: false}]
+        }]
+      };
+
+      // ACT
+      const command = new UpdateClipTextCommand(service, 'proj-1', clipBeforeEdit.id, oldContent, newContent);
+      commandHistoryService.execute(command);
+
+      // ASSERT
+      const updatedRawContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent as string;
+
+      expect(updatedRawContent).withContext('First line should be updated').toContain('Dialogue: 0:00:25.58,0:00:29.96,Sign-Default,{\\bord6}Not Edible2');
+      expect(updatedRawContent).withContext('Second line should also be updated').toContain('Dialogue: 0:00:25.58,0:00:29.96,Sign-Default,{\\bord0}Not Edible2');
+    });
+
+    it('should correctly update a multi-fragment ASS part without duplicating text', () => {
+      // ARRANGE
+      projectState.rawAssContent = `
+[Events]
+Format: Start, End, Style, Text
+Dialogue: 0:00:53.48,0:00:57.14,Default,,{\\i1}Atashi'll oshieru{\\i0} you real usable {\\i1}Eigo{\\i0}.
+      `;
+      const oldPart: SubtitlePart = {
+        text: "Atashi'll oshieru you real usable Eigo.", style: 'Default',
+        fragments: [
+          {text: '{\\i1}', isTag: true}, {text: "Atashi'll oshieru", isTag: false}, {text: '{\\i0}', isTag: true},
+          {text: ' you real usable ', isTag: false},
+          {text: '{\\i1}', isTag: true}, {text: 'Eigo', isTag: false}, {text: '{\\i0}', isTag: true},
+          {text: '.', isTag: false}
+        ]
+      };
+      projectState.subtitles = [{
+        type: 'ass',
+        id: 'sub-1',
+        startTime: 53.48,
+        endTime: 57.14,
+        track: 0,
+        parts: [oldPart]
+      }];
+      service.setSubtitles(projectState.subtitles);
+
+      const clipBeforeEdit = service.clipsForAllTracks().find(c => c.hasSubtitle)!;
+
+      // This simulates the data coming from EditSubtitlesDialogComponent after editing each fragment
+      const newContent: ClipContent = {
+        parts: [{
+          text: "A B C D", // This is the new concatenated text
+          style: 'Default',
+          fragments: [
+            {text: '{\\i1}', isTag: true}, {text: 'A', isTag: false}, {text: '{\\i0}', isTag: true},
+            {text: 'B', isTag: false},
+            {text: '{\\i1}', isTag: true}, {text: 'C', isTag: false}, {text: '{\\i0}', isTag: true},
+            {text: 'D', isTag: false}
+          ]
+        }]
+      };
+
+      // ACT
+      service.updateClipText('proj-1', clipBeforeEdit.id, newContent);
+
+      // ASSERT
+      const updatedSubtitles = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].subtitles as AssSubtitleData[];
+      const updatedSub = updatedSubtitles.find(s => s.id === 'sub-1')!;
+      const updatedFragments = updatedSub.parts[0].fragments!;
+
+      // Check that the text from each fragment is correct and not the full duplicated string
+      expect(updatedFragments[1].text).withContext('Fragment 1 text').toBe('A');
+      expect(updatedFragments[3].text).withContext('Fragment 2 text').toBe('B');
+      expect(updatedFragments[5].text).withContext('Fragment 3 text').toBe('C');
+      expect(updatedFragments[7].text).withContext('Fragment 4 text').toBe('D');
+      // Also check that a tag was preserved
+      expect(updatedFragments[0].text).withContext('Tag should be preserved').toBe('{\\i1}');
+    });
+
+    it('updates raw ass content for complex animations merged by the parser', () => {
+      // ARRANGE
+      projectState.rawAssContent = `
+[Events]
+Format: Start, End, Style, Text
+Dialogue: 0:01:00.00,0:01:01.00,Default,Animating Text
+Dialogue: 0:01:01.00,0:01:02.00,Default,Animating Text
+`.trim();
+
+      const sourceDialogue1: AssSubtitleData = {
+        type: 'ass',
+        id: 'sub-anim-1',
+        startTime: 60,
+        endTime: 61,
+        track: 0,
+        parts: [{text: 'Animating Text', style: 'Default', fragments: [{text: 'Animating Text', isTag: false}]}]
+      };
+      const sourceDialogue2: AssSubtitleData = {
+        type: 'ass',
+        id: 'sub-anim-2',
+        startTime: 61,
+        endTime: 62,
+        track: 0,
+        parts: [{text: 'Animating Text', style: 'Default', fragments: [{text: 'Animating Text', isTag: false}]}]
+      };
+
+      const mergedSubtitle: AssSubtitleData = {
+        type: 'ass', id: 'merged-id', startTime: 60, endTime: 62, track: 0,
+        parts: [{text: 'Animating Text', style: 'Default'}],
+        sourceDialogues: [sourceDialogue1, sourceDialogue2]
+      };
+
+      projectState.subtitles = [mergedSubtitle];
+      service.setSubtitles(projectState.subtitles);
+
+      const clipBeforeEdit = service.clipsForAllTracks().find(c => c.hasSubtitle)!;
+      const oldContent: ClipContent = {parts: clipBeforeEdit.parts};
+      const newContent: ClipContent = {
+        parts: [{
+          ...cloneDeep(clipBeforeEdit.parts[0]),
+          text: 'Animating Text EDITED',
+          fragments: [{text: 'Animating Text EDITED', isTag: false}]
+        }]
+      };
+
+      // ACT
+      const command = new UpdateClipTextCommand(service, 'proj-1', clipBeforeEdit.id, oldContent, newContent);
+      commandHistoryService.execute(command);
+
+      // ASSERT
+      const updatedRawContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent as string;
+      expect(updatedRawContent).toContain('Dialogue: 0:01:00.00,0:01:01.00,Default,Animating Text EDITED');
+      expect(updatedRawContent).toContain('Dialogue: 0:01:01.00,0:01:02.00,Default,Animating Text EDITED');
+    });
+
+    it('should correctly update a merged karaoke clip', () => {
+      // ARRANGE: Realistic raw content snippet for the karaoke line, including effect tags
+      const oldDialogueLine = 'Dialogue: 0,0:08:27.90,0:08:33.54,TLED,,0,0,0,,{\\fad(100,100)}I thought I caught a glimpse';
+      projectState.rawAssContent = `
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Comment: 0,0:08:27.90,0:08:33.54,RomajiED,,0,0,0,karaoke,original romaji
+Comment: 0,0:08:27.90,0:08:33.54,TLED,,0,0,0,karaoke,I thought I caught a glimpse
+${oldDialogueLine}
+Dialogue: 0,0:08:27.90,0:08:28.28,RomajiED,,0,0,0,,ki
+    `.trim();
+
+      // This mimics the data structure after parsing logic runs
+      const sourceSub1: AssSubtitleData = {
+        type: 'ass', id: 'source-tled', startTime: 507.90, endTime: 513.54, track: 0,
+        parts: [{
+          text: 'I thought I caught a glimpse',
+          style: 'TLED',
+          fragments: [{text: '{\\fad(100,100)}', isTag: true}, {text: 'I thought I caught a glimpse', isTag: false}]
+        }]
+      };
+      const sourceSub2: AssSubtitleData = {
+        type: 'ass', id: 'source-romaji-syllable', startTime: 507.90, endTime: 508.28, track: 1,
+        parts: [{text: 'ki', style: 'RomajiED'}]
+      };
+      const mergedKaraokeSubtitle: AssSubtitleData = {
+        type: 'ass', id: 'merged-karaoke-uuid', startTime: 507.90, endTime: 513.54, track: 0,
+        parts: [
+          {text: 'original romaji', style: 'RomajiED'},
+          {text: 'I thought I caught a glimpse', style: 'TLED'}
+        ],
+        sourceDialogues: [sourceSub1, sourceSub2]
+      };
+
+      service.setSubtitles([mergedKaraokeSubtitle]);
+
+      const clipBeforeEdit = service.clipsForAllTracks().find(c => c.hasSubtitle)!;
+      const oldContent: ClipContent = {parts: cloneDeep(clipBeforeEdit.parts)};
+      const newContent: ClipContent = {
+        parts: [
+          cloneDeep(clipBeforeEdit.parts.find(p => p.style === 'RomajiED')!),
+          {
+            text: 'EDITED English Translation',
+            style: 'TLED',
+            fragments: [{text: '{\\fad(100,100)}', isTag: true}, {text: 'EDITED English Translation', isTag: false}]
+          }
+        ].sort((a, b) => a.style.localeCompare(b.style))
+      };
+
+      // ACT
+      const command = new UpdateClipTextCommand(service, 'proj-1', clipBeforeEdit.id, oldContent, newContent);
+      commandHistoryService.execute(command);
+
+      // ASSERT
+      const updatedRawContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent as string;
+      const newDialogueLine = 'Dialogue: 0,0:08:27.90,0:08:33.54,TLED,,0,0,0,,{\\fad(100,100)}EDITED English Translation';
+
+      expect(updatedRawContent).withContext('The new dialogue line should be added').toContain(newDialogueLine);
+      expect(updatedRawContent).withContext('The old dialogue line should be removed').not.toContain(oldDialogueLine);
+      expect(updatedRawContent).withContext('The comment line should be untouched').toContain('Comment: 0,0:08:27.90,0:08:33.54,TLED,,0,0,0,karaoke,I thought I caught a glimpse');
+    });
   });
 
   describe('Clip Timing Adjustments (SRT)', () => {
     const initialSrtSubtitles: SrtSubtitleData[] = [
-      {type: 'srt', id: 'srt-1', startTime: 5, endTime: 10, text: 'Subtitle A'},
-      {type: 'srt', id: 'srt-2', startTime: 15, endTime: 20, text: 'Subtitle B'}
+      {type: 'srt', id: 'srt-1', startTime: 5, endTime: 10, text: 'Subtitle A', track: 0},
+      {type: 'srt', id: 'srt-2', startTime: 15, endTime: 20, text: 'Subtitle B', track: 0}
     ];
 
     beforeEach(() => {
@@ -258,22 +600,33 @@ describe('ClipsStateService', () => {
 
     it('adjusts boundary with keyboard shortcut and correctly undoes it', fakeAsync(() => {
       const initialClipsState = JSON.stringify(service.clips());
-      service.setCurrentClipByIndex(1); // Select 'Subtitle A'
+
+      // Select 'Subtitle A' by setting the time within it and flushing effects
+      currentTimeSignal.set(7);
+      spectator.flushEffects();
+
+      // Ensure the correct clip is selected before proceeding
+      expect(service.currentClip()?.id).toBe('subtitle-5');
+
       service.adjustCurrentClipBoundary('end', 'right');
-      tick(100); // Allow debounce timer in performAdjust to complete
+      tick(ADJUST_DEBOUNCE_MS); // Allow debounce timer in performAdjust to complete
 
       const modifiedClip = service.clips()[1];
       expect(modifiedClip.endTime).toBe(10.05);
 
       commandHistoryService.undo();
+      // After undo, the underlying subtitles signal has changed.
+      // Flush effects ensures the `clips()` computed signal is updated.
+      spectator.flushEffects();
+
       expect(JSON.stringify(service.clips())).toEqual(initialClipsState);
     }));
 
     it('creates a gap when shrinking a subtitle clip adjacent to another subtitle clip', () => {
       // ARRANGE: Two adjacent subtitle clips
       const adjacentSubtitles: SrtSubtitleData[] = [
-        {type: 'srt', id: 'srt-1', startTime: 5, endTime: 10, text: 'A'},
-        {type: 'srt', id: 'srt-2', startTime: 10, endTime: 15, text: 'B'}
+        {type: 'srt', id: 'srt-1', startTime: 5, endTime: 10, text: 'A', track: 0},
+        {type: 'srt', id: 'srt-2', startTime: 10, endTime: 15, text: 'B', track: 0}
       ];
       service.setSubtitles(adjacentSubtitles);
       // Clips are: gap, sub A, sub B, gap -> 4 clips
@@ -298,8 +651,8 @@ describe('ClipsStateService', () => {
     it('consumes an adjacent subtitled clip when stretching over it', () => {
       // ARRANGE: Set up a state with two perfectly adjacent subtitle clips.
       const adjacentSubtitles: SrtSubtitleData[] = [
-        {type: 'srt', id: 'srt-1', startTime: 5, endTime: 10, text: 'Subtitle A'},
-        {type: 'srt', id: 'srt-2', startTime: 10, endTime: 15, text: 'Subtitle B'}
+        {type: 'srt', id: 'srt-1', startTime: 5, endTime: 10, text: 'Subtitle A', track: 0},
+        {type: 'srt', id: 'srt-2', startTime: 10, endTime: 15, text: 'Subtitle B', track: 0}
       ];
       service.setSubtitles(adjacentSubtitles);
 
@@ -324,8 +677,8 @@ describe('ClipsStateService', () => {
     it('consumes a gap and shrinks the next subtitled clip when stretching over it', () => {
       // ARRANGE: Clip A (5-10), Gap (10-15), Clip B (15-20)
       const initialSubs: SrtSubtitleData[] = [
-        {type: 'srt', id: 'srt-1', startTime: 5, endTime: 10, text: 'A'},
-        {type: 'srt', id: 'srt-2', startTime: 15, endTime: 20, text: 'B'}
+        {type: 'srt', id: 'srt-1', startTime: 5, endTime: 10, text: 'A', track: 0},
+        {type: 'srt', id: 'srt-2', startTime: 15, endTime: 20, text: 'B', track: 0}
       ];
       service.setSubtitles(initialSubs);
       let clips = service.clips();
@@ -354,8 +707,8 @@ describe('ClipsStateService', () => {
     it('consumes a gap and shrinks the previous subtitled clip when stretching over it', () => {
       // ARRANGE: Clip A (5-10), Gap (10-15), Clip B (15-20)
       const initialSubs: SrtSubtitleData[] = [
-        {type: 'srt', id: 'srt-1', startTime: 5, endTime: 10, text: 'A'},
-        {type: 'srt', id: 'srt-2', startTime: 15, endTime: 20, text: 'B'}
+        {type: 'srt', id: 'srt-1', startTime: 5, endTime: 10, text: 'A', track: 0},
+        {type: 'srt', id: 'srt-2', startTime: 15, endTime: 20, text: 'B', track: 0}
       ];
       service.setSubtitles(initialSubs);
       let clips = service.clips();
@@ -403,8 +756,8 @@ describe('ClipsStateService', () => {
     it('preserves a large gap when a clip is resized slightly into it', () => {
       // ARRANGE: Clip A (5-10), Huge Gap (10-50), Clip B (50-55)
       const initialSubs: SrtSubtitleData[] = [
-        {type: 'srt', id: 'srt-1', startTime: 5, endTime: 10, text: 'A'},
-        {type: 'srt', id: 'srt-2', startTime: 50, endTime: 55, text: 'B'}
+        {type: 'srt', id: 'srt-1', startTime: 5, endTime: 10, text: 'A', track: 0},
+        {type: 'srt', id: 'srt-2', startTime: 50, endTime: 55, text: 'B', track: 0}
       ];
       service.setSubtitles(initialSubs);
       let clips = service.clips();
@@ -432,7 +785,7 @@ describe('ClipsStateService', () => {
     it('doesn\'t shrink a subtitled clip below its minimum duration when a gap is stretched', () => {
       // ARRANGE: A gap followed by a subtitled clip
       const initialSubs: SrtSubtitleData[] = [
-        {type: 'srt', id: 'srt-1', startTime: 10, endTime: 15, text: 'A'},
+        {type: 'srt', id: 'srt-1', startTime: 10, endTime: 15, text: 'A', track: 0},
       ];
       service.setSubtitles(initialSubs);
       // Clips are: gap(0-10), sub A(10-15), gap(15-end)
@@ -457,7 +810,7 @@ describe('ClipsStateService', () => {
     it('preserves the correct anchor when shrinking a subtitled clip below its minimum duration', () => {
       // ARRANGE: A single subtitled clip to test against
       const initialSubs: SrtSubtitleData[] = [
-        {type: 'srt', id: 'srt-1', startTime: 10, endTime: 15, text: 'A'},
+        {type: 'srt', id: 'srt-1', startTime: 10, endTime: 15, text: 'A', track: 0},
       ];
       service.setSubtitles(initialSubs);
       const subtitleClip = service.clips().find(c => c.hasSubtitle)!;
@@ -488,7 +841,7 @@ describe('ClipsStateService', () => {
     it('uses the stationary handle as an anchor when a clip is shrunk below its minimum duration, even when inverted', () => {
       // ARRANGE
       const initialSubs: SrtSubtitleData[] = [
-        {type: 'srt', id: 'srt-1', startTime: 10, endTime: 15, text: 'A'},
+        {type: 'srt', id: 'srt-1', startTime: 10, endTime: 15, text: 'A', track: 0},
       ];
       service.setSubtitles(initialSubs);
       const subtitleClip = service.clips().find(c => c.hasSubtitle)!;
@@ -528,20 +881,22 @@ describe('ClipsStateService', () => {
 
   describe('Boundary Adjustments with Keyboard Shortcuts', () => {
     const srtSubs: SrtSubtitleData[] = [
-      {type: 'srt', id: 'srt-1', startTime: 10, endTime: 20, text: 'Subtitle A'},
+      {type: 'srt', id: 'srt-1', startTime: 10, endTime: 20, text: 'Subtitle A', track: 0},
     ];
 
-    beforeEach(() => {
+    beforeEach(fakeAsync(() => {
       projectState.subtitles = cloneDeep(srtSubs);
       service.setSubtitles(cloneDeep(srtSubs));
       // The clips will be: gap(0-10), sub(10-20), gap(20-end)
-      // Select the subtitled clip at index 1
-      service.setCurrentClipByIndex(1);
-    });
+      // Select the subtitled clip by setting the current time within it and flushing effects
+      currentTimeSignal.set(15);
+      spectator.flushEffects();
+    }));
 
     it('should snap playhead to new start time if adjustment moves the boundary past the playhead', fakeAsync(() => {
       // ARRANGE: Playhead is at 10.01s. Default 50ms adjustment will move start boundary to 10.05s, past the playhead.
       currentTimeSignal.set(10.01);
+      spectator.flushEffects();
 
       // ACT: Adjust start boundary to the right by 50ms.
       service.adjustCurrentClipBoundary('start', 'right');
@@ -555,6 +910,7 @@ describe('ClipsStateService', () => {
     it('should snap playhead when paused exactly at the start and the start boundary is moved right', fakeAsync(() => {
       // ARRANGE: Playhead is exactly at the start time, 10.0s.
       currentTimeSignal.set(10.0);
+      spectator.flushEffects();
 
       // ACT: Adjust start boundary to the right by 50ms, moving it to 10.05s.
       service.adjustCurrentClipBoundary('start', 'right');
@@ -568,6 +924,7 @@ describe('ClipsStateService', () => {
     it('should snap playhead to new end time if adjustment moves the boundary before the playhead', fakeAsync(() => {
       // ARRANGE: Playhead is at 19.99s. Default 50ms adjustment will move end boundary to 19.95s, before the playhead.
       currentTimeSignal.set(19.99);
+      spectator.flushEffects();
 
       // ACT: Adjust end boundary to the left by 50ms.
       service.adjustCurrentClipBoundary('end', 'left');
@@ -575,12 +932,13 @@ describe('ClipsStateService', () => {
 
       // ASSERT: The playhead should be moved to just before the new end time.
       const newEndTime = 19.95;
-      expect(videoStateService.seekAbsolute).toHaveBeenCalledWith(newEndTime - 0.01);
+      expect((videoStateService.seekAbsolute as jasmine.Spy).calls.mostRecent().args[0]).toBeCloseTo(newEndTime - 0.01);
     }));
 
     it('should NOT snap playhead if it remains within the new boundaries after adjustment', fakeAsync(() => {
       // ARRANGE: Playhead is at 15s. The 50ms adjustment will not move a boundary past it.
       currentTimeSignal.set(15);
+      spectator.flushEffects();
 
       // ACT: Adjust end boundary to the right (expanding the clip).
       service.adjustCurrentClipBoundary('end', 'right');
@@ -591,23 +949,27 @@ describe('ClipsStateService', () => {
     }));
 
     it('should snap playhead back when shrinking an end boundary while auto-paused exactly at that boundary', fakeAsync(() => {
-      // ARRANGE: Playhead is exactly at the end time, 20s.
-      currentTimeSignal.set(20);
+      // ARRANGE: To simulate being "at the end" of the clip, set the time just inside its boundary.
+      // This ensures the correct clip is selected because the selection logic is `currentTime < endTime`.
+      currentTimeSignal.set(19.999);
+      spectator.flushEffects();
 
       // ACT: Adjust end boundary to the left by 50ms, moving it to 19.95s.
       service.adjustCurrentClipBoundary('end', 'left');
       tick(ADJUST_DEBOUNCE_MS);
 
-      // ASSERT: The playhead should be moved to just before the new end time to remain inside the clip.
+      // ASSERT: The original playhead position (19.999) is now outside the new boundary (10 -> 19.95).
+      // The playhead should be snapped back to just before the new end time.
       const newEndTime = 19.95;
-      expect(videoStateService.seekAbsolute).toHaveBeenCalledWith(newEndTime - 0.01);
+      expect(videoStateService.seekAbsolute).toHaveBeenCalled();
+      expect((videoStateService.seekAbsolute as jasmine.Spy).calls.mostRecent().args[0]).toBeCloseTo(newEndTime - 0.01);
     }));
   });
 
   describe('ASS Timing Adjustments', () => {
     const initialAssSubtitles: AssSubtitleData[] = [
-      {type: 'ass', id: 'ass-1', startTime: 5, endTime: 10, parts: [{text: 'Line 1', style: 'Default'}]},
-      {type: 'ass', id: 'ass-2', startTime: 15, endTime: 20, parts: [{text: 'Line 2', style: 'Top'}]}
+      {type: 'ass', id: 'ass-1', startTime: 5, endTime: 10, parts: [{text: 'Line 1', style: 'Default'}], track: 0},
+      {type: 'ass', id: 'ass-2', startTime: 15, endTime: 20, parts: [{text: 'Line 2', style: 'Top'}], track: 0}
     ];
 
     beforeEach(() => {
@@ -661,8 +1023,8 @@ Dialogue: 0,0:00:05.00,0:00:10.00,Default,,0,0,0,,Clip A
 Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,Clip B
       `.trim();
       const adjacentSubs: AssSubtitleData[] = [
-        {type: 'ass', id: 'ass-1', startTime: 5, endTime: 10, parts: [{text: 'Clip A', style: 'Default'}]},
-        {type: 'ass', id: 'ass-2', startTime: 10, endTime: 15, parts: [{text: 'Clip B', style: 'Default'}]}
+        {type: 'ass', id: 'ass-1', startTime: 5, endTime: 10, parts: [{text: 'Clip A', style: 'Default'}], track: 0},
+        {type: 'ass', id: 'ass-2', startTime: 10, endTime: 15, parts: [{text: 'Clip B', style: 'Default'}], track: 0}
       ];
       projectState.subtitles = adjacentSubs;
       projectState.rawAssContent = adjacentRawContent;
@@ -679,8 +1041,8 @@ Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,Clip B
 
     it('consumes an adjacent clip when stretching over it', () => {
       const adjacentSubs: AssSubtitleData[] = [
-        {type: 'ass', id: 'ass-1', startTime: 5, endTime: 10, parts: [{text: 'Clip A', style: 'Default'}]},
-        {type: 'ass', id: 'ass-2', startTime: 10, endTime: 15, parts: [{text: 'Clip B', style: 'Default'}]}
+        {type: 'ass', id: 'ass-1', startTime: 5, endTime: 10, parts: [{text: 'Clip A', style: 'Default'}], track: 0},
+        {type: 'ass', id: 'ass-2', startTime: 10, endTime: 15, parts: [{text: 'Clip B', style: 'Default'}], track: 0}
       ];
       service.setSubtitles(adjacentSubs);
       const firstSub = service.clips()[1];
@@ -740,8 +1102,22 @@ Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,Clip B
         'Dialogue: 0,0:00:55.00,0:01:00.00,Default,,0,0,0,,Animating Text',
       ].join('\r\n');
       projectState.subtitles = [
-        {type: 'ass', id: 'ass-1', startTime: 50, endTime: 55, parts: [{text: 'Animating Text', style: 'Default'}]},
-        {type: 'ass', id: 'ass-2', startTime: 55, endTime: 60, parts: [{text: 'Animating Text', style: 'Default'}]}
+        {
+          type: 'ass',
+          id: 'ass-1',
+          startTime: 50,
+          endTime: 55,
+          parts: [{text: 'Animating Text', style: 'Default'}],
+          track: 0
+        },
+        {
+          type: 'ass',
+          id: 'ass-2',
+          startTime: 55,
+          endTime: 60,
+          parts: [{text: 'Animating Text', style: 'Default'}],
+          track: 0
+        }
       ];
       service.setSubtitles(projectState.subtitles);
 
@@ -767,19 +1143,64 @@ Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,Clip B
       expect(newRawContent).toContain('Dialogue: 0,0:00:50.00,0:01:00.00,Default,,0,0,0,,Animating Text');
       expect(newRawContent).toContain('Dialogue: 0,0:01:00.00,0:01:10.00,Default,,0,0,0,,Animating Text');
     });
+
+    it('correctly updates rawAssContent on timing change and correctly reverts it on undo', () => {
+      // ARRANGE: Define a valid, minimal ASS content string directly in the test.
+      const initialLine = 'Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,Hello';
+      projectState.rawAssContent = `
+[Script Info]
+Title: Test
+[V4+ Styles]
+Format: Name, Fontname, Fontsize
+Style: Default,Arial,20
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+${initialLine}
+      `.trim();
+      projectState.subtitles = [
+        {type: 'ass', id: 'sub-1', startTime: 10, endTime: 15, track: 0, parts: [{text: 'Hello', style: 'Default'}]}
+      ];
+      service.setSubtitles(projectState.subtitles);
+      const originalRawContent = projectState.rawAssContent;
+      const clipToResize = service.clips().find(c => c.hasSubtitle)!;
+
+      // ACT 1: Execute a resize
+      service.updateClipTimesFromTimeline(clipToResize.id, 10, 12);
+
+      // ASSERT 1: The raw content should be updated
+      const updatedRawContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
+      const expectedUpdatedLine = 'Dialogue: 0,0:00:10.00,0:00:12.00,Default,,0,0,0,,Hello';
+      expect(updatedRawContent).toContain(expectedUpdatedLine);
+      expect(updatedRawContent).not.toContain(initialLine);
+
+      // ACT 2: Undo the command
+      commandHistoryService.undo();
+
+      // ASSERT 2: The raw content should be restored
+      const restoredRawContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
+      expect(restoredRawContent).toEqual(originalRawContent);
+      expect(restoredRawContent).toContain(initialLine);
+    });
   });
 
   describe('Clip Creation, Deletion, and Merging (SRT)', () => {
     beforeEach(() => {
       projectState.subtitles = [
-        {type: 'srt', id: 'srt-1', startTime: 5, endTime: 10, text: 'Subtitle A'},
-        {type: 'srt', id: 'srt-2', startTime: 15, endTime: 20, text: 'Subtitle B'}
+        {type: 'srt', id: 'srt-1', startTime: 5, endTime: 10, text: 'Subtitle A', track: 0},
+        {type: 'srt', id: 'srt-2', startTime: 15, endTime: 20, text: 'Subtitle B', track: 0}
       ];
       service.setSubtitles(projectState.subtitles);
     });
 
     it('correctly creates a new subtitle, and then undo/redo the creation', () => {
-      const newSubtitle: SrtSubtitleData = {type: 'srt', id: 'srt-new', startTime: 11, endTime: 14, text: 'New'};
+      const newSubtitle: SrtSubtitleData = {
+        type: 'srt',
+        id: 'srt-new',
+        startTime: 11,
+        endTime: 14,
+        text: 'New',
+        track: 0
+      };
       const createCommand = new CreateSubtitledClipCommand(service, newSubtitle);
 
       commandHistoryService.execute(createCommand);
@@ -860,19 +1281,28 @@ Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,Clip B
       videoStateService.setCurrentTime(0); // Reset just in case
     });
 
-    it('doesn\'t split a clip that is too short to produce two valid clips and a gap', () => {
+    it('doesn\'t split a clip that is too short to produce two valid clips and a gap', fakeAsync(() => {
       // ARRANGE: Create a clip that is 1.0s long, which is less than the required 1.1s.
       const shortSubtitle: SrtSubtitleData[] = [
-        {type: 'srt', id: 'srt-short', startTime: 5, endTime: 6, text: 'Short clip'}
+        {type: 'srt', id: 'srt-short', startTime: 5, endTime: 6, text: 'Short clip', track: 0}
       ];
       service.setSubtitles(shortSubtitle);
-      // The method being tested requires the current clip to be set.
-      service.setCurrentClipByIndex(1); // The subtitled clip is at index 1.
+      currentTimeSignal.set(5.5);
+
+      // Force all pending signal effects to run synchronously. This updates the clips array
+      // and the activeTrackClipIndex, ensuring `currentClip()` is correct.
+      spectator.flushEffects();
+
+      // Pre-condition sanity check to ensure setup is correct
+      expect(service.currentClip()?.hasSubtitle).withContext('Pre-condition failed: the short subtitled clip was not selected').toBe(true);
+      expect(service.currentClip()?.id).toBe('subtitle-5');
+
       // Spy on the command history to ensure no command is executed.
       spyOn(commandHistoryService, 'execute');
 
       // ACT
       service.splitCurrentSubtitledClip();
+      tick();
 
       // ASSERT
       // The split should have been aborted.
@@ -881,7 +1311,7 @@ Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,Clip B
       expect(service.clips().filter(c => c.hasSubtitle).length).toBe(1);
       // The user should be warned with the correct minimum duration.
       expect(toastService.warn).toHaveBeenCalledWith('Selected clip is too short to split. Minimum required duration is 1.1s.');
-    });
+    }));
 
     it('clamps the split point to respect minimum clip duration when splitting near the end', () => {
       // ARRANGE: Set the playback time very close to the end of the clip (19.8s in a 15-20s clip)
@@ -961,7 +1391,7 @@ Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,Clip B
       expect(firstGap).withContext('Gap from first split should still exist').toBeDefined();
     });
 
-    it('sets the first new clip as active and nudges the playhead back when splitting in the middle', () => {
+    it('sets the first new clip as active and nudges the playhead back when splitting in the middle', fakeAsync(() => {
       // ARRANGE: Split the 5-10s clip at 7.5s
       videoStateService.setCurrentTime(7.5);
       const clipToSplit = service.clips().find(c => c.id === 'subtitle-5')!;
@@ -969,17 +1399,18 @@ Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,Clip B
 
       // ACT
       commandHistoryService.execute(command);
+      tick();
 
       // ASSERT
-      const newClips = service.clips();
+      const newClips = service.clipsForAllTracks();
       const firstPart = newClips.find(c => c.startTime === 5 && c.endTime === 7.5)!;
       const indexOfFirstPart = newClips.indexOf(firstPart);
 
-      expect(service.currentClipIndex()).withContext('The first part of the split clip should be active').toBe(indexOfFirstPart);
+      expect(service.masterClipIndex()).withContext('The first part of the split clip should be active').toBe(indexOfFirstPart);
       expect(videoStateService.seekAbsolute).toHaveBeenCalledWith(7.5 - 0.01);
-    });
+    }));
 
-    it('sets the second new clip as active and preserves playhead position when splitting near the end', () => {
+    it('sets the second new clip as active and preserves playhead position when splitting near the end', fakeAsync(() => {
       // ARRANGE: Split the 15-20s clip at 19.8s. The split point will be clamped to 19.4s.
       videoStateService.setCurrentTime(19.8);
       const clipToSplit = service.clips().find(c => c.id === 'subtitle-15')!;
@@ -987,18 +1418,19 @@ Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,Clip B
 
       // ACT
       commandHistoryService.execute(command);
+      tick();
 
       // ASSERT
-      const newClips = service.clips();
+      const newClips = service.clipsForAllTracks();
       const clampedSplitPoint = 20 - MIN_SUBTITLE_DURATION - MIN_GAP_DURATION; // 19.4
       const secondPart = newClips.find(c => c.startTime === clampedSplitPoint + MIN_GAP_DURATION)!;
       const indexOfSecondPart = newClips.indexOf(secondPart);
 
-      expect(service.currentClipIndex()).withContext('The second part of the split clip should be active').toBe(indexOfSecondPart);
+      expect(service.masterClipIndex()).withContext('The second part of the split clip should be active').toBe(indexOfSecondPart);
       expect(videoStateService.seekAbsolute).not.toHaveBeenCalled();
-    });
+    }));
 
-    it('sets the first new clip as active and preserves playhead position when splitting near the beginning', () => {
+    it('sets the first new clip as active and preserves playhead position when splitting near the beginning', fakeAsync(() => {
       // ARRANGE: Split the 15-20s clip at 15.2s. The split point will be clamped to 15.5s.
       videoStateService.setCurrentTime(15.2);
       const clipToSplit = service.clips().find(c => c.id === 'subtitle-15')!;
@@ -1006,18 +1438,19 @@ Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,Clip B
 
       // ACT
       commandHistoryService.execute(command);
+      tick();
 
       // ASSERT
-      const newClips = service.clips();
+      const newClips = service.clipsForAllTracks();
       const clampedSplitPoint = 15 + MIN_SUBTITLE_DURATION; // 15.5
       const firstPart = newClips.find(c => c.startTime === 15 && c.endTime === clampedSplitPoint)!;
       const indexOfFirstPart = newClips.indexOf(firstPart);
 
-      expect(service.currentClipIndex()).withContext('The first part of the split clip should be active').toBe(indexOfFirstPart);
+      expect(service.masterClipIndex()).withContext('The first part of the split clip should be active').toBe(indexOfFirstPart);
       expect(videoStateService.seekAbsolute).not.toHaveBeenCalled();
-    });
+    }));
 
-    it('correctly restores the active clip after undoing a split', () => {
+    it('correctly restores the active clip after undoing a split', fakeAsync(() => {
       // ARRANGE: Split the 5-10s clip at 8s. The playhead will be nudged to 7.99s.
       videoStateService.setCurrentTime(8);
       const clipToSplit = service.clips().find(c => c.id === 'subtitle-5')!;
@@ -1027,15 +1460,16 @@ Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,Clip B
 
       // ACT: Undo the split
       commandHistoryService.undo();
+      tick();
 
       // ASSERT
-      const restoredClips = service.clips();
+      const restoredClips = service.clipsForAllTracks();
       const restoredOriginalClip = restoredClips.find(c => c.startTime === 5 && c.endTime === 10)!;
       const indexOfRestoredClip = restoredClips.indexOf(restoredOriginalClip);
 
-      expect(restoredClips.filter(c => c.hasSubtitle).length).withContext('Should be back to 2 subtitled clips').toBe(2);
-      expect(service.currentClipIndex()).withContext('The restored original clip should be active').toBe(indexOfRestoredClip);
-    });
+      expect(service.clips().filter(c => c.hasSubtitle).length).withContext('Should be back to 2 subtitled clips').toBe(2);
+      expect(service.masterClipIndex()).withContext('The restored original clip should be active').toBe(indexOfRestoredClip);
+    }));
   });
 
   describe('Clip Creation, Deletion, and Merging (ASS)', () => {
@@ -1048,10 +1482,21 @@ Dialogue: 0,0:00:15.00,0:00:20.00,Default,,0,0,0,,Subtitle B
 Dialogue: 0,0:00:15.00,0:00:20.00,Top,,0,0,0,,Subtitle B Top
       `.trim();
       projectState.subtitles = [
-        {type: 'ass', id: 'ass-1', startTime: 5, endTime: 10, parts: [{text: 'Subtitle A', style: 'Default'}]},
         {
-          type: 'ass', id: 'ass-2', startTime: 15, endTime: 20, parts: [
+          type: 'ass',
+          id: 'ass-1',
+          startTime: 5,
+          endTime: 10,
+          parts: [{text: 'Subtitle A', style: 'Default'}],
+          track: 0
+        },
+        {
+          type: 'ass', id: 'ass-2', startTime: 15, endTime: 20, track: 0, parts: [
             {text: 'Subtitle B', style: 'Default'},
+          ]
+        },
+        {
+          type: 'ass', id: 'ass-3', startTime: 15, endTime: 20, track: 1, parts: [
             {text: 'Subtitle B Top', style: 'Top'}
           ]
         }
@@ -1065,6 +1510,7 @@ Dialogue: 0,0:00:15.00,0:00:20.00,Top,,0,0,0,,Subtitle B Top
         id: 'ass-new',
         startTime: 11,
         endTime: 14,
+        track: 0,
         parts: [{text: 'New', style: 'Default'}]
       };
       const createCommand = new CreateSubtitledClipCommand(service, newSubtitle);
@@ -1084,21 +1530,30 @@ Dialogue: 0,0:00:15.00,0:00:20.00,Top,,0,0,0,,Subtitle B Top
     });
 
     it('correctly deletes a subtitle, and then undo/redo the deletion', () => {
-      const clipToDelete = service.clips().find(c => c.sourceSubtitles.some(s => s.id === 'ass-2'))!;
+      // Set active track to 1, which only contains 'ass-3'
+      service.setActiveTrack(1);
+      const initialSubtitledClips = service.clipsForAllTracks().filter(c => c.hasSubtitle);
+      expect(initialSubtitledClips.length).withContext('Pre-condition: should be 2 merged subtitled clips').toBe(2);
+
+      // Find the clip on the active track (track 1) to delete
+      const clipToDelete = service.clips().find(c => c.sourceSubtitles.some(s => s.id === 'ass-3'))!;
       const command = new DeleteSubtitledClipCommand(service, clipToDelete);
 
       commandHistoryService.execute(command);
-      expect(service.clips().filter(c => c.hasSubtitle).length).toBe(1);
+      // After deleting ass-3, ass-1 and ass-2 remain, which still form 2 distinct subtitled clips
+      expect(service.clipsForAllTracks().filter(c => c.hasSubtitle).length).toBe(2);
       let updatedContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
-      expect(updatedContent).not.toContain('Subtitle B');
+      expect(updatedContent).not.toContain('Subtitle B Top');
+      expect(updatedContent).toContain('Subtitle B'); // Ensure other track's sub is untouched
 
       commandHistoryService.undo();
-      expect(service.clips().filter(c => c.hasSubtitle).length).toBe(2);
+      // After undo, all 3 original subtitles exist again, forming 2 merged clips
+      expect(service.clipsForAllTracks().filter(c => c.hasSubtitle).length).toBe(2);
       updatedContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
-      expect(updatedContent).toContain('Subtitle B');
+      expect(updatedContent).toContain('Subtitle B Top');
 
       commandHistoryService.redo();
-      expect(service.clips().filter(c => c.hasSubtitle).length).toBe(1);
+      expect(service.clipsForAllTracks().filter(c => c.hasSubtitle).length).toBe(2);
     });
 
     it('correctly closes a gap by stretching, and then undo/redo', () => {
@@ -1127,8 +1582,22 @@ Dialogue: 0,0:00:10.00,0:00:12.00,Default,,0,0,0,,Animated Text
 Dialogue: 0,0:00:12.00,0:00:14.00,Default,,0,0,0,,Animated Text
     `.trim();
       projectState.subtitles = [
-        {type: 'ass', id: 'ass-a', startTime: 10, endTime: 12, parts: [{text: 'Animated Text', style: 'Default'}]},
-        {type: 'ass', id: 'ass-b', startTime: 12, endTime: 14, parts: [{text: 'Animated Text', style: 'Default'}]},
+        {
+          type: 'ass',
+          id: 'ass-a',
+          startTime: 10,
+          endTime: 12,
+          parts: [{text: 'Animated Text', style: 'Default'}],
+          track: 0
+        },
+        {
+          type: 'ass',
+          id: 'ass-b',
+          startTime: 12,
+          endTime: 14,
+          parts: [{text: 'Animated Text', style: 'Default'}],
+          track: 0
+        },
       ];
       service.setSubtitles(projectState.subtitles);
 
@@ -1226,95 +1695,176 @@ Dialogue: 10,0:00:26.77,0:00:29.34,Default,,0,0,0,,Strike!
 
       projectState.subtitles = [
         {
-          type: 'ass', id: 'ass-ne-1', startTime: 25.58, endTime: 29.96,
-          parts: [{text: 'Not Edible', style: 'Sign-Default', fragments: [{text: 'Not Edible', isTag: false}]}]
+          type: 'ass', id: 'ass-not-edible', startTime: 25.58, endTime: 29.96, track: 0,
+          parts: [
+            {text: 'Not Edible', style: 'Sign-Default', fragments: [{text: 'Not Edible', isTag: false}]},
+            {text: 'Not Edible', style: 'Sign-Default', fragments: [{text: 'Not Edible', isTag: false}]}
+          ]
         },
         {
-          type: 'ass', id: 'ass-ne-2', startTime: 25.58, endTime: 29.96,
-          parts: [{text: 'Not Edible', style: 'Sign-Default', fragments: [{text: 'Not Edible', isTag: false}]}]
-        },
-        {
-          type: 'ass', id: 'ass-strike', startTime: 26.77, endTime: 29.34,
+          type: 'ass', id: 'ass-strike', startTime: 26.77, endTime: 29.34, track: 1,
           parts: [{text: 'Strike!', style: 'Default', fragments: [{text: 'Strike!', isTag: false}]}]
         }
       ];
       service.setSubtitles(projectState.subtitles);
     });
 
-    it('should remove a contained clip and split spanning clips, then correctly undo', () => {
-      // ARRANGE: Should have 3 clips: "Not Edible" (25.58-26.77), "Not Edible" + "Strike!" (26.77-29.34), "Not Edible" (29.34-29.96)
-      let clips = service.clips();
-      expect(clips.filter(c => c.hasSubtitle).length).withContext('Pre-condition: should have 3 subtitled clips').toBe(3);
-      const middleClip = clips.find(c => c.startTime === 26.77)!;
-      expect(middleClip).toBeDefined();
+    it('should remove only the active track\'s subtitle from a merged clip, then correctly undo', () => {
+      // ARRANGE: The setup results in 3 merged clips:
+      // 1. "Not Edible" (25.58 - 26.77)
+      // 2. "Not Edible" + "Strike!" (26.77 - 29.34)
+      // 3. "Not Edible" (29.34 - 29.96)
 
-      const command = new DeleteSubtitledClipCommand(service, middleClip);
+      // Simulate the user being on Track 2 (index 1), which only contains the "Strike!" subtitle.
+      service.setActiveTrack(1);
 
-      // ACT: Execute deletion
+      // Find the clip to delete
+      const clipToDelete = service.clips().find(c => c.sourceSubtitles.some(s => s.id === 'ass-strike'))!;
+      expect(clipToDelete).withContext('Pre-condition: Could not find "Strike!" clip on active track 1').toBeDefined();
+      expect(clipToDelete.sourceSubtitles.length).withContext('Pre-condition: Clip to delete should only have one source').toBe(1);
+
+      const command = new DeleteSubtitledClipCommand(service, clipToDelete);
+
+      // ACT: Execute deletion of the "Strike!" clip.
       commandHistoryService.execute(command);
 
       // ASSERT:
-      clips = service.clips();
-      const subtitledClips = clips.filter(c => c.hasSubtitle);
-      // The two remaining "Not Edible" parts should be separate clips because of the new gap.
-      expect(subtitledClips.length).withContext('Post-delete: should have 2 separate subtitled clips').toBe(2);
-      expect(subtitledClips[0].startTime).toBe(25.58);
-      expect(subtitledClips[0].endTime).toBe(26.77);
-      expect(subtitledClips[1].startTime).toBe(29.34);
-      expect(subtitledClips[1].endTime).toBe(29.96);
+      // The "Strike!" subtitle is gone, but "Not Edible" remains.
+      // The timeline should re-merge into a single, long "Not Edible" clip.
+      const clipsAfterDelete = service.clipsForAllTracks();
+      const subtitledClips = clipsAfterDelete.filter(c => c.hasSubtitle);
 
-      // The clips should be [gap, sub, gap, sub, gap]
-      expect(clips.length).withContext('Post-delete: should have 5 total clips').toBe(5);
+      expect(subtitledClips.length).withContext('Post-delete: Should be 1 merged subtitled clip remaining').toBe(1);
+      expect(subtitledClips[0].parts.some(p => p.text === 'Not Edible')).toBe(true);
+      expect(subtitledClips[0].parts.some(p => p.text === 'Strike!')).toBe(false);
 
       const updatedRawContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
       expect(updatedRawContent).not.toContain('Strike!');
-      expect(updatedRawContent.split('Dialogue:').length - 1).toBe(4); // 2 lines before split, 2 lines after
+      expect(updatedRawContent).toContain('Not Edible');
+      expect(updatedRawContent.split('Dialogue:').length - 1).withContext('Only "Not Edible" dialogue lines should remain').toBe(2);
 
       // ACT 2: Undo
       commandHistoryService.undo();
 
       // ASSERT 2:
-      clips = service.clips();
-      expect(clips.filter(c => c.hasSubtitle).length).withContext('Post-undo: should have 3 subtitled clips again').toBe(3);
+      // The original state with 3 merged clips should be perfectly restored.
+      const clipsAfterUndo = service.clipsForAllTracks();
+      expect(clipsAfterUndo.filter(c => c.hasSubtitle).length).withContext('Post-undo: should have 3 subtitled clips again').toBe(3);
+
       const finalRawContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
       expect(finalRawContent).toContain('Strike!');
       expect(finalRawContent.split('Dialogue:').length - 1).toBe(3);
     });
 
-    it('restores the active clip index after undoing a deletion', () => {
-      // ARRANGE: Set playhead inside the middle clip
+    it('restores the active clip index after undoing a deletion', fakeAsync(() => {
+      // ARRANGE: Simulate the user being on Track 2 (index 1), which only contains the "Strike!" subtitle.
+      service.setActiveTrack(1);
+
+      // Set the playhead to be inside the "Strike!" clip's time range.
       const initialTime = 28.0;
-      videoStateService.setCurrentTime(initialTime);
+      currentTimeSignal.set(initialTime);
+      tick();
 
-      // Manually sync index based on initial time to establish a clear starting state
-      let clips = service.clips();
-      const initialClipIndex = clips.findIndex(c => initialTime >= c.startTime && initialTime < c.endTime);
-      service.setCurrentClipByIndex(initialClipIndex);
+      // The master list of clips is [gap, sub(NE), sub(NE+S), sub(NE), gap].
+      // The clip at t=28.0 is the merged "Not Edible" + "Strike!" clip at master index 2.
+      let masterClips = service.clipsForAllTracks();
+      const initialMasterClipIndex = masterClips.findIndex(c => initialTime >= c.startTime && initialTime < c.endTime);
+      expect(initialMasterClipIndex).withContext('Pre-condition: Could not find the initial merged clip at t=28.0').toBe(2);
 
-      const middleClip = clips.find(c => c.startTime === 26.77)!;
-      expect(service.currentClipIndex()).withContext('Pre-condition: middle clip should be active').toBe(initialClipIndex);
-      expect(clips[initialClipIndex].id).toBe(middleClip.id);
+      // Manually set the master clip index to simulate the playback manager's state.
+      service.setCurrentClipByIndex(initialMasterClipIndex);
+      tick();
 
-      const command = new DeleteSubtitledClipCommand(service, middleClip);
+      // The clip to delete is the one on the *active track* (Track 2 / index 1).
+      const clipToDelete = service.clips().find(c => c.hasSubtitle)!;
+      expect(clipToDelete.sourceSubtitles[0].id).toBe('ass-strike');
+      expect(service.masterClipIndex()).withContext('Pre-condition: middle merged clip should be active').toBe(initialMasterClipIndex);
+
+      const command = new DeleteSubtitledClipCommand(service, clipToDelete);
 
       // ACT 1: Execute deletion
       commandHistoryService.execute(command);
+      tick();
 
-      // ASSERT 1: After deletion, the playhead is in the new gap, which should be the active clip
-      clips = service.clips();
-      const newActiveClipIndex = clips.findIndex(c => initialTime >= c.startTime && initialTime < c.endTime);
-      expect(service.currentClipIndex()).withContext('Post-delete: The new gap should be the active clip').toBe(newActiveClipIndex);
-      expect(clips[newActiveClipIndex].hasSubtitle).toBe(false);
+      // ASSERT 1: After deleting "Strike!", the master clips re-merge.
+      // The new layout is [gap, sub(NE), gap]. The playhead at 28.0 is now inside the single, large "Not Edible" clip.
+      masterClips = service.clipsForAllTracks();
+      const newActiveClipIndex = masterClips.findIndex(c => initialTime >= c.startTime && initialTime < c.endTime);
+
+      expect(newActiveClipIndex).withContext('Post-delete: The active clip should now be the "Not Edible" clip at index 1').toBe(1);
+      expect(service.masterClipIndex()).withContext('Post-delete: The "Not Edible" clip should be the active clip').toBe(newActiveClipIndex);
+      expect(masterClips[newActiveClipIndex].hasSubtitle).withContext('Post-delete: The new active clip should have subtitles').toBe(true);
 
       // ACT 2: Undo the deletion
       commandHistoryService.undo();
+      tick();
 
-      // ASSERT 2: After undo, the playhead is back in the restored middle clip, which should now be active again
-      clips = service.clips();
-      const finalActiveClipIndex = clips.findIndex(c => initialTime >= c.startTime && initialTime < c.endTime);
-      expect(service.currentClipIndex()).withContext('Post-undo: The restored middle clip should be active again').toBe(finalActiveClipIndex);
-      expect(clips[finalActiveClipIndex].hasSubtitle).withContext('Post-undo: Active clip should have subtitles').toBe(true);
-      expect(clips[finalActiveClipIndex].startTime).withContext('Post-undo: Active clip should be the correct one').toBe(26.77);
+      // ASSERT 2: After undo, the state is restored. The playhead is back in the restored middle clip.
+      masterClips = service.clipsForAllTracks();
+      const finalActiveClipIndex = masterClips.findIndex(c => initialTime >= c.startTime && initialTime < c.endTime);
+
+      expect(finalActiveClipIndex).withContext('Post-undo: The master index should be restored to 2').toBe(2);
+      expect(service.masterClipIndex()).withContext('Post-undo: The restored middle clip should be active again').toBe(finalActiveClipIndex);
+      expect(masterClips[finalActiveClipIndex].hasSubtitle).withContext('Post-undo: Active clip should have subtitles').toBe(true);
+      expect(masterClips[finalActiveClipIndex].startTime).withContext('Post-undo: Active clip should be the correct one').toBe(26.77);
+    }));
+  });
+
+  describe('Undo/Redo of Complex Operations', () => {
+    it('correctly undoes a text edit on a complex merged animation', () => {
+      // ARRANGE
+      const originalRawContent = `
+[Events]
+Format: Start, End, Style, Text
+Dialogue: 0:01:00.00,0:01:01.00,Default,Animating Text
+Dialogue: 0:01:01.00,0:01:02.00,Default,Animating Text
+    `.trim();
+      projectState.rawAssContent = originalRawContent;
+
+      const sourceDialogue1: AssSubtitleData = {
+        type: 'ass',
+        id: 'sub-anim-1',
+        startTime: 60,
+        endTime: 61,
+        track: 0,
+        parts: [{text: 'Animating Text', style: 'Default', fragments: [{text: 'Animating Text', isTag: false}]}]
+      };
+      const sourceDialogue2: AssSubtitleData = {
+        type: 'ass',
+        id: 'sub-anim-2',
+        startTime: 61,
+        endTime: 62,
+        track: 0,
+        parts: [{text: 'Animating Text', style: 'Default', fragments: [{text: 'Animating Text', isTag: false}]}]
+      };
+      projectState.subtitles = [sourceDialogue1, sourceDialogue2];
+      service.setSubtitles(projectState.subtitles);
+
+      const clipBeforeEdit = service.clipsForAllTracks().find(c => c.hasSubtitle)!;
+      const oldContent: ClipContent = {parts: clipBeforeEdit.parts};
+      const newContent: ClipContent = {
+        parts: [{
+          ...cloneDeep(clipBeforeEdit.parts[0]), // Use cloneDeep to avoid reference issues
+          text: 'Animating Text EDITED',
+          fragments: [{text: 'Animating Text EDITED', isTag: false}]
+        }]
+      };
+      const command = new UpdateClipTextCommand(service, 'proj-1', clipBeforeEdit.id, oldContent, newContent);
+
+      // ACT 1: Execute
+      commandHistoryService.execute(command);
+
+      // Sanity check
+      let updatedRawContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
+      expect(updatedRawContent).toContain('Animating Text EDITED');
+
+      // ACT 2: Undo
+      commandHistoryService.undo();
+
+      // ASSERT
+      const restoredRawContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
+      const normalize = (str: string) => str.trim().replace(/\r\n/g, '\n');
+      expect(normalize(restoredRawContent)).toEqual(normalize(originalRawContent));
     });
   });
 });

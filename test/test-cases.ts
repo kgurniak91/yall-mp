@@ -20,6 +20,7 @@ export const TEST_CASES: TestCase[] = [
         id: 'test-id-0',
         startTime: 16.39,
         endTime: 19.08,
+        track: 0,
         parts: [{
           text: "Still good, but it'll go bad soon. Close one!",
           style: "Default",
@@ -55,6 +56,7 @@ export const TEST_CASES: TestCase[] = [
         id: 'test-id-0',
         startTime: 62.58,
         endTime: 64.24,
+        track: 0,
         parts: [{text: 'Amazing.', style: 'Default', fragments: [{text: 'Amazing.', isTag: false}]}]
       },
       {
@@ -62,6 +64,7 @@ export const TEST_CASES: TestCase[] = [
         id: 'test-id-1',
         startTime: 62.58,
         endTime: 64.24,
+        track: 1,
         parts: [{text: 'Amazing.', style: 'Sign-Default', fragments: [{text: 'Amazing.', isTag: false}]}]
       }
     ],
@@ -93,6 +96,7 @@ export const TEST_CASES: TestCase[] = [
         id: 'test-id-0',
         startTime: 25.58,
         endTime: 29.96,
+        track: 1,
         parts: [{text: 'Not Edible', style: 'Sign-Default', fragments: [{text: 'Not Edible', isTag: false}]}]
       },
       {
@@ -100,6 +104,7 @@ export const TEST_CASES: TestCase[] = [
         id: 'test-id-1',
         startTime: 25.58,
         endTime: 29.96,
+        track: 1,
         parts: [{text: 'Not Edible', style: 'Sign-Default', fragments: [{text: 'Not Edible', isTag: false}]}]
       },
       {
@@ -107,6 +112,7 @@ export const TEST_CASES: TestCase[] = [
         id: 'test-id-2',
         startTime: 26.77,
         endTime: 29.34,
+        track: 0,
         parts: [{text: 'Strike!', style: 'Default', fragments: [{text: 'Strike!', isTag: false}]}]
       }
     ],
@@ -152,6 +158,7 @@ export const TEST_CASES: TestCase[] = [
         id: 'test-id-0',
         startTime: 33.97,
         endTime: 36.62,
+        track: 0,
         parts: [{text: 'Much More Railgun!', style: 'Default', fragments: [{text: 'Much More Railgun!', isTag: false}]}]
       },
       {
@@ -159,6 +166,7 @@ export const TEST_CASES: TestCase[] = [
         id: 'test-id-1',
         startTime: 33.97,
         endTime: 40.47,
+        track: 1,
         parts: [{
           text: 'Much More Railgun Ⅲ',
           style: 'mmr3title',
@@ -170,6 +178,7 @@ export const TEST_CASES: TestCase[] = [
         id: 'test-id-2',
         startTime: 36.62,
         endTime: 40.47,
+        track: 0,
         parts: [{text: 'MMR!', style: 'Default', fragments: [{text: 'MMR!', isTag: false}]}]
       }
     ],
@@ -218,6 +227,7 @@ export const TEST_CASES: TestCase[] = [
         id: 'test-id-0',
         startTime: 59.53,
         endTime: 59.58,
+        track: 0,
         parts: [{text: 'Real Usable', style: 'Sign-Default', fragments: [{text: 'Real Usable', isTag: false}]}]
       },
       {
@@ -225,6 +235,7 @@ export const TEST_CASES: TestCase[] = [
         id: 'test-id-1',
         startTime: 59.53,
         endTime: 59.58,
+        track: 0,
         parts: [{text: 'English Lesson', style: 'Sign-Default', fragments: [{text: 'English Lesson', isTag: false}]}]
       },
       {
@@ -232,6 +243,7 @@ export const TEST_CASES: TestCase[] = [
         id: 'test-id-2',
         startTime: 59.53,
         endTime: 59.58,
+        track: 0,
         parts: [{text: 'English Lesson', style: 'Sign-Default', fragments: [{text: 'English Lesson', isTag: false}]}]
       },
       {
@@ -239,6 +251,7 @@ export const TEST_CASES: TestCase[] = [
         id: 'test-id-3',
         startTime: 59.53,
         endTime: 59.58,
+        track: 0,
         parts: [{text: 'Real Usable', style: 'Sign-Default', fragments: [{text: 'Real Usable', isTag: false}]}]
       },
       {
@@ -246,6 +259,7 @@ export const TEST_CASES: TestCase[] = [
         id: 'test-id-4',
         startTime: 59.58,
         endTime: 59.62,
+        track: 0,
         parts: [{text: 'Real Usable', style: 'Sign-Default', fragments: [{text: 'Real Usable', isTag: false}]}]
       },
       {
@@ -253,6 +267,7 @@ export const TEST_CASES: TestCase[] = [
         id: 'test-id-5',
         startTime: 59.58,
         endTime: 59.62,
+        track: 0,
         parts: [{text: 'English Lesson', style: 'Sign-Default', fragments: [{text: 'English Lesson', isTag: false}]}]
       },
       {
@@ -260,6 +275,7 @@ export const TEST_CASES: TestCase[] = [
         id: 'test-id-6',
         startTime: 59.58,
         endTime: 59.62,
+        track: 0,
         parts: [{text: 'English Lesson', style: 'Sign-Default', fragments: [{text: 'English Lesson', isTag: false}]}]
       },
       {
@@ -267,6 +283,7 @@ export const TEST_CASES: TestCase[] = [
         id: 'test-id-7',
         startTime: 59.58,
         endTime: 59.62,
+        track: 0,
         parts: [{text: 'Real Usable', style: 'Sign-Default', fragments: [{text: 'Real Usable', isTag: false}]}]
       },
       {
@@ -274,6 +291,7 @@ export const TEST_CASES: TestCase[] = [
         id: 'test-id-8',
         startTime: 59.62,
         endTime: 59.66,
+        track: 0,
         parts: [{text: 'Real Usable', style: 'Sign-Default', fragments: [{text: 'Real Usable', isTag: false}]}]
       },
       {
@@ -281,6 +299,7 @@ export const TEST_CASES: TestCase[] = [
         id: 'test-id-9',
         startTime: 59.62,
         endTime: 59.66,
+        track: 0,
         parts: [{text: 'English Lesson', style: 'Sign-Default', fragments: [{text: 'English Lesson', isTag: false}]}]
       },
     ],
@@ -305,6 +324,7 @@ export const TEST_CASES: TestCase[] = [
         id: 'test-id-0',
         startTime: 50.23,
         endTime: 53.48,
+        track: 0,
         parts: [{
           text: 'Anata look like you suck at Eigo.',
           style: 'Default',
@@ -358,6 +378,7 @@ Dialogue: 1,0:01:26.52,0:01:30.52,mmr3title,,0,0,0,,{\\fnA-OTF Jun Pro MMR3 34\\
         id: 'test-id-0',
         startTime: 86.52,
         endTime: 90.52,
+        track: 0,
         parts: [{
           text: 'Much More Railgun Ⅲ',
           style: 'mmr3title',
@@ -379,6 +400,7 @@ Dialogue: 1,0:01:26.52,0:01:30.52,mmr3title,,0,0,0,,{\\fnA-OTF Jun Pro MMR3 34\\
         id: 'test-id-1',
         startTime: 86.52,
         endTime: 90.52,
+        track: 1,
         parts: [{
           text: 'Much More Railgun Ⅲ',
           style: 'mmr3title',
@@ -436,6 +458,7 @@ Dialogue: 1,0:01:26.52,0:01:30.52,mmr3title,,0,0,0,,{\\fnA-OTF Jun Pro MMR3 34\\
         id: 'test-id-0',
         startTime: 29.96,
         endTime: 33.97,
+        track: 0,
         parts: [{
           text: 'Real subtitle text.',
           style: 'Sign-Default',
@@ -474,6 +497,7 @@ Dialogue: 1,0:01:26.52,0:01:30.52,mmr3title,,0,0,0,,{\\fnA-OTF Jun Pro MMR3 34\\
         id: 'test-id-0',
         startTime: 10.00,
         endTime: 15.00,
+        track: 0,
         parts: [{
           text: 'First line.\nSecond line.',
           style: 'Default',

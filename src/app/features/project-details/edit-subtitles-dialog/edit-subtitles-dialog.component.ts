@@ -5,6 +5,7 @@ import {Textarea} from 'primeng/textarea';
 import {DynamicDialogConfig, DynamicDialogRef} from 'primeng/dynamicdialog';
 import {
   AssSubtitleData,
+  DialogSubtitlePart,
   SrtSubtitleData,
   SubtitleData,
   SubtitleFragment,
@@ -21,6 +22,7 @@ interface EditedPartFormValue {
   style: string;
   text: string;
   fragments: SubtitleFragment[];
+  track: number;
 }
 
 @Component({
@@ -55,16 +57,26 @@ export class EditSubtitlesDialogComponent implements OnInit {
         originalIndex: index
       }));
 
-      // Sort based on their y-coordinate on the screen
-      partsWithOriginalIndex.sort((a, b) => (a.part.y ?? Infinity) - (b.part.y ?? Infinity));
+      // Sort by track DESCENDING first, then by vertical position ASCENDING.
+      partsWithOriginalIndex.sort((a, b) => {
+        const aPart = a.part as DialogSubtitlePart;
+        const bPart = b.part as DialogSubtitlePart;
 
-      // Filter for parts that are actually visible and editable
+        // Primary sort: by track number, DESCENDING
+        if (aPart.track !== bPart.track) {
+          return bPart.track - aPart.track;
+        }
+
+        // Secondary sort: by y-coordinate, ASCENDING (lower `y` means it's higher on the screen)
+        return (aPart.y ?? Infinity) - (bPart.y ?? Infinity);
+      });
+
       const visibleParts = partsWithOriginalIndex
         .filter(item => item.part.fragments?.some(f => !f.isTag));
 
       this.form = this.fb.group({
         parts: this.fb.array(
-          visibleParts.map(item => this.createPartGroup(item.part, item.originalIndex)),
+          visibleParts.map(item => this.createPartGroup(item.part as DialogSubtitlePart, item.originalIndex)),
           {validators: [CustomValidators.atLeastOneNotBlank()]}
         )
       });
@@ -132,11 +144,12 @@ export class EditSubtitlesDialogComponent implements OnInit {
     }
   }
 
-  private createPartGroup(part: SubtitlePart, originalIndex: number): FormGroup {
+  private createPartGroup(part: DialogSubtitlePart, originalIndex: number): FormGroup {
     return this.fb.group({
       originalIndex: [originalIndex],
       style: [part.style],
       text: [part.text, [Validators.maxLength(1000)]],
+      track: [part.track],
       fragments: this.fb.array(
         (part.fragments || []).map(fragment => this.fb.group({
           text: [fragment.text, !fragment.isTag ? [Validators.maxLength(1000)] : []],

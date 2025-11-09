@@ -8,6 +8,11 @@
         @for (partGroup of partsFormArray.controls; track $index) {
           @let partIndex = $index;
           <div [formGroupName]="partIndex">
+            <div class="mb-3">
+              <label>
+                Track {{ partGroup.get('track')?.value + 1 }}
+              </label>
+            </div>
             <div class="part-content">
               @if (getFragmentsArray(partIndex).length > 0) {
                 <div formArrayName="fragments">

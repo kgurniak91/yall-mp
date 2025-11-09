@@ -198,6 +198,8 @@ export class PlaybackManager {
 
     if (newClipIndex === -1) {
       // Failsafe: if no clip is found, don't change the index. This prevents state corruption.
+      // But still notify the UI with the updated clips list.
+      this.notifyUI();
       return;
     }
 

@@ -20,6 +20,7 @@ import fontkit from 'fontkit';
 import Levenshtein from 'fast-levenshtein';
 import {AppData, CoreConfig, Project, SubtitleSelection, SupportedLanguage} from './src/app/model/project.types';
 import {
+  assignTracksToSubtitles,
   dialoguesToAssSubtitleData,
   mergeIdenticalConsecutiveSubtitles,
   mergeKaraokeSubtitles
@@ -1001,6 +1002,7 @@ async function handleSubtitleParse(projectId: string, filePath: string): Promise
       const granularTimeline = dialoguesToAssSubtitleData(compiled.dialogues, parsed.events.dialogue, compiled.styles, playResY);
       const karaokeMergedTimeline = mergeKaraokeSubtitles(granularTimeline, parsed.events);
       const finalTimeline = mergeIdenticalConsecutiveSubtitles(karaokeMergedTimeline);
+      const subtitlesWithTracks = assignTracksToSubtitles(finalTimeline);
       const requiredFonts = getRequiredFontsFromAss(content);
       const fonts = await loadFontData(requiredFonts, undefined, filePath);
       const fullText = getFullTextFromSubtitles(finalTimeline);
@@ -1009,7 +1011,7 @@ async function handleSubtitleParse(projectId: string, filePath: string): Promise
       await fs.writeFile(path.join(FONT_CACHE_DIR, `${projectId}.json`), JSON.stringify(fonts));
 
       return {
-        subtitles: finalTimeline,
+        subtitles: subtitlesWithTracks,
         rawAssContent: content,
         styles: compiled.styles,
         detectedLanguage
@@ -1027,13 +1029,14 @@ async function handleSubtitleParse(projectId: string, filePath: string): Promise
         startTime: cue.startTime,
         endTime: cue.endTime,
         text: cue.text,
+        track: 0
       }));
       const processedSubtitles = preprocessSubtitles(subtitles);
       const fullText = getFullTextFromSubtitles(processedSubtitles);
       const detectedLanguage = detectLanguage(fullText);
 
       return {
-        subtitles: preprocessSubtitles(subtitles),
+        subtitles: processedSubtitles,
         detectedLanguage
       };
     }
@@ -1389,6 +1392,7 @@ async function handleExtractSubtitleTrack(projectId: string, mediaPath: string, 
             const granularTimeline = dialoguesToAssSubtitleData(compiled.dialogues, parsed.events.dialogue, compiled.styles, playResY);
             const karaokeMergedTimeline = mergeKaraokeSubtitles(granularTimeline, parsed.events);
             const finalTimeline = mergeIdenticalConsecutiveSubtitles(karaokeMergedTimeline);
+            const subtitlesWithTracks = assignTracksToSubtitles(finalTimeline);
             const requiredFonts = getRequiredFontsFromAss(subtitleContent);
             const fonts = await loadFontData(requiredFonts, mediaPath, undefined);
             const fullText = getFullTextFromSubtitles(finalTimeline);
@@ -1397,7 +1401,7 @@ async function handleExtractSubtitleTrack(projectId: string, mediaPath: string, 
             await fs.writeFile(path.join(FONT_CACHE_DIR, `${projectId}.json`), JSON.stringify(fonts));
 
             resolve({
-              subtitles: finalTimeline,
+              subtitles: subtitlesWithTracks,
               rawAssContent: subtitleContent,
               styles: compiled.styles,
               detectedLanguage
@@ -1413,14 +1417,15 @@ async function handleExtractSubtitleTrack(projectId: string, mediaPath: string, 
               id: cue.id,
               startTime: cue.startTime,
               endTime: cue.endTime,
-              text: cue.text
+              text: cue.text,
+              track: 0
             }));
             const processedSubtitles = preprocessSubtitles(subtitles);
             const fullText = getFullTextFromSubtitles(processedSubtitles);
             const detectedLanguage = detectLanguage(fullText);
 
             resolve({
-              subtitles: preprocessSubtitles(subtitles),
+              subtitles: processedSubtitles,
               detectedLanguage
             });
           }

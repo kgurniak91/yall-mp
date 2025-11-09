@@ -2,7 +2,7 @@ import {AssEditService} from './ass-edit.service';
 import {VideoClip} from '../../../../model/video.types';
 import {ClipContent} from '../../../../model/commands/update-clip-text.command';
 import {createServiceFactory, SpectatorService} from '@ngneat/spectator';
-import {AssSubtitleData} from '../../../../../../shared/types/subtitle.type';
+import {AssSubtitleData, SubtitlePart} from '../../../../../../shared/types/subtitle.type';
 
 const assFileTemplate = (dialogueLines: string) => `
 [Script Info]
@@ -14,6 +14,7 @@ Format: Name, Fontname, Fontsize, PrimaryColour
 Style: Default,Arial,28,&H00FFFFFF
 Style: Top,Arial,28,&H00FFFFFF
 Style: Sign-Default,Arial,20,&H00FFFFFF
+Style: mmr3title,Arial,20,&H00FFFFFF
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -34,6 +35,15 @@ describe('AssEditService', () => {
     it('edits the text of a clip consisting of a single, simple dialogue line', () => {
       const dialogueLine = 'Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello World';
       const rawAssContent = assFileTemplate(dialogueLine);
+      const oldPart = {text: 'Hello World', style: 'Default'};
+      const sourceSubtitle: AssSubtitleData = {
+        type: 'ass',
+        id: 'sub-1',
+        startTime: 1,
+        endTime: 2,
+        track: 0,
+        parts: [oldPart]
+      };
 
       const clip: VideoClip = {
         id: 'subtitle-guid-1',
@@ -41,11 +51,8 @@ describe('AssEditService', () => {
         endTime: 2,
         duration: 1,
         hasSubtitle: true,
-        parts: [{
-          text: 'Hello World',
-          style: 'Default'
-        }],
-        sourceSubtitles: []
+        parts: [oldPart],
+        sourceSubtitles: [sourceSubtitle]
       };
 
       const newContent: ClipContent = {
@@ -70,6 +77,15 @@ describe('AssEditService', () => {
         'Dialogue: 0,0:00:03.00,0:00:04.00,Default,,0,0,0,,Duplicate Text'
       ].join('\r\n');
       const rawAssContent = assFileTemplate(dialogueLines);
+      const oldPart = {text: 'Duplicate Text', style: 'Default'};
+      const sourceSubtitle: AssSubtitleData = {
+        type: 'ass',
+        id: 'sub-2',
+        startTime: 3,
+        endTime: 4,
+        track: 0,
+        parts: [oldPart]
+      };
 
       const clip: VideoClip = {
         id: 'subtitle-guid-2',
@@ -77,8 +93,8 @@ describe('AssEditService', () => {
         endTime: 4,
         duration: 1,
         hasSubtitle: true,
-        parts: [{text: 'Duplicate Text', style: 'Default'}],
-        sourceSubtitles: []
+        parts: [oldPart],
+        sourceSubtitles: [sourceSubtitle]
       };
 
       const newContent: ClipContent = {
@@ -113,6 +129,41 @@ describe('AssEditService', () => {
         'Dialogue: 1,0:01:00.45,0:01:02.50,Sign-Default,,150,0,0,,{\\an7\\3c&H000000&\\3a&HFF&\\4c&H000000&\\4a&HFF&\\fnKozuka Mincho Pr6N Toaru B\\fs65\\c&HF4F3F2&\\blur0.4\\bord0\\pos(864.000,396.000)}Real Usable',
       ].join('\r\n');
       const rawAssContent = assFileTemplate(dialogueLines);
+      const oldPart1 = {
+        text: 'Real Usable', style: 'Sign-Default', fragments: [
+          {
+            text: '{\\an7\\3c&HF4F3F2&\\3a&HD7&\\4c&H000000&\\4a&HFF&\\fnKozuka Mincho Pr6N Toaru B\\fs65\\c&HF4F3F2&\\blur9\\bord5\\pos(861.820,-332.345)\\1a&HFF&}',
+            isTag: true
+          },
+          {text: 'Real Usable', isTag: false}
+        ]
+      };
+      const oldPart2 = {
+        text: 'English Lesson', style: 'Sign-Default', fragments: [
+          {
+            text: '{\\an7\\bord5\\blur9\\3c&HF4F3F2&\\3a&HB9&\\4c&H000000&\\4a&HFF&\\fnKozuka Mincho Pr6N-CP H\\fs110\\b1\\c&HF4F3F2&\\1a&HFF&\\pos(895.820,-146.345)}',
+            isTag: true
+          },
+          {text: 'English Lesson', isTag: false}
+        ]
+      };
+
+      const sourceSub1: AssSubtitleData = {
+        type: 'ass',
+        id: 's1',
+        startTime: 59.53,
+        endTime: 59.58,
+        track: 0,
+        parts: [oldPart1, oldPart2]
+      };
+      const sourceSub2: AssSubtitleData = {
+        type: 'ass',
+        id: 's2',
+        startTime: 60.45,
+        endTime: 62.50,
+        track: 0,
+        parts: [oldPart1, oldPart2]
+      };
 
       const clip: VideoClip = {
         id: 'clip-1',
@@ -120,11 +171,8 @@ describe('AssEditService', () => {
         endTime: 62.50,
         duration: 2.97,
         hasSubtitle: true,
-        parts: [
-          {text: 'Real Usable', style: 'Sign-Default'},
-          {text: 'English Lesson', style: 'Sign-Default'}
-        ],
-        sourceSubtitles: []
+        parts: [oldPart1, oldPart2],
+        sourceSubtitles: [sourceSub1, sourceSub2]
       };
 
       const newContent: ClipContent = {
@@ -132,12 +180,24 @@ describe('AssEditService', () => {
           {
             text: 'Fake Unusable',
             style: 'Sign-Default',
-            fragments: [{text: 'Fake Unusable', isTag: false}]
+            fragments: [
+              {
+                text: '{\\an7\\3c&HF4F3F2&\\3a&HD7&\\4c&H000000&\\4a&HFF&\\fnKozuka Mincho Pr6N Toaru B\\fs65\\c&HF4F3F2&\\blur9\\bord5\\pos(861.820,-332.345)\\1a&HFF&}',
+                isTag: true
+              },
+              {text: 'Fake Unusable', isTag: false}
+            ]
           },
           {
             text: 'Spanish Siesta',
             style: 'Sign-Default',
-            fragments: [{text: 'Spanish Siesta', isTag: false}]
+            fragments: [
+              {
+                text: '{\\an7\\bord5\\blur9\\3c&HF4F3F2&\\3a&HB9&\\4c&H000000&\\4a&HFF&\\fnKozuka Mincho Pr6N-CP H\\fs110\\b1\\c&HF4F3F2&\\1a&HFF&\\pos(895.820,-146.345)}',
+                isTag: true
+              },
+              {text: 'Spanish Siesta', isTag: false}
+            ]
           }
         ]
       };
@@ -166,6 +226,28 @@ describe('AssEditService', () => {
     it('edits text while preserving inline style tags', () => {
       const dialogueLine = 'Dialogue: 0,0:00:10.00,0:00:12.00,Default,,0,0,0,,{\\i1}Anata{\\i0} look like you suck at {\\i1}Eigo{\\i0}.';
       const rawAssContent = assFileTemplate(dialogueLine);
+      const oldPart = {
+        text: 'Anata look like you suck at Eigo.',
+        style: 'Default',
+        fragments: [
+          {text: '{\\i1}', isTag: true},
+          {text: 'Anata', isTag: false},
+          {text: '{\\i0}', isTag: true},
+          {text: ' look like you suck at ', isTag: false},
+          {text: '{\\i1}', isTag: true},
+          {text: 'Eigo', isTag: false},
+          {text: '{\\i0}', isTag: true},
+          {text: '.', isTag: false},
+        ]
+      };
+      const sourceSubtitle: AssSubtitleData = {
+        type: 'ass',
+        id: 'sub-3',
+        startTime: 10,
+        endTime: 12,
+        track: 0,
+        parts: [oldPart]
+      };
 
       const clip: VideoClip = {
         id: 'subtitle-guid-3',
@@ -173,21 +255,8 @@ describe('AssEditService', () => {
         endTime: 12,
         duration: 2,
         hasSubtitle: true,
-        parts: [{
-          text: 'Anata look like you suck at Eigo.',
-          style: 'Default',
-          fragments: [
-            {text: '{\\i1}', isTag: true},
-            {text: 'Anata', isTag: false},
-            {text: '{\\i0}', isTag: true},
-            {text: ' look like you suck at ', isTag: false},
-            {text: '{\\i1}', isTag: true},
-            {text: 'Eigo', isTag: false},
-            {text: '{\\i0}', isTag: true},
-            {text: '.', isTag: false},
-          ]
-        }],
-        sourceSubtitles: []
+        parts: [oldPart],
+        sourceSubtitles: [sourceSubtitle]
       };
 
       const newContent: ClipContent = {
@@ -218,6 +287,24 @@ describe('AssEditService', () => {
     it('moves text between fragments of a line with inline tags', () => {
       const dialogueLine = 'Dialogue: 0,0:00:10.00,0:00:12.00,Default,,0,0,0,,{\\i1}A{\\i0} and {\\i1}B{\\i0}.';
       const rawAssContent = assFileTemplate(dialogueLine);
+      const oldPart = {
+        text: 'A and B.',
+        style: 'Default',
+        fragments: [
+          {text: '{\\i1}', isTag: true}, {text: 'A', isTag: false}, {text: '{\\i0}', isTag: true},
+          {text: ' and ', isTag: false},
+          {text: '{\\i1}', isTag: true}, {text: 'B', isTag: false}, {text: '{\\i0}', isTag: true},
+          {text: '.', isTag: false},
+        ]
+      };
+      const sourceSubtitle: AssSubtitleData = {
+        type: 'ass',
+        id: 'sub-4',
+        startTime: 10,
+        endTime: 12,
+        track: 0,
+        parts: [oldPart]
+      };
 
       const clip: VideoClip = {
         id: 'subtitle-guid-4',
@@ -225,17 +312,8 @@ describe('AssEditService', () => {
         endTime: 12,
         duration: 2,
         hasSubtitle: true,
-        parts: [{
-          text: 'A and B.',
-          style: 'Default',
-          fragments: [
-            {text: '{\\i1}', isTag: true}, {text: 'A', isTag: false}, {text: '{\\i0}', isTag: true},
-            {text: ' and ', isTag: false},
-            {text: '{\\i1}', isTag: true}, {text: 'B', isTag: false}, {text: '{\\i0}', isTag: true},
-            {text: '.', isTag: false},
-          ]
-        }],
-        sourceSubtitles: []
+        parts: [oldPart],
+        sourceSubtitles: [sourceSubtitle]
       };
 
       const newContent: ClipContent = {
@@ -264,6 +342,28 @@ describe('AssEditService', () => {
     it('correctly simulates an edit and subsequent undo on a line with complex inline tags and an apostrophe', () => {
       const originalDialogueLine = "Dialogue: 0,0:00:53.48,0:00:57.14,Default,,0,0,0,,{\\i1}Atashi'll oshieru{\\i0} you real usable {\\i1}Eigo{\\i0}.";
       const originalRawContent = assFileTemplate(originalDialogueLine);
+      const oldPart = {
+        text: "Atashi'll oshieru you real usable Eigo.",
+        style: 'Default',
+        fragments: [
+          {text: '{\\i1}', isTag: true},
+          {text: "Atashi'll oshieru", isTag: false},
+          {text: '{\\i0}', isTag: true},
+          {text: ' you real usable ', isTag: false},
+          {text: '{\\i1}', isTag: true},
+          {text: 'Eigo', isTag: false},
+          {text: '{\\i0}', isTag: true},
+          {text: '.', isTag: false}
+        ]
+      };
+      const sourceSubtitle: AssSubtitleData = {
+        type: 'ass',
+        id: 'sub-7',
+        startTime: 53.48,
+        endTime: 57.14,
+        track: 0,
+        parts: [oldPart]
+      };
 
       const originalClip: VideoClip = {
         id: 'clip-guid-7',
@@ -271,21 +371,8 @@ describe('AssEditService', () => {
         endTime: 57.14,
         duration: 3.66,
         hasSubtitle: true,
-        parts: [{
-          text: "Atashi'll oshieru you real usable Eigo.",
-          style: 'Default',
-          fragments: [
-            {text: '{\\i1}', isTag: true},
-            {text: "Atashi'll oshieru", isTag: false},
-            {text: '{\\i0}', isTag: true},
-            {text: ' you real usable ', isTag: false},
-            {text: '{\\i1}', isTag: true},
-            {text: 'Eigo', isTag: false},
-            {text: '{\\i0}', isTag: true},
-            {text: '.', isTag: false}
-          ]
-        }],
-        sourceSubtitles: []
+        parts: [oldPart],
+        sourceSubtitles: [sourceSubtitle]
       };
 
       const editedContent: ClipContent = {
@@ -304,6 +391,10 @@ describe('AssEditService', () => {
       const clipBeforeUndo: VideoClip = {
         ...originalClip,
         parts: editedContent.parts!,
+        sourceSubtitles: [{
+          ...sourceSubtitle,
+          parts: editedContent.parts!,
+        }],
       };
 
       // Perform the initial edit
@@ -327,34 +418,105 @@ describe('AssEditService', () => {
       expect(finalRestoredContent).withContext('After undo, the simplified line should be gone.').not.toContain(expectedSimplifiedLine);
     });
 
+    it('correctly reconstructs a line when editing multiple fragments with inline tags', () => {
+      const originalLine = "Dialogue: 0,0:00:53.48,0:00:57.14,Default,,0,0,0,,{\\i1}Atashi'll oshieru{\\i0} you real usable {\\i1}Eigo{\\i0}.";
+      const rawAssContent = assFileTemplate(originalLine);
+      const oldPart: SubtitlePart = {
+        text: "Atashi'll oshieru you real usable Eigo.", style: 'Default',
+        fragments: [
+          {text: '{\\i1}', isTag: true}, {text: "Atashi'll oshieru", isTag: false}, {text: '{\\i0}', isTag: true},
+          {text: ' you real usable ', isTag: false},
+          {text: '{\\i1}', isTag: true}, {text: 'Eigo', isTag: false}, {text: '{\\i0}', isTag: true},
+          {text: '.', isTag: false}
+        ]
+      };
+      const sourceSubtitle: AssSubtitleData = {
+        type: 'ass', id: 'sub-frag', startTime: 53.48, endTime: 57.14, track: 0, parts: [oldPart]
+      };
+
+      const clip: VideoClip = {
+        id: 'frag-clip',
+        startTime: 53.48, endTime: 57.14, duration: 3.66, hasSubtitle: true,
+        parts: [oldPart],
+        sourceSubtitles: [sourceSubtitle]
+      };
+
+      // Simulate editing each text fragment in the UI
+      const newPart: SubtitlePart = {
+        text: "A B C D", // The final concatenated text
+        style: 'Default',
+        fragments: [
+          {text: '{\\i1}', isTag: true}, {text: 'A', isTag: false}, {text: '{\\i0}', isTag: true},
+          {text: 'B', isTag: false},
+          {text: '{\\i1}', isTag: true}, {text: 'C', isTag: false}, {text: '{\\i0}', isTag: true},
+          {text: 'D', isTag: false}
+        ]
+      };
+      const newContent: ClipContent = {
+        parts: [newPart]
+      };
+
+      const result = service.modifyAssText(clip, newContent, rawAssContent);
+
+      const expectedLine = 'Dialogue: 0,0:00:53.48,0:00:57.14,Default,,0,0,0,,{\\i1}A{\\i0}B{\\i1}C{\\i0}D';
+      expect(result).toContain(expectedLine);
+      expect(result).not.toContain(originalLine);
+    });
+
+
     it('correctly handles edits and undos on lines with mixed animation and inline tags', () => {
       // Two dialogue lines with different border/blur tags but the same text content:
       const originalDialogueLines = `Dialogue: 0,0:01:26.52,0:01:30.52,mmr3title,,0,0,0,,{\\fnA-OTF Jun Pro MMR3 34\\fs19\\an7\\bord9\\blur7\\fsp6\\c&H3974E9&\\4c&H000000&\\4a&HFF&\\3c&HFFFFFF&\\pos(1454,838)}Much More Railgun{\\fscx60} {\\fs16\\fscx100}Ⅲ\r\nDialogue: 1,0:01:26.52,0:01:30.52,mmr3title,,0,0,0,,{\\fnA-OTF Jun Pro MMR3 34\\fs19\\an7\\bord1.8\\blur0\\fsp6\\c&H3974E9&\\4c&H000000&\\4a&HFF&\\3c&H423A80&\\pos(1454,838)}Much More Railgun{\\fscx60} {\\fs16\\fscx100}Ⅲ`;
       const originalRawContent = assFileTemplate(originalDialogueLines);
 
-      // This represents the correctly parsed, merged view of the two lines above:
+      const oldPart1 = {
+        text: 'Much More Railgun Ⅲ', style: 'mmr3title',
+        fragments: [
+          {
+            text: '{\\fnA-OTF Jun Pro MMR3 34\\fs19\\an7\\bord9\\blur7\\fsp6\\c&H3974E9&\\4c&H000000&\\4a&HFF&\\3c&HFFFFFF&\\pos(1454,838)}',
+            isTag: true
+          },
+          {text: 'Much More Railgun', isTag: false},
+          {text: '{\\fscx60}', isTag: true}, {text: ' ', isTag: false}, {
+            text: '{\\fs16\\fscx100}',
+            isTag: true
+          }, {text: 'Ⅲ', isTag: false}
+        ]
+      };
+      const oldPart2 = { // Text is same, style is same, but fragments (animation tags) are different
+        text: 'Much More Railgun Ⅲ', style: 'mmr3title',
+        fragments: [
+          {
+            text: '{\\fnA-OTF Jun Pro MMR3 34\\fs19\\an7\\bord1.8\\blur0\\fsp6\\c&H3974E9&\\4c&H000000&\\4a&HFF&\\3c&H423A80&\\pos(1454,838)}',
+            isTag: true
+          },
+          {text: 'Much More Railgun', isTag: false},
+          {text: '{\\fscx60}', isTag: true}, {text: ' ', isTag: false}, {
+            text: '{\\fs16\\fscx100}',
+            isTag: true
+          }, {text: 'Ⅲ', isTag: false}
+        ]
+      };
+
+      // In the real app, these two parts would come from separate SubtitleData objects on different tracks
+      const sourceSubtitle: AssSubtitleData = {
+        type: 'ass',
+        id: 'sub-8',
+        startTime: 86.52,
+        endTime: 90.52,
+        track: 0,
+        parts: [oldPart1, oldPart2]
+      };
+
       const originalClip: VideoClip = {
         id: 'clip-guid-8', startTime: 86.52, endTime: 90.52, duration: 4, hasSubtitle: true,
-        parts: [{
-          text: 'Much More Railgun Ⅲ', style: 'mmr3title',
-          fragments: [
-            {
-              text: '{\\fnA-OTF Jun Pro MMR3 34\\fs19\\an7\\bord9\\blur7\\fsp6\\c&H3974E9&\\4c&H000000&\\4a&HFF&\\3c&HFFFFFF&\\pos(1454,838)}',
-              isTag: true
-            },
-            {text: 'Much More Railgun', isTag: false},
-            {text: '{\\fscx60}', isTag: true},
-            {text: ' ', isTag: false},
-            {text: '{\\fs16\\fscx100}', isTag: true},
-            {text: 'Ⅲ', isTag: false}
-          ]
-        }],
-        sourceSubtitles: []
+        parts: [oldPart1], // The clip shows the merged view, which de-duplicates parts
+        sourceSubtitles: [sourceSubtitle]
       };
 
       const editedContent: ClipContent = {
         parts: [{
-          text: 'Mux More Railgun Ⅲ', // Changed "Much" to "Mux"
+          text: 'Mux More Railgun Ⅲ',
           style: 'mmr3title',
           fragments: [
             {
@@ -362,10 +524,10 @@ describe('AssEditService', () => {
               isTag: true
             },
             {text: 'Mux More Railgun', isTag: false},
-            {text: '{\\fscx60}', isTag: true},
-            {text: ' ', isTag: false},
-            {text: '{\\fs16\\fscx100}', isTag: true},
-            {text: 'Ⅲ', isTag: false}
+            {text: '{\\fscx60}', isTag: true}, {text: ' ', isTag: false}, {
+              text: '{\\fs16\\fscx100}',
+              isTag: true
+            }, {text: 'Ⅲ', isTag: false}
           ]
         }]
       };
@@ -381,7 +543,25 @@ describe('AssEditService', () => {
       expect(contentAfterEdit).withContext('The original text should be gone').not.toContain('}Much More Railgun{');
 
       // Perform the undo operation
-      const clipBeforeUndo: VideoClip = {...originalClip, parts: editedContent.parts!};
+      const editedSourcePart1 = {
+        ...oldPart1,
+        text: 'Mux More Railgun Ⅲ',
+        fragments: oldPart1.fragments.map(f => f.text === 'Much More Railgun' ? {...f, text: 'Mux More Railgun'} : f)
+      };
+      const editedSourcePart2 = {
+        ...oldPart2,
+        text: 'Mux More Railgun Ⅲ',
+        fragments: oldPart2.fragments.map(f => f.text === 'Much More Railgun' ? {...f, text: 'Mux More Railgun'} : f)
+      };
+
+      const clipBeforeUndo: VideoClip = {
+        ...originalClip,
+        parts: editedContent.parts!,
+        sourceSubtitles: [{
+          ...sourceSubtitle,
+          parts: [editedSourcePart1, editedSourcePart2]
+        }]
+      };
       const contentToRestore: ClipContent = {parts: originalClip.parts};
       const finalRestoredContent = service.modifyAssText(clipBeforeUndo, contentToRestore, contentAfterEdit);
 
@@ -396,19 +576,36 @@ Dialogue: 0,0:00:25.58,0:00:29.96,Sign-Default,,0,0,0,,{\\fnDFPMaruGothic-W6-Kam
 Dialogue: 1,0:00:25.58,0:00:29.96,Sign-Default,,0,0,0,,{\\fnDFPMaruGothic-W6-Kami\\fs150\\c&H181818&\\3c&HFFFFFF&\\bord0\\blur0.5\\4c&H000000&\\4a&HFF&\\pos(974,758)}Not Edible
       `);
 
+      const oldPart1 = {
+        text: 'Not Edible', style: 'Sign-Default',
+        fragments: [
+          {
+            text: '{\\fnDFPMaruGothic-W6-Kami\\fs150\\c&HFFFFFF&\\3c&HFFFFFF&\\blur0.5\\bord6\\4c&H000000&\\4a&HFF&\\pos(974,758)}',
+            isTag: true
+          },
+          {text: 'Not Edible', isTag: false}
+        ]
+      };
+      const oldPart2 = {
+        ...oldPart1,
+        fragments: [{
+          text: '{\\fnDFPMaruGothic-W6-Kami\\fs150\\c&H181818&\\3c&HFFFFFF&\\bord0\\blur0.5\\4c&H000000&\\4a&HFF&\\pos(974,758)}',
+          isTag: true
+        }, {text: 'Not Edible', isTag: false}]
+      };
+      const sourceSubtitle: AssSubtitleData = {
+        type: 'ass',
+        id: 'sub-edit',
+        startTime: 25.58,
+        endTime: 29.96,
+        track: 0,
+        parts: [oldPart1, oldPart2]
+      };
+
       const clip: VideoClip = {
         id: 'clip-to-edit', startTime: 25.58, endTime: 29.96, hasSubtitle: true, duration: 4.38,
-        parts: [{
-          text: 'Not Edible', style: 'Sign-Default',
-          fragments: [
-            {
-              text: '{\\fnDFPMaruGothic-W6-Kami\\fs150\\c&HFFFFFF&\\3c&HFFFFFF&\\blur0.5\\bord6\\4c&H000000&\\4a&HFF&\\pos(974,758)}',
-              isTag: true
-            },
-            {text: 'Not Edible', isTag: false}
-          ]
-        }],
-        sourceSubtitles: []
+        parts: [oldPart1],
+        sourceSubtitles: [sourceSubtitle]
       };
 
       // Perform the initial edit to "Not Edible2".
@@ -435,9 +632,20 @@ Dialogue: 1,0:00:25.58,0:00:29.96,Sign-Default,,0,0,0,,{\\fnDFPMaruGothic-W6-Kam
       expect(contentAfterEdit).withContext('The second dialogue line should also be updated').toContain(expectedEditedLine2);
 
       // Undo logic
+      const editedSourcePart1 = {...oldPart1, text: 'Not Edible2', fragments: editContent.parts![0].fragments};
+      const editedSourcePart2 = {
+        ...oldPart2,
+        text: 'Not Edible2',
+        fragments: [oldPart2.fragments![0], {text: 'Not Edible2', isTag: false}]
+      };
+
       const clipBeforeUndo: VideoClip = {
         ...clip,
-        parts: editContent.parts!
+        parts: editContent.parts!,
+        sourceSubtitles: [{
+          ...sourceSubtitle,
+          parts: [editedSourcePart1, editedSourcePart2]
+        }]
       };
       const contentToRestore: ClipContent = {
         parts: clip.parts
@@ -454,6 +662,19 @@ Dialogue: 1,0:00:25.58,0:00:29.96,Sign-Default,,0,0,0,,{\\fnDFPMaruGothic-W6-Kam
     it('edits a multi-line subtitle containing a newline (\\N) character', () => {
       const dialogueLine = 'Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,First line.\\NSecond line.';
       const rawAssContent = assFileTemplate(dialogueLine);
+      const oldPart = {
+        text: 'First line.\nSecond line.',
+        style: 'Default',
+        fragments: [{text: 'First line.\nSecond line.', isTag: false}]
+      };
+      const sourceSubtitle: AssSubtitleData = {
+        type: 'ass',
+        id: 'sub-ml',
+        startTime: 10,
+        endTime: 15,
+        track: 0,
+        parts: [oldPart]
+      };
 
       const clip: VideoClip = {
         id: 'multi-line-clip',
@@ -461,12 +682,8 @@ Dialogue: 1,0:00:25.58,0:00:29.96,Sign-Default,,0,0,0,,{\\fnDFPMaruGothic-W6-Kam
         endTime: 15,
         duration: 5,
         hasSubtitle: true,
-        parts: [{
-          text: 'First line.\nSecond line.',
-          style: 'Default',
-          fragments: [{text: 'First line.\nSecond line.', isTag: false}]
-        }],
-        sourceSubtitles: []
+        parts: [oldPart],
+        sourceSubtitles: [sourceSubtitle]
       };
 
       const newContent: ClipContent = {
@@ -478,7 +695,6 @@ Dialogue: 1,0:00:25.58,0:00:29.96,Sign-Default,,0,0,0,,{\\fnDFPMaruGothic-W6-Kam
       };
 
       const expectedLine = 'Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,First line.\\NEdited second line.';
-
       const result = service.modifyAssText(clip, newContent, rawAssContent);
 
       expect(result).toContain(expectedLine);
@@ -492,7 +708,7 @@ Dialogue: 1,0:00:25.58,0:00:29.96,Sign-Default,,0,0,0,,{\\fnDFPMaruGothic-W6-Kam
       const rawAssContent = assFileTemplate(dialogueLine);
 
       const originalSub: AssSubtitleData = {
-        type: 'ass', id: 'sub-1', startTime: 10, endTime: 12, parts: [{text: 'Hello', style: 'Default'}]
+        type: 'ass', id: 'sub-1', startTime: 10, endTime: 12, track: 0, parts: [{text: 'Hello', style: 'Default'}]
       };
       const updatedSub: AssSubtitleData = {
         ...originalSub, startTime: 8, endTime: 13
@@ -510,7 +726,7 @@ Dialogue: 1,0:00:25.58,0:00:29.96,Sign-Default,,0,0,0,,{\\fnDFPMaruGothic-W6-Kam
       const rawAssContent = assFileTemplate(dialogueLine);
 
       const originalSub: AssSubtitleData = {
-        type: 'ass', id: 'sub-1', startTime: 10, endTime: 12, parts: [{text: 'Hello', style: 'Default'}]
+        type: 'ass', id: 'sub-1', startTime: 10, endTime: 12, track: 0, parts: [{text: 'Hello', style: 'Default'}]
       };
 
       const updatedSub: AssSubtitleData = {
@@ -532,10 +748,10 @@ Dialogue: 0,0:00:06.00,0:00:08.00,Top,,0,0,0,,Part 2
       const rawAssContent = assFileTemplate(dialogueLines);
 
       const originalA: AssSubtitleData = {
-        type: 'ass', id: 'sub-a', startTime: 5, endTime: 6, parts: [{text: 'Part 1', style: 'Default'}]
+        type: 'ass', id: 'sub-a', startTime: 5, endTime: 6, track: 0, parts: [{text: 'Part 1', style: 'Default'}]
       };
       const originalB: AssSubtitleData = {
-        type: 'ass', id: 'sub-b', startTime: 6, endTime: 8, parts: [{text: 'Part 2', style: 'Top'}]
+        type: 'ass', id: 'sub-b', startTime: 6, endTime: 8, track: 0, parts: [{text: 'Part 2', style: 'Top'}]
       };
 
       const updatedA: AssSubtitleData = {...originalA, startTime: 4, endTime: 9};
@@ -557,7 +773,7 @@ Dialogue: 1,0:00:20.00,0:00:22.00,Default,,0,0,0,,Shadow Text
       const rawAssContent = assFileTemplate(dialogueLines);
 
       const originalSub: AssSubtitleData = {
-        type: 'ass', id: 'sub-1', startTime: 20, endTime: 22, parts: [{text: 'Shadow Text', style: 'Default'}]
+        type: 'ass', id: 'sub-1', startTime: 20, endTime: 22, track: 0, parts: [{text: 'Shadow Text', style: 'Default'}]
       };
       const updatedSub: AssSubtitleData = {
         ...originalSub, startTime: 20, endTime: 21
@@ -581,6 +797,7 @@ Dialogue: 1,0:00:20.00,0:00:22.00,Default,,0,0,0,,Shadow Text
         id: 'new-sub',
         startTime: 3,
         endTime: 4,
+        track: 0,
         parts: [{text: 'New Line', style: 'Top', fragments: []}]
       };
 
@@ -597,6 +814,7 @@ Dialogue: 1,0:00:20.00,0:00:22.00,Default,,0,0,0,,Shadow Text
         id: 'new-sub',
         startTime: 1,
         endTime: 2,
+        track: 0,
         parts: [{text: 'First', style: 'Default', fragments: []}]
       };
 
@@ -615,7 +833,7 @@ Dialogue: 1,0:00:20.00,0:00:22.00,Default,,0,0,0,,Shadow Text
       const clipToRemove: Partial<VideoClip> = {
         hasSubtitle: true,
         sourceSubtitles: [{
-          type: 'ass', id: 'sub-1', startTime: 1, endTime: 2, parts: [{text: 'Hello', style: 'Default'}]
+          type: 'ass', id: 'sub-1', startTime: 1, endTime: 2, track: 0, parts: [{text: 'Hello', style: 'Default'}]
         }]
       };
 
@@ -634,8 +852,8 @@ Dialogue: 0,0:00:15.00,0:00:16.00,Default,,0,0,0,,Unaffected
       const clipToRemove: Partial<VideoClip> = {
         hasSubtitle: true,
         sourceSubtitles: [
-          {type: 'ass', id: 'sub-1', startTime: 10, endTime: 12, parts: [{text: 'Part 1', style: 'Default'}]},
-          {type: 'ass', id: 'sub-2', startTime: 10, endTime: 12, parts: [{text: 'Part 2', style: 'Top'}]}
+          {type: 'ass', id: 'sub-1', startTime: 10, endTime: 12, track: 0, parts: [{text: 'Part 1', style: 'Default'}]},
+          {type: 'ass', id: 'sub-2', startTime: 10, endTime: 12, track: 0, parts: [{text: 'Part 2', style: 'Top'}]}
         ]
       };
 
@@ -657,12 +875,12 @@ Dialogue: 0,0:00:08.00,0:00:10.00,Top,,0,0,0,,Part 2
 
       const clip1: Partial<VideoClip> = {
         startTime: 5, endTime: 6, sourceSubtitles: [
-          {type: 'ass', id: 'sub-a', startTime: 5, endTime: 6, parts: [{text: 'Part 1', style: 'Default'}]}
+          {type: 'ass', id: 'sub-a', startTime: 5, endTime: 6, track: 0, parts: [{text: 'Part 1', style: 'Default'}]}
         ]
       };
       const clip2: Partial<VideoClip> = {
         startTime: 8, endTime: 10, sourceSubtitles: [
-          {type: 'ass', id: 'sub-b', startTime: 8, endTime: 10, parts: [{text: 'Part 2', style: 'Top'}]}
+          {type: 'ass', id: 'sub-b', startTime: 8, endTime: 10, track: 0, parts: [{text: 'Part 2', style: 'Top'}]}
         ]
       };
 
@@ -684,12 +902,17 @@ Dialogue: 0,0:00:08.00,0:00:10.00,Top,,0,0,0,,Part 2
 
       const clipToSplit: Partial<VideoClip> = {
         sourceSubtitles: [{
-          type: 'ass', id: 'sub-1', startTime: 10, endTime: 15, parts: [{text: 'This is a test', style: 'Default'}]
+          type: 'ass',
+          id: 'sub-1',
+          startTime: 10,
+          endTime: 15,
+          track: 0,
+          parts: [{text: 'This is a test', style: 'Default'}]
         }]
       };
 
       const newSecondPartSubs: AssSubtitleData[] = [{
-        type: 'ass', id: 'sub-2', startTime: splitPoint + 0.1, endTime: 15, parts: [{
+        type: 'ass', id: 'sub-2', startTime: splitPoint + 0.1, endTime: 15, track: 0, parts: [{
           text: 'This is a test',
           style: 'Default'
         }]
@@ -715,7 +938,12 @@ Dialogue: 1,0:00:20.00,0:00:25.00,Default,,0,0,0,,Shadow Text
 
       const clipToSplit: Partial<VideoClip> = {
         sourceSubtitles: [{
-          type: 'ass', id: 'sub-1', startTime: 20, endTime: 25, parts: [{text: 'Shadow Text', style: 'Default'}]
+          type: 'ass',
+          id: 'sub-1',
+          startTime: 20,
+          endTime: 25,
+          track: 0,
+          parts: [{text: 'Shadow Text', style: 'Default'}]
         }]
       };
 
@@ -724,6 +952,7 @@ Dialogue: 1,0:00:20.00,0:00:25.00,Default,,0,0,0,,Shadow Text
         id: 'sub-2',
         startTime: splitPoint + 0.1,
         endTime: 25,
+        track: 0,
         parts: [{text: 'Shadow Text', style: 'Default'}]
       }];
 
@@ -752,13 +981,28 @@ Dialogue: 0,0:00:12.60,0:00:15.00,Default,,0,0,0,,This is a test
       const rawAssContent = assFileTemplate(dialogueLines);
 
       const subtitlesToExtend: AssSubtitleData[] = [{
-        type: 'ass', id: 'sub-1', startTime: 10, endTime: 12.5, parts: [{text: 'This is a test', style: 'Default'}]
+        type: 'ass',
+        id: 'sub-1',
+        startTime: 10,
+        endTime: 12.5,
+        track: 0,
+        parts: [{text: 'This is a test', style: 'Default'}]
       }];
       const subtitlesToRemove: AssSubtitleData[] = [{
-        type: 'ass', id: 'sub-2', startTime: 12.6, endTime: 15, parts: [{text: 'This is a test', style: 'Default'}]
+        type: 'ass',
+        id: 'sub-2',
+        startTime: 12.6,
+        endTime: 15,
+        track: 0,
+        parts: [{text: 'This is a test', style: 'Default'}]
       }];
       const restoredFullSubtitles: AssSubtitleData[] = [{
-        type: 'ass', id: 'sub-1', startTime: 10, endTime: 15, parts: [{text: 'This is a test', style: 'Default'}]
+        type: 'ass',
+        id: 'sub-1',
+        startTime: 10,
+        endTime: 15,
+        track: 0,
+        parts: [{text: 'This is a test', style: 'Default'}]
       }];
 
       const result = service.unsplitDialogueLines(rawAssContent, subtitlesToExtend, subtitlesToRemove, restoredFullSubtitles);
@@ -766,113 +1010,6 @@ Dialogue: 0,0:00:12.60,0:00:15.00,Default,,0,0,0,,This is a test
       const expectedLine = 'Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,This is a test';
       expect(result).toContain(expectedLine);
       expect(result.split('Dialogue:').length - 1).toBe(1);
-    });
-  });
-
-  describe('deleteAssClipAndSplitSpanningLines', () => {
-    it('removes a line fully contained within the clip but keeps lines outside', () => {
-      const dialogueLines = `
-Dialogue: 0,0:00:05.00,0:00:08.00,Default,,0,0,0,,Keep Before
-Dialogue: 0,0:00:12.00,0:00:15.00,Default,,0,0,0,,Delete Me
-Dialogue: 0,0:00:22.00,0:00:25.00,Default,,0,0,0,,Keep After
-      `.trim();
-      const rawAssContent = assFileTemplate(dialogueLines);
-      const clipToRemove: Partial<VideoClip> = {startTime: 10, endTime: 20};
-
-      const result = service.deleteAssClipAndSplitSpanningLines(rawAssContent, clipToRemove as VideoClip);
-
-      expect(result).toContain('Keep Before');
-      expect(result).toContain('Keep After');
-      expect(result).not.toContain('Delete Me');
-      expect(result.split('Dialogue:').length - 1).toBe(2);
-    });
-
-    it('splits a line that spans the entire clip', () => {
-      const dialogueLines = 'Dialogue: 0,0:00:10.00,0:00:20.00,Default,,0,0,0,,Split Me';
-      const rawAssContent = assFileTemplate(dialogueLines);
-      const clipToRemove: Partial<VideoClip> = {startTime: 12, endTime: 18};
-
-      const result = service.deleteAssClipAndSplitSpanningLines(rawAssContent, clipToRemove as VideoClip);
-
-      const expectedLine1 = 'Dialogue: 0,0:00:10.00,0:00:12.00,Default,,0,0,0,,Split Me';
-      const expectedLine2 = 'Dialogue: 0,0:00:18.00,0:00:20.00,Default,,0,0,0,,Split Me';
-
-      expect(result).toContain(expectedLine1);
-      expect(result).toContain(expectedLine2);
-      expect(result.split('Dialogue:').length - 1).toBe(2);
-    });
-
-    it('truncates a line that overlaps the start of the clip', () => {
-      const dialogueLine = 'Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,Truncate End';
-      const rawAssContent = assFileTemplate(dialogueLine);
-      const clipToRemove: Partial<VideoClip> = {startTime: 12, endTime: 18};
-
-      const result = service.deleteAssClipAndSplitSpanningLines(rawAssContent, clipToRemove as VideoClip);
-      const expectedLine = 'Dialogue: 0,0:00:10.00,0:00:12.00,Default,,0,0,0,,Truncate End';
-
-      expect(result).toContain(expectedLine);
-      expect(result.split('Dialogue:').length - 1).toBe(1);
-    });
-
-    it('shifts the start time of a line that overlaps the end of the clip', () => {
-      const dialogueLine = 'Dialogue: 0,0:00:15.00,0:00:20.00,Default,,0,0,0,,Shift Start';
-      const rawAssContent = assFileTemplate(dialogueLine);
-      const clipToRemove: Partial<VideoClip> = {startTime: 12, endTime: 18};
-
-      const result = service.deleteAssClipAndSplitSpanningLines(rawAssContent, clipToRemove as VideoClip);
-      const expectedLine = 'Dialogue: 0,0:00:18.00,0:00:20.00,Default,,0,0,0,,Shift Start';
-
-      expect(result).toContain(expectedLine);
-      expect(result.split('Dialogue:').length - 1).toBe(1);
-    });
-
-    it('keeps lines that are completely outside the clip range', () => {
-      const dialogueLines = `
-Dialogue: 0,0:00:05.00,0:00:08.00,Default,,0,0,0,,Keep Before
-Dialogue: 0,0:00:22.00,0:00:25.00,Default,,0,0,0,,Keep After
-      `.trim();
-      const rawAssContent = assFileTemplate(dialogueLines);
-      const clipToRemove: Partial<VideoClip> = {startTime: 10, endTime: 20};
-
-      const result = service.deleteAssClipAndSplitSpanningLines(rawAssContent, clipToRemove as VideoClip);
-
-      expect(result).toContain('Keep Before');
-      expect(result).toContain('Keep After');
-      expect(result.split('Dialogue:').length - 1).toBe(2);
-    });
-
-    it('removes a contained line and splits two spanning lines', () => {
-      const dialogueLines = `
-Dialogue: 0,0:00:25.58,0:00:29.96,Sign-Default,,0,0,0,,Not Edible
-Dialogue: 1,0:00:25.58,0:00:29.96,Sign-Default,,0,0,0,,Not Edible
-Dialogue: 10,0:00:26.77,0:00:29.34,Default,,0,0,0,,Strike!
-      `.trim();
-      const rawAssContent = assFileTemplate(dialogueLines);
-
-      const clipToRemove: Partial<VideoClip> = {
-        startTime: 26.77,
-        endTime: 29.34
-      };
-
-      const result = service.deleteAssClipAndSplitSpanningLines(rawAssContent, clipToRemove as VideoClip);
-
-      const expectedLines = [
-        'Dialogue: 0,0:00:25.58,0:00:26.77,Sign-Default,,0,0,0,,Not Edible',
-        'Dialogue: 1,0:00:25.58,0:00:26.77,Sign-Default,,0,0,0,,Not Edible',
-        'Dialogue: 0,0:00:29.34,0:00:29.96,Sign-Default,,0,0,0,,Not Edible',
-        'Dialogue: 1,0:00:29.34,0:00:29.96,Sign-Default,,0,0,0,,Not Edible',
-      ];
-
-      // Check that "Strike!" is gone
-      expect(result).not.toContain('Strike!');
-
-      // Check that all expected split/truncated lines are present
-      for (const line of expectedLines) {
-        expect(result).toContain(line);
-      }
-
-      // Check that the total number of dialogue lines is correct
-      expect(result.split('Dialogue:').length - 1).toBe(4);
     });
   });
 });

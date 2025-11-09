@@ -19,9 +19,9 @@ import {GlobalSettingsStateService} from '../global-settings/global-settings-sta
 import {ClipContent} from '../../model/commands/update-clip-text.command';
 import {AssEditService} from '../../features/project-details/services/ass-edit/ass-edit.service';
 import {Project} from '../../model/project.types';
-import {AssSubtitlesUtils} from '../../shared/utils/ass-subtitles/ass-subtitles.utils';
 import {cloneDeep, isEqual} from 'lodash-es';
 import {v4 as uuidv4} from 'uuid';
+import {AssSubtitlesUtils} from '../../../../shared/utils/ass-subtitles.utils';
 
 export const ADJUST_DEBOUNCE_MS = 50;
 export const MIN_GAP_DURATION = 0.1;
@@ -36,23 +36,65 @@ export class ClipsStateService implements OnDestroy {
   private readonly toastService = inject(ToastService);
   private readonly assEditService = inject(AssEditService);
   private readonly _subtitles = signal<SubtitleData[]>([]);
-  private readonly _currentClipIndex = signal(0);
+  private readonly _activeTrack = signal(0);
+  private readonly _masterClipIndex = signal(0); // Track master clip index, works across flattened and merged collection of video clips
+  private readonly _activeTrackClipIndex = signal(0); // Clip index on currently active track
   private readonly _playerState = signal<PlayerState>(PlayerState.Idle);
   private adjustDebounceTimer: any;
   private _projectId: string | null = null;
   private readonly cleanupPlaybackListener: (() => void) | null = null;
 
-  public readonly currentClipIndex = this._currentClipIndex.asReadonly();
+  public readonly activeTrack = this._activeTrack.asReadonly();
+  public readonly masterClipIndex = this._masterClipIndex.asReadonly();
+  public readonly activeTrackClipIndex = this._activeTrackClipIndex.asReadonly();
   public readonly playerState = this._playerState.asReadonly();
   public readonly isPlaying = computed(() => this.playerState() === PlayerState.Playing);
-  public readonly clips: Signal<VideoClip[]> = computed(() => this.generateClips());
+  public readonly clipsForAllTracks: Signal<VideoClip[]> = computed(() => this.generateClips(this._subtitles()));
+  public readonly clips: Signal<VideoClip[]> = computed(() => {
+    const activeTrackIndex = this._activeTrack();
+    const subtitlesForActiveTrack = this._subtitles().filter(s => s.track === activeTrackIndex);
+    return this.generateClips(subtitlesForActiveTrack);
+  });
+
   public readonly currentClip = computed<VideoClip | undefined>(() => {
-    return this.clips()[this.currentClipIndex()];
+    return this.clips()[this.activeTrackClipIndex()];
+  });
+
+  public readonly currentClipForAllTracks = computed<VideoClip | undefined>(() => {
+    return this.clipsForAllTracks()[this.masterClipIndex()];
+  });
+
+  public readonly totalTracks = computed(() => {
+    const subtitles = this._subtitles();
+    if (subtitles.length === 0) {
+      return 1;
+    }
+
+    // Track numbers are 0-indexed, so max track number + 1 is the total count
+    return Math.max(...subtitles.map(s => s.track)) + 1;
+  });
+
+  public readonly subtitlesAtCurrentTime = computed(() => {
+    const time = this.videoStateService.currentTime();
+    return this._subtitles().filter(sub => time >= sub.startTime && time < sub.endTime);
   });
 
   constructor() {
     effect(() => {
-      const currentClips = this.clips();
+      const trackClips = this.clips();
+      const currentTime = this.videoStateService.currentTime();
+
+      if (trackClips.length === 0) {
+        this._activeTrackClipIndex.set(-1);
+        return;
+      }
+
+      const newActiveIndex = trackClips.findIndex(c => currentTime >= c.startTime && currentTime < c.endTime);
+      this._activeTrackClipIndex.set(newActiveIndex);
+    });
+
+    effect(() => {
+      const currentClips = this.clipsForAllTracks();
       if (currentClips.length > 0) {
         window.electronAPI.playbackUpdateClips(currentClips);
       }
@@ -60,13 +102,19 @@ export class ClipsStateService implements OnDestroy {
 
     this.cleanupPlaybackListener = window.electronAPI.onPlaybackStateUpdate((update) => {
       this.setPlayerState(update.playerState);
-      this.setCurrentClipByIndex(update.currentClipIndex);
+      this._masterClipIndex.set(update.currentClipIndex);
     });
   }
 
   ngOnDestroy(): void {
     if (this.cleanupPlaybackListener) {
       this.cleanupPlaybackListener();
+    }
+  }
+
+  public setActiveTrack(trackIndex: number): void {
+    if (trackIndex >= 0 && trackIndex < this.totalTracks() && this._activeTrack() !== trackIndex) {
+      this._activeTrack.set(trackIndex);
     }
   }
 
@@ -103,7 +151,7 @@ export class ClipsStateService implements OnDestroy {
 
     // Re-sync active clip after undo
     const currentTime = this.videoStateService.currentTime();
-    const newClipsArray = this.clips();
+    const newClipsArray = this.clipsForAllTracks();
     const newCorrectIndex = newClipsArray.findIndex(c =>
       currentTime >= c.startTime && currentTime < c.endTime
     );
@@ -114,8 +162,9 @@ export class ClipsStateService implements OnDestroy {
   }
 
   public setCurrentClipByIndex(index: number): void {
-    if (index >= 0 && index < this.clips().length) {
-      this._currentClipIndex.set(index);
+    const allClips = this.clipsForAllTracks();
+    if (index >= 0 && index < allClips.length) {
+      this._masterClipIndex.set(index);
     }
   }
 
@@ -238,7 +287,7 @@ export class ClipsStateService implements OnDestroy {
 
     // Re-sync active clip after undo:
     const currentTime = this.videoStateService.currentTime();
-    const newClipsArray = this.clips();
+    const newClipsArray = this.clipsForAllTracks();
     const newCorrectIndex = newClipsArray.findIndex(c =>
       currentTime >= c.startTime && currentTime < c.endTime
     );
@@ -257,7 +306,7 @@ export class ClipsStateService implements OnDestroy {
       this.commandHistoryStateService.execute(command);
     } else {
       const clips = this.clips();
-      const currentIndex = this.currentClipIndex();
+      const currentIndex = this.activeTrackClipIndex();
       const prevClip = clips[currentIndex - 1];
       const nextClip = clips[currentIndex + 1];
 
@@ -286,36 +335,13 @@ export class ClipsStateService implements OnDestroy {
 
     let newSubtitles: SubtitleData[];
     const updates: Partial<Project> = {};
+    const sourceIdsToDelete = new Set(clipToDelete.sourceSubtitles.map(s => s.id));
 
     if (project.rawAssContent) {
-      updates.rawAssContent = this.assEditService.deleteAssClipAndSplitSpanningLines(project.rawAssContent, clipToDelete);
-
-      const clipStart = clipToDelete.startTime;
-      const clipEnd = clipToDelete.endTime;
-      newSubtitles = [];
-
-      for (const sub of originalSubtitles) {
-        if (sub.endTime <= clipStart || sub.startTime >= clipEnd) {
-          // Keep: Subtitle is completely outside the deleted clip's range
-          newSubtitles.push(sub);
-        } else if (sub.startTime >= clipStart && sub.endTime <= clipEnd) {
-          // Remove: Subtitle is completely inside the deleted clip
-        } else if (sub.startTime < clipStart && sub.endTime > clipEnd) {
-          // Split: Subtitle spans the entire deleted clip
-          newSubtitles.push({...sub, endTime: clipStart});
-          newSubtitles.push({...cloneDeep(sub), id: uuidv4(), startTime: clipEnd});
-        } else if (sub.startTime < clipStart) {
-          // Truncate: Subtitle overlaps the start of the deleted clip
-          newSubtitles.push({...sub, endTime: clipStart});
-        } else { // sub.endTime > clipEnd
-          // Shift: Subtitle overlaps the end of the deleted clip
-          newSubtitles.push({...sub, startTime: clipEnd});
-        }
-      }
-      newSubtitles.sort((a, b) => a.startTime - b.startTime);
+      updates.rawAssContent = this.assEditService.removeDialogueLines(project.rawAssContent, clipToDelete);
+      newSubtitles = originalSubtitles.filter(sub => !sourceIdsToDelete.has(sub.id));
       updates.subtitles = newSubtitles;
-    } else {
-      const sourceIdsToDelete = new Set(clipToDelete.sourceSubtitles.map(s => s.id));
+    } else { // SRT
       newSubtitles = originalSubtitles.filter(sub => !sourceIdsToDelete.has(sub.id));
       updates.subtitles = newSubtitles;
     }
@@ -323,7 +349,7 @@ export class ClipsStateService implements OnDestroy {
     this.appStateService.updateProject(this._projectId!, updates);
     this._subtitles.set(newSubtitles);
 
-    const newClipsArray = this.clips();
+    const newClipsArray = this.clipsForAllTracks();
     let newCorrectIndex = newClipsArray.findIndex(c =>
       timeBeforeDelete >= c.startTime && timeBeforeDelete < c.endTime
     );
@@ -333,7 +359,7 @@ export class ClipsStateService implements OnDestroy {
     }
 
     if (newCorrectIndex !== -1) {
-      this._currentClipIndex.set(newCorrectIndex);
+      this._masterClipIndex.set(newCorrectIndex);
     }
 
     return {originalSubtitles, originalRawAssContent};
@@ -385,13 +411,13 @@ export class ClipsStateService implements OnDestroy {
     this.appStateService.updateProject(this._projectId!, updates);
     this._subtitles.set(newSubtitles);
 
-    const newClipsArray = this.clips();
+    const newClipsArray = this.clipsForAllTracks();
     const newCorrectIndex = newClipsArray.findIndex(c =>
       midpoint >= c.startTime && midpoint < c.endTime
     );
 
     if (newCorrectIndex !== -1) {
-      this._currentClipIndex.set(newCorrectIndex);
+      this._masterClipIndex.set(newCorrectIndex);
     }
   }
 
@@ -482,7 +508,8 @@ export class ClipsStateService implements OnDestroy {
         id: crypto.randomUUID(),
         startTime: newStartTime,
         endTime: newEndTime,
-        parts: [{text: 'New Subtitle', style: 'Default', fragments: [{text: 'New Subtitle', isTag: false}]}]
+        parts: [{text: 'New Subtitle', style: 'Default', fragments: [{text: 'New Subtitle', isTag: false}]}],
+        track: this._activeTrack()
       };
     } else {
       newSubtitle = {
@@ -490,7 +517,8 @@ export class ClipsStateService implements OnDestroy {
         id: crypto.randomUUID(),
         startTime: newStartTime,
         endTime: newEndTime,
-        text: 'New Subtitle'
+        text: 'New Subtitle',
+        track: this._activeTrack()
       };
     }
 
@@ -537,7 +565,7 @@ export class ClipsStateService implements OnDestroy {
     const timeBeforeDelete = this.videoStateService.currentTime();
 
     // Find the clip context BEFORE filtering subtitles, which is needed for rawAssContent removal
-    const clipToDelete = this.clips().find(c => c.sourceSubtitles.some(s => s.id === subtitleIds[0]));
+    const clipToDelete = this.clipsForAllTracks().find(c => c.sourceSubtitles.some(s => s.id === subtitleIds[0]));
 
     const deletedSubtitles: SubtitleData[] = [];
     const originalIndexes: number[] = [];
@@ -560,13 +588,13 @@ export class ClipsStateService implements OnDestroy {
     this.appStateService.updateProject(this._projectId!, updates);
     this._subtitles.set(newSubtitles);
 
-    const newClipsArray = this.clips();
+    const newClipsArray = this.clipsForAllTracks();
     const newCorrectIndex = newClipsArray.findIndex(c =>
       timeBeforeDelete >= c.startTime && timeBeforeDelete < c.endTime
     );
 
     if (newCorrectIndex !== -1) {
-      this._currentClipIndex.set(newCorrectIndex);
+      this._masterClipIndex.set(newCorrectIndex);
     }
 
     return {deletedSubtitles, originalIndexes};
@@ -574,7 +602,7 @@ export class ClipsStateService implements OnDestroy {
 
   public updateClipText(projectId: string, clipId: string, newContent: ClipContent): void {
     const project = this.appStateService.getProjectById(projectId);
-    const clip = this.clips().find(c => c.id === clipId);
+    const clip = this.clipsForAllTracks().find(c => c.id === clipId);
 
     if (!project || !clip) {
       console.error('Could not update clip text: project or clip not found.');
@@ -590,31 +618,43 @@ export class ClipsStateService implements OnDestroy {
 
       const newSubtitles = cloneDeep(this._subtitles());
 
-      // For each part that was edited in the UI...
+      const updateNestedSubtitles = (subtitle: AssSubtitleData, oldPart: SubtitlePart, newPart: SubtitlePart) => {
+        // Recursive function to traverse sourceDialogues
+        if (subtitle.sourceDialogues && subtitle.sourceDialogues.length > 0) {
+          subtitle.sourceDialogues.forEach(sub => updateNestedSubtitles(sub, oldPart, newPart));
+        }
+
+        // Update the parts on the current level (leaf node or parent)
+        subtitle.parts = subtitle.parts.map(currentPartInState => {
+          if (currentPartInState.style === oldPart.style && currentPartInState.text === oldPart.text) {
+            const updatedPart = {...currentPartInState, text: newPart.text};
+            if (updatedPart.fragments && newPart.fragments) {
+              const newTextFragmentsOnly = newPart.fragments.filter(f => !f.isTag);
+              let textFragmentIndex = 0;
+              updatedPart.fragments = updatedPart.fragments.map(frag => {
+                if (frag.isTag) {
+                  return frag;
+                }
+                const newText = newTextFragmentsOnly[textFragmentIndex]?.text ?? '';
+                textFragmentIndex++;
+                return {...frag, text: newText};
+              });
+            }
+            return updatedPart;
+          }
+          return currentPartInState;
+        });
+      };
+
       for (let i = 0; i < clip.parts.length; i++) {
         const oldPart = clip.parts[i];
         const newPart = newContent.parts[i];
+        if (!newPart || isEqual(oldPart, newPart)) continue;
 
-        // Failsafe in case of mismatched arrays
-        if (!newPart) {
-          console.error('Mismatch in parts array length during update. Aborting update for this part.');
-          continue;
-        }
-
-        if (!isEqual(oldPart, newPart)) {
-          // ...find EVERY subtitle object that is a source for the current clip...
-          for (const sourceSub of clip.sourceSubtitles) {
-            const subtitleToUpdate = newSubtitles.find(s => s.id === sourceSub.id);
-            if (subtitleToUpdate?.type === 'ass') {
-              let partHasBeenReplaced = false; // Ensure only one part per source subtitle is replaced, even if multiple are identical
-              subtitleToUpdate.parts = subtitleToUpdate.parts.map(currentPartInState => {
-                if (!partHasBeenReplaced && currentPartInState.style === oldPart.style && currentPartInState.text === oldPart.text) {
-                  partHasBeenReplaced = true;
-                  return newPart; // Replace the found part with the new part from the command
-                }
-                return currentPartInState;
-              });
-            }
+        for (const sourceSub of clip.sourceSubtitles) {
+          const subtitleToUpdate = newSubtitles.find(s => s.id === sourceSub.id);
+          if (subtitleToUpdate?.type === 'ass') {
+            updateNestedSubtitles(subtitleToUpdate, oldPart, newPart);
           }
         }
       }
@@ -697,7 +737,8 @@ export class ClipsStateService implements OnDestroy {
       return;
     }
 
-    const command = new UpdateClipTimesCommand(this, potentialNewSubtitles);
+    const project = this.appStateService.getProjectById(this._projectId!);
+    const command = new UpdateClipTimesCommand(this, potentialNewSubtitles, project?.rawAssContent);
     this.commandHistoryStateService.execute(command);
   }
 
@@ -736,7 +777,8 @@ export class ClipsStateService implements OnDestroy {
       return;
     }
 
-    const command = new UpdateClipTimesCommand(this, potentialNewSubtitles);
+    const project = this.appStateService.getProjectById(this._projectId!);
+    const command = new UpdateClipTimesCommand(this, potentialNewSubtitles, project?.rawAssContent);
     this.commandHistoryStateService.execute(command);
 
     // After state update, find the SAME logical clip using its stable source IDs.
@@ -767,12 +809,12 @@ export class ClipsStateService implements OnDestroy {
   }
 
   private findAdjacentSubtitledClip(direction: SeekDirection): VideoClip | undefined {
-    const clips = this.clips();
+    const clips = this.clipsForAllTracks();
     if (clips.length === 0) {
       return undefined;
     }
 
-    const currentIndex = this.currentClipIndex();
+    const currentIndex = this.masterClipIndex();
     const referenceClip = clips[currentIndex];
     if (!referenceClip) {
       return undefined;
@@ -812,8 +854,7 @@ export class ClipsStateService implements OnDestroy {
     return undefined; // No adjacent subtitle clip was found
   }
 
-  private generateClips(): VideoClip[] {
-    const subtitles = this._subtitles();
+  private generateClips(subtitles: SubtitleData[]): VideoClip[] {
     const duration = this.videoStateService.duration();
     if (!duration) return [];
 
@@ -1126,7 +1167,7 @@ export class ClipsStateService implements OnDestroy {
   };
 
   private synchronizeStateAfterSplit(originalClip: VideoClip, splitPoint: number, currentTime: number): void {
-    const newClipsArray = this.clips();
+    const newClipsArray = this.clipsForAllTracks();
     let newActiveClip: VideoClip | undefined;
 
     if (currentTime < (originalClip.startTime + MIN_SUBTITLE_DURATION - 0.01)) {
