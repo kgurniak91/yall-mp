@@ -109,10 +109,40 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
     group: KeyboardShortcutGroup.Playback
   },
   {
+    action: KeyboardAction.NextSubtitledClip,
+    key: 'ArrowRight',
+    ctrlKey: true,
+    description: 'Go to next subtitled clip',
+    displayKeys: ['Ctrl', '→'],
+    scope: KeyboardShortcutScope.Project,
+    type: ActionType.Continuous,
+    group: KeyboardShortcutGroup.Playback
+  },
+  {
+    action: KeyboardAction.PreviousSubtitledClip,
+    key: 'ArrowLeft',
+    ctrlKey: true,
+    description: 'Go to previous subtitled clip',
+    displayKeys: ['Ctrl', '←'],
+    scope: KeyboardShortcutScope.Project,
+    type: ActionType.Continuous,
+    group: KeyboardShortcutGroup.Playback
+  },
+  {
     action: KeyboardAction.RepeatCurrentClip,
     key: 'ArrowUp',
     description: 'Repeat current clip',
     displayKeys: ['↑'],
+    scope: KeyboardShortcutScope.Project,
+    type: ActionType.SingleShot,
+    group: KeyboardShortcutGroup.Playback
+  },
+  {
+    action: KeyboardAction.RepeatCurrentClip,
+    key: 'ArrowUp',
+    ctrlKey: true,
+    description: 'Repeat current clip (alternative)',
+    displayKeys: ['Ctrl', '↑'],
     scope: KeyboardShortcutScope.Project,
     type: ActionType.SingleShot,
     group: KeyboardShortcutGroup.Playback
@@ -127,23 +157,13 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
     group: KeyboardShortcutGroup.Playback
   },
   {
-    action: KeyboardAction.PreviousSubtitledClip,
-    key: 'ArrowLeft',
+    action: KeyboardAction.ForceContinue,
+    key: 'ArrowDown',
     ctrlKey: true,
-    description: 'Go to previous subtitled clip',
-    displayKeys: ['Ctrl', '←'],
+    description: 'Force continue playback from auto-pause (alternative)',
+    displayKeys: ['Ctrl', '↓'],
     scope: KeyboardShortcutScope.Project,
-    type: ActionType.Continuous,
-    group: KeyboardShortcutGroup.Playback
-  },
-  {
-    action: KeyboardAction.NextSubtitledClip,
-    key: 'ArrowRight',
-    ctrlKey: true,
-    description: 'Go to next subtitled clip',
-    displayKeys: ['Ctrl', '→'],
-    scope: KeyboardShortcutScope.Project,
-    type: ActionType.Continuous,
+    type: ActionType.SingleShot,
     group: KeyboardShortcutGroup.Playback
   },
   // --- Project Scope - Timeline
@@ -254,16 +274,6 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
     key: 'e',
     description: 'Export current clip to Anki',
     displayKeys: ['E'],
-    scope: KeyboardShortcutScope.Project,
-    type: ActionType.SingleShot,
-    group: KeyboardShortcutGroup.Subtitles
-  },
-  {
-    action: KeyboardAction.ExportToAnki,
-    key: 'e',
-    ctrlKey: true,
-    description: 'Export current clip to Anki (alternative)',
-    displayKeys: ['Ctrl', 'E'],
     scope: KeyboardShortcutScope.Project,
     type: ActionType.SingleShot,
     group: KeyboardShortcutGroup.Subtitles
