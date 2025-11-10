@@ -877,6 +877,70 @@ Dialogue: 0,0:08:27.90,0:08:28.28,RomajiED,,0,0,0,,ki
       expect(updatedSub.startTime).withContext('Invert Right: Start anchor should be preserved').toBe(10);
       expect(updatedSub.endTime).withContext('Invert Right: End time should be adjusted').toBe(10.5);
     });
+
+    it('should handle rapid, repeated adjustments of adjacent clips without state corruption', () => {
+      // This test simulates a user repeatedly "wiggling" the boundary between two adjacent clips
+      // to expose floating point errors or state corruption.
+      const adjacentSubtitles: SrtSubtitleData[] = [
+        {type: 'srt', id: 'srt-1', startTime: 5, endTime: 10, text: 'A', track: 0},
+        {type: 'srt', id: 'srt-2', startTime: 10, endTime: 15, text: 'B', track: 0}
+      ];
+      service.setSubtitles(adjacentSubtitles);
+
+      const initialEndTimeB = 15;
+
+      // Wiggle the boundary back and forth
+      for (let i = 0; i < 5; i++) {
+        const clipB_id = service.clips().find(c => c.sourceSubtitles.some(s => s.id === 'srt-2'))!.id;
+        // Move left edge of B slightly left
+        const newStartB_left = 10 - (i * 0.01) - 0.01; // e.g., 9.99, 9.97...
+        service.updateClipTimesFromTimeline(clipB_id, newStartB_left, initialEndTimeB);
+
+        let clips = service.clips();
+        let clipA = clips.find(c => c.sourceSubtitles.some(s => s.id === 'srt-1'))!;
+        let clipB = clips.find(c => c.sourceSubtitles.some(s => s.id === 'srt-2'))!;
+
+        // Assert after moving left
+        expect(clipB.endTime).withContext(`Left wiggle ${i}: B's end time should be stable`).toBeCloseTo(initialEndTimeB);
+        expect(clipB.startTime).withContext(`Left wiggle ${i}: B's start time should be updated`).toBeCloseTo(newStartB_left);
+        expect(clipA.endTime).withContext(`Left wiggle ${i}: A's end time should match B's start time`).toBeCloseTo(newStartB_left);
+
+        const clipA_id = clipA.id;
+        // Move right edge of A slightly right
+        const newEndA_right = 10 + (i * 0.01); // e.g., 10.00, 10.01...
+        service.updateClipTimesFromTimeline(clipA_id, 5, newEndA_right);
+
+        clips = service.clips();
+        clipA = clips.find(c => c.sourceSubtitles.some(s => s.id === 'srt-1'))!;
+        clipB = clips.find(c => c.sourceSubtitles.some(s => s.id === 'srt-2'))!;
+
+        // Assert after moving right
+        expect(clipB.endTime).withContext(`Right wiggle ${i}: B's end time should be stable`).toBeCloseTo(initialEndTimeB);
+        expect(clipA.endTime).withContext(`Right wiggle ${i}: A's end time should be updated`).toBeCloseTo(newEndA_right);
+        expect(clipB.startTime).withContext(`Right wiggle ${i}: B's start time should match A's end time`).toBeCloseTo(newEndA_right);
+      }
+    });
+
+    it('should not move the stationary end handle when shrinking the start handle of an adjacent clip', () => {
+      // ARRANGE: Two adjacent subtitle clips
+      const adjacentSubtitles: SrtSubtitleData[] = [
+        {type: 'srt', id: 'srt-1', startTime: 5, endTime: 10, text: 'A', track: 0},
+        {type: 'srt', id: 'srt-2', startTime: 10, endTime: 15, text: 'B', track: 0}
+      ];
+      service.setSubtitles(adjacentSubtitles);
+      const secondSub = service.clips()[2];
+
+      // ACT: Shrink the second clip by moving its start handle to the right, creating a gap
+      service.updateClipTimesFromTimeline(secondSub.id, 12, 15);
+
+      // ASSERT: A gap should have been created, and the end handle of the second clip should be untouched
+      const clips = service.clips();
+      const modifiedSecondSub = clips.find(c => c.sourceSubtitles.some(s => s.id === 'srt-2'))!;
+
+      expect(clips.length).withContext('A gap should be created, resulting in 5 clips total').toBe(5);
+      expect(modifiedSecondSub.startTime).toBe(12);
+      expect(modifiedSecondSub.endTime).withContext('End handle of the adjusted clip should remain stationary').toBe(15);
+    });
   });
 
   describe('Boundary Adjustments with Keyboard Shortcuts', () => {

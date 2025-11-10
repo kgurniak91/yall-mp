@@ -1007,38 +1007,33 @@ export class ClipsStateService implements OnDestroy {
     const oldStartTime = targetClip.startTime;
     const oldEndTime = targetClip.endTime;
 
+    // Determine which handle the user intended to move by seeing which value changed.
+    const startHandleMoved = Math.abs(newStartTime - oldStartTime) > 0.001;
+    const endHandleMoved = Math.abs(newEndTime - oldEndTime) > 0.001;
+
     let finalStartTime = newStartTime;
     let finalEndTime = newEndTime;
 
-    // First, enforce the minimum duration of the clip being dragged.
+    // If a handle was not meant to move, restore its original position to fight float errors.
+    if (startHandleMoved && !endHandleMoved) {
+      finalEndTime = oldEndTime;
+    } else if (!startHandleMoved && endHandleMoved) {
+      finalStartTime = oldStartTime;
+    }
+
+    // Now, enforce minimum duration based on the handle that moved.
     const minDuration = targetClip.hasSubtitle ? MIN_SUBTITLE_DURATION : MIN_GAP_DURATION;
     if (finalEndTime - finalStartTime < minDuration) {
-      // Determine which handle was stationary relative to the original clip state.
-      // Use a small tolerance for floating point comparisons.
-      const startHandleStationary = Math.abs(finalStartTime - oldStartTime) < 0.01;
-      const endHandleStationary = Math.abs(finalEndTime - oldEndTime) < 0.01;
-
-      if (startHandleStationary && !endHandleStationary) {
-        // The start handle was the anchor, so adjust the end time.
-        finalEndTime = finalStartTime + minDuration;
-      } else if (!startHandleStationary && endHandleStationary) {
-        // The end handle was the anchor, so adjust the start time.
+      if (startHandleMoved && !endHandleMoved) { // Left handle moved, right is anchor.
         finalStartTime = finalEndTime - minDuration;
-      } else {
-        // This case covers an inversion (both handles moved relative to their names).
-        // First check which handle stayed on its "side". If the start handle was dragged
-        // across the end handle, the end handle is the anchor, and vice-versa.
-        if (finalStartTime > oldEndTime) { // Left handle dragged past right handle
-          finalStartTime = finalEndTime - minDuration;
-        } else { // Right handle dragged past left handle
-          finalEndTime = finalStartTime + minDuration;
-        }
+      } else { // Right handle moved, left is anchor (covers inversion case too).
+        finalEndTime = finalStartTime + minDuration;
       }
     }
 
     // Second, handle collisions and interactions with other clips.
     // --- Adjusting START boundary (moving left handle) ---
-    if (finalStartTime.toFixed(4) !== oldStartTime.toFixed(4)) {
+    if (Math.abs(finalStartTime - oldStartTime) > 0.001) {
       if (finalStartTime < oldStartTime) { // Expanding to the left
         let leftBoundary = 0;
         for (let i = clipIndex - 1; i >= 0; i--) {
@@ -1065,7 +1060,7 @@ export class ClipsStateService implements OnDestroy {
     }
 
     // --- Adjusting END boundary (moving right handle) ---
-    if (finalEndTime.toFixed(4) !== oldEndTime.toFixed(4)) {
+    if (Math.abs(finalEndTime - oldEndTime) > 0.001) {
       if (finalEndTime > oldEndTime) { // Expanding to the right
         let rightBoundary = this.videoStateService.duration();
         for (let i = clipIndex + 1; i < updatedClips.length; i++) {
@@ -1095,7 +1090,13 @@ export class ClipsStateService implements OnDestroy {
     targetClip.endTime = finalEndTime;
 
     updatedClips.forEach(c => c.duration = c.endTime - c.startTime);
-    return updatedClips.filter(c => c.duration > 0.01);
+    // Remove zero-duration clips and round all values at the very end
+    return updatedClips.filter(c => c.duration > 0.001).map(c => ({
+      ...c,
+      startTime: AssSubtitlesUtils.roundToAssPrecision(c.startTime),
+      endTime: AssSubtitlesUtils.roundToAssPrecision(c.endTime),
+      duration: AssSubtitlesUtils.roundToAssPrecision(c.endTime - c.startTime)
+    }));
   }
 
   private calculateNewSubtitlesForUpdate(clipId: string, newStartTime: number, newEndTime: number): SubtitleData[] | null {
@@ -1116,26 +1117,26 @@ export class ClipsStateService implements OnDestroy {
 
       const originalClip = originalClips.find(oc => this.areVideoClipsEqual(oc, updatedClip));
 
-      if (originalClip && (originalClip.startTime !== updatedClip.startTime || originalClip.endTime !== updatedClip.endTime)) {
+      if (originalClip && (Math.abs(originalClip.startTime - updatedClip.startTime) > 0.001 || Math.abs(originalClip.endTime - updatedClip.endTime) > 0.001)) {
         for (const sourceSub of updatedClip.sourceSubtitles) {
           const originalSourceSub = originalSubtitles.find(s => s.id === sourceSub.id);
           if (!originalSourceSub) continue;
 
           const updatedSub = cloneDeep(originalSourceSub);
           const oldDuration = originalClip.duration;
-          const newDuration = updatedClip.duration;
-          const wasStretched = Math.abs(oldDuration - newDuration) > 0.01;
 
-          if (wasStretched && oldDuration > 0.01) {
+          if (oldDuration > 0.01) { // Avoid division by zero for vanished clips
+            const newDuration = updatedClip.duration;
             const startRatio = (originalSourceSub.startTime - originalClip.startTime) / oldDuration;
             const endRatio = (originalSourceSub.endTime - originalClip.startTime) / oldDuration;
             updatedSub.startTime = updatedClip.startTime + (startRatio * newDuration);
             updatedSub.endTime = updatedClip.startTime + (endRatio * newDuration);
           } else {
-            const shiftAmount = updatedClip.startTime - originalClip.startTime;
-            updatedSub.startTime = originalSourceSub.startTime + shiftAmount;
-            updatedSub.endTime = originalSourceSub.endTime + shiftAmount;
+            // If original clip had no duration, just clamp the sub to the new clip times
+            updatedSub.startTime = updatedClip.startTime;
+            updatedSub.endTime = updatedClip.endTime;
           }
+
           changedSubtitles.set(updatedSub.id, {original: originalSourceSub, updated: updatedSub});
         }
       }
