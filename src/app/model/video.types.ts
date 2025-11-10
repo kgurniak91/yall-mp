@@ -39,7 +39,18 @@ export enum KeyboardAction {
   CloseDialogOrEsc = 'CloseDialogOrEsc',
   ConfirmDialog = 'ConfirmDialog',
   AddNote = 'AddNote',
+  SwitchToTrack1 = 'SwitchToTrack1',
+  SwitchToTrack2 = 'SwitchToTrack2',
+  SwitchToTrack3 = 'SwitchToTrack3',
+  SwitchToTrack4 = 'SwitchToTrack4',
+  SwitchToTrack5 = 'SwitchToTrack5',
+  SwitchToTrack6 = 'SwitchToTrack6',
+  SwitchToTrack7 = 'SwitchToTrack7',
+  SwitchToTrack8 = 'SwitchToTrack8',
+  SwitchToTrack9 = 'SwitchToTrack9'
 }
+
+export type KeyboardActionKey = keyof typeof KeyboardAction;
 
 export enum SeekType {
   Absolute = 'Absolute',

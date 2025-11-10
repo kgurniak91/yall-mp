@@ -48,6 +48,14 @@ export class ProjectActionService {
   }
 
   private executeAction(action: KeyboardAction): void {
+    if (action.startsWith('SwitchToTrack')) {
+      const trackNumber = parseInt(action.replace('SwitchToTrack', ''), 10);
+      if (!isNaN(trackNumber) && trackNumber >= 1 && trackNumber <= 9) {
+        this.clipsStateService.setActiveTrack(trackNumber - 1); // track index is 0-based
+        return; // Action is handled, exit the function
+      }
+    }
+
     switch (action) {
       case KeyboardAction.ToggleSubtitles:
         this.videoStateService.toggleSubtitlesVisible();

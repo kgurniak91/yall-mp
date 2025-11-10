@@ -1,4 +1,4 @@
-import {KeyboardAction} from "./video.types";
+import {KeyboardAction, KeyboardActionKey} from "./video.types";
 
 export enum KeyboardShortcutGroup {
   Global = 'Global Dialogs & Windows',
@@ -6,6 +6,7 @@ export enum KeyboardShortcutGroup {
   Timeline = 'Timeline Editing',
   Subtitles = 'Subtitles & Integration',
   Application = 'Application & History',
+  Tracks = 'Subtitle Tracks'
 }
 
 export enum KeyboardShortcutScope {
@@ -30,6 +31,19 @@ export interface KeyboardShortcut {
   type: ActionType;
   group: KeyboardShortcutGroup;
 }
+
+const SWITCH_TRACK_SHORTCUTS: KeyboardShortcut[] = Array(9).fill(null).map((_, index: number) => {
+  const key = `${index + 1}`;
+  return {
+    action: KeyboardAction[`SwitchToTrack${key}` as KeyboardActionKey],
+    key,
+    description: `Switch subtitle track to ${key}`,
+    displayKeys: [key],
+    scope: KeyboardShortcutScope.Project,
+    type: ActionType.SingleShot,
+    group: KeyboardShortcutGroup.Tracks
+  };
+});
 
 export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
   // --- Global Scope
@@ -319,4 +333,6 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
     type: ActionType.SingleShot,
     group: KeyboardShortcutGroup.Application
   },
+  // --- Subtitle Tracks
+  ...SWITCH_TRACK_SHORTCUTS
 ];
