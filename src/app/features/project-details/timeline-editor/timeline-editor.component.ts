@@ -323,7 +323,7 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
         end: clip.endTime,
         color: clip.hasSubtitle ? this.inactiveSubtitleBg : this.gapBg,
         drag: false,
-        resize: true,
+        resize: clip.hasSubtitle
       });
     });
   }
