@@ -43,6 +43,7 @@ export class ClipsStateService implements OnDestroy {
   private adjustDebounceTimer: any;
   private _projectId: string | null = null;
   private readonly cleanupPlaybackListener: (() => void) | null = null;
+  private lastMinDurationToastTime = 0;
 
   public readonly activeTrack = this._activeTrack.asReadonly();
   public readonly masterClipIndex = this._masterClipIndex.asReadonly();
@@ -729,6 +730,10 @@ export class ClipsStateService implements OnDestroy {
   public updateClipTimesFromTimeline(clipId: string, newStartTime: number, newEndTime: number): void {
     const roundedStartTime = AssSubtitlesUtils.roundToAssPrecision(newStartTime);
     const roundedEndTime = AssSubtitlesUtils.roundToAssPrecision(newEndTime);
+    const clipToUpdate = this.clips().find(c => c.id === clipId);
+
+    this.showMinDurationToastIfNecessary(clipToUpdate, roundedStartTime, roundedEndTime);
+
     const currentSubtitles = this.getSubtitles();
     const potentialNewSubtitles = this.calculateNewSubtitlesForUpdate(clipId, roundedStartTime, roundedEndTime);
 
@@ -769,6 +774,8 @@ export class ClipsStateService implements OnDestroy {
     } else {
       newEndTime += changeAmount;
     }
+
+    this.showMinDurationToastIfNecessary(currentClip, newStartTime, newEndTime);
 
     const currentSubtitles = this.getSubtitles();
     const potentialNewSubtitles = this.calculateNewSubtitlesForUpdate(currentClip.id, newStartTime, newEndTime);
@@ -1192,6 +1199,21 @@ export class ClipsStateService implements OnDestroy {
       const newIndex = newClipsArray.indexOf(newActiveClip);
       if (newIndex !== -1) {
         this.setCurrentClipByIndex(newIndex);
+      }
+    }
+  }
+
+  private showMinDurationToastIfNecessary(clip: VideoClip | undefined, attemptedStartTime: number, attemptedEndTime: number): void {
+    const attemptedDuration = attemptedEndTime - attemptedStartTime;
+
+    // If the clip has subtitles and the user's action results in a duration
+    // less than the minimum (including negative durations from inversion), show the toast.
+    if (clip?.hasSubtitle && attemptedDuration < MIN_SUBTITLE_DURATION) {
+      const now = Date.now();
+      // Throttle the toast to show it at most once every 3 seconds to avoid spam during dragging or key-repeats.
+      if (now - this.lastMinDurationToastTime > 3000) {
+        this.toastService.info(`A subtitled clip cannot be shorter than ${MIN_SUBTITLE_DURATION} seconds.`);
+        this.lastMinDurationToastTime = now;
       }
     }
   }
