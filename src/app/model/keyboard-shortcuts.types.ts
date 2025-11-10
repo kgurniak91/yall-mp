@@ -17,6 +17,7 @@ export enum KeyboardShortcutScope {
 export enum ActionType {
   SingleShot,
   Continuous,
+  Instant
 }
 
 export interface KeyboardShortcut {
@@ -40,7 +41,7 @@ const SWITCH_TRACK_SHORTCUTS: KeyboardShortcut[] = Array(9).fill(null).map((_, i
     description: `Switch subtitle track to ${key}`,
     displayKeys: [key],
     scope: KeyboardShortcutScope.Project,
-    type: ActionType.SingleShot,
+    type: ActionType.Instant,
     group: KeyboardShortcutGroup.Tracks
   };
 });

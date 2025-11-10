@@ -24,6 +24,12 @@ export class ProjectActionService {
   private readonly destroyRef = inject(DestroyRef);
 
   constructor() {
+    // Instant actions with no throttling
+    this.action$.pipe(
+      filter(action => this.keyboardShortcutsHelperService.getActionType(action) === ActionType.Instant),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(action => this.executeAction(action));
+
     // Handle Single-Shot Actions (UI clicks or Keyboard presses)
     // throttleTime(250ms) ensures that rapid clicking on UI buttons doesn't spam.
     // leading: true executes immediately. trailing: false ignores subsequent triggers within 250ms.
