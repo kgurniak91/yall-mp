@@ -100,12 +100,12 @@ export class ProjectFormComponent implements OnInit {
     });
   }
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     const projectId = this.route.snapshot.paramMap.get('id');
     if (projectId) {
       this.editMode.set(true);
       this.editingProjectId.set(projectId);
-      const project = this.appStateService.getProjectById(projectId);
+      const project = await this.appStateService.getProjectById(projectId);
       if (project) {
         this.mediaFilePath.set(project.mediaPath);
         this.existingMediaFileName.set(project.mediaFileName);
@@ -229,6 +229,7 @@ export class ProjectFormComponent implements OnInit {
         selectedAudioTrackIndex: firstAudioTrack ? firstAudioTrack.index : null
       },
       subtitles: [],
+      lastSubtitleEndTime: 0,
       audioTracks: this.audioTracks(),
       subtitleTracks: this.subtitleTracks(),
       videoWidth: this.videoWidth(),
@@ -241,7 +242,7 @@ export class ProjectFormComponent implements OnInit {
     this.router.navigate(['/project', newProject.id]);
   }
 
-  private editExistingProject(): void {
+  private async editExistingProject(): Promise<void> {
     const projectId = this.editingProjectId();
     if (!projectId || !this.isValid()) {
       this.showInvalidFormToast();
@@ -251,7 +252,12 @@ export class ProjectFormComponent implements OnInit {
     const mediaPath = this.mediaFilePath()!;
     const {subtitleSelection, subtitleFileName} = this.buildSubtitleSelection();
     const firstAudioTrack = this.audioTracks()[0];
-    const existingProject = this.appStateService.getProjectById(projectId)!;
+    const existingProject = await this.appStateService.getProjectById(projectId);
+    if (!existingProject) {
+      this.toastService.error('Could not find the project to update.');
+      return;
+    }
+
     const updates: Partial<Project> = {
       mediaPath: mediaPath,
       mediaFileName: this.getBaseName(mediaPath),

@@ -8,7 +8,7 @@ export class ProjectSettingsStateService {
   private readonly _isSettingsDrawerOpen = signal(false);
 
   public readonly settings = computed(() => {
-    return this.appStateService.lastOpenedProject()?.settings ?? DEFAULT_PROJECT_SETTINGS;
+    return this.appStateService.currentProject()?.settings ?? DEFAULT_PROJECT_SETTINGS;
   });
   public readonly autoPauseAtStart = computed(() => this.settings().autoPauseAtStart);
   public readonly autoPauseAtEnd = computed(() => this.settings().autoPauseAtEnd);
@@ -21,7 +21,7 @@ export class ProjectSettingsStateService {
   public readonly isSettingsDrawerOpen = this._isSettingsDrawerOpen.asReadonly();
 
   public setSettings(projectSettings: Partial<ProjectSettings> | undefined): void {
-    const project = this.appStateService.lastOpenedProject();
+    const project = this.appStateService.currentProject();
     if (project) {
       const newSettings = {...(project.settings ?? DEFAULT_PROJECT_SETTINGS), ...projectSettings};
       this.appStateService.updateProject(project.id, {settings: newSettings});
@@ -29,7 +29,7 @@ export class ProjectSettingsStateService {
   }
 
   public setSubtitlesVisible(isVisible: boolean): void {
-    const project = this.appStateService.lastOpenedProject();
+    const project = this.appStateService.currentProject();
     if (project) {
       const newSettings = {...this.settings(), subtitlesVisible: isVisible};
       this.appStateService.updateProject(project.id, {settings: newSettings});

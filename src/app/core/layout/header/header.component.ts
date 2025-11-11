@@ -137,7 +137,7 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private computeCurrentProject(): Project | null {
     if (this.isProjectDetailsView()) {
-      return this.appStateService.lastOpenedProject();
+      return this.appStateService.currentProject();
     }
     return null;
   }

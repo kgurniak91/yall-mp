@@ -84,6 +84,7 @@ export interface IElectronAPI {
   onMpvInitialSeekComplete: (callback: () => void) => (() => void);
   // --- Storage
   getAppData: () => Promise<AppData | null>;
+  getProjectById: (projectId: string) => Promise<Project | null>;
   saveProject: (project: Project) => Promise<void>;
   deleteProjectFile: (projectId: string) => Promise<void>;
   saveCoreConfig: (config: CoreConfig) => Promise<void>;

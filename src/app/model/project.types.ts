@@ -17,6 +17,18 @@ export interface ProjectClipNotes {
   manualNote?: string;
 }
 
+export interface MinimalProject {
+  id: string;
+  mediaFileName: string;
+  subtitleFileName: string;
+  createdDate: number;
+  lastOpenedDate: number;
+  duration: number;
+  lastPlaybackTime: number;
+  subtitleCount: number;
+  lastSubtitleEndTime: number;
+}
+
 export interface Project {
   id: string;
   mediaFileName: string;
@@ -41,14 +53,15 @@ export interface Project {
   ankiTags: string[];
   lastAnkiSuspendState?: boolean;
   ankiExportHistory?: string[]; // List of SubtitleData IDs
+  lastSubtitleEndTime: number;
 }
 
 /**
- * Represents in-memory app state (combined from yall-mp-app-data.json and /projects folder)
+ * Represents in-memory app state (combined on init from yall-mp-app-data.json and single current project from /projects folder)
  */
 export interface AppData {
-  projects: Project[];
-  lastOpenedProjectId: string | null;
+  projects: MinimalProject[];
+  currentProject: Project | null;
   globalSettings: GlobalSettings;
   ankiSettings: AnkiSettings;
 }
@@ -57,7 +70,7 @@ export interface AppData {
  * Represents on-disk app state (stored in yall-mp-app-data.json)
  */
 export interface CoreConfig {
-  projectIds: string[];
+  projects: MinimalProject[];
   lastOpenedProjectId: string | null;
   globalSettings: GlobalSettings;
   ankiSettings: AnkiSettings;

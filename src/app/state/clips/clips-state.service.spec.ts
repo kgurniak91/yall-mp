@@ -64,7 +64,8 @@ describe('ClipsStateService', () => {
     commandHistoryService.clearHistory();
 
     projectState = {id: 'proj-1', subtitles: []};
-    (appStateService.getProjectById as jasmine.Spy).and.callFake(() => projectState);
+    (appStateService.getProjectById as jasmine.Spy).and.callFake(() => Promise.resolve(projectState));
+    (appStateService as any).currentProject = () => projectState;
     (appStateService.updateProject as jasmine.Spy).and.callFake((id, updates) => {
       if (id === 'proj-1') {
         projectState = {...projectState, ...updates};

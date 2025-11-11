@@ -1,15 +1,15 @@
 import {computed, DestroyRef, inject, Injectable, Injector, signal} from '@angular/core';
-import {AppData, CoreConfig, Project} from '../../model/project.types';
+import {AppData, CoreConfig, MinimalProject, Project} from '../../model/project.types';
 import {DEFAULT_GLOBAL_SETTINGS, DEFAULT_PROJECT_SETTINGS, GlobalSettings} from '../../model/settings.types';
 import {AnkiSettings} from '../../model/anki.types';
 import {StorageService} from '../../core/services/storage/storage.service';
 import {merge} from 'lodash-es';
-import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
 import {debounceTime, skip} from 'rxjs';
+import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
 
 const defaults: AppData = {
   projects: [],
-  lastOpenedProjectId: null,
+  currentProject: null,
   globalSettings: DEFAULT_GLOBAL_SETTINGS,
   ankiSettings: {
     ankiCardTemplates: [],
@@ -27,8 +27,8 @@ export class AppStateService {
   private readonly destroyRef = inject(DestroyRef);
 
   private readonly coreConfig = computed<CoreConfig>(() => ({
-    projectIds: this._appData().projects.map(p => p.id),
-    lastOpenedProjectId: this._appData().lastOpenedProjectId,
+    projects: this._appData().projects,
+    lastOpenedProjectId: this._appData().currentProject?.id ?? null,
     globalSettings: this._appData().globalSettings,
     ankiSettings: this._appData().ankiSettings,
   }));
@@ -37,11 +37,8 @@ export class AppStateService {
     return this._appData().projects.sort((a, b) => b.lastOpenedDate - a.lastOpenedDate);
   });
 
-  public readonly lastOpenedProjectId = computed(() => this._appData()?.lastOpenedProjectId);
-
-  public readonly lastOpenedProject = computed(() => {
-    return this._appData().projects.find(p => p.id === this.lastOpenedProjectId()) ?? null;
-  });
+  public readonly currentProjectId = computed(() => this._appData().currentProject?.id ?? null);
+  public readonly currentProject = computed(() => this._appData().currentProject);
 
   public readonly globalSettings = computed(() => this._appData().globalSettings);
   public readonly ankiSettings = computed(() => this._appData().ankiSettings);
@@ -51,7 +48,7 @@ export class AppStateService {
       skip(1), // Skip the initial value on app load to prevent an unnecessary write
       debounceTime(500),
       takeUntilDestroyed(this.destroyRef)
-    ).subscribe(configToSave => {
+    ).subscribe((configToSave: CoreConfig) => {
       this.storageService.saveCoreConfig(configToSave);
     });
   }
@@ -69,22 +66,24 @@ export class AppStateService {
         mergedData.ankiSettings.ankiCardTemplates = data.ankiSettings.ankiCardTemplates;
       }
 
-      if (mergedData.projects?.length) {
-        mergedData.projects = mergedData.projects.map(p => {
-          const completeSettings = merge({}, DEFAULT_PROJECT_SETTINGS, p.settings);
-          return {...p, settings: completeSettings};
-        });
+      if (mergedData.currentProject) {
+        mergedData.currentProject.settings = merge({}, DEFAULT_PROJECT_SETTINGS, mergedData.currentProject.settings);
       }
 
       this._appData.set(mergedData);
     }
   }
 
-  public getProjectById(projectId: string): Project | null {
-    return this._appData().projects.find(p => p.id === projectId) || null;
+  public async getProjectById(projectId: string): Promise<Project | null> {
+    if (this.currentProjectId() === projectId) {
+      return this.currentProject();
+    }
+    return this.storageService.getProjectById(projectId);
   }
 
   public createProject(project: Project): void {
+    const minimalProject: MinimalProject = this.toMinimalProject(project);
+
     this._appData.update(data => {
       const projectExists = data.projects.some(p => p.id === project.id);
       if (projectExists) {
@@ -95,60 +94,65 @@ export class AppStateService {
 
       return {
         ...data,
-        projects: [...data.projects, project],
-        lastOpenedProjectId: project.id
+        projects: [...data.projects, minimalProject],
+        currentProject: project
       };
     });
   }
 
   public updateProject(projectId: string, updates: Partial<Project>): void {
+    if (updates.subtitles) {
+      updates.lastSubtitleEndTime = updates.subtitles.length > 0
+        ? Math.max(...updates.subtitles.map(s => s.endTime))
+        : 0;
+    }
+
     this._appData.update(currentData => {
-      const projectIndex = currentData.projects.findIndex(p => p.id === projectId);
-      if (projectIndex === -1) {
-        console.error(`Project with ID ${projectId} not found. Cannot update.`);
+      const isUpdatingCurrentProject = currentData.currentProject?.id === projectId;
+      if (!isUpdatingCurrentProject) {
+        console.error(`Attempted to update a project that is not currently loaded. ID: ${projectId}`);
         return currentData;
       }
 
-      const projectToUpdate = currentData.projects[projectIndex];
       const updatedProject = {
-        ...projectToUpdate,
+        ...currentData.currentProject!,
         ...updates
       };
 
-      const projectsCopy = [...currentData.projects];
-      projectsCopy[projectIndex] = updatedProject;
-
       this.storageService.saveProject(updatedProject);
 
-      return {
-        ...currentData,
-        projects: projectsCopy
-      };
-    });
-  }
-
-  public setCurrentProject(projectId: string): void {
-    this._appData.update(currentData => {
-      const projectIndex = currentData.projects.findIndex(p => p.id === projectId);
-      if (projectIndex === -1) {
-        return currentData;
-      }
-
-      const projectToUpdate = {
-        ...currentData.projects[projectIndex],
-        lastOpenedDate: Date.now()
-      };
-      const projectsCopy = [...currentData.projects];
-      projectsCopy[projectIndex] = projectToUpdate;
-
-      this.storageService.saveProject(projectToUpdate);
+      const minimalProject = this.toMinimalProject(updatedProject);
+      const projectsCopy = currentData.projects.map(p => p.id === projectId ? minimalProject : p);
 
       return {
         ...currentData,
         projects: projectsCopy,
-        lastOpenedProjectId: projectId
+        currentProject: updatedProject
       };
     });
+  }
+
+  public async setCurrentProject(projectId: string): Promise<void> {
+    if (this.currentProjectId() === projectId) {
+      return;
+    }
+
+    const projectToLoad = await this.storageService.getProjectById(projectId);
+    if (!projectToLoad) {
+      console.error(`Failed to set current project: Project with ID ${projectId} not found on disk.`);
+      return;
+    }
+
+    projectToLoad.lastOpenedDate = Date.now();
+    const minimalProject = this.toMinimalProject(projectToLoad);
+
+    this.storageService.saveProject(projectToLoad);
+
+    this._appData.update(currentData => ({
+      ...currentData,
+      projects: currentData.projects.map(p => p.id === projectId ? minimalProject : p),
+      currentProject: projectToLoad
+    }));
   }
 
   public deleteProject(projectId: string): void {
@@ -157,18 +161,16 @@ export class AppStateService {
 
     this._appData.update(data => {
       const updatedProjects = data.projects.filter(p => p.id !== projectId);
-      let newLastOpenedProjectId = data.lastOpenedProjectId;
+      let newCurrentProject = data.currentProject;
 
-      if (data.lastOpenedProjectId === projectId) {
-        // Sort remaining projects to find the most recently opened one
-        const sortedRemaining = updatedProjects.sort((a, b) => b.lastOpenedDate - a.lastOpenedDate);
-        newLastOpenedProjectId = sortedRemaining.length > 0 ? sortedRemaining[0].id : null;
+      if (data.currentProject?.id === projectId) {
+        newCurrentProject = null;
       }
 
       return {
         ...data,
         projects: updatedProjects,
-        lastOpenedProjectId: newLastOpenedProjectId
+        currentProject: newCurrentProject
       };
     });
   }
@@ -189,16 +191,14 @@ export class AppStateService {
 
   public addAnkiExportToHistory(projectId: string, subtitleId: string): void {
     this._appData.update(currentData => {
-      const projectIndex = currentData.projects.findIndex(p => p.id === projectId);
-      if (projectIndex === -1) {
+      if (currentData.currentProject?.id !== projectId) {
         console.error(`Project with ID ${projectId} not found. Cannot update Anki history.`);
         return currentData;
       }
 
-      const project = currentData.projects[projectIndex];
+      const project = currentData.currentProject;
       const currentHistory = project.ankiExportHistory || [];
 
-      // Avoid adding duplicates
       if (currentHistory.includes(subtitleId)) {
         return currentData;
       }
@@ -208,16 +208,26 @@ export class AppStateService {
         ankiExportHistory: [...currentHistory, subtitleId]
       };
 
-      const projectsCopy = [...currentData.projects];
-      projectsCopy[projectIndex] = updatedProject;
-
       this.storageService.saveProject(updatedProject);
 
       return {
         ...currentData,
-        projects: projectsCopy
+        currentProject: updatedProject
       };
     });
   }
 
+  private toMinimalProject(project: Project): MinimalProject {
+    return {
+      id: project.id,
+      mediaFileName: project.mediaFileName,
+      subtitleFileName: project.subtitleFileName,
+      createdDate: project.createdDate,
+      lastOpenedDate: project.lastOpenedDate,
+      duration: project.duration,
+      lastPlaybackTime: project.lastPlaybackTime,
+      subtitleCount: project.subtitles.length,
+      lastSubtitleEndTime: project.lastSubtitleEndTime
+    };
+  }
 }

@@ -11,8 +11,18 @@ export class HomeRedirectComponent {
   constructor() {
     const appStateService = inject(AppStateService);
     const router = inject(Router);
-    const lastProject = appStateService.lastOpenedProject();
-    const targetUrl = lastProject ? `/project/${lastProject.id}` : '/project/new';
+    const currentProject = appStateService.currentProject();
+    const projects = appStateService.projects();
+    let targetUrl: string;
+
+    if (currentProject) {
+      targetUrl = `/project/${currentProject.id}`;
+    } else if (projects.length > 0) {
+      targetUrl = '/projects';
+    } else {
+      targetUrl = '/project/new';
+    }
+
     router.navigateByUrl(targetUrl, {replaceUrl: true});
   }
 }

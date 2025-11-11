@@ -136,7 +136,7 @@ export class ClipsStateService implements OnDestroy {
   }
 
   public restoreSubtitles(originalSubtitles: SubtitleData[], originalRawAssContent?: string): void {
-    const project = this.appStateService.getProjectById(this._projectId!);
+    const project = this.appStateService.currentProject();
     if (!project) {
       return;
     }
@@ -183,7 +183,7 @@ export class ClipsStateService implements OnDestroy {
       return;
     }
 
-    const project = this.appStateService.getProjectById(this._projectId!);
+    const project = this.appStateService.currentProject();
     const command = new SplitSubtitledClipCommand(this, currentClip.id, project?.rawAssContent);
     this.commandHistoryStateService.execute(command);
   }
@@ -248,7 +248,7 @@ export class ClipsStateService implements OnDestroy {
 
     finalSubtitles.sort((a, b) => a.startTime - b.startTime);
 
-    const project = this.appStateService.getProjectById(this._projectId!);
+    const project = this.appStateService.currentProject();
     if (!project) return;
     const updates: Partial<Project> = {subtitles: finalSubtitles};
 
@@ -267,8 +267,10 @@ export class ClipsStateService implements OnDestroy {
   }
 
   public unsplitClip(originalSubtitles: SubtitleData[], createdAndModifiedIds: string[], originalRawAssContent?: string): void {
-    const project = this.appStateService.getProjectById(this._projectId!);
-    if (!project) return;
+    const project = this.appStateService.currentProject();
+    if (!project) {
+      return;
+    }
 
     const idsToRemove = new Set(createdAndModifiedIds);
 
@@ -325,7 +327,7 @@ export class ClipsStateService implements OnDestroy {
     originalSubtitles: SubtitleData[],
     originalRawAssContent?: string
   } | null {
-    const project = this.appStateService.getProjectById(this._projectId!);
+    const project = this.appStateService.currentProject();
     if (!project) {
       return null;
     }
@@ -371,7 +373,7 @@ export class ClipsStateService implements OnDestroy {
     secondClipId: string,
     onMergeCallback?: (originalFirstSubtitles: SubtitleData[], deletedSecondSubtitles: SubtitleData[]) => void
   ): void {
-    const project = this.appStateService.getProjectById(this._projectId!);
+    const project = this.appStateService.currentProject();
     if (!project) return;
 
     const firstClip = this.clips().find(c => c.id === firstClipId);
@@ -426,7 +428,7 @@ export class ClipsStateService implements OnDestroy {
     originalFirstSubtitles: SubtitleData[],
     subtitlesToRestore: SubtitleData[]
   ): void {
-    const project = this.appStateService.getProjectById(this._projectId!);
+    const project = this.appStateService.currentProject();
     if (!project) {
       return;
     }
@@ -469,7 +471,7 @@ export class ClipsStateService implements OnDestroy {
 
   public createNewSubtitledClipAtCurrentTime(): void {
     const currentClip = this.currentClip();
-    const project = this.appStateService.getProjectById(this._projectId!);
+    const project = this.appStateService.currentProject();
     if (!project || !currentClip || currentClip.hasSubtitle) {
       this.toastService.info('A new subtitle can only be added inside a gap.');
       return;
@@ -531,7 +533,7 @@ export class ClipsStateService implements OnDestroy {
   }
 
   public addSubtitle(subtitle: SubtitleData): void {
-    const project = this.appStateService.getProjectById(this._projectId!);
+    const project = this.appStateService.currentProject();
     if (!project) {
       return;
     }
@@ -560,7 +562,7 @@ export class ClipsStateService implements OnDestroy {
     deletedSubtitles: SubtitleData[],
     originalIndexes: number[]
   } | null {
-    const project = this.appStateService.getProjectById(this._projectId!);
+    const project = this.appStateService.currentProject();
     if (!project) return null;
 
     const timeBeforeDelete = this.videoStateService.currentTime();
@@ -602,7 +604,7 @@ export class ClipsStateService implements OnDestroy {
   }
 
   public updateClipText(projectId: string, clipId: string, newContent: ClipContent): void {
-    const project = this.appStateService.getProjectById(projectId);
+    const project = this.appStateService.currentProject();
     const clip = this.clipsForAllTracks().find(c => c.id === clipId);
 
     if (!project || !clip) {
@@ -693,7 +695,7 @@ export class ClipsStateService implements OnDestroy {
   }
 
   public applySubtitleUpdates(newSubtitles: SubtitleData[]): void {
-    const project = this.appStateService.getProjectById(this._projectId!);
+    const project = this.appStateService.currentProject();
     if (!project) return;
 
     const originalSubtitles = this._subtitles();
@@ -742,7 +744,7 @@ export class ClipsStateService implements OnDestroy {
       return;
     }
 
-    const project = this.appStateService.getProjectById(this._projectId!);
+    const project = this.appStateService.currentProject();
     const command = new UpdateClipTimesCommand(this, potentialNewSubtitles, project?.rawAssContent);
     this.commandHistoryStateService.execute(command);
   }
@@ -784,7 +786,7 @@ export class ClipsStateService implements OnDestroy {
       return;
     }
 
-    const project = this.appStateService.getProjectById(this._projectId!);
+    const project = this.appStateService.currentProject();
     const command = new UpdateClipTimesCommand(this, potentialNewSubtitles, project?.rawAssContent);
     this.commandHistoryStateService.execute(command);
 

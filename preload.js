@@ -84,6 +84,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   // --- Storage
   getAppData: () => ipcRenderer.invoke('app:get-data'),
+  getProjectById: (projectId) => ipcRenderer.invoke('project:get-by-id', projectId),
   saveProject: (project) => ipcRenderer.invoke('project:save', project),
   deleteProjectFile: (projectId) => ipcRenderer.invoke('project:delete-file', projectId),
   saveCoreConfig: (config) => ipcRenderer.invoke('core-config:save', config),

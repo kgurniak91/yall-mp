@@ -475,6 +475,16 @@ app.whenReady().then(() => {
   ipcMain.handle('anki:exportAnkiCard', (_, exportRquest: AnkiExportRequest) => handleAnkiExport(exportRquest));
   ipcMain.handle('ffmpeg:check', () => isFFmpegAvailable);
   ipcMain.handle('app:get-data', readAppData);
+  ipcMain.handle('project:get-by-id', async (_, projectId: string) => {
+    try {
+      const projectPath = path.join(PROJECTS_DIR, `${projectId}.json`);
+      const projectFile = await fs.readFile(projectPath, 'utf-8');
+      return JSON.parse(projectFile);
+    } catch (e) {
+      console.error(`Could not load project file for ID ${projectId}.`, e);
+      return null;
+    }
+  });
 
   ipcMain.handle('core-config:save', (_, coreConfig) => {
     coreConfigToSave = coreConfig;
@@ -1472,24 +1482,29 @@ function getLanguageInfo(track: Omit<MediaTrack, 'label' | 'code'>): { label: st
 async function readAppData(): Promise<AppData | null> {
   try {
     const coreConfigFile = await fs.readFile(APP_DATA_PATH, 'utf-8');
-    const coreConfig = JSON.parse(coreConfigFile);
+    const coreConfig: CoreConfig = JSON.parse(coreConfigFile);
 
-    if (!coreConfig || !coreConfig.projectIds) {
-      return coreConfig;
+    if (!coreConfig) {
+      return null;
     }
 
-    const projects: Project[] = [];
-    for (const projectId of coreConfig.projectIds) {
-      const projectPath = path.join(PROJECTS_DIR, `${projectId}.json`);
+    let currentProject: Project | null = null;
+    if (coreConfig.lastOpenedProjectId) {
       try {
+        const projectPath = path.join(PROJECTS_DIR, `${coreConfig.lastOpenedProjectId}.json`);
         const projectFile = await fs.readFile(projectPath, 'utf-8');
-        projects.push(JSON.parse(projectFile));
+        currentProject = JSON.parse(projectFile);
       } catch (e) {
-        console.warn(`Could not load project file for ID ${projectId}. It may have been deleted.`);
+        console.warn(`Could not load last opened project file for ID ${coreConfig.lastOpenedProjectId}. It may have been deleted.`);
       }
     }
 
-    return {...coreConfig, projects};
+    return {
+      projects: coreConfig.projects || [],
+      currentProject,
+      globalSettings: coreConfig.globalSettings,
+      ankiSettings: coreConfig.ankiSettings,
+    };
   } catch (error) {
     console.log('Could not read app data (file might not exist yet). Returning null.');
     return null;

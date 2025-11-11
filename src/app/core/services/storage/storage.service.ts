@@ -9,6 +9,10 @@ export class StorageService {
     return window.electronAPI.getAppData();
   }
 
+  getProjectById(projectId: string): Promise<Project | null> {
+    return window.electronAPI.getProjectById(projectId);
+  }
+
   saveProject(project: Project): void {
     window.electronAPI.saveProject(project).catch(err => {
       console.error(`Failed to save project ${project.id} through Electron API`, err);

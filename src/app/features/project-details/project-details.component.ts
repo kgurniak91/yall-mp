@@ -165,10 +165,10 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   protected readonly projectSettingsStateService = inject(ProjectSettingsStateService);
   protected readonly project = computed(() => {
     const projectId = this.route.snapshot.paramMap.get('id');
-    if (!projectId) {
+    if (!projectId || this.appStateService.currentProjectId() !== projectId) {
       return null;
     }
-    return this.appStateService.projects().find(p => p.id === projectId) ?? null;
+    return this.appStateService.currentProject();
   });
   protected readonly settingsPresets = signal<SettingsPreset[]>(BuiltInSettingsPresets);
   protected readonly selectedSettingsPreset = signal<SettingsPreset | null>(null);
@@ -316,7 +316,11 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const foundProject = this.appStateService.getProjectById(projectId);
+    if (this.appStateService.currentProjectId() !== projectId) {
+      await this.appStateService.setCurrentProject(projectId);
+    }
+
+    const foundProject = this.project();
 
     if (!foundProject) {
       this.toastService.error(`Project with ID ${projectId} not found`);
@@ -337,7 +341,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     this.videoStateService.setProjectId(projectId);
     this.videoStateService.setMediaPath(foundProject.mediaPath);
 
-    const hasExistingSubtitles = foundProject?.subtitles?.length > 0;
+    const hasExistingSubtitles = foundProject.subtitles?.length > 0;
     let subtitles: SubtitleData[];
 
     if (hasExistingSubtitles) {
