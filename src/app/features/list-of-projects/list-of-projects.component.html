@@ -21,8 +21,8 @@
 
     <ng-template #emptymessage>
       <div class="empty-message">
-        <h3>No projects found.</h3>
-        <p>Get started by creating a new one!</p>
+        <h2>No projects found.</h2>
+        <h3>Get started by <a class="new-project-link" [routerLink]="['/project/new']">creating a new one!</a></h3>
       </div>
     </ng-template>
   </p-dataView>
