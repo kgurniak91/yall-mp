@@ -107,18 +107,26 @@ export class ProjectFormComponent implements OnInit {
       this.editingProjectId.set(projectId);
       const project = await this.appStateService.getProjectById(projectId);
       if (project) {
-        this.mediaFilePath.set(project.mediaPath);
-        this.existingMediaFileName.set(project.mediaFileName);
-        this.audioTracks.set(project.audioTracks);
-        this.subtitleTracks.set(project.subtitleTracks);
-        this.videoWidth.set(project.videoWidth);
-        this.videoHeight.set(project.videoHeight);
+        const mediaFileExists = await window.electronAPI.checkFileExists(project.mediaPath);
+
+        if (mediaFileExists) {
+          this.mediaFilePath.set(project.mediaPath);
+          this.existingMediaFileName.set(project.mediaFileName);
+          this.audioTracks.set(project.audioTracks);
+          this.subtitleTracks.set(project.subtitleTracks);
+          this.videoWidth.set(project.videoWidth);
+          this.videoHeight.set(project.videoHeight);
+        }
+
         this.selectedSubtitleOption.set(project.subtitleSelection.type);
 
         switch (project.subtitleSelection.type) {
           case 'external':
-            this.externalSubtitlePath.set(project.subtitleSelection.filePath);
-            this.existingSubtitleFileName.set(project.subtitleFileName);
+            const subtitleFileExists = await window.electronAPI.checkFileExists(project.subtitleSelection.filePath);
+            if (subtitleFileExists) {
+              this.externalSubtitlePath.set(project.subtitleSelection.filePath);
+              this.existingSubtitleFileName.set(project.subtitleFileName);
+            }
             break;
           case 'embedded':
             this.selectedEmbeddedSubtitleTrackIndex.set(project.subtitleSelection.trackIndex);

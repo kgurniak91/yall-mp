@@ -819,11 +819,17 @@ app.whenReady().then(() => {
       }
     });
 
-    // Start MPV inside the child window's handle
-    await mpvManager.start(mediaPath, audioTrackIndex, subtitleSelection, subtitleTracks, useMpvSubtitles, subtitlesVisible);
-    mpvManager.observeProperty('time-pos');
-    mpvManager.observeProperty('duration');
-    mpvManager.observeProperty('pause');
+    try {
+      // Start MPV inside the child window's handle
+      await mpvManager.start(mediaPath, audioTrackIndex, subtitleSelection, subtitleTracks, useMpvSubtitles, subtitlesVisible);
+      mpvManager.observeProperty('time-pos');
+      mpvManager.observeProperty('duration');
+      mpvManager.observeProperty('pause');
+    } catch (error) {
+      console.error('[Main Process] Critical error during MPV startup:', error);
+      // Re-throw the error so the renderer process's Promise is rejected.
+      throw error;
+    }
   });
 
   ipcMain.handle('mpv:finishVideoResize', async (_, containerRect: {
@@ -949,6 +955,16 @@ app.whenReady().then(() => {
       await fs.unlink(fontFilePath);
     } catch (error) {
       // Ignore errors if the file doesn't exist
+    }
+  });
+
+  ipcMain.handle('fs:check-file-exists', async (_, filePath: string) => {
+    if (!filePath) return false;
+    try {
+      await fs.access(filePath);
+      return true;
+    } catch {
+      return false;
     }
   });
 

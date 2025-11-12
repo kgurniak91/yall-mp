@@ -53,6 +53,7 @@ import {
 } from '../../core/services/header-current-project-action-bridge/header-current-project-action-bridge.service';
 import {DatePipe} from '@angular/common';
 import {AssSubtitlesUtils} from '../../../../shared/utils/ass-subtitles.utils';
+import {Project} from '../../model/project.types';
 
 @Component({
   selector: 'app-project-details',
@@ -297,6 +298,8 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   }
 
   async ngOnInit() {
+    const foundProject = this.route.snapshot.data['project'] as Project;
+    const projectId = foundProject.id;
     this.videoStateService.setIsBusy(true);
 
     this.cleanupInitialSeekListener = window.electronAPI.onMpvInitialSeekComplete(() => {
@@ -307,26 +310,6 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     this.cleanupAddNoteListener = window.electronAPI.onProjectAddNote((note) => {
       this.addNoteToProject(note.clipSubtitleId, note.selection, note.text);
     });
-
-    const projectId = this.route.snapshot.paramMap.get('id');
-
-    if (!projectId) {
-      this.toastService.error('No project ID provided');
-      this.router.navigate(['/projects']);
-      return;
-    }
-
-    if (this.appStateService.currentProjectId() !== projectId) {
-      await this.appStateService.setCurrentProject(projectId);
-    }
-
-    const foundProject = this.project();
-
-    if (!foundProject) {
-      this.toastService.error(`Project with ID ${projectId} not found`);
-      this.router.navigate(['/projects']);
-      return;
-    }
 
     // Set the initial playback time immediately to prevent the timeline from defaulting to 0
     this.videoStateService.setCurrentTime(foundProject.lastPlaybackTime);
@@ -389,14 +372,21 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
     this.clipsStateService.setSubtitles(subtitles);
 
-    await window.electronAPI.mpvCreateViewport(
-      foundProject.mediaPath,
-      foundProject.settings.selectedAudioTrackIndex,
-      foundProject.subtitleSelection,
-      foundProject.subtitleTracks,
-      foundProject.settings.useMpvSubtitles,
-      foundProject.settings.subtitlesVisible
-    );
+    try {
+      await window.electronAPI.mpvCreateViewport(
+        foundProject.mediaPath,
+        foundProject.settings.selectedAudioTrackIndex,
+        foundProject.subtitleSelection,
+        foundProject.subtitleTracks,
+        foundProject.settings.useMpvSubtitles,
+        foundProject.settings.subtitlesVisible
+      );
+    } catch (e: any) {
+      console.error('MPV failed to initialize unexpectedly', e);
+      this.toastService.error(`The media player failed to start: ${e.message || 'The file may be corrupt or unsupported.'}`);
+      this.videoStateService.setIsBusy(false);
+      this.router.navigate(['/projects']);
+    }
   }
 
   ngOnDestroy(): void {

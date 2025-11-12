@@ -1,4 +1,5 @@
 import {Routes} from '@angular/router';
+import {projectResolver} from './features/project-details/project-resolver/project.resolver';
 
 export const routes: Routes = [
   {
@@ -20,6 +21,9 @@ export const routes: Routes = [
   },
   {
     path: 'project/:id',
-    loadComponent: () => import('./features/project-details/project-details.component').then(m => m.ProjectDetailsComponent)
+    loadComponent: () => import('./features/project-details/project-details.component').then(m => m.ProjectDetailsComponent),
+    resolve: {
+      project: projectResolver
+    }
   }
 ];

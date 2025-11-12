@@ -54,6 +54,7 @@ export interface IElectronAPI {
   getPathForFile: (file: File) => string;
   getProjectFonts: (projectId: string) => Promise<FontData[]>;
   deleteProjectFonts: (projectId: string) => void;
+  checkFileExists: (filePath: string) => Promise<boolean>;
   // --- Anki
   checkAnkiConnection: () => Promise<any>;
   getAnkiDeckNames: () => Promise<any>;

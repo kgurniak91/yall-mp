@@ -43,6 +43,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getPathForFile: (file) => webUtils.getPathForFile(file),
   getProjectFonts: (projectId) => ipcRenderer.invoke('fonts:get-fonts', projectId),
   deleteProjectFonts: (projectId) => ipcRenderer.send('fonts:delete-fonts', projectId),
+  checkFileExists: (filePath) => ipcRenderer.invoke('fs:check-file-exists', filePath),
   // --- Anki
   checkAnkiConnection: () => ipcRenderer.invoke('anki:check'),
   getAnkiDeckNames: () => ipcRenderer.invoke('anki:getDeckNames'),
