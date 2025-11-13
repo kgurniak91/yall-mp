@@ -11,7 +11,12 @@
   "include": [
     "electron-main.ts",
     "mpv-manager.ts",
-    "src/custom-typings.d.ts"
+    "src/custom-typings.d.ts",
+    "playback-manager.ts",
+    "src/app/model/anki.types.ts",
+    "src/app/model/project.types.ts",
+    "src/app/model/settings.types.ts",
+    "src/app/model/video.types.ts"
   ],
   "exclude": []
 }

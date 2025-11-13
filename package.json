@@ -1,5 +1,6 @@
 {
   "name": "yall-mp",
+  "description": "Yet Another Language Learning Media Player",
   "version": "0.0.0",
   "main": "electron-main.js",
   "scripts": {
@@ -14,15 +15,57 @@
     "electron:build": "ng build --configuration=electron && tsc --project tsconfig.electron.json",
     "electron:watch:build": "concurrently \"ng build --watch --configuration=electron\" \"tsc --watch --project tsconfig.electron.json\"",
     "electron:watch:run": "nodemon",
-    "postinstall": "node scripts/download-mpv.js"
+    "postinstall": "node scripts/download-mpv.js",
+    "package:win": "npm run electron:build && electron-builder --win",
+    "package:mac": "npm run electron:build && electron-builder --mac",
+    "package:linux": "npm run electron:build && electron-builder --linux"
   },
   "build": {
+    "appId": "com.yall-mp.app",
+    "productName": "Y'ALL Media Player",
+    "directories": {
+      "output": "dist_electron"
+    },
+    "files": [
+      "dist/yall-mp/browser/**/*",
+      "electron-main.js",
+      "mpv-manager.js",
+      "playback-manager.js",
+      "shared/utils/*.js",
+      "shared/types/*.js",
+      "src/app/model/**/*.js",
+      "node_modules/**/*",
+      "preload.js",
+      "subtitles-lookup-host-preload.js",
+      "subtitles-lookup-preload.js"
+    ],
+    "asarUnpack": [
+      "**/node_modules/ffmpeg-static/**",
+      "**/node_modules/ffprobe-static/**"
+    ],
     "extraResources": [
       {
         "from": "electron-resources/",
         "to": "electron-resources/"
       }
-    ]
+    ],
+    "win": {
+      "target": "portable",
+      "icon": "build/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "build/icon.icns",
+      "artifactName": "${productName} v${version}.${ext}"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "build/icon.png",
+      "artifactName": "${productName} v${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName} v${version}.exe"
+    }
   },
   "private": true,
   "dependencies": {
