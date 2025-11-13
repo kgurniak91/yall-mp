@@ -1546,16 +1546,16 @@ async function processSaveQueue() {
     // Prioritize saving core config
     if (coreConfigToSave) {
       const configData = coreConfigToSave;
-      coreConfigToSave = null; // Clear before await
       await fs.writeFile(APP_DATA_PATH, JSON.stringify(configData, null, 2), 'utf-8');
+      coreConfigToSave = null;
     }
 
     // Save one project from the queue
     if (projectsToSave.size > 0) {
       const [[projectId, projectData]] = projectsToSave; // Destructure 1st entry from map of projects
-      projectsToSave.delete(projectId); // Clear before await
       const projectPath = path.join(PROJECTS_DIR, `${projectId}.json`);
       await fs.writeFile(projectPath, JSON.stringify(projectData, null, 2), 'utf-8');
+      projectsToSave.delete(projectId);
     }
   } catch (error) {
     console.error('Failed during save operation:', error);
