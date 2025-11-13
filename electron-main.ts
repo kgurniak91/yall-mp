@@ -793,6 +793,12 @@ app.whenReady().then(() => {
     mpvManager = new MpvManager(videoWindow);
     playbackManager = new PlaybackManager(mpvManager, uiWindow);
 
+    playbackManager.on('repeat-seek-completed', () => {
+      if (uiWindow && !uiWindow.isDestroyed()) {
+        uiWindow.webContents.send('playback:repeat-seek-completed');
+      }
+    });
+
     mpvManager.on('status', (status) => {
       if (uiWindow) {
         uiWindow.webContents.send('mpv:event', status)

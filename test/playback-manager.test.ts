@@ -327,6 +327,74 @@ describe('PlaybackManager', () => {
     });
   });
 
+  describe('User Action: Repeat Clip', () => {
+    beforeEach(() => {
+      playbackManager = setupManager();
+    });
+
+    it('should rewind to the start and play the clip if paused mid-clip', () => {
+      // ARRANGE: Seek to the middle of a subtitled clip and ensure it's paused.
+      playbackManager.seek(15); // In sub-1 (10s to 20s)
+      simulateSeekComplete(playbackManager);
+      playbackManager.pause(); // Explicitly pause
+      expect(getLastStateUpdate()?.playerState).toBe(PlayerState.PausedByUser);
+      vi.clearAllMocks();
+
+      // ACT: Call the repeat method
+      playbackManager.repeat();
+
+      // ASSERT:
+      // It should seek to the beginning of the current clip (sub-1 starts at 10s).
+      expect(mockMpvManager.sendCommand).toHaveBeenCalledWith(['seek', 10, 'absolute']);
+      // It should unpause the player.
+      expect(mockMpvManager.setProperty).toHaveBeenCalledWith('pause', false);
+      // The final state should be 'Playing'.
+      expect(getLastStateUpdate()?.playerState).toBe(PlayerState.Playing);
+    });
+
+    it('should rewind to the start and continue playing if already playing mid-clip', () => {
+      // ARRANGE: Seek to the middle of a subtitled clip and start playing.
+      playbackManager.seek(15); // In sub-1
+      simulateSeekComplete(playbackManager);
+      playbackManager.play();
+      expect(getLastStateUpdate()?.playerState).toBe(PlayerState.Playing);
+      vi.clearAllMocks();
+
+      // ACT: Call the repeat method
+      playbackManager.repeat();
+
+      // ASSERT:
+      // It should seek to the beginning of the current clip.
+      expect(mockMpvManager.sendCommand).toHaveBeenCalledWith(['seek', 10, 'absolute']);
+      // It should ensure the player is playing.
+      expect(mockMpvManager.setProperty).toHaveBeenCalledWith('pause', false);
+      // The final state should still be 'Playing'.
+      expect(getLastStateUpdate()?.playerState).toBe(PlayerState.Playing);
+    });
+
+    it('should rewind to the start and play the clip if auto-paused at the end of the clip', () => {
+      // ARRANGE: Set up a manager that auto-pauses at the end.
+      playbackManager = setupManager({autoPauseAtEnd: true});
+      // Go to the end of sub-1 (ends at 20s) and simulate the auto-pause.
+      (playbackManager as any).currentClipIndex = 1; // Manually set clip to sub-1
+      (playbackManager as any).currentTime = 20 - 0.05;
+      (playbackManager as any).handleClipEnd(); // Trigger the AutoPausedAtEnd state
+      expect(getLastStateUpdate()?.playerState).toBe(PlayerState.AutoPausedAtEnd);
+      vi.clearAllMocks();
+
+      // ACT: Call the repeat method
+      playbackManager.repeat();
+
+      // ASSERT:
+      // It should seek to the beginning of the current clip (sub-1 starts at 10s).
+      expect(mockMpvManager.sendCommand).toHaveBeenCalledWith(['seek', 10, 'absolute']);
+      // It should unpause the player.
+      expect(mockMpvManager.setProperty).toHaveBeenCalledWith('pause', false);
+      // The final state should be 'Playing'.
+      expect(getLastStateUpdate()?.playerState).toBe(PlayerState.Playing);
+    });
+  });
+
   describe('updateClips', () => {
     const fourClipLayout: VideoClip[] = [
       {id: 'gap-0', startTime: 0, endTime: 5, duration: 5, hasSubtitle: false, parts: [], sourceSubtitles: []},
@@ -337,7 +405,7 @@ describe('PlaybackManager', () => {
         duration: 5,
         hasSubtitle: true,
         parts: [],
-        sourceSubtitles: [{id: 's1', type: 'srt', text: 'A', startTime: 5, endTime: 10}]
+        sourceSubtitles: [{id: 's1', type: 'srt', text: 'A', startTime: 5, endTime: 10, track: 0}]
       },
       {id: 'gap-10', startTime: 10, endTime: 15, duration: 5, hasSubtitle: false, parts: [], sourceSubtitles: []},
       {
@@ -347,7 +415,7 @@ describe('PlaybackManager', () => {
         duration: 5,
         hasSubtitle: true,
         parts: [],
-        sourceSubtitles: [{id: 's2', type: 'srt', text: 'B', startTime: 15, endTime: 20}]
+        sourceSubtitles: [{id: 's2', type: 'srt', text: 'B', startTime: 15, endTime: 20, track: 0}]
       },
     ];
 

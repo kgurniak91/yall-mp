@@ -4,6 +4,7 @@ import {PlayerState} from './src/app/model/video.types';
 import type {ProjectSettings} from './src/app/model/settings.types';
 import {SubtitleBehavior} from './src/app/model/settings.types';
 import {BrowserWindow} from 'electron';
+import {EventEmitter} from 'events';
 
 export interface PlaybackStateUpdate {
   playerState: PlayerState;
@@ -13,7 +14,7 @@ export interface PlaybackStateUpdate {
   subtitlesVisible: boolean;
 }
 
-export class PlaybackManager {
+export class PlaybackManager extends EventEmitter {
   private clips: VideoClip[] = [];
   private settings: ProjectSettings | null = null;
   private currentClipIndex = -1;
@@ -25,11 +26,13 @@ export class PlaybackManager {
   private isSeekingWithinSameClip = false;
   private mpvSubtitlesHiddenDueToRenderer = false;
   private isProjectLoaded = false;
+  private isAwaitingRepeatSeek = false;
 
   constructor(
     private mpvManager: MpvManager,
     private uiWindow: BrowserWindow,
   ) {
+    super();
     this.mpvManager.on('status', (status) => this.handleMpvEvent(status));
   }
 
@@ -110,9 +113,10 @@ export class PlaybackManager {
   public repeat(): void {
     const clip = this.clips[this.currentClipIndex];
     if (clip) {
+      this.isAwaitingRepeatSeek = true;
       this.mpvManager.sendCommand(['seek', clip.startTime, 'absolute']);
       this.mpvManager.setProperty('pause', false);
-      this.setPlayerState(PlayerState.Playing);
+      this.setPlayerState(PlayerState.Playing, true);
     }
   }
 
@@ -228,6 +232,11 @@ export class PlaybackManager {
         this.notifyUI();
       }
     } else if (status.event === 'seek') {
+      if (this.isAwaitingRepeatSeek) {
+        this.isAwaitingRepeatSeek = false;
+        this.emit('repeat-seek-completed');
+      }
+
       if (this.playerState === PlayerState.Seeking) {
         const shouldResume = this.preSeekState === PlayerState.Playing;
         const isInitialSeek = this.preSeekState === PlayerState.Idle;

@@ -101,6 +101,7 @@ export interface IElectronAPI {
   playbackUpdateSettings: (settings: ProjectSettings) => void;
   playbackUpdateClips: (clips: VideoClip[]) => void;
   onPlaybackStateUpdate: (callback: (update: PlaybackStateUpdate) => void) => (() => void);
+  onRepeatSeekCompleted: (callback: () => void) => (() => void);
 }
 
 declare global {

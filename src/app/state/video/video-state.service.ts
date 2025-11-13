@@ -32,6 +32,7 @@ export class VideoStateService implements OnDestroy {
   private isInitializing = true;
   private cleanupMpvListener: (() => void) | null = null;
   private cleanupPlaybackListener: (() => void) | null = null;
+  private cleanupRepeatSeekListener: (() => void) | null = null;
 
   public readonly mediaPath: Signal<string | null> = this._mediaPath.asReadonly();
   public readonly currentTime: Signal<number> = this._currentTime.asReadonly();
@@ -66,6 +67,10 @@ export class VideoStateService implements OnDestroy {
       this._subtitlesVisible.set(update.subtitlesVisible);
       this._playerState.set(update.playerState);
     });
+
+    this.cleanupRepeatSeekListener = window.electronAPI.onRepeatSeekCompleted(() => {
+      this._seekCompleted.set(Date.now());
+    });
   }
 
   ngOnDestroy(): void {
@@ -76,6 +81,10 @@ export class VideoStateService implements OnDestroy {
     if (this.cleanupPlaybackListener) {
       this.cleanupPlaybackListener();
       this.cleanupPlaybackListener = null;
+    }
+    if (this.cleanupRepeatSeekListener) {
+      this.cleanupRepeatSeekListener();
+      this.cleanupRepeatSeekListener = null;
     }
     this.saveCurrentPlaybackTime(this._currentTime());
   }

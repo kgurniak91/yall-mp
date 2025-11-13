@@ -105,4 +105,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('playback:state-update', subscription);
     return () => ipcRenderer.removeListener('playback:state-update', subscription);
   },
+  onRepeatSeekCompleted: (callback) => {
+    const subscription = () => callback();
+    ipcRenderer.on('playback:repeat-seek-completed', subscription);
+    return () => ipcRenderer.removeListener('playback:repeat-seek-completed', subscription);
+  },
 });
