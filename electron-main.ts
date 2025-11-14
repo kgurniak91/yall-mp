@@ -2,22 +2,14 @@ import {app, BrowserWindow, dialog, ipcMain, Menu, Rectangle, screen, shell, Web
 import path from 'path';
 import os from 'os';
 import {promises as fs} from 'fs';
-import {CaptionsFileFormat, ParsedCaptionsResult, parseResponse, VTTCue} from 'media-captions';
+import type {CaptionsFileFormat, ParsedCaptionsResult, parseResponse, VTTCue} from 'media-captions';
 import type {SrtSubtitleData, SubtitleData} from './shared/types/subtitle.type';
 import type {MediaTrack} from './shared/types/media.type';
 import {AnkiCard, AnkiExportRequest} from './src/app/model/anki.types';
-import ffmpegStatic from 'ffmpeg-static';
 import {v4 as uuidv4} from 'uuid';
 import {ChildProcess, spawn} from 'child_process';
 import {MpvManager} from './mpv-manager';
 import {FontData, ParsedSubtitlesData} from './src/electron-api';
-import ffprobeStatic from 'ffprobe-static';
-import languages from '@cospired/i18n-iso-languages';
-import {compile, parse} from 'ass-compiler';
-import fontScanner from 'font-scanner';
-import {Decoder} from 'ts-ebml';
-import fontkit from 'fontkit';
-import Levenshtein from 'fast-levenshtein';
 import {AppData, CoreConfig, Project, SubtitleSelection, SupportedLanguage} from './src/app/model/project.types';
 import {
   assignTracksToSubtitles,
@@ -26,7 +18,7 @@ import {
   mergeKaraokeSubtitles
 } from './shared/utils/subtitle-parsing';
 import {PlaybackManager} from './playback-manager';
-import {francAll} from 'franc-all';
+import type fontkit from 'fontkit';
 
 interface AvailableFont {
   family: string;
@@ -79,12 +71,22 @@ let initialAppBounds: Electron.Rectangle | null = null;
 const MIN_GAP_DURATION = 0.1;
 const DRAGGABLE_ZONE_PADDING = 3; // 3px on all sides
 
-if (ffmpegStatic) {
-  isFFmpegAvailable = true;
-  ffmpegPath = ffmpegStatic.replace('app.asar', 'app.asar.unpacked');
-  ffprobePath = ffprobeStatic.path.replace('app.asar', 'app.asar.unpacked');
-} else {
-  console.warn('ffmpeg-static binary not found. Anki export feature will be disabled.');
+async function ensureFFmpegPaths(): Promise<void> {
+  if (ffmpegPath) {
+    return;
+  }
+
+  console.log('Initializing FFmpeg/FFprobe paths for the first time...');
+  const ffmpegStatic = (await import('ffmpeg-static')).default;
+  const ffprobeStatic = (await import('ffprobe-static')).default;
+
+  if (ffmpegStatic) {
+    isFFmpegAvailable = true;
+    ffmpegPath = ffmpegStatic.replace('app.asar', 'app.asar.unpacked');
+    ffprobePath = ffprobeStatic.path.replace('app.asar', 'app.asar.unpacked');
+  } else {
+    console.warn('ffmpeg-static binary not found. Media features will be disabled.');
+  }
 }
 
 function subtractRect(rect: Rectangle, hole: Rectangle): Rectangle[] {
@@ -473,7 +475,10 @@ app.whenReady().then(() => {
   ipcMain.handle('anki:getNoteTypes', () => invokeAnkiConnect('modelNames'));
   ipcMain.handle('anki:getNoteTypeFieldNames', (_, modelName) => invokeAnkiConnect('modelFieldNames', {modelName}));
   ipcMain.handle('anki:exportAnkiCard', (_, exportRquest: AnkiExportRequest) => handleAnkiExport(exportRquest));
-  ipcMain.handle('ffmpeg:check', () => isFFmpegAvailable);
+  ipcMain.handle('ffmpeg:check', async () => {
+    await ensureFFmpegPaths();
+    return isFFmpegAvailable;
+  });
   ipcMain.handle('app:get-data', readAppData);
   ipcMain.handle('project:get-by-id', async (_, projectId: string) => {
     try {
@@ -1020,6 +1025,9 @@ async function handleFileOpen(options: Electron.OpenDialogOptions) {
 }
 
 async function handleSubtitleParse(projectId: string, filePath: string): Promise<ParsedSubtitlesData> {
+  const {parseResponse} = await import('media-captions');
+  const {compile, parse} = await import('ass-compiler');
+
   try {
     const content = await fs.readFile(filePath, 'utf-8');
     const extension = path.extname(filePath).toLowerCase();
@@ -1038,7 +1046,7 @@ async function handleSubtitleParse(projectId: string, filePath: string): Promise
       const requiredFonts = getRequiredFontsFromAss(content);
       const fonts = await loadFontData(requiredFonts, undefined, filePath);
       const fullText = getFullTextFromSubtitles(finalTimeline);
-      const detectedLanguage = detectLanguage(fullText);
+      const detectedLanguage = await detectLanguage(fullText);
 
       await fs.writeFile(path.join(FONT_CACHE_DIR, `${projectId}.json`), JSON.stringify(fonts));
 
@@ -1065,7 +1073,7 @@ async function handleSubtitleParse(projectId: string, filePath: string): Promise
       }));
       const processedSubtitles = preprocessSubtitles(subtitles);
       const fullText = getFullTextFromSubtitles(processedSubtitles);
-      const detectedLanguage = detectLanguage(fullText);
+      const detectedLanguage = await detectLanguage(fullText);
 
       return {
         subtitles: processedSubtitles,
@@ -1135,6 +1143,8 @@ async function invokeAnkiConnect(action: string, params = {}) {
 }
 
 async function handleAnkiExport(exportRequest: AnkiExportRequest) {
+  await ensureFFmpegPaths();
+
   if (!isFFmpegAvailable) {
     return {cardId: null, error: 'FFmpeg is not available, cannot export media.'};
   }
@@ -1339,6 +1349,8 @@ async function runFfprobe(args: string[]): Promise<any> {
 }
 
 async function handleGetMediaMetadata(filePath: string) {
+  await ensureFFmpegPaths();
+
   if (!isFFmpegAvailable) {
     return {audioTracks: [], subtitleTracks: []};
   }
@@ -1389,6 +1401,10 @@ async function handleGetMediaMetadata(filePath: string) {
 }
 
 async function handleExtractSubtitleTrack(projectId: string, mediaPath: string, trackIndex: number): Promise<ParsedSubtitlesData> {
+  const {parseResponse} = await import('media-captions');
+  const {compile, parse} = await import('ass-compiler');
+  await ensureFFmpegPaths();
+
   return new Promise(async (resolve, reject) => {
     const probeResult = await runFfprobe(['-v', 'quiet', '-print_format', 'json', '-show_streams', mediaPath]);
     const subtitleStream = probeResult.streams.find((s: any) => s.index === trackIndex);
@@ -1428,7 +1444,7 @@ async function handleExtractSubtitleTrack(projectId: string, mediaPath: string, 
             const requiredFonts = getRequiredFontsFromAss(subtitleContent);
             const fonts = await loadFontData(requiredFonts, mediaPath, undefined);
             const fullText = getFullTextFromSubtitles(finalTimeline);
-            const detectedLanguage = detectLanguage(fullText);
+            const detectedLanguage = await detectLanguage(fullText);
 
             await fs.writeFile(path.join(FONT_CACHE_DIR, `${projectId}.json`), JSON.stringify(fonts));
 
@@ -1454,7 +1470,7 @@ async function handleExtractSubtitleTrack(projectId: string, mediaPath: string, 
             }));
             const processedSubtitles = preprocessSubtitles(subtitles);
             const fullText = getFullTextFromSubtitles(processedSubtitles);
-            const detectedLanguage = detectLanguage(fullText);
+            const detectedLanguage = await detectLanguage(fullText);
 
             resolve({
               subtitles: processedSubtitles,
@@ -1472,6 +1488,8 @@ async function handleExtractSubtitleTrack(projectId: string, mediaPath: string, 
 }
 
 function getLanguageInfo(track: Omit<MediaTrack, 'label' | 'code'>): { label: string, code?: string } {
+  const languages = require('@cospired/i18n-iso-languages');
+
   const originalCode = track.language;
   let langName: string | undefined = '';
   let standardCode: string | undefined;
@@ -1621,6 +1639,8 @@ async function extractAttachmentsWithEbml(mediaPath: string): Promise<Map<string
   fileName: string,
   fileData: Buffer
 }>> {
+  const {Decoder} = await import('ts-ebml');
+
   console.log('[Fonts] Parsing MKV with ts-ebml to find attachments...');
   const fileBuffer = await fs.readFile(mediaPath);
   const decoder = new Decoder();
@@ -1698,6 +1718,10 @@ async function loadFontData(
   mediaPath?: string,
   assFilePath?: string
 ): Promise<FontData[]> {
+  const Levenshtein = (await import('fast-levenshtein')).default;
+  const fontScanner = (await import('font-scanner')).default;
+  const fontkit = (await import('fontkit')).default;
+
   console.log(`[Fonts] Starting search for ${requiredFonts.length} required font styles.`);
   const foundFonts = new Map<string, string>();
   const availableFonts: AvailableFont[] = [];
@@ -1895,7 +1919,9 @@ function getFullTextFromSubtitles(subtitles: SubtitleData[]): string {
   }).join('\n');
 }
 
-function detectLanguage(text: string): SupportedLanguage {
+async function detectLanguage(text: string): Promise<SupportedLanguage> {
+  const {francAll} = await import('franc-all');
+
   const supportedSpecialCaseLanguages: SupportedLanguage[] = ['jpn', 'cmn', 'zho', 'tha'];
   const langResults = francAll(text, {minLength: 3, only: supportedSpecialCaseLanguages});
   const topLang = langResults.length > 0 ? langResults[0][0] : 'und';
