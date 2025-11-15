@@ -26,6 +26,10 @@
     "directories": {
       "output": "dist_electron"
     },
+    "electronLanguages": [
+      "en-US",
+      "pl"
+    ],
     "files": [
       "dist/yall-mp/browser/**/*",
       "electron-main.js",
@@ -47,8 +51,9 @@
         "to": "electron-resources/"
       }
     ],
+    "removePackageScripts": true,
     "win": {
-      "target": "portable",
+      "target": "nsis",
       "icon": "build/icon.ico"
     },
     "mac": {
@@ -60,6 +65,10 @@
       "target": "AppImage",
       "icon": "build/icon.png",
       "artifactName": "${productName} v${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
     },
     "portable": {
       "artifactName": "${productName} v${version}.exe"
