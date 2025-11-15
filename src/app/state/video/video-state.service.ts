@@ -25,6 +25,8 @@ export class VideoStateService implements OnDestroy {
   private readonly _zoomInRequest = signal<number | null>(null);
   private readonly _zoomOutRequest = signal<number | null>(null);
   private readonly _playerState = signal<PlayerState>(PlayerState.Idle);
+  private readonly _waveformPath = signal<string | null>(null);
+  private readonly _loadingMessage = signal('Generating timeline...');
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly appStateService = inject(AppStateService);
@@ -53,6 +55,8 @@ export class VideoStateService implements OnDestroy {
   public readonly zoomInRequest = this._zoomInRequest.asReadonly();
   public readonly zoomOutRequest = this._zoomOutRequest.asReadonly();
   public readonly playerState = this._playerState.asReadonly();
+  public readonly waveformPath: Signal<string | null> = this._waveformPath.asReadonly();
+  public readonly loadingMessage: Signal<string> = this._loadingMessage.asReadonly();
 
   constructor() {
     this.cleanupMpvListener = window.electronAPI.onMpvEvent((status) => {
@@ -236,6 +240,14 @@ export class VideoStateService implements OnDestroy {
     if (this._projectId && this.duration() > 0 && time != null && isFinite(time)) {
       this.appStateService.updateProject(this._projectId, {lastPlaybackTime: time});
     }
+  }
+
+  public setWaveformPath(path: string | null): void {
+    this._waveformPath.set(path);
+  }
+
+  public setLoadingMessage(message: string): void {
+    this._loadingMessage.set(message);
   }
 
   private setupPeriodicSaving(): void {

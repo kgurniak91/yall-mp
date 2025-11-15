@@ -969,6 +969,16 @@ app.whenReady().then(() => {
     }
   });
 
+  ipcMain.on('project:delete-audio-cache', async (_, projectId) => {
+    try {
+      const audioCachePath = path.join(PROJECTS_DIR, `${projectId}.opus`);
+      await fs.unlink(audioCachePath);
+      console.log(`[Cleanup] Deleted cached audio for project ${projectId}.`);
+    } catch (error) {
+      // Ignore errors if the file doesn't exist
+    }
+  });
+
   ipcMain.handle('fs:check-file-exists', async (_, filePath: string) => {
     if (!filePath) return false;
     try {
@@ -1000,6 +1010,49 @@ app.whenReady().then(() => {
   });
   ipcMain.handle('playback:loadProject', (_, clips, settings, lastPlaybackTime) => playbackManager?.loadProject(clips, settings, lastPlaybackTime));
   ipcMain.handle('app:get-version', () => app.getVersion());
+
+  ipcMain.handle('project:extract-audio', async (_, projectId, mediaPath) => {
+    await ensureFFmpegPaths();
+
+    if (!isFFmpegAvailable) {
+      console.warn('Cannot extract audio because FFmpeg is not available.');
+      return null;
+    }
+
+    const audioCachePath = path.join(PROJECTS_DIR, `${projectId}.opus`);
+
+    try {
+      // Check if the cached file already exists and is valid
+      await fs.access(audioCachePath);
+      console.log(`[Audio Extraction] Found cached audio for project ${projectId}.`);
+      return audioCachePath;
+    } catch (error) {
+      // File doesn't exist, proceed with extraction
+      console.log(`[Audio Extraction] No cached audio found for project ${projectId}. Extracting...`);
+    }
+
+    try {
+      uiWindow?.webContents.send('timeline:status-update', {message: 'Extracting audio...'});
+      const args = [
+        '-i', mediaPath,
+        '-vn', // No video
+        '-c:a', 'libopus',         // Opus codec
+        '-b:a', '16k',             // Set a very low constant bitrate of 16 kbps
+        '-ar', '16000',            // Downsample audio further to 16kHz
+        '-ac', '1',                // Mono audio
+        audioCachePath
+      ];
+      await runFFmpeg(args);
+      console.log(`[Audio Extraction] Successfully extracted audio to ${audioCachePath}`);
+      return audioCachePath;
+    } catch (error) {
+      console.error(`Failed to extract audio for project ${projectId}:`, error);
+      // Clean up failed artifact if it exists
+      await fs.unlink(audioCachePath).catch(() => {
+      });
+      return null;
+    }
+  });
 
   createWindow();
 

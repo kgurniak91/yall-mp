@@ -35,8 +35,8 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
   public readonly hideContextMenuRequested = output<void>();
   protected readonly timelineContainer = viewChild.required<ElementRef<HTMLDivElement>>('timeline');
   protected readonly loading = signal(true);
+  protected videoStateService = inject(VideoStateService);
   private readonly isWaveSurferReady = signal(false);
-  private videoStateService = inject(VideoStateService);
   private clipsStateService = inject(ClipsStateService);
   private elementRef = inject(ElementRef);
   private wavesurfer: WaveSurfer | undefined;
@@ -124,12 +124,12 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
 
   private timelineRenderer = effect(() => {
     const clips = this.clipsStateService.clips();
-    const mediaPath = this.videoStateService.mediaPath();
+    const waveformPath = this.videoStateService.waveformPath();
     const container = this.timelineContainer()?.nativeElement;
     this.clipsStateService.activeTrackClipIndex(); // Refresh effect when current clip changes
 
-    if (!this.wavesurfer && mediaPath && container) {
-      this.initializeWaveSurfer(mediaPath, container);
+    if (!this.wavesurfer && waveformPath && container) {
+      this.initializeWaveSurfer(waveformPath, container);
     }
 
     if (!this.isWaveSurferReady() || !this.wsRegions || clips.length === 0) {
@@ -161,7 +161,9 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
   });
 
   private playbackTimeObserver = effect(() => {
-    if (!this.wavesurfer || !this.isWaveSurferReady()) return;
+    if (!this.isWaveSurferReady() || !this.wavesurfer) {
+      return;
+    }
 
     const currentTime = this.videoStateService.currentTime();
     const duration = this.videoStateService.duration();
@@ -175,20 +177,23 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
     }
   });
 
-  private initializeWaveSurfer(mediaPath: string, container: HTMLElement) {
+  private initializeWaveSurfer(waveformPath: string, container: HTMLElement) {
+    this.videoStateService.setLoadingMessage('Generating timeline...');
+
     this.wavesurfer = WaveSurfer.create({
       container,
       waveColor: '#ccc',
       progressColor: '#f55',
-      barWidth: 2,
+      barWidth: 3,
       barGap: 1,
       minPxPerSec: this.currentZoom(),
       autoScroll: true,
       autoCenter: true,
+      sampleRate: 5000,
       // Prevent wavesurfer from interacting with media, because the player is driven externally
       media: undefined,
       // Pass the URL directly to load the waveform
-      url: `file://${mediaPath}`
+      url: `file://${waveformPath}`
     });
 
     this.wsRegions = this.wavesurfer.registerPlugin(RegionsPlugin.create());
@@ -287,6 +292,7 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
   private handleWaveSurferReady = () => {
     if (this.wavesurfer) {
       this.isWaveSurferReady.set(true);
+      this.videoStateService.setLoadingMessage('Generating timeline...');
     }
   };
 

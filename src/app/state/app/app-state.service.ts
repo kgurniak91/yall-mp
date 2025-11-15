@@ -157,6 +157,7 @@ export class AppStateService {
 
   public deleteProject(projectId: string): void {
     window.electronAPI.deleteProjectFonts(projectId);
+    window.electronAPI.deleteProjectAudioCache(projectId);
     this.storageService.deleteProjectFile(projectId);
 
     this._appData.update(data => {
