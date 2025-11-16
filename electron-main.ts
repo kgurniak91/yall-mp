@@ -969,15 +969,7 @@ app.whenReady().then(() => {
     }
   });
 
-  ipcMain.on('project:delete-audio-cache', async (_, projectId) => {
-    try {
-      const audioCachePath = path.join(PROJECTS_DIR, `${projectId}.opus`);
-      await fs.unlink(audioCachePath);
-      console.log(`[Cleanup] Deleted cached audio for project ${projectId}.`);
-    } catch (error) {
-      // Ignore errors if the file doesn't exist
-    }
-  });
+  ipcMain.handle('project:generate-audio-peaks', async (_, projectId, mediaPath) => generateAudioPeaks(projectId, mediaPath));
 
   ipcMain.handle('fs:check-file-exists', async (_, filePath: string) => {
     if (!filePath) return false;
@@ -1010,49 +1002,6 @@ app.whenReady().then(() => {
   });
   ipcMain.handle('playback:loadProject', (_, clips, settings, lastPlaybackTime) => playbackManager?.loadProject(clips, settings, lastPlaybackTime));
   ipcMain.handle('app:get-version', () => app.getVersion());
-
-  ipcMain.handle('project:extract-audio', async (_, projectId, mediaPath) => {
-    await ensureFFmpegPaths();
-
-    if (!isFFmpegAvailable) {
-      console.warn('Cannot extract audio because FFmpeg is not available.');
-      return null;
-    }
-
-    const audioCachePath = path.join(PROJECTS_DIR, `${projectId}.opus`);
-
-    try {
-      // Check if the cached file already exists and is valid
-      await fs.access(audioCachePath);
-      console.log(`[Audio Extraction] Found cached audio for project ${projectId}.`);
-      return audioCachePath;
-    } catch (error) {
-      // File doesn't exist, proceed with extraction
-      console.log(`[Audio Extraction] No cached audio found for project ${projectId}. Extracting...`);
-    }
-
-    try {
-      uiWindow?.webContents.send('timeline:status-update', {message: 'Extracting audio...'});
-      const args = [
-        '-i', mediaPath,
-        '-vn', // No video
-        '-c:a', 'libopus',         // Opus codec
-        '-b:a', '16k',             // Set a very low constant bitrate of 16 kbps
-        '-ar', '16000',            // Downsample audio further to 16kHz
-        '-ac', '1',                // Mono audio
-        audioCachePath
-      ];
-      await runFFmpeg(args);
-      console.log(`[Audio Extraction] Successfully extracted audio to ${audioCachePath}`);
-      return audioCachePath;
-    } catch (error) {
-      console.error(`Failed to extract audio for project ${projectId}:`, error);
-      // Clean up failed artifact if it exists
-      await fs.unlink(audioCachePath).catch(() => {
-      });
-      return null;
-    }
-  });
 
   createWindow();
 
@@ -1985,4 +1934,109 @@ async function detectLanguage(text: string): Promise<SupportedLanguage> {
   if (topLang === 'tha') return 'tha';
 
   return 'other';
+}
+
+async function generateAudioPeaks(projectId: string, mediaPath: string): Promise<number[][] | null> {
+  await ensureFFmpegPaths();
+
+  const platform = process.platform;
+  const basePath = app.isPackaged ? process.resourcesPath : app.getAppPath();
+  let audiowaveformPath = '';
+
+  if (platform === 'win32') {
+    audiowaveformPath = path.join(basePath, 'electron-resources', 'windows', 'audiowaveform.exe');
+  } else {
+    // TODO: Add paths for macOS and Linux
+  }
+
+  for (const exePath of [audiowaveformPath, ffmpegPath]) {
+    try {
+      await fs.access(exePath);
+    } catch (error) {
+      console.error(`[Peaks] Executable not found at ${exePath}`);
+      return null;
+    }
+  }
+
+  console.log(`[Peaks] Generating waveform peaks for project ${projectId} using a WAV pipe.`);
+
+  return new Promise((resolve, reject) => {
+    // -f wav: Output format is WAV.
+    // -ar 16000: Downsample to 16kHz. Still very fast, but slightly better quality than 8kHz.
+    const ffmpegArgs = ['-i', mediaPath, '-vn', '-f', 'wav', '-ac', '1', '-ar', '16000', '-'];
+
+    // When reading from a pipe (stdin), audiowaveform needs to be explicitly told the input format
+    const audiowaveformArgs = [
+      '--input-format', 'wav',
+      '-i', '-',
+      '--output-format', 'json',
+      '--pixels-per-second', '10', // Lower detail for speed
+      '--bits', '8'
+    ];
+
+    const ffmpegProcess = spawn(ffmpegPath, ffmpegArgs);
+    const audiowaveformProcess = spawn(audiowaveformPath, audiowaveformArgs);
+
+    // Pipe the output of ffmpeg to the input of audiowaveform
+    ffmpegProcess.stdout.pipe(audiowaveformProcess.stdin);
+
+    let jsonData = '';
+    const ffmpegError: string[] = [];
+    const audiowaveformError: string[] = [];
+
+    audiowaveformProcess.stdout.on('data', (data) => {
+      jsonData += data.toString();
+    });
+
+    ffmpegProcess.stderr.on('data', (data) => ffmpegError.push(data.toString()));
+    audiowaveformProcess.stderr.on('data', (data) => audiowaveformError.push(data.toString()));
+
+    const killProcesses = () => {
+      if (!ffmpegProcess.killed) ffmpegProcess.kill();
+      if (!audiowaveformProcess.killed) audiowaveformProcess.kill();
+    };
+
+    ffmpegProcess.on('error', (err) => {
+      killProcesses();
+      reject(err);
+    });
+
+    audiowaveformProcess.on('error', (err) => {
+      killProcesses();
+      reject(err);
+    });
+
+    audiowaveformProcess.on('close', (code) => {
+      killProcesses();
+
+      if (code === 0) {
+        if (!jsonData) {
+          const combinedError = `FFMPEG Stderr:\n${ffmpegError.join('')}\n\nAUDIOWAVEFORM Stderr:\n${audiowaveformError.join('')}`;
+          console.error(`[Peaks] Pipeline failed: audiowaveform received no data from ffmpeg.`);
+          console.error(combinedError);
+          reject(new Error('FFmpeg failed to provide audio data.'));
+          return;
+        }
+        try {
+          const waveformData = JSON.parse(jsonData);
+          const rawPeaks = waveformData.data;
+          const scale = waveformData.bits === 16 ? 32768 : 128; // Output is 8-bit, so scale will be 128
+          const normalizedPeaks: number[] = rawPeaks.map((p: number) => p / scale);
+
+          const peaks = [normalizedPeaks];
+          console.log(`[Peaks] Successfully generated and normalized ${normalizedPeaks.length} data points.`);
+          resolve(peaks);
+        } catch (e) {
+          console.error('[Peaks] Failed to parse JSON from audiowaveform output.', e);
+          reject(new Error('Failed to parse waveform data.'));
+        }
+      } else {
+        const combinedError = `FFMPEG Stderr:\n${ffmpegError.join('')}\n\nAUDIOWAVEFORM Stderr:\n${audiowaveformError.join('')}`;
+        console.error(`[Peaks] Pipeline failed. audiowaveform process exited with code ${code}.`);
+        console.error(`[Peaks] Combined Stderr:\n${combinedError}`);
+        const relevantError = (audiowaveformError.join('').trim() || ffmpegError.join('').trim() || `Waveform generation failed.`).split('\n').pop();
+        reject(new Error(relevantError));
+      }
+    });
+  });
 }

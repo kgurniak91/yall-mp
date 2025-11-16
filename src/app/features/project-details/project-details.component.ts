@@ -233,7 +233,6 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   private cleanupInitialSeekListener: (() => void) | null = null;
   private cleanupMpvReadyListener: (() => void) | null = null;
   private cleanupAddNoteListener: (() => void) | null = null;
-  private cleanupTimelineStatusListener: (() => void) | null = null;
   private clickTimeout: any = null;
 
   constructor() {
@@ -296,10 +295,6 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       console.log('[ProjectDetails] Received mpv:managerReady signal!');
       this.isMpvReady.set(true);
     });
-
-    this.cleanupTimelineStatusListener = window.electronAPI.onTimelineStatusUpdate((status) => {
-      this.videoStateService.setLoadingMessage(status.message);
-    });
   }
 
   async ngOnInit() {
@@ -324,15 +319,19 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       this.loadAndInjectFonts(projectId);
     }
 
-    // Extract audio from media file for WaveSurfer
-    window.electronAPI.extractAudio(projectId, foundProject.mediaPath).then(audioPath => {
-      if (audioPath) {
-        this.videoStateService.setWaveformPath(audioPath);
-      } else {
-        this.toastService.error('Failed to extract audio for timeline. The original media file will be used, which may be slow.');
-        this.videoStateService.setWaveformPath(foundProject.mediaPath); // Fallback to original media
+    if (!foundProject.audioPeaks) {
+      console.log('[ProjectDetails] No waveform peaks found. Generating new ones.');
+      try {
+        const audioPeaks = await window.electronAPI.generateAudioPeaks(projectId, foundProject.mediaPath);
+        if (audioPeaks) {
+          this.appStateService.updateProject(projectId, {audioPeaks});
+        } else {
+          this.toastService.error('Failed to generate timeline waveform.');
+        }
+      } catch (e: any) {
+        this.toastService.error(`Failed to generate timeline waveform: ${e.message}`);
       }
-    });
+    }
 
     this.videoStateService.setSubtitlesVisible(foundProject.settings.subtitlesVisible);
     this.clipsStateService.setProjectId(projectId);
@@ -413,9 +412,6 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     }
     if (this.cleanupAddNoteListener) {
       this.cleanupAddNoteListener();
-    }
-    if (this.cleanupTimelineStatusListener) {
-      this.cleanupTimelineStatusListener();
     }
     this.fontInjectionService.clearFonts();
     window.electronAPI.mpvHideSubtitles();

@@ -54,6 +54,7 @@ export interface Project {
   lastAnkiSuspendState?: boolean;
   ankiExportHistory?: string[]; // List of SubtitleData IDs
   lastSubtitleEndTime: number;
+  audioPeaks?: number[][];
 }
 
 /**

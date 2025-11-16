@@ -213,11 +213,11 @@ export class MpvManager extends EventEmitter {
     let executablePath = '';
 
     if (platform === 'win32') {
-      executablePath = path.join(basePath, 'electron-resources', 'windows', 'mpv', 'mpv.exe');
+      executablePath = path.join(basePath, 'electron-resources', 'windows', 'mpv.exe');
     } else if (platform === 'darwin') { // macOS
-      executablePath = path.join(basePath, 'electron-resources', 'mac', 'mpv', 'mpv');
+      executablePath = path.join(basePath, 'electron-resources', 'mac', 'mpv');
     } else { // linux
-      executablePath = path.join(basePath, 'electron-resources', 'linux', 'mpv', 'mpv');
+      executablePath = path.join(basePath, 'electron-resources', 'linux', 'mpv');
     }
 
     return executablePath;

@@ -16,6 +16,7 @@ import {VideoStateService} from '../../../state/video/video-state.service';
 import {VideoClip} from '../../../model/video.types';
 import {ClipsStateService} from '../../../state/clips/clips-state.service';
 import {SpinnerComponent} from '../../../shared/components/spinner/spinner.component';
+import {AppStateService} from '../../../state/app/app-state.service';
 
 const INITIAL_ZOOM = 100;
 const MIN_ZOOM = 20;
@@ -38,6 +39,7 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
   protected videoStateService = inject(VideoStateService);
   private readonly isWaveSurferReady = signal(false);
   private clipsStateService = inject(ClipsStateService);
+  private appStateService = inject(AppStateService);
   private elementRef = inject(ElementRef);
   private wavesurfer: WaveSurfer | undefined;
   private wsRegions: RegionsPlugin | undefined;
@@ -124,12 +126,14 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
 
   private timelineRenderer = effect(() => {
     const clips = this.clipsStateService.clips();
-    const waveformPath = this.videoStateService.waveformPath();
+    const project = this.appStateService.currentProject();
+    const audioPeaks = project?.audioPeaks;
+    const duration = this.videoStateService.duration();
     const container = this.timelineContainer()?.nativeElement;
-    this.clipsStateService.activeTrackClipIndex(); // Refresh effect when current clip changes
+    this.clipsStateService.activeTrackClipIndex();
 
-    if (!this.wavesurfer && waveformPath && container) {
-      this.initializeWaveSurfer(waveformPath, container);
+    if (!this.wavesurfer && audioPeaks && duration > 0 && container) {
+      this.initializeWaveSurfer(audioPeaks, duration, container);
     }
 
     if (!this.isWaveSurferReady() || !this.wsRegions || clips.length === 0) {
@@ -138,26 +142,35 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
 
     const clipsSignature = clips.map(c => `${c.id}@${c.startTime}:${c.endTime}`).join(',');
 
-    if (clipsSignature !== this.lastDrawnClipsSignature) {
-      this.drawRegions(clips);
-      this.lastDrawnClipsSignature = clipsSignature;
-    }
+    // Defer the rest of the logic to ensure WaveSurfer has processed its initial options.
+    setTimeout(() => {
+      // Add a safety check in case the component is destroyed before the timeout fires.
+      if (!this.wsRegions || !this.wavesurfer) {
+        return;
+      }
 
-    // Once the first set of regions is drawn, hide the loader
-    if (this.loading()) {
-      setTimeout(() => {
+      if (clipsSignature !== this.lastDrawnClipsSignature) {
+        this.drawRegions(clips);
+        this.lastDrawnClipsSignature = clipsSignature;
+      }
+
+      // Once the first set of regions is drawn, hide the loader
+      if (this.loading()) {
         this.loading.set(false);
 
         // Scroll the timeline to the initial playback position automatically:
         if (!this.hasPerformedInitialSync()) {
           const initialTime = untracked(() => this.videoStateService.currentTime());
-          this.wavesurfer?.setScrollTime(initialTime);
-          this.hasPerformedInitialSync.set(true);
+          // Check if duration is valid before trying to scroll
+          if (this.wavesurfer.getDuration() > 0) {
+            this.wavesurfer.setScrollTime(initialTime);
+            this.hasPerformedInitialSync.set(true);
+          }
         }
-      }, 0);
-    }
+      }
 
-    this.syncHighlight();
+      this.syncHighlight();
+    }, 0);
   });
 
   private playbackTimeObserver = effect(() => {
@@ -177,9 +190,7 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
     }
   });
 
-  private initializeWaveSurfer(waveformPath: string, container: HTMLElement) {
-    this.videoStateService.setLoadingMessage('Generating timeline...');
-
+  private initializeWaveSurfer(audioPeaks: number[][], duration: number, container: HTMLElement) {
     this.wavesurfer = WaveSurfer.create({
       container,
       waveColor: '#ccc',
@@ -189,17 +200,18 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
       minPxPerSec: this.currentZoom(),
       autoScroll: true,
       autoCenter: true,
-      sampleRate: 5000,
       // Prevent wavesurfer from interacting with media, because the player is driven externally
       media: undefined,
-      // Pass the URL directly to load the waveform
-      url: `file://${waveformPath}`
+      peaks: audioPeaks,
+      duration: duration
     });
 
     this.wsRegions = this.wavesurfer.registerPlugin(RegionsPlugin.create());
     this.setupWsRegionsEventListeners();
     this.wavesurfer.on('scroll', this.handleWaveSurferScroll);
-    this.wavesurfer.on('ready', this.handleWaveSurferReady);
+
+    // Manually trigger ready state since 'ready' event doesn't fire with pre-decoded peaks
+    this.handleWaveSurferReady();
   }
 
   private setupWsRegionsEventListeners() {
@@ -292,7 +304,6 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
   private handleWaveSurferReady = () => {
     if (this.wavesurfer) {
       this.isWaveSurferReady.set(true);
-      this.videoStateService.setLoadingMessage('Generating timeline...');
     }
   };
 

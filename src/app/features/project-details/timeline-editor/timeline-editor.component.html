@@ -1,7 +1,9 @@
 @if (loading()) {
   <div class="loader-wrapper">
     <app-spinner/>
-    <p>{{ videoStateService.loadingMessage() }}</p>
+    <p>
+      Generating timeline...
+    </p>
   </div>
 }
 <div [style.visibility]="loading() ? 'hidden' : 'visible'" id="timeline" #timeline (wheel)="onWheel($event)"></div>
