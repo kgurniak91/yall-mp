@@ -319,7 +319,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       this.loadAndInjectFonts(projectId);
     }
 
-    if (!foundProject.audioPeaks) {
+    if (this.globalSettingsStateService.generateAudioPeaks() && !foundProject.audioPeaks) {
       console.log('[ProjectDetails] No waveform peaks found. Generating new ones.');
       try {
         const audioPeaks = await window.electronAPI.generateAudioPeaks(projectId, foundProject.mediaPath);

@@ -50,6 +50,7 @@ export interface GlobalSettings {
   subtitleLookupServices: SubtitleLookupService[];
   subtitleLookupBrowserType: SubtitleLookupBrowserType;
   ankiSuspendNewCardsByDefault: boolean;
+  generateAudioPeaks: boolean;
 }
 
 export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
@@ -103,7 +104,8 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
     }
   ],
   subtitleLookupBrowserType: SubtitleLookupBrowserType.BuiltIn,
-  ankiSuspendNewCardsByDefault: false
+  ankiSuspendNewCardsByDefault: false,
+  generateAudioPeaks: false
 };
 
 export interface SettingsPreset {

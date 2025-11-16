@@ -13,6 +13,22 @@
     </div>
   </p-fieldset>
 
+  <p-fieldset legend="Timeline Generation" [toggleable]="false">
+    <div class="setting-item">
+      <label for="generate-audio-peaks" class="font-semibold">Generate Audio Waveform</label>
+      <p-inputSwitch inputId="generate-audio-peaks"
+                     [ngModel]="globalSettingsStateService.generateAudioPeaks()"
+                     (ngModelChange)="globalSettingsStateService.setGenerateAudioPeaks($event)"/>
+    </div>
+    <small class="block mt-2 text-sm">
+      Displays a visual waveform of the audio on the timeline.<br><br>
+      <b>Warning:</b> This is slow process (e.g., ~1 minute for a 2-hour movie) that has to be done once per project.<br>
+      It is recommended to keep this disabled for the fastest project loading.<br><br>
+      If enabled, a waveform will be generated for any project that is loaded without one.<br>
+      Disabling this setting will <b>not</b> remove waveforms from projects that already have them.
+    </small>
+  </p-fieldset>
+
   <p-fieldset legend="Timeline Editing" [toggleable]="false">
     <div class="setting-item-column">
       <label for="adjustValue">

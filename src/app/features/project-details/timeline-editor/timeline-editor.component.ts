@@ -3,7 +3,7 @@ import {
   Component,
   effect,
   ElementRef,
-  inject,
+  inject, input,
   OnDestroy,
   output,
   signal,
@@ -132,7 +132,7 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
     const container = this.timelineContainer()?.nativeElement;
     this.clipsStateService.activeTrackClipIndex();
 
-    if (!this.wavesurfer && audioPeaks && duration > 0 && container) {
+    if (!this.wavesurfer && duration > 0 && container) {
       this.initializeWaveSurfer(audioPeaks, duration, container);
     }
 
@@ -190,7 +190,7 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
     }
   });
 
-  private initializeWaveSurfer(audioPeaks: number[][], duration: number, container: HTMLElement) {
+  private initializeWaveSurfer(audioPeaks: number[][] | undefined, duration: number, container: HTMLElement) {
     this.wavesurfer = WaveSurfer.create({
       container,
       waveColor: '#ccc',
@@ -202,7 +202,7 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
       autoCenter: true,
       // Prevent wavesurfer from interacting with media, because the player is driven externally
       media: undefined,
-      peaks: audioPeaks,
+      peaks: audioPeaks || [[0]],
       duration: duration
     });
 

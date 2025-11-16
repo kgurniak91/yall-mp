@@ -6,6 +6,7 @@ import {FormsModule} from '@angular/forms';
 import {GlobalSettingsStateService} from '../../../state/global-settings/global-settings-state.service';
 import {DEFAULT_GLOBAL_SETTINGS} from '../../../model/settings.types';
 import {DecimalPipe} from '@angular/common';
+import {InputSwitch} from 'primeng/inputswitch';
 
 @Component({
   selector: 'app-global-settings',
@@ -14,7 +15,8 @@ import {DecimalPipe} from '@angular/common';
     InputNumber,
     Slider,
     FormsModule,
-    DecimalPipe
+    DecimalPipe,
+    InputSwitch
   ],
   templateUrl: './global-settings.component.html',
   styleUrl: './global-settings.component.scss'

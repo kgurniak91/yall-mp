@@ -16,6 +16,7 @@ export class GlobalSettingsStateService {
   public readonly ankiSuspendNewCardsByDefault = computed(() => this.appStateService.globalSettings().ankiSuspendNewCardsByDefault);
   public readonly srtFontSizePx = computed(() => this.appStateService.globalSettings().srtFontSizePx);
   public readonly srtBackgroundOpacity = computed(() => this.appStateService.globalSettings().srtBackgroundOpacity);
+  public readonly generateAudioPeaks = computed(() => this.appStateService.globalSettings().generateAudioPeaks);
   public readonly srtBackgroundColor = computed(() => `rgba(0, 0, 0, ${this.srtBackgroundOpacity()})`);
 
   public setBoundaryAdjustAmountMs(value: number): void {
@@ -52,5 +53,9 @@ export class GlobalSettingsStateService {
 
   public setAnkiSuspendNewCardsByDefault(value: boolean): void {
     this.appStateService.updateGlobalSettings({ankiSuspendNewCardsByDefault: value});
+  }
+
+  public setGenerateAudioPeaks(value: boolean): void {
+    this.appStateService.updateGlobalSettings({generateAudioPeaks: value});
   }
 }
