@@ -1092,39 +1092,24 @@ async function handleSubtitleParse(projectId: string, filePath: string): Promise
 }
 
 function preprocessSubtitles(subtitles: SubtitleData[]): SubtitleData[] {
-  if (subtitles.length < 2) {
-    return subtitles;
+  const sortedSubtitles = [...subtitles].sort((a, b) => a.startTime - b.startTime);
+
+  if (sortedSubtitles.length === 0) {
+    return [];
   }
 
-  const sanitizedSubtitles: SubtitleData[] = [];
-  // The first subtitle is always fine as-is.
-  sanitizedSubtitles.push(subtitles[0]);
-
-  for (let i = 1; i < subtitles.length; i++) {
-    const previousSubtitle = sanitizedSubtitles[i - 1];
-    const currentSubtitle = subtitles[i];
-
-    if (currentSubtitle.startTime <= previousSubtitle.endTime) {
-      // CONFLICT: The current subtitle starts too early, adjust it.
-      const originalDuration = currentSubtitle.endTime - currentSubtitle.startTime;
-
-      // Push the start time forward by the previous subtitle's end time plus the gap
-      const newStartTime = previousSubtitle.endTime + MIN_GAP_DURATION;
-      const newEndTime = newStartTime + originalDuration;
-      const adjustedSubtitle: SubtitleData = {
-        ...currentSubtitle,
-        startTime: newStartTime,
-        endTime: newEndTime
+  sortedSubtitles.forEach((sub: SubtitleData, i: number) => {
+    if (i > 0) {
+      const previousSubtitle = sortedSubtitles[i - 1];
+      // If there's an overlap, truncate the previous subtitle
+      if (sub.startTime < previousSubtitle.endTime) {
+        previousSubtitle.endTime = sub.startTime;
       }
-
-      sanitizedSubtitles.push(adjustedSubtitle);
-    } else {
-      // NO CONFLICT: The natural gap is sufficient. Add the subtitle as-is.
-      sanitizedSubtitles.push(currentSubtitle);
     }
-  }
+  });
 
-  return sanitizedSubtitles;
+  // Filter out any subtitles that may have become zero-duration or negative-duration as a result of the truncation
+  return sortedSubtitles.filter(sub => sub.endTime > sub.startTime);
 }
 
 async function invokeAnkiConnect(action: string, params = {}) {

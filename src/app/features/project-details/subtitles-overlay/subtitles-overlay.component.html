@@ -10,7 +10,7 @@
         <div class="srt-container"
              [style.background-color]="globalSettingsStateService.srtBackgroundColor()"
              [style.font-size.px]="globalSettingsStateService.srtFontSizePx()">
-          {{ clip.text }}
+          <span [innerHTML]="clip.text"></span>
         </div>
       }
     }
