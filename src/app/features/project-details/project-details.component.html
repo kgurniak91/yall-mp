@@ -73,14 +73,43 @@
                     tooltipPosition="right" pTooltip="Adjust Right (])"/>
         </div>
       </p-popover>
+
+      @if (trackIndexes().length > 1) {
+        <p-overlaybadge badgeSize="small"
+                        severity="info"
+                        [pTooltip]="trackDropdownTooltip()"
+                        tooltipStyleClass="tooltip-one-line"
+                        [badgeDisabled]="!hasParallelClipsAtCurrentTime()">
+          <p-dropdown [options]="trackOptions()"
+                      [ngModel]="clipsStateService.activeTrack()"
+                      (onChange)="onTrackChange($event.value)"
+                      class="tracks-dropdown"
+                      optionLabel="label"
+                      optionValue="value">
+            <ng-template let-option pTemplate="item">
+              <div class="track-option"
+                   [pTooltip]="option.hasContent ? 'Contains Parallel Subtitle' : undefined"
+                   tooltipStyleClass="tooltip-one-line"
+                   tooltipPosition="right">
+                <span>{{ option.label }}</span>
+                @if (option.hasContent) {
+                  <div class="content-indicator ml-2"></div>
+                }
+              </div>
+            </ng-template>
+          </p-dropdown>
+        </p-overlaybadge>
+      }
     </div>
 
     <div class="toolbar-actions-wrapper">
-      <div class="mr-2">
-        <span>{{ videoStateService.currentTime() * 1000 | date:'HH:mm:ss':'UTC' }}</span>
-        <span class="text-gray-500 mx-1">/</span>
-        <span class="text-gray-400">{{ videoStateService.duration() * 1000 | date:'HH:mm:ss':'UTC' }}</span>
-      </div>
+      @if (videoStateService.duration() > 0) {
+        <div class="ml-2 mr-2">
+          <span>{{ videoStateService.currentTime() * 1000 | date:'HH:mm:ss':'UTC' }}</span>
+          <span class="text-gray-500 mx-1">/</span>
+          <span class="text-gray-400">{{ videoStateService.duration() * 1000 | date:'HH:mm:ss':'UTC' }}</span>
+        </div>
+      }
 
       @let subtitlesVisible = videoStateService.subtitlesVisible();
       <p-button icon="{{subtitlesVisible ? 'fa-solid' : 'fa-regular'}} fa-closed-captioning"
@@ -96,23 +125,6 @@
                 severity="secondary"
                 (onClick)="toggleSettings()"/>
     </div>
-  </div>
-
-  <div class="tracks">
-    @for (trackIndex of trackIndexes(); track trackIndex) {
-      @let hasContent = trackHasContent()[trackIndex];
-      @let isActive = clipsStateService.activeTrack() === trackIndex;
-
-      <p-button [label]="'Track ' + (trackIndex + 1)"
-                [outlined]="!isActive"
-                (onClick)="clipsStateService.setActiveTrack(trackIndex)"
-                iconPos="right"
-                [class.active-track]="isActive"
-                [icon]="hasContent ? 'fa-solid fa-circle fa-2xs' : undefined"
-                [pTooltip]="hasContent ? 'Contains parallel clip' : undefined"
-                tooltipPosition="bottom">
-      </p-button>
-    }
   </div>
 
   <div class="timeline-area">

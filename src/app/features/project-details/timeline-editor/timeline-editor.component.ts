@@ -203,7 +203,8 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
       // Prevent wavesurfer from interacting with media, because the player is driven externally
       media: undefined,
       peaks: audioPeaks || [[0]],
-      duration: duration
+      duration: duration,
+      height: 100
     });
 
     this.wsRegions = this.wavesurfer.registerPlugin(RegionsPlugin.create());

@@ -54,6 +54,7 @@ import {
 import {DatePipe} from '@angular/common';
 import {AssSubtitlesUtils} from '../../../../shared/utils/ass-subtitles.utils';
 import {Project} from '../../model/project.types';
+import {OverlayBadgeModule} from 'primeng/overlaybadge';
 
 @Component({
   selector: 'app-project-details',
@@ -70,7 +71,8 @@ import {Project} from '../../model/project.types';
     SubtitlesOverlayComponent,
     SubtitlesHighlighterComponent,
     ContextMenu,
-    DatePipe
+    DatePipe,
+    OverlayBadgeModule
   ],
   templateUrl: './project-details.component.html',
   styleUrl: './project-details.component.scss',
@@ -106,6 +108,35 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       }
     }
     return trackBooleans;
+  });
+
+  protected readonly hasParallelClipsAtCurrentTime = computed(() => {
+    const activeSubtitles = this.clipsStateService.subtitlesAtCurrentTime();
+
+    if (activeSubtitles.length < 2) {
+      return false;
+    }
+
+    const activeTracks = new Set(activeSubtitles.map(sub => sub.track));
+    return activeTracks.size >= 2;
+  });
+
+  protected readonly trackDropdownTooltip = computed(() => {
+    if (this.hasParallelClipsAtCurrentTime()) {
+      return 'Parallel Subtitles Available';
+    } else {
+      return 'Switch Subtitles Track';
+    }
+  });
+
+  protected readonly trackOptions = computed(() => {
+    const indexes = this.trackIndexes();
+    const content = this.trackHasContent();
+    return indexes.map(i => ({
+      label: `Track ${i + 1}`,
+      value: i,
+      hasContent: content[i]
+    }));
   });
 
   protected readonly canEditSubtitles = computed(() => {
@@ -558,6 +589,10 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
+  protected onTrackChange(trackIndex: number): void {
+    this.clipsStateService.setActiveTrack(trackIndex);
+  }
+
   onSubtitlesContextMenu(payload: { event: MouseEvent, text: string }): void {
     this.timelineContextMenu().hide();
 
@@ -598,7 +633,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       const menuItem: MenuItem = {
         label: service.name,
         badge: isDefault ? 'Default' : undefined,
-        badgeStyleClass: 'p-badge-info',
+        badgeStyleClass: 'default-lookup-service-badge',
         command: () => this.executeLookup(service, this.selectedSubtitleTextForMenu)
       };
 

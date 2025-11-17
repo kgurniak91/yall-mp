@@ -35,6 +35,10 @@
 
   --p-slider-track-size: 6px !important;
   --p-message-error-background: #dc2626 !important;
+  --p-overlaybadge-outline-width: 1px !important;
+  --p-overlaybadge-outline-color: black !important;
+  --p-badge-sm-min-width: 0.5rem !important;
+  --p-badge-sm-height: 0.5rem !important;
 }
 
 html, body {
@@ -152,6 +156,9 @@ label.required::after {
 
 p-badge {
   white-space: nowrap;
+}
+
+p-badge.default-lookup-service-badge {
   min-width: auto !important;
 }
 
