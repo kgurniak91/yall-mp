@@ -972,8 +972,9 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     const seekTime = project.lastPlaybackTime;
     console.log(`[ProjectDetails] Startup sequence. Seeking to last known time: ${seekTime}`);
 
-    const clips = this.clipsStateService.clips();
-    const targetClipIndex = clips.findIndex(c => seekTime >= c.startTime && seekTime < c.endTime);
+    const allClips = this.clipsStateService.clipsForAllTracks();
+    const targetClipIndex = allClips.findIndex(c => seekTime >= c.startTime && seekTime < c.endTime);
+
     if (targetClipIndex !== -1) {
       this.clipsStateService.setCurrentClipByIndex(targetClipIndex);
       console.log(`[ProjectDetails] Synchronized active clip to index: ${targetClipIndex} `);

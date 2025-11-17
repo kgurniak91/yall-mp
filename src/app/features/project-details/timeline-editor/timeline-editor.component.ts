@@ -163,6 +163,7 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
           const initialTime = untracked(() => this.videoStateService.currentTime());
           // Check if duration is valid before trying to scroll
           if (this.wavesurfer.getDuration() > 0) {
+            this.wavesurfer.setTime(initialTime);
             this.wavesurfer.setScrollTime(initialTime);
             this.hasPerformedInitialSync.set(true);
           }
