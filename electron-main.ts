@@ -1970,8 +1970,8 @@ async function generateAudioPeaks(projectId: string, mediaPath: string): Promise
       '--input-format', 'wav',
       '-i', '-',
       '--output-format', 'json',
-      '--pixels-per-second', '10', // Lower detail for speed
-      '--bits', '8'
+      '--pixels-per-second', '100',
+      '--bits', '16'
     ];
 
     const ffmpegProcess = spawn(ffmpegPath, ffmpegArgs);
