@@ -50,6 +50,14 @@ html, body {
   font-family: var(--app-font-family), sans-serif;
 }
 
+.p-dialog-mask,
+.p-drawer-mask,
+.p-confirm-dialog-mask,
+.p-overlay-mask {
+  top: var(--app-header-height) !important;
+  height: calc(100% - var(--app-header-height)) !important;
+}
+
 video {
   &:focus-visible {
     outline: none !important;
