@@ -8,12 +8,12 @@
   color: currentColor;
   display: inline-block;
   position: relative;
-  width: 80px;
-  height: 80px;
+  width: 4rem;
+  height: 4rem;
 }
 
 .lds-spinner div {
-  transform-origin: 40px 40px;
+  transform-origin: 2rem 2rem;
   animation: lds-spinner 1.2s linear infinite;
 }
 
@@ -21,10 +21,10 @@
   content: " ";
   display: block;
   position: absolute;
-  top: 3.2px;
-  left: 36.8px;
-  width: 6.4px;
-  height: 17.6px;
+  top: 0.16rem;
+  left: 1.84rem;
+  width: 0.32rem;
+  height: 0.88rem;
   border-radius: 20%;
   background: currentColor;
 }

@@ -12,7 +12,7 @@
   </div>
 
   <div class="toolbar">
-    <div class="toolbar-actions-wrapper">
+    <div class="toolbar-actions-wrapper" [class.with-tracks-dropdown]="trackIndexes().length > 1">
       <p-button icon="fa-solid {{clipsStateService.isPlaying() ? 'fa-pause' : 'fa-play'}}"
                 [pTooltip]="(clipsStateService.isPlaying() ? 'Pause' : 'Play') + ' (Space)'"
                 tooltipPosition="bottom"
