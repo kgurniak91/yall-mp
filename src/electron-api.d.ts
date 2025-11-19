@@ -56,6 +56,9 @@ export interface IElectronAPI {
   deleteProjectFonts: (projectId: string) => void;
   checkFileExists: (filePath: string) => Promise<boolean>;
   generateAudioPeaks: (projectId: string, mediaPath: string) => Promise<number[][] | null>;
+  // --- File Association ("Open with")
+  getPendingOpenFiles: () => Promise<string[]>;
+  onAppOpenFiles: (callback: (filePaths: string[]) => void) => (() => void);
   // --- Anki
   checkAnkiConnection: () => Promise<any>;
   getAnkiDeckNames: () => Promise<any>;

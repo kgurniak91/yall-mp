@@ -1,93 +1,99 @@
-<div class="new-project-container">
-  <div class="header">
-    <h1>{{ pageTitle() }}</h1>
+@if (isLoading()) {
+  <div class="flex justify-content-center align-items-center flex-grow-1">
+    <app-spinner/>
   </div>
+} @else {
+  <div class="new-project-container">
+    <div class="header">
+      <h1>{{ pageTitle() }}</h1>
+    </div>
 
-  <div class="content-grid">
-    <section class="form-panel">
-      <h2 class="m-0 mb-3">Media</h2>
-      <div class="panel-body">
-        <app-file-drop-zone label="Drag and drop a media file here"
-                            icon="fa-solid fa-file-video"
-                            [accept]="SUPPORTED_MEDIA_TYPES"
-                            [existingFileName]="existingMediaFileName()"
-                            (filePathChange)="onMediaFilePathChange($event)"/>
-      </div>
-    </section>
+    <div class="content-grid">
+      <section class="form-panel">
+        <h2 class="m-0 mb-3">Media</h2>
+        <div class="panel-body">
+          <app-file-drop-zone label="Drag and drop a media file here"
+                              icon="fa-solid fa-file-video"
+                              [accept]="SUPPORTED_MEDIA_TYPES"
+                              [existingFileName]="existingMediaFileName()"
+                              (filePathChange)="onMediaFilePathChange($event)"/>
+        </div>
+      </section>
 
-    <section class="form-panel">
-      <h2 class="m-0 mb-3">Subtitles</h2>
-      <div class="panel-body">
-        @if (isProcessingMedia()) {
-          <div class="flex justify-content-center align-items-center h-full">
-            <app-spinner/>
-          </div>
-        } @else if (mediaFilePath()) {
-          <div class="radio-group">
-            @for (option of subtitleOptions; track option.value) {
-              <!-- Conditionally render the "embedded" option only if tracks exist -->
-              @if (option.value !== SubtitleOptionType.embedded || subtitleTracks().length > 0) {
-                @let isSelected = (selectedSubtitleOption() === option.value);
-                <div class="radio-option"
-                     [class.flex-1]="isSelected && option.value === SubtitleOptionType.external"
-                     [class.selected]="isSelected">
-                  <label>
-                    <input type="radio" name="sub-option" [value]="option.value" [(ngModel)]="selectedSubtitleOption">
-                    <span class="custom-radio"></span>
-                    {{ option.label }}
-                  </label>
+      <section class="form-panel">
+        <h2 class="m-0 mb-3">Subtitles</h2>
+        <div class="panel-body">
+          @if (isProcessingMedia()) {
+            <div class="flex justify-content-center align-items-center h-full">
+              <app-spinner/>
+            </div>
+          } @else if (mediaFilePath()) {
+            <div class="radio-group">
+              @for (option of subtitleOptions; track option.value) {
+                <!-- Conditionally render the "embedded" option only if tracks exist -->
+                @if (option.value !== SubtitleOptionType.embedded || subtitleTracks().length > 0) {
+                  @let isSelected = (selectedSubtitleOption() === option.value);
+                  <div class="radio-option"
+                       [class.flex-1]="isSelected && option.value === SubtitleOptionType.external"
+                       [class.selected]="isSelected">
+                    <label>
+                      <input type="radio" name="sub-option" [value]="option.value" [(ngModel)]="selectedSubtitleOption">
+                      <span class="custom-radio"></span>
+                      {{ option.label }}
+                    </label>
 
-                  @if (isSelected) {
-                    <div class="radio-content">
-                      @switch (option.value) {
-                        @case (SubtitleOptionType.embedded) {
-                          <p-select [options]="subtitleTracks()"
-                                    [(ngModel)]="selectedEmbeddedSubtitleTrackIndex"
-                                    optionLabel="label"
-                                    optionValue="index"
-                                    placeholder="Select subtitle track"
-                                    styleClass="w-full">
-                          </p-select>
+                    @if (isSelected) {
+                      <div class="radio-content">
+                        @switch (option.value) {
+                          @case (SubtitleOptionType.embedded) {
+                            <p-select [options]="subtitleTracks()"
+                                      [(ngModel)]="selectedEmbeddedSubtitleTrackIndex"
+                                      optionLabel="label"
+                                      optionValue="index"
+                                      placeholder="Select subtitle track"
+                                      styleClass="w-full">
+                            </p-select>
+                          }
+                          @case (SubtitleOptionType.external) {
+                            <app-file-drop-zone label="Drag and drop a subtitle file here"
+                                                icon="fa-solid fa-file-lines"
+                                                [accept]="SUPPORTED_SUBTITLE_TYPES"
+                                                [existingFileName]="existingSubtitleFileName()"
+                                                (filePathChange)="onSubtitleFilePathChange($event)"/>
+                          }
+                          @case (SubtitleOptionType.none) {
+                            <p class="m-0">
+                              <b>The timeline will start empty.</b>
+                              <br>
+                              You will be able to manually create your own subtitled clips later.
+                            </p>
+                          }
                         }
-                        @case (SubtitleOptionType.external) {
-                          <app-file-drop-zone label="Drag and drop a subtitle file here"
-                                              icon="fa-solid fa-file-lines"
-                                              [accept]="SUPPORTED_SUBTITLE_TYPES"
-                                              [existingFileName]="existingSubtitleFileName()"
-                                              (filePathChange)="onSubtitleFilePathChange($event)"/>
-                        }
-                        @case (SubtitleOptionType.none) {
-                          <p class="m-0">
-                            <b>The timeline will start empty.</b>
-                            <br>
-                            You will be able to manually create your own subtitled clips later.
-                          </p>
-                        }
-                      }
-                    </div>
-                  }
-                </div>
+                      </div>
+                    }
+                  </div>
+                }
               }
-            }
-          </div>
-        } @else {
-          <div class="flex justify-content-center align-items-center h-full">
-            <span>Select a media file first to see available options</span>
-          </div>
-        }
-      </div>
-    </section>
-  </div>
+            </div>
+          } @else {
+            <div class="flex justify-content-center align-items-center h-full">
+              <span>Select a media file first to see available options</span>
+            </div>
+          }
+        </div>
+      </section>
+    </div>
 
-  <div class="actions">
-    <p-button label="Cancel"
-              icon="fa-solid fa-arrow-left"
-              severity="secondary"
-              (onClick)="goBack()"/>
+    <div class="actions">
+      <p-button label="Cancel"
+                icon="fa-solid fa-arrow-left"
+                severity="secondary"
+                (onClick)="goBack()"/>
 
-    <p-button [label]="editMode() ? 'Save Changes' : 'Start Learning'"
-              icon="fa-solid fa-check"
-              severity="primary"
-              (onClick)="submitProject()"/>
+      <p-button [label]="editMode() ? 'Save Changes' : 'Start Learning'"
+                icon="fa-solid fa-check"
+                severity="primary"
+                (onClick)="submitProject()"/>
+    </div>
   </div>
-</div>
+}

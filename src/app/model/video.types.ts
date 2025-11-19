@@ -76,5 +76,30 @@ export enum PlayerState {
   Seeking = 'Seeking'
 }
 
-export const SUPPORTED_MEDIA_TYPES = ['mp4', 'mkv', 'webm', 'mov', 'avi'];
-export const SUPPORTED_SUBTITLE_TYPES = ['vtt', 'srt', 'ssa', 'ass'];
+const SUPPORTED_VIDEO_TYPES = [
+  // Standard Containers
+  'mp4', 'mkv', 'webm', 'mov', 'avi', 'wmv', 'flv',
+  // MPEG Variations
+  'mpg', 'mpeg', 'm4v', 'mts', 'm2ts', 'ts', 'vob',
+  // Mobile / Legacy / Web
+  '3gp', 'ogv', 'divx'
+];
+
+const SUPPORTED_AUDIO_TYPES = [
+  // Common Music Formats
+  'mp3', 'aac', 'wma', 'ogg',
+  // High Fidelity / Lossless
+  'flac', 'wav', 'aiff', 'alac', 'ape', 'dsd', 'pcm',
+  // Audiobooks & Podcasts
+  'm4a', 'm4b', 'mka', 'aa', 'aax', 'opus'
+];
+
+export const SUPPORTED_MEDIA_TYPES = [
+  ...SUPPORTED_VIDEO_TYPES,
+  ...SUPPORTED_AUDIO_TYPES
+];
+
+export const SUPPORTED_SUBTITLE_TYPES = [
+  // Text-based (Most common)
+  'srt', 'vtt', 'ssa', 'ass', 'smi', 'sub'
+];

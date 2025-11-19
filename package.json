@@ -72,7 +72,21 @@
     },
     "portable": {
       "artifactName": "${productName} v${version}.exe"
-    }
+    },
+    "fileAssociations": [
+      {
+        "ext": [
+          "mp4", "mkv", "webm", "mov", "avi", "wmv", "flv",
+          "mpg", "mpeg", "m4v", "mts", "m2ts", "ts", "vob",
+          "3gp", "ogv", "divx",
+          "mp3", "aac", "wma", "ogg",
+          "flac", "wav", "aiff", "alac", "ape", "dsd", "pcm",
+          "m4a", "m4b", "mka", "aa", "aax", "opus"
+        ],
+        "name": "Media File",
+        "role": "Viewer"
+      }
+    ]
   },
   "private": true,
   "dependencies": {

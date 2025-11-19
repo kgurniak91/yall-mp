@@ -45,6 +45,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deleteProjectFonts: (projectId) => ipcRenderer.send('fonts:delete-fonts', projectId),
   checkFileExists: (filePath) => ipcRenderer.invoke('fs:check-file-exists', filePath),
   generateAudioPeaks: (projectId, mediaPath) => ipcRenderer.invoke('project:generate-audio-peaks', projectId, mediaPath),
+  // --- File Association ("Open with")
+  getPendingOpenFiles: () => ipcRenderer.invoke('app:get-pending-files'),
+  onAppOpenFiles: (callback) => {
+    const subscription = (_event, filePaths) => callback(filePaths);
+    ipcRenderer.on('app:open-files', subscription);
+    return () => ipcRenderer.removeListener('app:open-files', subscription);
+  },
   // --- Anki
   checkAnkiConnection: () => ipcRenderer.invoke('anki:check'),
   getAnkiDeckNames: () => ipcRenderer.invoke('anki:getDeckNames'),

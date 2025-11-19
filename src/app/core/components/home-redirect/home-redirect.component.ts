@@ -1,18 +1,39 @@
-import {Component, inject} from '@angular/core';
+import {Component, inject, OnInit} from '@angular/core';
 import {AppStateService} from '../../../state/app/app-state.service';
 import {Router} from '@angular/router';
+import {FileOpenIntentService} from '../../services/file-open-intent/file-open-intent.service';
+import {ToastService} from '../../../shared/services/toast/toast.service';
 
 @Component({
   selector: 'app-home-redirect',
   imports: [],
   template: '<!-- for redirects only -->'
 })
-export class HomeRedirectComponent {
-  constructor() {
-    const appStateService = inject(AppStateService);
-    const router = inject(Router);
-    const currentProject = appStateService.currentProject();
-    const projects = appStateService.projects();
+export class HomeRedirectComponent implements OnInit {
+  private readonly appStateService = inject(AppStateService);
+  private readonly router = inject(Router);
+  private readonly fileOpenIntentService = inject(FileOpenIntentService);
+  private readonly toastService = inject(ToastService);
+
+  async ngOnInit() {
+    // Check if app was launched with file(s) via "Open With"
+    const pendingFiles = await window.electronAPI.getPendingOpenFiles();
+
+    if (pendingFiles && pendingFiles.length > 0) {
+      const error = this.fileOpenIntentService.processFiles(pendingFiles);
+      if (error) {
+        this.toastService.error(error);
+        // Fall through to normal logic on error
+      } else {
+        // Intent successful, go to new project form
+        this.router.navigateByUrl('/project/new', {replaceUrl: true});
+        return;
+      }
+    }
+
+    // Default startup logic
+    const currentProject = this.appStateService.currentProject();
+    const projects = this.appStateService.projects();
     let targetUrl: string;
 
     if (currentProject) {
@@ -23,6 +44,6 @@ export class HomeRedirectComponent {
       targetUrl = '/project/new';
     }
 
-    router.navigateByUrl(targetUrl, {replaceUrl: true});
+    this.router.navigateByUrl(targetUrl, {replaceUrl: true});
   }
 }

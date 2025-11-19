@@ -1,7 +1,7 @@
 import {app, BrowserWindow, dialog, ipcMain, Menu, Rectangle, screen, shell, WebContentsView} from 'electron';
 import path from 'path';
 import os from 'os';
-import {promises as fs} from 'fs';
+import {promises as fs, statSync} from 'fs';
 import type {CaptionsFileFormat, ParsedCaptionsResult, parseResponse, VTTCue} from 'media-captions';
 import type {SrtSubtitleData, SubtitleData} from './shared/types/subtitle.type';
 import type {MediaTrack} from './shared/types/media.type';
@@ -19,6 +19,7 @@ import {
 } from './shared/utils/subtitle-parsing';
 import {PlaybackManager} from './playback-manager';
 import type fontkit from 'fontkit';
+import {SUPPORTED_MEDIA_TYPES, SUPPORTED_SUBTITLE_TYPES} from './src/app/model/video.types';
 
 interface AvailableFont {
   family: string;
@@ -68,7 +69,7 @@ let coreConfigToSave: CoreConfig | null = null;
 const projectsToSave = new Map<string, Project>();
 let showVideoTimeout: NodeJS.Timeout | null = null;
 let initialAppBounds: Electron.Rectangle | null = null;
-const MIN_GAP_DURATION = 0.1;
+let pendingFilesToOpen: string[] = [];
 const DRAGGABLE_ZONE_PADDING = 3; // 3px on all sides
 
 async function ensureFFmpegPaths(): Promise<void> {
@@ -464,553 +465,596 @@ function createWindow() {
   }
 }
 
-app.whenReady().then(() => {
-  ensureProjectsDirExists();
-  ipcMain.handle('dialog:openFile', (_, options) => handleFileOpen(options));
-  ipcMain.handle('subtitle:parse', (_, projectId, filePath) => handleSubtitleParse(projectId, filePath));
-  ipcMain.handle('media:getMetadata', (_, filePath) => handleGetMediaMetadata(filePath));
-  ipcMain.handle('media:extractSubtitleTrack', (_, projectId, mediaPath, trackIndex) => handleExtractSubtitleTrack(projectId, mediaPath, trackIndex));
-  ipcMain.handle('anki:check', () => invokeAnkiConnect('version'));
-  ipcMain.handle('anki:getDeckNames', () => invokeAnkiConnect('deckNames'));
-  ipcMain.handle('anki:getNoteTypes', () => invokeAnkiConnect('modelNames'));
-  ipcMain.handle('anki:getNoteTypeFieldNames', (_, modelName) => invokeAnkiConnect('modelFieldNames', {modelName}));
-  ipcMain.handle('anki:exportAnkiCard', (_, exportRquest: AnkiExportRequest) => handleAnkiExport(exportRquest));
-  ipcMain.handle('ffmpeg:check', async () => {
-    await ensureFFmpegPaths();
-    return isFFmpegAvailable;
-  });
-  ipcMain.handle('app:get-data', readAppData);
-  ipcMain.handle('project:get-by-id', async (_, projectId: string) => {
-    try {
-      const projectPath = path.join(PROJECTS_DIR, `${projectId}.json`);
-      const projectFile = await fs.readFile(projectPath, 'utf-8');
-      return JSON.parse(projectFile);
-    } catch (e) {
-      console.error(`Could not load project file for ID ${projectId}.`, e);
-      return null;
-    }
-  });
+const gotTheLock = app.requestSingleInstanceLock();
 
-  ipcMain.handle('core-config:save', (_, coreConfig) => {
-    coreConfigToSave = coreConfig;
-    processSaveQueue();
-  });
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    console.log('[Main] Second instance detected.');
 
-  ipcMain.handle('project:save', (_, project: Project) => {
-    projectsToSave.set(project.id, project); // Map automatically handles overwriting with the latest data
-    processSaveQueue();
-  });
-
-  ipcMain.handle('project:delete-file', async (_, projectId: string) => {
-    const projectPath = path.join(PROJECTS_DIR, `${projectId}.json`);
-    try {
-      await fs.unlink(projectPath);
-    } catch (error) {
-      console.error(`Failed to delete project file for ${projectId}:`, error);
-    }
-  });
-
-  ipcMain.on('window:minimize', () => {
-    mainWindow?.minimize();
-  });
-
-  ipcMain.on('window:toggle-maximize', () => {
-    if (!mainWindow) {
-      return;
-    }
-
-    if (preMaximizeBounds) {
-      mainWindow.setBounds(preMaximizeBounds);
-      preMaximizeBounds = null;
-      if (uiWindow) {
-        uiWindow.webContents.send('window:maximized-state-changed', false);
-      }
-    } else {
-      preMaximizeBounds = mainWindow.getBounds();
-      const display = screen.getPrimaryDisplay();
-      mainWindow.setBounds(display.workArea);
-      if (uiWindow) {
-        uiWindow.webContents.send('window:maximized-state-changed', true);
-      }
-    }
-  });
-
-  ipcMain.on('window:toggle-fullscreen', () => {
     if (mainWindow) {
-      mainWindow.setFullScreen(!isFullScreen);
-    }
-  });
-
-  ipcMain.on('window:handle-double-click', () => {
-    if (!mainWindow) {
-      return;
-    }
-
-    if (isFullScreen) {
-      mainWindow.setFullScreen(false);
-    } else {
-      mainWindow.setFullScreen(true);
-    }
-  });
-
-  ipcMain.on('window:escape', () => {
-    if (!mainWindow) {
-      return;
-    }
-
-    if (isFullScreen) {
-      // If fullscreen, exit fullscreen
-      mainWindow.setFullScreen(false);
-    } else if (preMaximizeBounds) {
-      // If maximized, unmaximize
-      mainWindow.setBounds(preMaximizeBounds);
-      preMaximizeBounds = null;
-      if (uiWindow) {
-        uiWindow.webContents.send('window:maximized-state-changed', false);
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore();
       }
-    } else {
-      // If normal, minimize.
-      mainWindow.minimize();
-    }
-  });
-
-  ipcMain.on('window:close', () => {
-    mainWindow?.close();
-  });
-
-  ipcMain.on('window:update-draggable-zones', (_, rects: Rectangle[]) => {
-    if (areRectsSimilar(draggableHeaderZones, rects)) {
-      return;
-    }
-    draggableHeaderZones = rects;
-    updateUiWindowShape();
-  });
-
-  ipcMain.handle('app:openInSystemBrowser', async (_, url: string) => {
-    // Security: Validate the URL protocol before opening
-    if (url.startsWith('http:') || url.startsWith('https:')) {
-      await shell.openExternal(url);
-    } else {
-      console.warn(`Blocked attempt to open non-http(s) URL: ${url}`);
-    }
-  });
-
-  ipcMain.handle('lookup:open-window', async (_, data: {
-    url: string,
-    clipSubtitleId: string,
-    originalSelection: string
-  }) => {
-    const {url, clipSubtitleId, originalSelection} = data;
-    currentSubtitlesLookupContext = {clipSubtitleId, originalSelection};
-
-    const parentBounds = mainWindow!.getBounds();
-    const lookupWidth = Math.round(parentBounds.width * 0.8);
-    const lookupHeight = Math.round(parentBounds.height * 0.8);
-    const lookupX = Math.round(parentBounds.x + (parentBounds.width - lookupWidth) / 2);
-    const lookupY = Math.round(parentBounds.y + (parentBounds.height - lookupHeight) / 2);
-
-    const TITLE_BAR_HEIGHT = 40; // 2.5rem
-    const FOOTER_HEIGHT = 40; // 2.5rem
-    const LOOKUP_PARTITION = 'in-memory:lookup_session';
-
-    // Create the window and view ONCE, then detach/reattach the view on subsequent loads:
-    if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
-      subtitlesLookupWindow.setBounds({
-        x: lookupX,
-        y: lookupY,
-        width: lookupWidth,
-        height: lookupHeight
-      });
-      subtitlesLookupWindow.show();
-      subtitlesLookupWindow.focus();
-
-      // Detach the view to hide old content and reveal the host window
-      if (subtitlesLookupView && subtitlesLookupWindow.contentView.children.includes(subtitlesLookupView)) {
-        subtitlesLookupWindow.contentView.removeChildView(subtitlesLookupView);
-      }
-
-      // Now that the view is detached, the spinner in the host window will be visible
-      subtitlesLookupWindow.webContents.send('view:loading-state-change', true);
-
-      if (subtitlesLookupView) {
-        // Load the new URL into the existing, but detached, view.
-        await subtitlesLookupView.webContents.loadURL(url, USER_AGENT_OPTIONS).catch(err => {
-          if (err.code !== 'ERR_ABORTED') {
-            console.error('Subsequent lookup URL load failed:', err);
-          }
-        });
-      }
-    } else {
-      subtitlesLookupWindow = new BrowserWindow({
-        x: lookupX,
-        y: lookupY,
-        width: lookupWidth,
-        height: lookupHeight,
-        parent: mainWindow!,
-        frame: false,
-        show: false,
-        title: 'Subtitles Lookup',
-        backgroundColor: '#ffffff',
-        webPreferences: {
-          preload: path.join(__dirname, 'subtitles-lookup-host-preload.js'),
-        }
-      });
-
-      await subtitlesLookupWindow.loadFile(path.join(__dirname, './dist/yall-mp/browser/subtitles-lookup-host.html'));
-      subtitlesLookupWindow.show();
-      subtitlesLookupWindow.focus();
-
-      subtitlesLookupWindow.on('hide', () => {
-        if (uiWindow && !uiWindow.isDestroyed()) {
-          uiWindow.focus();
-        }
-      });
-
-      subtitlesLookupWindow.on('close', (event) => {
-        event.preventDefault();
-        subtitlesLookupWindow?.hide();
-      });
-
-      const view = new WebContentsView({
-        webPreferences: {
-          preload: path.join(__dirname, 'subtitles-lookup-preload.js'),
-          devTools: !app.isPackaged,
-          partition: LOOKUP_PARTITION
-        }
-      });
-      subtitlesLookupView = view;
-
-      const updateViewBounds = () => {
-        if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
-          const [width, height] = subtitlesLookupWindow.getSize();
-          view.setBounds({x: 0, y: TITLE_BAR_HEIGHT, width: width, height: height - TITLE_BAR_HEIGHT - FOOTER_HEIGHT});
-        }
-      };
-      updateViewBounds();
-      subtitlesLookupWindow.on('resize', updateViewBounds);
-
-      view.webContents.on('did-finish-load', () => {
-        if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
-          subtitlesLookupWindow.webContents.send('view:loading-state-change', false);
-          // Re-attach the view now that it has new content:
-          if (!subtitlesLookupWindow.contentView.children.includes(view)) {
-            subtitlesLookupWindow.contentView.addChildView(view);
-          }
-        }
-      });
-
-      view.webContents.on('did-fail-load', (_, errorCode, errorDescription) => {
-        console.error(`Lookup view failed to load: ${errorDescription} (Code: ${errorCode})`);
-        if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
-          subtitlesLookupWindow.webContents.send('view:loading-state-change', false);
-        }
-      });
-
-      // The spinner is showing by default on the host. Now load the initial URL:
-      await view.webContents.loadURL(url, USER_AGENT_OPTIONS).catch(err => {
-        if (err.code !== 'ERR_ABORTED') {
-          console.error('Initial lookup URL load failed:', err);
-        }
-      });
-    }
-  });
-
-  ipcMain.on('lookup:close-window', () => {
-    subtitlesLookupWindow?.hide();
-  });
-
-  ipcMain.on('lookup:show-context-menu', (_, selectedText) => {
-    const template = [
-      {
-        label: 'Add to Notes',
-        click: () => {
-          if (uiWindow && !uiWindow.isDestroyed() && currentSubtitlesLookupContext && selectedText) {
-            uiWindow.webContents.send('project:add-note', {
-              clipSubtitleId: currentSubtitlesLookupContext.clipSubtitleId,
-              text: selectedText,
-              selection: currentSubtitlesLookupContext.originalSelection
-            });
-            if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
-              subtitlesLookupWindow.webContents.send('lookup:show-toast', 'Note added!');
-            }
-          } else {
-            console.error('[Main Process] Could not send note: uiWindow or context is missing.');
-          }
-        }
-      }
-    ];
-    const menu = Menu.buildFromTemplate(template);
-    const parentWindow = subtitlesLookupWindow ?? undefined;
-    menu.popup({window: parentWindow});
-  });
-
-  ipcMain.on('lookup:add-note', (_, {text}) => {
-    if (uiWindow && !uiWindow.isDestroyed() && currentSubtitlesLookupContext) {
-      uiWindow.webContents.send('project:add-note', {
-        clipSubtitleId: currentSubtitlesLookupContext.clipSubtitleId,
-        text: text,
-        selection: currentSubtitlesLookupContext.originalSelection
-      });
-      if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
-        subtitlesLookupWindow.webContents.send('lookup:show-toast', 'Note added!');
-      }
-    } else {
-      console.error('[Main Process] Could not forward note: uiWindow or context is missing.');
-    }
-  });
-
-  ipcMain.handle('mpv:createViewport', async (
-    _,
-    mediaPath: string,
-    audioTrackIndex: number | null,
-    subtitleSelection: SubtitleSelection,
-    subtitleTracks: MediaTrack[],
-    useMpvSubtitles: boolean,
-    subtitlesVisible: boolean
-  ) => {
-    if (!uiWindow || !mainWindow) {
-      return;
+      mainWindow.focus();
     }
 
-    isInitialResizeComplete = false;
-    hasRequestedInitialSeek = false;
+    const files = getFilesFromArgv(commandLine);
 
-    // Clean up any old instances
-    videoWindow?.close();
-    mpvManager?.stop();
-
-    // Create a new, borderless, independent window.
-    videoWindow = new BrowserWindow({
-      frame: false,
-      show: false,
-      skipTaskbar: true,
-      transparent: true,
-      resizable: false,
-      focusable: false,
-      parent: mainWindow,
-    });
-
-    videoWindow.setIgnoreMouseEvents(true);
-
-    // uiWindow is the child of videoWindow to always be on top and prevent stacking order issues:
-    uiWindow.setParentWindow(videoWindow);
-
-    mpvManager = new MpvManager(videoWindow);
-    playbackManager = new PlaybackManager(mpvManager, uiWindow);
-
-    playbackManager.on('repeat-seek-completed', () => {
+    if (files.length > 0) {
       if (uiWindow && !uiWindow.isDestroyed()) {
-        uiWindow.webContents.send('playback:repeat-seek-completed');
+        uiWindow.webContents.send('app:open-files', files);
+        uiWindow.focus();
+      } else {
+        console.error('[Main] UI Window is missing or destroyed, cannot send files.');
       }
-    });
-
-    mpvManager.on('status', (status) => {
-      if (uiWindow) {
-        uiWindow.webContents.send('mpv:event', status)
-      }
-    });
-
-    const onMpvStatus = (status: any) => {
-      // Listen for confirmation only if seek requested
-      // This ignores the premature playback-restart at t=0.
-      if (status.event === 'playback-restart' && hasRequestedInitialSeek) {
-        console.log('[Main Process] Confirmed playback-restart AFTER seek request.');
-        tryShowVideoWindowAndNotifyUI();
-        // This is only needed once:
-        mpvManager?.removeListener('status', onMpvStatus);
-      }
-    };
-    mpvManager.on('status', onMpvStatus);
-
-    mpvManager.on('error', (err) => console.error("MPV Error:", err));
-    mpvManager.on('ready', () => {
-      console.log('[Main Process] MpvManager is ready. Notifying renderer.');
-      if (uiWindow) {
-        uiWindow.webContents.send('mpv:managerReady');
-      }
-    });
-
-    try {
-      // Start MPV inside the child window's handle
-      await mpvManager.start(mediaPath, audioTrackIndex, subtitleSelection, subtitleTracks, useMpvSubtitles, subtitlesVisible);
-      mpvManager.observeProperty('time-pos');
-      mpvManager.observeProperty('duration');
-      mpvManager.observeProperty('pause');
-    } catch (error) {
-      console.error('[Main Process] Critical error during MPV startup:', error);
-      // Re-throw the error so the renderer process's Promise is rejected.
-      throw error;
+    } else {
+      console.warn('[Main] No valid files found in command line arguments.');
     }
   });
 
-  ipcMain.handle('mpv:finishVideoResize', async (_, containerRect: {
-    x: number,
-    y: number,
-    width: number,
-    height: number
-  }) => {
-    if (!videoWindow || !mainWindow || !mpvManager) {
-      console.error('[Main Process] Resize called but a window is missing!');
-      return;
-    }
+  app.whenReady().then(() => {
+    ensureProjectsDirExists();
+    pendingFilesToOpen = getFilesFromArgv(process.argv); // Handle "Open with"
 
-    try {
-      // Get the video's aspect ratio from MPV.
-      const videoAspectRatio = await mpvManager.getProperty('video-params/aspect');
+    ipcMain.handle('dialog:openFile', (_, options) => handleFileOpen(options));
+    ipcMain.handle('subtitle:parse', (_, projectId, filePath) => handleSubtitleParse(projectId, filePath));
+    ipcMain.handle('media:getMetadata', (_, filePath) => handleGetMediaMetadata(filePath));
+    ipcMain.handle('media:extractSubtitleTrack', (_, projectId, mediaPath, trackIndex) => handleExtractSubtitleTrack(projectId, mediaPath, trackIndex));
+    ipcMain.handle('anki:check', () => invokeAnkiConnect('version'));
+    ipcMain.handle('anki:getDeckNames', () => invokeAnkiConnect('deckNames'));
+    ipcMain.handle('anki:getNoteTypes', () => invokeAnkiConnect('modelNames'));
+    ipcMain.handle('anki:getNoteTypeFieldNames', (_, modelName) => invokeAnkiConnect('modelFieldNames', {modelName}));
+    ipcMain.handle('anki:exportAnkiCard', (_, exportRquest: AnkiExportRequest) => handleAnkiExport(exportRquest));
+    ipcMain.handle('ffmpeg:check', async () => {
+      await ensureFFmpegPaths();
+      return isFFmpegAvailable;
+    });
+    ipcMain.handle('app:get-data', readAppData);
+    ipcMain.handle('project:get-by-id', async (_, projectId: string) => {
+      try {
+        const projectPath = path.join(PROJECTS_DIR, `${projectId}.json`);
+        const projectFile = await fs.readFile(projectPath, 'utf-8');
+        return JSON.parse(projectFile);
+      } catch (e) {
+        console.error(`Could not load project file for ID ${projectId}.`, e);
+        return null;
+      }
+    });
 
-      // Fallback if the aspect ratio isn't available yet.
-      if (!videoAspectRatio || videoAspectRatio <= 0) {
-        if (!videoWindow.isVisible()) {
-          videoWindow.showInactive();
-        }
+    ipcMain.handle('core-config:save', (_, coreConfig) => {
+      coreConfigToSave = coreConfig;
+      processSaveQueue();
+    });
+
+    ipcMain.handle('project:save', (_, project: Project) => {
+      projectsToSave.set(project.id, project); // Map automatically handles overwriting with the latest data
+      processSaveQueue();
+    });
+
+    ipcMain.handle('project:delete-file', async (_, projectId: string) => {
+      const projectPath = path.join(PROJECTS_DIR, `${projectId}.json`);
+      try {
+        await fs.unlink(projectPath);
+      } catch (error) {
+        console.error(`Failed to delete project file for ${projectId}:`, error);
+      }
+    });
+
+    ipcMain.on('window:minimize', () => {
+      mainWindow?.minimize();
+    });
+
+    ipcMain.on('window:toggle-maximize', () => {
+      if (!mainWindow) {
         return;
       }
 
-      // Perform the aspect ratio calculation.
-      let newWidth = containerRect.width;
-      let newHeight = newWidth / videoAspectRatio;
-
-      if (newHeight > containerRect.height) {
-        newHeight = containerRect.height;
-        newWidth = newHeight * videoAspectRatio;
-      }
-
-      // Calculate the centered position.
-      const [parentX, parentY] = mainWindow.getPosition();
-      const offsetX = (containerRect.width - newWidth) / 2;
-      const offsetY = (containerRect.height - newHeight) / 2;
-
-      const finalBounds = {
-        x: parentX + Math.round(containerRect.x) + Math.round(offsetX),
-        y: parentY + Math.round(containerRect.y) + Math.round(offsetY),
-        width: Math.round(newWidth),
-        height: Math.round(newHeight),
-      };
-
-      // Set the final bounds on the video window.
-      videoWindow.setBounds(finalBounds);
-
-      if (!isInitialResizeComplete) {
-        console.log('[Main Process] Initial resize is complete.');
-        isInitialResizeComplete = true;
-        tryShowVideoWindowAndNotifyUI();
+      if (preMaximizeBounds) {
+        mainWindow.setBounds(preMaximizeBounds);
+        preMaximizeBounds = null;
+        if (uiWindow) {
+          uiWindow.webContents.send('window:maximized-state-changed', false);
+        }
       } else {
-        videoWindow.showInactive();
+        preMaximizeBounds = mainWindow.getBounds();
+        const display = screen.getPrimaryDisplay();
+        mainWindow.setBounds(display.workArea);
+        if (uiWindow) {
+          uiWindow.webContents.send('window:maximized-state-changed', true);
+        }
       }
-    } catch (e) {
-      console.error("Error during viewport resize:", e);
-    }
-  });
+    });
 
-  ipcMain.handle('mpv:command', (_, commandArray) => {
-    console.log('[Main Process]  Received mpv:command:', commandArray);
-    mpvManager?.sendCommand(commandArray);
-  });
-
-  ipcMain.handle('mpv:getProperty', (_, property) => {
-    const value = mpvManager?.getProperty(property);
-    console.log(`[Main Process] Received mpv:getProperty: ${property}=${value}`);
-    return value;
-  });
-
-  ipcMain.handle('mpv:setProperty', (_, property, value) => {
-    console.log(`[Main Process] Received mpv:setProperty: ${property}=${value}`);
-    mpvManager?.setProperty(property, value);
-  });
-
-  ipcMain.handle('mpv:showSubtitles', () => mpvManager?.showSubtitles());
-  ipcMain.handle('mpv:hideSubtitles', () => mpvManager?.hideSubtitles());
-
-  ipcMain.on('mpv:destroyViewport', () => {
-    console.log('[Main Process] Received mpv:destroyViewport. Cleaning up.');
-
-    mpvManager?.stop();
-    mpvManager = null;
-    playbackManager = null;
-
-    if (uiWindow && !uiWindow.isDestroyed() && mainWindow && !mainWindow.isDestroyed()) {
-      uiWindow.setParentWindow(mainWindow);
-    }
-
-    // Defer the destruction of the videoWindow to the NEXT macrotask.
-    // This guarantees that the re-parenting command above has been fully processed by Electron.
-    setTimeout(() => {
-      if (videoWindow && !videoWindow.isDestroyed()) {
-        videoWindow.close();
+    ipcMain.on('window:toggle-fullscreen', () => {
+      if (mainWindow) {
+        mainWindow.setFullScreen(!isFullScreen);
       }
-      videoWindow = null;
-      console.log('[Main Process] Deferred videoWindow cleanup complete.');
-    }, 0);
+    });
 
-    if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
-      subtitlesLookupWindow.destroy();
-    }
-    subtitlesLookupWindow = null;
-    subtitlesLookupView = null;
-  });
+    ipcMain.on('window:handle-double-click', () => {
+      if (!mainWindow) {
+        return;
+      }
 
-  ipcMain.handle('fonts:get-fonts', async (_, projectId: string) => {
-    try {
-      const fontFilePath = path.join(FONT_CACHE_DIR, `${projectId}.json`);
-      const data = await fs.readFile(fontFilePath, 'utf-8');
-      return JSON.parse(data);
-    } catch (error) {
-      // It's normal for a file not to exist if a project has no ASS subtitles
-      return [];
-    }
-  });
+      if (isFullScreen) {
+        mainWindow.setFullScreen(false);
+      } else {
+        mainWindow.setFullScreen(true);
+      }
+    });
 
-  ipcMain.on('fonts:delete-fonts', async (_, projectId: string) => {
-    try {
-      const fontFilePath = path.join(FONT_CACHE_DIR, `${projectId}.json`);
-      await fs.unlink(fontFilePath);
-    } catch (error) {
-      // Ignore errors if the file doesn't exist
-    }
-  });
+    ipcMain.on('window:escape', () => {
+      if (!mainWindow) {
+        return;
+      }
 
-  ipcMain.handle('project:generate-audio-peaks', async (_, projectId, mediaPath) => generateAudioPeaks(projectId, mediaPath));
+      if (isFullScreen) {
+        // If fullscreen, exit fullscreen
+        mainWindow.setFullScreen(false);
+      } else if (preMaximizeBounds) {
+        // If maximized, unmaximize
+        mainWindow.setBounds(preMaximizeBounds);
+        preMaximizeBounds = null;
+        if (uiWindow) {
+          uiWindow.webContents.send('window:maximized-state-changed', false);
+        }
+      } else {
+        // If normal, minimize.
+        mainWindow.minimize();
+      }
+    });
 
-  ipcMain.handle('fs:check-file-exists', async (_, filePath: string) => {
-    if (!filePath) return false;
-    try {
-      await fs.access(filePath);
-      return true;
-    } catch {
-      return false;
-    }
-  });
+    ipcMain.on('window:close', () => {
+      mainWindow?.close();
+    });
 
-  ipcMain.on('playback:play', () => playbackManager?.play());
-  ipcMain.on('playback:pause', () => playbackManager?.pause());
-  ipcMain.on('playback:togglePlayPause', () => playbackManager?.togglePlayPause());
-  ipcMain.on('playback:toggleSubtitles', () => playbackManager?.toggleSubtitles());
-  ipcMain.on('playback:repeat', () => playbackManager?.repeat());
-  ipcMain.on('playback:forceContinue', () => playbackManager?.forceContinue());
-  ipcMain.on('playback:seek', (_, time) => {
-    // Use this flag on first seek to coordinate showing the video window
-    if (!hasRequestedInitialSeek) {
-      hasRequestedInitialSeek = true;
-    }
-    playbackManager?.seek(time);
-  });
-  ipcMain.on('playback:updateSettings', (_, settings) => {
-    playbackManager?.updateSettings(settings);
-  });
-  ipcMain.on('playback:updateClips', (_, clips) => {
-    playbackManager?.updateClips(clips);
-  });
-  ipcMain.handle('playback:loadProject', (_, clips, settings, lastPlaybackTime) => playbackManager?.loadProject(clips, settings, lastPlaybackTime));
-  ipcMain.handle('app:get-version', () => app.getVersion());
+    ipcMain.on('window:update-draggable-zones', (_, rects: Rectangle[]) => {
+      if (areRectsSimilar(draggableHeaderZones, rects)) {
+        return;
+      }
+      draggableHeaderZones = rects;
+      updateUiWindowShape();
+    });
 
-  createWindow();
+    ipcMain.handle('app:openInSystemBrowser', async (_, url: string) => {
+      // Security: Validate the URL protocol before opening
+      if (url.startsWith('http:') || url.startsWith('https:')) {
+        await shell.openExternal(url);
+      } else {
+        console.warn(`Blocked attempt to open non-http(s) URL: ${url}`);
+      }
+    });
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
+    ipcMain.handle('lookup:open-window', async (_, data: {
+      url: string,
+      clipSubtitleId: string,
+      originalSelection: string
+    }) => {
+      const {url, clipSubtitleId, originalSelection} = data;
+      currentSubtitlesLookupContext = {clipSubtitleId, originalSelection};
+
+      const parentBounds = mainWindow!.getBounds();
+      const lookupWidth = Math.round(parentBounds.width * 0.8);
+      const lookupHeight = Math.round(parentBounds.height * 0.8);
+      const lookupX = Math.round(parentBounds.x + (parentBounds.width - lookupWidth) / 2);
+      const lookupY = Math.round(parentBounds.y + (parentBounds.height - lookupHeight) / 2);
+
+      const TITLE_BAR_HEIGHT = 40; // 2.5rem
+      const FOOTER_HEIGHT = 40; // 2.5rem
+      const LOOKUP_PARTITION = 'in-memory:lookup_session';
+
+      // Create the window and view ONCE, then detach/reattach the view on subsequent loads:
+      if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
+        subtitlesLookupWindow.setBounds({
+          x: lookupX,
+          y: lookupY,
+          width: lookupWidth,
+          height: lookupHeight
+        });
+        subtitlesLookupWindow.show();
+        subtitlesLookupWindow.focus();
+
+        // Detach the view to hide old content and reveal the host window
+        if (subtitlesLookupView && subtitlesLookupWindow.contentView.children.includes(subtitlesLookupView)) {
+          subtitlesLookupWindow.contentView.removeChildView(subtitlesLookupView);
+        }
+
+        // Now that the view is detached, the spinner in the host window will be visible
+        subtitlesLookupWindow.webContents.send('view:loading-state-change', true);
+
+        if (subtitlesLookupView) {
+          // Load the new URL into the existing, but detached, view.
+          await subtitlesLookupView.webContents.loadURL(url, USER_AGENT_OPTIONS).catch(err => {
+            if (err.code !== 'ERR_ABORTED') {
+              console.error('Subsequent lookup URL load failed:', err);
+            }
+          });
+        }
+      } else {
+        subtitlesLookupWindow = new BrowserWindow({
+          x: lookupX,
+          y: lookupY,
+          width: lookupWidth,
+          height: lookupHeight,
+          parent: mainWindow!,
+          frame: false,
+          show: false,
+          title: 'Subtitles Lookup',
+          backgroundColor: '#ffffff',
+          webPreferences: {
+            preload: path.join(__dirname, 'subtitles-lookup-host-preload.js'),
+          }
+        });
+
+        await subtitlesLookupWindow.loadFile(path.join(__dirname, './dist/yall-mp/browser/subtitles-lookup-host.html'));
+        subtitlesLookupWindow.show();
+        subtitlesLookupWindow.focus();
+
+        subtitlesLookupWindow.on('hide', () => {
+          if (uiWindow && !uiWindow.isDestroyed()) {
+            uiWindow.focus();
+          }
+        });
+
+        subtitlesLookupWindow.on('close', (event) => {
+          event.preventDefault();
+          subtitlesLookupWindow?.hide();
+        });
+
+        const view = new WebContentsView({
+          webPreferences: {
+            preload: path.join(__dirname, 'subtitles-lookup-preload.js'),
+            devTools: !app.isPackaged,
+            partition: LOOKUP_PARTITION
+          }
+        });
+        subtitlesLookupView = view;
+
+        const updateViewBounds = () => {
+          if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
+            const [width, height] = subtitlesLookupWindow.getSize();
+            view.setBounds({
+              x: 0,
+              y: TITLE_BAR_HEIGHT,
+              width: width,
+              height: height - TITLE_BAR_HEIGHT - FOOTER_HEIGHT
+            });
+          }
+        };
+        updateViewBounds();
+        subtitlesLookupWindow.on('resize', updateViewBounds);
+
+        view.webContents.on('did-finish-load', () => {
+          if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
+            subtitlesLookupWindow.webContents.send('view:loading-state-change', false);
+            // Re-attach the view now that it has new content:
+            if (!subtitlesLookupWindow.contentView.children.includes(view)) {
+              subtitlesLookupWindow.contentView.addChildView(view);
+            }
+          }
+        });
+
+        view.webContents.on('did-fail-load', (_, errorCode, errorDescription) => {
+          console.error(`Lookup view failed to load: ${errorDescription} (Code: ${errorCode})`);
+          if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
+            subtitlesLookupWindow.webContents.send('view:loading-state-change', false);
+          }
+        });
+
+        // The spinner is showing by default on the host. Now load the initial URL:
+        await view.webContents.loadURL(url, USER_AGENT_OPTIONS).catch(err => {
+          if (err.code !== 'ERR_ABORTED') {
+            console.error('Initial lookup URL load failed:', err);
+          }
+        });
+      }
+    });
+
+    ipcMain.on('lookup:close-window', () => {
+      subtitlesLookupWindow?.hide();
+    });
+
+    ipcMain.on('lookup:show-context-menu', (_, selectedText) => {
+      const template = [
+        {
+          label: 'Add to Notes',
+          click: () => {
+            if (uiWindow && !uiWindow.isDestroyed() && currentSubtitlesLookupContext && selectedText) {
+              uiWindow.webContents.send('project:add-note', {
+                clipSubtitleId: currentSubtitlesLookupContext.clipSubtitleId,
+                text: selectedText,
+                selection: currentSubtitlesLookupContext.originalSelection
+              });
+              if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
+                subtitlesLookupWindow.webContents.send('lookup:show-toast', 'Note added!');
+              }
+            } else {
+              console.error('[Main Process] Could not send note: uiWindow or context is missing.');
+            }
+          }
+        }
+      ];
+      const menu = Menu.buildFromTemplate(template);
+      const parentWindow = subtitlesLookupWindow ?? undefined;
+      menu.popup({window: parentWindow});
+    });
+
+    ipcMain.on('lookup:add-note', (_, {text}) => {
+      if (uiWindow && !uiWindow.isDestroyed() && currentSubtitlesLookupContext) {
+        uiWindow.webContents.send('project:add-note', {
+          clipSubtitleId: currentSubtitlesLookupContext.clipSubtitleId,
+          text: text,
+          selection: currentSubtitlesLookupContext.originalSelection
+        });
+        if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
+          subtitlesLookupWindow.webContents.send('lookup:show-toast', 'Note added!');
+        }
+      } else {
+        console.error('[Main Process] Could not forward note: uiWindow or context is missing.');
+      }
+    });
+
+    ipcMain.handle('mpv:createViewport', async (
+      _,
+      mediaPath: string,
+      audioTrackIndex: number | null,
+      subtitleSelection: SubtitleSelection,
+      subtitleTracks: MediaTrack[],
+      useMpvSubtitles: boolean,
+      subtitlesVisible: boolean
+    ) => {
+      if (!uiWindow || !mainWindow) {
+        return;
+      }
+
+      isInitialResizeComplete = false;
+      hasRequestedInitialSeek = false;
+
+      // Clean up any old instances
+      videoWindow?.close();
+      mpvManager?.stop();
+
+      // Create a new, borderless, independent window.
+      videoWindow = new BrowserWindow({
+        frame: false,
+        show: false,
+        skipTaskbar: true,
+        transparent: true,
+        resizable: false,
+        focusable: false,
+        parent: mainWindow,
+      });
+
+      videoWindow.setIgnoreMouseEvents(true);
+
+      // uiWindow is the child of videoWindow to always be on top and prevent stacking order issues:
+      uiWindow.setParentWindow(videoWindow);
+
+      mpvManager = new MpvManager(videoWindow);
+      playbackManager = new PlaybackManager(mpvManager, uiWindow);
+
+      playbackManager.on('repeat-seek-completed', () => {
+        if (uiWindow && !uiWindow.isDestroyed()) {
+          uiWindow.webContents.send('playback:repeat-seek-completed');
+        }
+      });
+
+      mpvManager.on('status', (status) => {
+        if (uiWindow) {
+          uiWindow.webContents.send('mpv:event', status)
+        }
+      });
+
+      const onMpvStatus = (status: any) => {
+        // Listen for confirmation only if seek requested
+        // This ignores the premature playback-restart at t=0.
+        if (status.event === 'playback-restart' && hasRequestedInitialSeek) {
+          console.log('[Main Process] Confirmed playback-restart AFTER seek request.');
+          tryShowVideoWindowAndNotifyUI();
+          // This is only needed once:
+          mpvManager?.removeListener('status', onMpvStatus);
+        }
+      };
+      mpvManager.on('status', onMpvStatus);
+
+      mpvManager.on('error', (err) => console.error("MPV Error:", err));
+      mpvManager.on('ready', () => {
+        console.log('[Main Process] MpvManager is ready. Notifying renderer.');
+        if (uiWindow) {
+          uiWindow.webContents.send('mpv:managerReady');
+        }
+      });
+
+      try {
+        // Start MPV inside the child window's handle
+        await mpvManager.start(mediaPath, audioTrackIndex, subtitleSelection, subtitleTracks, useMpvSubtitles, subtitlesVisible);
+        mpvManager.observeProperty('time-pos');
+        mpvManager.observeProperty('duration');
+        mpvManager.observeProperty('pause');
+      } catch (error) {
+        console.error('[Main Process] Critical error during MPV startup:', error);
+        // Re-throw the error so the renderer process's Promise is rejected.
+        throw error;
+      }
+    });
+
+    ipcMain.handle('mpv:finishVideoResize', async (_, containerRect: {
+      x: number,
+      y: number,
+      width: number,
+      height: number
+    }) => {
+      if (!videoWindow || !mainWindow || !mpvManager) {
+        console.error('[Main Process] Resize called but a window is missing!');
+        return;
+      }
+
+      try {
+        // Get the video's aspect ratio from MPV.
+        const videoAspectRatio = await mpvManager.getProperty('video-params/aspect');
+
+        // Fallback if the aspect ratio isn't available yet.
+        if (!videoAspectRatio || videoAspectRatio <= 0) {
+          if (!videoWindow.isVisible()) {
+            videoWindow.showInactive();
+          }
+          return;
+        }
+
+        // Perform the aspect ratio calculation.
+        let newWidth = containerRect.width;
+        let newHeight = newWidth / videoAspectRatio;
+
+        if (newHeight > containerRect.height) {
+          newHeight = containerRect.height;
+          newWidth = newHeight * videoAspectRatio;
+        }
+
+        // Calculate the centered position.
+        const [parentX, parentY] = mainWindow.getPosition();
+        const offsetX = (containerRect.width - newWidth) / 2;
+        const offsetY = (containerRect.height - newHeight) / 2;
+
+        const finalBounds = {
+          x: parentX + Math.round(containerRect.x) + Math.round(offsetX),
+          y: parentY + Math.round(containerRect.y) + Math.round(offsetY),
+          width: Math.round(newWidth),
+          height: Math.round(newHeight),
+        };
+
+        // Set the final bounds on the video window.
+        videoWindow.setBounds(finalBounds);
+
+        if (!isInitialResizeComplete) {
+          console.log('[Main Process] Initial resize is complete.');
+          isInitialResizeComplete = true;
+          tryShowVideoWindowAndNotifyUI();
+        } else {
+          videoWindow.showInactive();
+        }
+      } catch (e) {
+        console.error("Error during viewport resize:", e);
+      }
+    });
+
+    ipcMain.handle('mpv:command', (_, commandArray) => {
+      console.log('[Main Process]  Received mpv:command:', commandArray);
+      mpvManager?.sendCommand(commandArray);
+    });
+
+    ipcMain.handle('mpv:getProperty', (_, property) => {
+      const value = mpvManager?.getProperty(property);
+      console.log(`[Main Process] Received mpv:getProperty: ${property}=${value}`);
+      return value;
+    });
+
+    ipcMain.handle('mpv:setProperty', (_, property, value) => {
+      console.log(`[Main Process] Received mpv:setProperty: ${property}=${value}`);
+      mpvManager?.setProperty(property, value);
+    });
+
+    ipcMain.handle('mpv:showSubtitles', () => mpvManager?.showSubtitles());
+    ipcMain.handle('mpv:hideSubtitles', () => mpvManager?.hideSubtitles());
+
+    ipcMain.on('mpv:destroyViewport', () => {
+      console.log('[Main Process] Received mpv:destroyViewport. Cleaning up.');
+
+      mpvManager?.stop();
+      mpvManager = null;
+      playbackManager = null;
+
+      if (uiWindow && !uiWindow.isDestroyed() && mainWindow && !mainWindow.isDestroyed()) {
+        uiWindow.setParentWindow(mainWindow);
+      }
+
+      // Defer the destruction of the videoWindow to the NEXT macrotask.
+      // This guarantees that the re-parenting command above has been fully processed by Electron.
+      setTimeout(() => {
+        if (videoWindow && !videoWindow.isDestroyed()) {
+          videoWindow.close();
+        }
+        videoWindow = null;
+        console.log('[Main Process] Deferred videoWindow cleanup complete.');
+      }, 0);
+
+      if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
+        subtitlesLookupWindow.destroy();
+      }
+      subtitlesLookupWindow = null;
+      subtitlesLookupView = null;
+    });
+
+    ipcMain.handle('fonts:get-fonts', async (_, projectId: string) => {
+      try {
+        const fontFilePath = path.join(FONT_CACHE_DIR, `${projectId}.json`);
+        const data = await fs.readFile(fontFilePath, 'utf-8');
+        return JSON.parse(data);
+      } catch (error) {
+        // It's normal for a file not to exist if a project has no ASS subtitles
+        return [];
+      }
+    });
+
+    ipcMain.on('fonts:delete-fonts', async (_, projectId: string) => {
+      try {
+        const fontFilePath = path.join(FONT_CACHE_DIR, `${projectId}.json`);
+        await fs.unlink(fontFilePath);
+      } catch (error) {
+        // Ignore errors if the file doesn't exist
+      }
+    });
+
+    ipcMain.handle('project:generate-audio-peaks', async (_, projectId, mediaPath) => generateAudioPeaks(projectId, mediaPath));
+
+    ipcMain.handle('fs:check-file-exists', async (_, filePath: string) => {
+      if (!filePath) return false;
+      try {
+        await fs.access(filePath);
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
+    ipcMain.on('playback:play', () => playbackManager?.play());
+    ipcMain.on('playback:pause', () => playbackManager?.pause());
+    ipcMain.on('playback:togglePlayPause', () => playbackManager?.togglePlayPause());
+    ipcMain.on('playback:toggleSubtitles', () => playbackManager?.toggleSubtitles());
+    ipcMain.on('playback:repeat', () => playbackManager?.repeat());
+    ipcMain.on('playback:forceContinue', () => playbackManager?.forceContinue());
+    ipcMain.on('playback:seek', (_, time) => {
+      // Use this flag on first seek to coordinate showing the video window
+      if (!hasRequestedInitialSeek) {
+        hasRequestedInitialSeek = true;
+      }
+      playbackManager?.seek(time);
+    });
+    ipcMain.on('playback:updateSettings', (_, settings) => {
+      playbackManager?.updateSettings(settings);
+    });
+    ipcMain.on('playback:updateClips', (_, clips) => {
+      playbackManager?.updateClips(clips);
+    });
+    ipcMain.handle('playback:loadProject', (_, clips, settings, lastPlaybackTime) => playbackManager?.loadProject(clips, settings, lastPlaybackTime));
+    ipcMain.handle('app:get-version', () => app.getVersion());
+
+    ipcMain.handle('app:get-pending-files', () => {
+      const files = [...pendingFilesToOpen];
+      pendingFilesToOpen = []; // Clear after retrieval
+      return files;
+    });
+
+    createWindow();
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        createWindow();
+      }
+    });
   });
-});
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -2023,5 +2067,23 @@ async function generateAudioPeaks(projectId: string, mediaPath: string): Promise
         reject(new Error(relevantError));
       }
     });
+  });
+}
+
+function getFilesFromArgv(argv: string[]): string[] {
+  return argv.filter(arg => {
+    try {
+      if (arg.startsWith('--') || arg.toLowerCase().endsWith('electron.exe') || arg.includes('electron-main.js')) {
+        return false;
+      }
+      const stat = statSync(arg);
+      if (stat.isFile()) {
+        const ext = path.extname(arg).toLowerCase().replace('.', '');
+        return SUPPORTED_MEDIA_TYPES.includes(ext) || SUPPORTED_SUBTITLE_TYPES.includes(ext);
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
   });
 }

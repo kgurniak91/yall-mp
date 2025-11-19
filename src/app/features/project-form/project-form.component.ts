@@ -13,10 +13,11 @@ import {GlobalSettingsStateService} from '../../state/global-settings/global-set
 import {Select} from 'primeng/select';
 import {FormsModule} from '@angular/forms';
 import {MediaTrack} from '../../../../shared/types/media.type';
-import {finalize, forkJoin, from, timer} from 'rxjs';
+import {finalize, firstValueFrom, forkJoin, from, timer} from 'rxjs';
 import {SUBTITLE_OPTIONS, SubtitleOptionType} from './project-form.type';
 import {SpinnerComponent} from '../../shared/components/spinner/spinner.component';
 import {generateTagFromFileName} from '../../shared/utils/tag/tag.utils';
+import {FileOpenIntentService} from '../../core/services/file-open-intent/file-open-intent.service';
 
 const EDIT_CONFIRMATION_MESSAGE = `
 Are you sure you want to edit this project?
@@ -43,6 +44,7 @@ This action cannot be undone.
   styleUrl: './project-form.component.scss'
 })
 export class ProjectFormComponent implements OnInit {
+  protected readonly isLoading = signal(true);
   protected readonly mediaFilePath = signal<string | null>(null);
   protected readonly existingMediaFileName = signal<string | null>(null);
   protected readonly existingSubtitleFileName = signal<string | null>(null);
@@ -86,6 +88,7 @@ export class ProjectFormComponent implements OnInit {
   private readonly toastService = inject(ToastService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly location = inject(Location);
+  private readonly fileOpenIntentService = inject(FileOpenIntentService);
 
   constructor() {
     effect(() => {
@@ -98,10 +101,18 @@ export class ProjectFormComponent implements OnInit {
         this.selectedEmbeddedSubtitleTrackIndex.set(null);
       }
     });
+
+    effect(() => {
+      if (this.fileOpenIntentService.hasIntent()) {
+        this.isLoading.set(true);
+        this.applyFileIntent();
+      }
+    });
   }
 
   async ngOnInit(): Promise<void> {
     const projectId = this.route.snapshot.paramMap.get('id');
+
     if (projectId) {
       this.editMode.set(true);
       this.editingProjectId.set(projectId);
@@ -132,14 +143,18 @@ export class ProjectFormComponent implements OnInit {
             this.selectedEmbeddedSubtitleTrackIndex.set(project.subtitleSelection.trackIndex);
             break;
         }
+
+        this.isLoading.set(false);
       } else {
         this.toastService.error('Project not found');
         this.goBack();
       }
+    } else if (!this.fileOpenIntentService.hasIntent()) {
+      this.isLoading.set(false);
     }
   }
 
-  protected async onMediaFilePathChange(path: string | null) {
+  protected async onMediaFilePathChange(path: string | null): Promise<void> {
     this.mediaFilePath.set(path);
 
     if (!path) {
@@ -156,29 +171,31 @@ export class ProjectFormComponent implements OnInit {
     const mediaProcessing$ = from(window.electronAPI.getMediaMetadata(path));
     const timer$ = timer(500); // Show spinner for at least 500ms to avoid GUI flickering
 
-    forkJoin([mediaProcessing$, timer$]).pipe(
-      finalize(() => this.isProcessingMedia.set(false))
-    ).subscribe({
-      next: ([metadata]) => {
-        this.audioTracks.set(metadata.audioTracks);
-        this.subtitleTracks.set(metadata.subtitleTracks);
-        this.videoWidth.set(metadata.videoWidth);
-        this.videoHeight.set(metadata.videoHeight);
-        if (metadata.subtitleTracks.length > 0) {
-          this.selectedSubtitleOption.set('embedded');
-          this.selectedEmbeddedSubtitleTrackIndex.set(null);
-        } else {
-          this.selectedSubtitleOption.set('external');
-        }
-      },
-      error: (e) => {
-        this.toastService.error(`Failed to read media metadata: ${e.message}`);
-        this.audioTracks.set([]);
-        this.subtitleTracks.set([]);
-        this.videoWidth.set(undefined);
-        this.videoHeight.set(undefined);
+    try {
+      const [metadata] = await firstValueFrom(
+        forkJoin([mediaProcessing$, timer$]).pipe(
+          finalize(() => this.isProcessingMedia.set(false))
+        )
+      );
+
+      this.audioTracks.set(metadata.audioTracks);
+      this.subtitleTracks.set(metadata.subtitleTracks);
+      this.videoWidth.set(metadata.videoWidth);
+      this.videoHeight.set(metadata.videoHeight);
+
+      if (metadata.subtitleTracks.length > 0) {
+        this.selectedSubtitleOption.set('embedded');
+        this.selectedEmbeddedSubtitleTrackIndex.set(null);
+      } else {
+        this.selectedSubtitleOption.set('external');
       }
-    });
+    } catch (e: any) {
+      this.toastService.error(`Failed to read media metadata: ${e.message}`);
+      this.audioTracks.set([]);
+      this.subtitleTracks.set([]);
+      this.videoWidth.set(undefined);
+      this.videoHeight.set(undefined);
+    }
   }
 
   protected onSubtitleFilePathChange(path: string | null) {
@@ -206,6 +223,29 @@ export class ProjectFormComponent implements OnInit {
       });
     } else {
       this.createNewProject();
+    }
+  }
+
+  private async applyFileIntent() {
+    const mediaPath = this.fileOpenIntentService.intentMedia();
+    const subPath = this.fileOpenIntentService.intentSubtitle();
+
+    this.fileOpenIntentService.clearIntent();
+
+    try {
+      if (mediaPath) {
+        this.editMode.set(false);
+        await this.onMediaFilePathChange(mediaPath);
+        this.existingMediaFileName.set(this.getBaseName(mediaPath));
+      }
+
+      if (subPath) {
+        this.selectedSubtitleOption.set('external');
+        this.onSubtitleFilePathChange(subPath);
+        this.existingSubtitleFileName.set(this.getBaseName(subPath));
+      }
+    } finally {
+      this.isLoading.set(false);
     }
   }
 
