@@ -74,6 +74,22 @@
         </div>
       </p-popover>
 
+      <p-button icon="fa-solid fa-backward-step"
+                pTooltip="Previous Media File (Ctrl+,)"
+                tooltipPosition="bottom"
+                tooltipStyleClass="tooltip-one-line"
+                severity="secondary"
+                [disabled]="!videoStateService.prevMediaPath()"
+                (onClick)="loadAdjacentMedia('previous')"/>
+
+      <p-button icon="fa-solid fa-forward-step"
+                pTooltip="Next Media File (Ctrl+.)"
+                tooltipPosition="bottom"
+                tooltipStyleClass="tooltip-one-line"
+                severity="secondary"
+                [disabled]="!videoStateService.nextMediaPath()"
+                (onClick)="loadAdjacentMedia('next')"/>
+
       @if (trackIndexes().length > 1) {
         <p-overlaybadge badgeSize="small"
                         severity="info"
@@ -119,7 +135,7 @@
                 severity="secondary"/>
 
       <p-button icon="fa-solid fa-gear"
-                pTooltip="Project settings (,)"
+                pTooltip="Project settings (P)"
                 tooltipStyleClass="tooltip-one-line"
                 tooltipPosition="left"
                 severity="secondary"

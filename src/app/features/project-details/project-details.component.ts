@@ -55,6 +55,7 @@ import {DatePipe} from '@angular/common';
 import {AssSubtitlesUtils} from '../../../../shared/utils/ass-subtitles.utils';
 import {Project} from '../../model/project.types';
 import {OverlayBadgeModule} from 'primeng/overlaybadge';
+import {FileOpenIntentService} from '../../core/services/file-open-intent/file-open-intent.service';
 
 @Component({
   selector: 'app-project-details',
@@ -256,6 +257,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   private readonly dialogOrchestrationService = inject(DialogOrchestrationService);
   private readonly subtitlesHighlighterService = inject(SubtitlesHighlighterService);
   private readonly headerCurrentProjectActionBridgeService = inject(HeaderCurrentProjectActionBridgeService);
+  private readonly fileOpenIntentService = inject(FileOpenIntentService);
   private dialogRef: DynamicDialogRef | undefined;
   private isMpvReady = signal(false);
   private isUiReady = signal(false);
@@ -445,9 +447,29 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       this.cleanupAddNoteListener();
     }
     this.fontInjectionService.clearFonts();
-    window.electronAPI.mpvHideSubtitles();
-    window.electronAPI.onMpvDestroyViewport();
     this.headerCurrentProjectActionBridgeService.clear();
+  }
+
+  async canDeactivate(): Promise<boolean> {
+    console.log('[ProjectDetails] Navigation detected. Starting cleanup sequence...');
+
+    try {
+      // Force save the current state while the project ID is still valid
+      await this.videoStateService.performCleanup();
+
+      // Hide subtitles just in case
+      await window.electronAPI.mpvHideSubtitles();
+
+      // Tell Electron to destroy MPV and WAIT for it to finish.
+      // This ensures the old mpv.exe process is dead before the new component asks for a new one.
+      await window.electronAPI.onMpvDestroyViewport();
+
+      console.log('[ProjectDetails] Cleanup complete. Allowing navigation.');
+      return true;
+    } catch (e) {
+      console.error('[ProjectDetails] Cleanup failed', e);
+      return true; // Allow navigation anyway to prevent getting stuck
+    }
   }
 
   onPlayerReady(): void {
@@ -517,6 +539,16 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
   redo(): void {
     this.actionService.dispatch(KeyboardAction.Redo);
+  }
+
+  loadAdjacentMedia(direction: 'next' | 'previous'): void {
+    const targetPath = direction === 'next'
+      ? this.videoStateService.nextMediaPath()
+      : this.videoStateService.prevMediaPath();
+
+    if (targetPath) {
+      this.fileOpenIntentService.openMedia(targetPath);
+    }
   }
 
   async openAnkiExportDialog(): Promise<void> {

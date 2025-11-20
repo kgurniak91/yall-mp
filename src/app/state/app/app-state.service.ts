@@ -222,6 +222,7 @@ export class AppStateService {
       id: project.id,
       mediaFileName: project.mediaFileName,
       subtitleFileName: project.subtitleFileName,
+      mediaPath: project.mediaPath,
       createdDate: project.createdDate,
       lastOpenedDate: project.lastOpenedDate,
       duration: project.duration,

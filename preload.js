@@ -45,6 +45,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deleteProjectFonts: (projectId) => ipcRenderer.send('fonts:delete-fonts', projectId),
   checkFileExists: (filePath) => ipcRenderer.invoke('fs:check-file-exists', filePath),
   generateAudioPeaks: (projectId, mediaPath) => ipcRenderer.invoke('project:generate-audio-peaks', projectId, mediaPath),
+  findAdjacentMedia: (currentPath, direction) => ipcRenderer.invoke('fs:find-adjacent-media', currentPath, direction),
+  findCompanionSubtitle: (mediaPath) => ipcRenderer.invoke('fs:find-companion-subtitle', mediaPath),
   // --- File Association ("Open with")
   getPendingOpenFiles: () => ipcRenderer.invoke('app:get-pending-files'),
   onAppOpenFiles: (callback) => {
@@ -70,7 +72,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   mpvSetProperty: (property, value) => ipcRenderer.invoke('mpv:setProperty', property, value),
   mpvShowSubtitles: () => ipcRenderer.invoke('mpv:showSubtitles'),
   mpvHideSubtitles: () => ipcRenderer.invoke('mpv:hideSubtitles'),
-  onMpvDestroyViewport: () => ipcRenderer.send('mpv:destroyViewport'),
+  onMpvDestroyViewport: () => ipcRenderer.invoke('mpv:destroyViewport'),
   onMpvEvent: (callback) => {
     const subscription = (_event, value) => callback(value);
     ipcRenderer.on('mpv:event', subscription);

@@ -1,5 +1,9 @@
-import {Routes} from '@angular/router';
+import {CanDeactivateFn, Routes} from '@angular/router';
 import {projectResolver} from './features/project-details/project-resolver/project.resolver';
+import {ProjectDetailsComponent} from './features/project-details/project-details.component';
+
+const canDeactivateProject: CanDeactivateFn<ProjectDetailsComponent> =
+  (component: ProjectDetailsComponent) => component.canDeactivate();
 
 export const routes: Routes = [
   {
@@ -24,6 +28,7 @@ export const routes: Routes = [
     loadComponent: () => import('./features/project-details/project-details.component').then(m => m.ProjectDetailsComponent),
     resolve: {
       project: projectResolver
-    }
+    },
+    canDeactivate: [canDeactivateProject]
   }
 ];

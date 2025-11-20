@@ -958,32 +958,37 @@ if (!gotTheLock) {
     ipcMain.handle('mpv:showSubtitles', () => mpvManager?.showSubtitles());
     ipcMain.handle('mpv:hideSubtitles', () => mpvManager?.hideSubtitles());
 
-    ipcMain.on('mpv:destroyViewport', () => {
+    ipcMain.handle('mpv:destroyViewport', () => {
       console.log('[Main Process] Received mpv:destroyViewport. Cleaning up.');
 
       mpvManager?.stop();
       mpvManager = null;
       playbackManager = null;
 
+      // Reset UI parent window
       if (uiWindow && !uiWindow.isDestroyed() && mainWindow && !mainWindow.isDestroyed()) {
         uiWindow.setParentWindow(mainWindow);
       }
 
-      // Defer the destruction of the videoWindow to the NEXT macrotask.
-      // This guarantees that the re-parenting command above has been fully processed by Electron.
-      setTimeout(() => {
-        if (videoWindow && !videoWindow.isDestroyed()) {
-          videoWindow.close();
-        }
-        videoWindow = null;
-        console.log('[Main Process] Deferred videoWindow cleanup complete.');
-      }, 0);
-
+      // Cleanup subtitles lookup window if open
       if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
         subtitlesLookupWindow.destroy();
       }
       subtitlesLookupWindow = null;
       subtitlesLookupView = null;
+
+      return new Promise<void>((resolve) => {
+        // Defer the destruction of the videoWindow to the NEXT macrotask.
+        // This guarantees that the re-parenting command above has been fully processed by Electron.
+        setTimeout(() => {
+          if (videoWindow && !videoWindow.isDestroyed()) {
+            videoWindow.close();
+          }
+          videoWindow = null;
+          console.log('[Main Process] Deferred videoWindow cleanup complete.');
+          resolve();
+        }, 50);
+      });
     });
 
     ipcMain.handle('fonts:get-fonts', async (_, projectId: string) => {
@@ -1044,6 +1049,107 @@ if (!gotTheLock) {
       const files = [...pendingFilesToOpen];
       pendingFilesToOpen = []; // Clear after retrieval
       return files;
+    });
+
+    const naturalSort = (a: string, b: string) => {
+      return new Intl.Collator(undefined, {numeric: true, sensitivity: 'base'}).compare(a, b);
+    };
+
+    ipcMain.handle('fs:find-adjacent-media', async (_, currentPath: string, direction: 'next' | 'previous') => {
+      try {
+        const currentDir = path.dirname(currentPath);
+        const currentFileName = path.basename(currentPath);
+
+        // Search for siblings (same directory)
+        const siblings = await fs.readdir(currentDir);
+        const mediaSiblings = siblings.filter(f => {
+          const ext = path.extname(f).toLowerCase().replace('.', '');
+          return SUPPORTED_MEDIA_TYPES.includes(ext);
+        }).sort(naturalSort);
+
+        const currentIndex = mediaSiblings.indexOf(currentFileName);
+        const targetIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+
+        // If found in same folder, return it
+        if (targetIndex >= 0 && targetIndex < mediaSiblings.length) {
+          return path.join(currentDir, mediaSiblings[targetIndex]);
+        }
+
+        // Search for siblings (e.g., folder per episode support)
+        // Only attempt this if user is at the edge of the current folder
+        // ("Next" on the last file or "Prev" on the first file)
+        const parentDir = path.dirname(currentDir);
+        const parentItems = await fs.readdir(parentDir);
+
+        // Get all directories in the parent folder
+        const siblingDirs = parentItems.filter(item => {
+          try {
+            return statSync(path.join(parentDir, item)).isDirectory();
+          } catch {
+            return false;
+          }
+        }).sort(naturalSort);
+
+        const currentDirName = path.basename(currentDir);
+        const currentDirIndex = siblingDirs.indexOf(currentDirName);
+
+        if (currentDirIndex === -1) {
+          return null;
+        }
+
+        const targetDirIndex = direction === 'next' ? currentDirIndex + 1 : currentDirIndex - 1;
+
+        if (targetDirIndex >= 0 && targetDirIndex < siblingDirs.length) {
+          const targetDirName = siblingDirs[targetDirIndex];
+          const targetDirPath = path.join(parentDir, targetDirName);
+
+          // Look inside the next folder
+          const targetDirFiles = await fs.readdir(targetDirPath);
+          const targetMediaFiles = targetDirFiles.filter(f => {
+            const ext = path.extname(f).toLowerCase().replace('.', '');
+            return SUPPORTED_MEDIA_TYPES.includes(ext);
+          }).sort(naturalSort);
+
+          if (targetMediaFiles.length > 0) {
+            // If going "Next", play the first file of the next folder.
+            // If going "Previous", play the last file of the previous folder.
+            const fileIndex = direction === 'next' ? 0 : targetMediaFiles.length - 1;
+            return path.join(targetDirPath, targetMediaFiles[fileIndex]);
+          }
+        }
+
+        return null;
+      } catch (e) {
+        console.error('Error finding adjacent media:', e);
+        return null;
+      }
+    });
+
+    ipcMain.handle('fs:find-companion-subtitle', async (_, mediaPath: string) => {
+      try {
+        const dir = path.dirname(mediaPath);
+        const nameNoExt = path.parse(mediaPath).name;
+        const files = await fs.readdir(dir);
+
+        const candidates = files.filter(f => {
+          const ext = path.extname(f).toLowerCase().replace('.', '');
+          if (!SUPPORTED_SUBTITLE_TYPES.includes(ext)) {
+            return false;
+          }
+          return f.startsWith(nameNoExt); // Basic check
+        });
+
+        // Sort candidates by length (shortest matching name is usually the "main" subtitle)
+        // e.g., "Movie.srt" is preferred over "Movie.commentary.srt"
+        candidates.sort((a, b) => a.length - b.length);
+
+        if (candidates.length > 0) {
+          return path.join(dir, candidates[0]);
+        }
+        return null;
+      } catch (e) {
+        return null;
+      }
     });
 
     createWindow();

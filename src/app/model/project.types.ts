@@ -21,6 +21,7 @@ export interface MinimalProject {
   id: string;
   mediaFileName: string;
   subtitleFileName: string;
+  mediaPath: string;
   createdDate: number;
   lastOpenedDate: number;
   duration: number;

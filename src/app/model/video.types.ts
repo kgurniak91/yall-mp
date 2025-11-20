@@ -20,6 +20,8 @@ export enum KeyboardAction {
   RepeatCurrentClip = 'RepeatCurrentClip',
   ForceContinue = 'ForceContinue',
   TogglePlayPause = 'TogglePlayPause',
+  NextMediaFile = 'NextMediaFile',
+  PreviousMediaFile = 'PreviousMediaFile',
   AdjustClipStartLeft = 'AdjustClipStartLeft',
   AdjustClipStartRight = 'AdjustClipStartRight',
   AdjustClipEndLeft = 'AdjustClipEndLeft',

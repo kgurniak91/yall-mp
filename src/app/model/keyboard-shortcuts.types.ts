@@ -181,6 +181,26 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
     type: ActionType.SingleShot,
     group: KeyboardShortcutGroup.Playback
   },
+  {
+    action: KeyboardAction.PreviousMediaFile,
+    key: ',',
+    ctrlKey: true,
+    description: 'Go to previous media file',
+    displayKeys: ['Ctrl', ','],
+    scope: KeyboardShortcutScope.Project,
+    type: ActionType.SingleShot,
+    group: KeyboardShortcutGroup.Playback
+  },
+  {
+    action: KeyboardAction.NextMediaFile,
+    key: '.',
+    ctrlKey: true,
+    description: 'Go to next media file',
+    displayKeys: ['Ctrl', '.'],
+    scope: KeyboardShortcutScope.Project,
+    type: ActionType.SingleShot,
+    group: KeyboardShortcutGroup.Playback
+  },
   // --- Project Scope - Timeline
   {
     action: KeyboardAction.AdjustClipStartLeft,
@@ -296,9 +316,9 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
   // --- Project Scope - Application
   {
     action: KeyboardAction.ToggleSettings,
-    key: ',',
+    key: 'p',
     description: 'Toggle project settings panel',
-    displayKeys: [','],
+    displayKeys: ['P'],
     scope: KeyboardShortcutScope.Project,
     type: ActionType.SingleShot,
     group: KeyboardShortcutGroup.Application

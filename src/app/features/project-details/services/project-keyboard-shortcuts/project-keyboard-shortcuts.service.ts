@@ -37,7 +37,7 @@ export class ProjectKeyboardShortcutsService implements OnDestroy {
 
     // Handle current settings drawer shortcuts first
     if (this.projectSettingsStateService.isSettingsDrawerOpen()) {
-      if (event.key === 'Escape' || event.key === ',') {
+      if (event.key === 'Escape' || event.key === 'p') {
         event.preventDefault();
         this.projectSettingsStateService.setSettingsDrawerOpen(false);
       }

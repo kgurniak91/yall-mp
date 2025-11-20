@@ -31,14 +31,11 @@ export class AppComponent implements OnInit {
 
   ngOnInit() {
     // Listen for files passed while app is ALREADY running
-    window.electronAPI.onAppOpenFiles((filePaths) => {
-      const error = this.fileOpenIntentService.processFiles(filePaths);
+    window.electronAPI.onAppOpenFiles(async (filePaths) => {
+      const error = await this.fileOpenIntentService.processFiles(filePaths);
       if (error) {
         this.toastService.error(error);
-        return;
       }
-      // If success, navigate/re-navigate to new project form to pick up the changes
-      this.router.navigate(['/project/new']);
     });
   }
 }

@@ -10,7 +10,7 @@ import {
   viewChild
 } from '@angular/core';
 import {ConfirmationService, MenuItem} from 'primeng/api';
-import {ActivatedRoute, NavigationEnd, NavigationStart, Router} from '@angular/router';
+import {NavigationEnd, NavigationStart, Router} from '@angular/router';
 import {AppStateService} from '../../../state/app/app-state.service';
 import {filter} from 'rxjs';
 import {Project} from '../../../model/project.types';
@@ -45,7 +45,6 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
   protected readonly menuWrapper = viewChild.required<ElementRef<HTMLDivElement>>('menuWrapper');
   protected readonly dragHandle = viewChild.required<ElementRef<HTMLDivElement>>('dragHandle');
   private readonly router = inject(Router);
-  private readonly activatedRoute = inject(ActivatedRoute);
   private readonly appStateService = inject(AppStateService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly dialogOrchestrationService = inject(DialogOrchestrationService);
@@ -69,7 +68,7 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
     this.router.events.pipe(
       filter((event): event is NavigationEnd => event instanceof NavigationEnd)
     ).subscribe(() => {
-      let route = this.activatedRoute;
+      let route = this.router.routerState.root;
       while (route.firstChild) {
         route = route.firstChild;
       }

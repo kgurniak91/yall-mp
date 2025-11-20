@@ -56,6 +56,8 @@ export interface IElectronAPI {
   deleteProjectFonts: (projectId: string) => void;
   checkFileExists: (filePath: string) => Promise<boolean>;
   generateAudioPeaks: (projectId: string, mediaPath: string) => Promise<number[][] | null>;
+  findAdjacentMedia: (currentPath: string, direction: 'next' | 'previous') => Promise<string | null>;
+  findCompanionSubtitle: (mediaPath: string) => Promise<string | null>;
   // --- File Association ("Open with")
   getPendingOpenFiles: () => Promise<string[]>;
   onAppOpenFiles: (callback: (filePaths: string[]) => void) => (() => void);
@@ -82,7 +84,7 @@ export interface IElectronAPI {
   mpvSetProperty: (property: string, value: any) => Promise<void>;
   mpvShowSubtitles: () => Promise<void>;
   mpvHideSubtitles: () => Promise<void>;
-  onMpvDestroyViewport: () => void;
+  onMpvDestroyViewport: () => Promise<void>;
   onMpvEvent: (callback: (status: any) => void) => (() => void);
   onMainWindowMoved: (callback: () => void) => (() => void);
   onMpvManagerReady: (callback: () => void) => (() => void);

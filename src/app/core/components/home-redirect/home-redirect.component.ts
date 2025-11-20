@@ -20,13 +20,12 @@ export class HomeRedirectComponent implements OnInit {
     const pendingFiles = await window.electronAPI.getPendingOpenFiles();
 
     if (pendingFiles && pendingFiles.length > 0) {
-      const error = this.fileOpenIntentService.processFiles(pendingFiles);
+      const error = await this.fileOpenIntentService.processFiles(pendingFiles);
       if (error) {
         this.toastService.error(error);
-        // Fall through to normal logic on error
+        // Fall through to default logic below if there was an error processing files
       } else {
-        // Intent successful, go to new project form
-        this.router.navigateByUrl('/project/new', {replaceUrl: true});
+        // Success - navigation already happened inside `fileOpenIntentService`. Stop here.
         return;
       }
     }

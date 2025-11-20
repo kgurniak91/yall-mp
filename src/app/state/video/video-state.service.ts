@@ -1,8 +1,9 @@
 import {DestroyRef, inject, Injectable, Injector, OnDestroy, Signal, signal} from '@angular/core';
 import {PlayerState, SeekType} from '../../model/video.types';
 import {AppStateService} from '../app/app-state.service';
-import {auditTime, filter} from 'rxjs';
+import {auditTime, filter, from, map, of} from 'rxjs';
 import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
+import {switchMap} from 'rxjs/operators';
 
 @Injectable()
 export class VideoStateService implements OnDestroy {
@@ -25,6 +26,8 @@ export class VideoStateService implements OnDestroy {
   private readonly _zoomInRequest = signal<number | null>(null);
   private readonly _zoomOutRequest = signal<number | null>(null);
   private readonly _playerState = signal<PlayerState>(PlayerState.Idle);
+  private readonly _nextMediaPath = signal<string | null>(null);
+  private readonly _prevMediaPath = signal<string | null>(null);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly appStateService = inject(AppStateService);
@@ -33,6 +36,7 @@ export class VideoStateService implements OnDestroy {
   private cleanupMpvListener: (() => void) | null = null;
   private cleanupPlaybackListener: (() => void) | null = null;
   private cleanupRepeatSeekListener: (() => void) | null = null;
+  private isDestroyed = false;
 
   public readonly mediaPath: Signal<string | null> = this._mediaPath.asReadonly();
   public readonly currentTime: Signal<number> = this._currentTime.asReadonly();
@@ -53,6 +57,8 @@ export class VideoStateService implements OnDestroy {
   public readonly zoomInRequest = this._zoomInRequest.asReadonly();
   public readonly zoomOutRequest = this._zoomOutRequest.asReadonly();
   public readonly playerState = this._playerState.asReadonly();
+  public readonly nextMediaPath = this._nextMediaPath.asReadonly();
+  public readonly prevMediaPath = this._prevMediaPath.asReadonly();
 
   constructor() {
     this.cleanupMpvListener = window.electronAPI.onMpvEvent((status) => {
@@ -71,6 +77,27 @@ export class VideoStateService implements OnDestroy {
     this.cleanupRepeatSeekListener = window.electronAPI.onRepeatSeekCompleted(() => {
       this._seekCompleted.set(Date.now());
     });
+
+    toObservable(this.mediaPath).pipe(
+      takeUntilDestroyed(),
+      switchMap((path: string | null) => {
+        if (!path) {
+          return of({next: null, prev: null});
+        }
+
+        return from(
+          Promise.all([
+            window.electronAPI.findAdjacentMedia(path, 'next'),
+            window.electronAPI.findAdjacentMedia(path, 'previous')
+          ])
+        ).pipe(
+          map(([next, prev]) => ({next, prev}))
+        );
+      })
+    ).subscribe(({next, prev}) => {
+      this._nextMediaPath.set(next);
+      this._prevMediaPath.set(prev);
+    });
   }
 
   ngOnDestroy(): void {
@@ -86,7 +113,22 @@ export class VideoStateService implements OnDestroy {
       this.cleanupRepeatSeekListener();
       this.cleanupRepeatSeekListener = null;
     }
+
+    // Only auto-save if manual cleanup inside `performCleanup` hasn't run
+    if (!this.isDestroyed) {
+      this.saveCurrentPlaybackTime(this._currentTime());
+    }
+
+    this.isDestroyed = true;
+  }
+
+  public async performCleanup(): Promise<void> {
+    if (this.isDestroyed) {
+      return;
+    }
+
     this.saveCurrentPlaybackTime(this._currentTime());
+    this.isDestroyed = true;
   }
 
   public setProjectId(id: string): void {

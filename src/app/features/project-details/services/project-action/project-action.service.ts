@@ -11,6 +11,7 @@ import {
   KeyboardShortcutsHelperService
 } from '../../../../core/services/keyboard-shortcuts-helper/keyboard-shortcuts-helper.service';
 import {ActionType} from '../../../../model/keyboard-shortcuts.types';
+import {FileOpenIntentService} from '../../../../core/services/file-open-intent/file-open-intent.service';
 
 @Injectable()
 export class ProjectActionService {
@@ -20,6 +21,7 @@ export class ProjectActionService {
   private projectSettingsStateService = inject(ProjectSettingsStateService);
   private commandHistoryStateService = inject(CommandHistoryStateService);
   private keyboardShortcutsHelperService = inject(KeyboardShortcutsHelperService);
+  private fileOpenIntentService = inject(FileOpenIntentService);
   private action$ = new Subject<KeyboardAction>();
   private readonly destroyRef = inject(DestroyRef);
 
@@ -128,6 +130,18 @@ export class ProjectActionService {
         break;
       case KeyboardAction.ZoomOut:
         this.videoStateService.requestZoomOut();
+        break;
+      case KeyboardAction.NextMediaFile:
+        const nextMediaFilePath = this.videoStateService.nextMediaPath();
+        if (nextMediaFilePath) {
+          this.fileOpenIntentService.openMedia(nextMediaFilePath);
+        }
+        break;
+      case KeyboardAction.PreviousMediaFile:
+        const prevMediaFilePath = this.videoStateService.prevMediaPath();
+        if (prevMediaFilePath) {
+          this.fileOpenIntentService.openMedia(prevMediaFilePath);
+        }
         break;
     }
   }
