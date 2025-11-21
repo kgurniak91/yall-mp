@@ -53,7 +53,6 @@ let subtitlesLookupWindow: BrowserWindow | null = null;
 let subtitlesLookupView: WebContentsView | null = null;
 let currentSubtitlesLookupContext: { clipSubtitleId: string; originalSelection: string; } | null = null;
 let preMaximizeBounds: Electron.Rectangle | null = null;
-let isFullScreen = false;
 let isFixingMaximize = false;
 let isProgrammaticResize = false;
 let isEnteringFullscreen = false;
@@ -138,7 +137,7 @@ function subtractRect(rect: Rectangle, hole: Rectangle): Rectangle[] {
 }
 
 function updateUiWindowShape() {
-  if (!uiWindow || !mainWindow || isFullScreen) {
+  if (!uiWindow || !mainWindow || mainWindow.isFullScreen()) {
     uiWindow?.setShape([]);
     return;
   }
@@ -184,6 +183,12 @@ function updateUiWindowShape() {
 }
 
 function tryShowVideoWindowAndNotifyUI() {
+  // Safety check: Ensure mainWindow is actually visible before showing the video window.
+  // This prevents the video window from showing up if the app was started minimized or hidden.
+  if (mainWindow && mainWindow.isMinimized()) {
+    return;
+  }
+
   if (isInitialResizeComplete && hasRequestedInitialSeek && videoWindow && !videoWindow.isDestroyed() && uiWindow && mainWindow) {
     console.log('[Main Process] All startup conditions met. Showing video window and notifying UI.');
     isVideoWindowVisible = true;
@@ -196,6 +201,30 @@ function tryShowVideoWindowAndNotifyUI() {
     // Reset flags to prevent this from ever running again for this project instance.
     isInitialResizeComplete = false;
     hasRequestedInitialSeek = false;
+  }
+}
+
+function handleWindowEscape() {
+  if (!mainWindow || mainWindow.isMinimized()) {
+    return;
+  }
+
+  if (mainWindow.isFullScreen()) {
+    mainWindow.setFullScreen(false);
+    // Force focus back to UI after exiting fullscreen so shortcuts work immediately
+    setTimeout(() => {
+      if (uiWindow && !uiWindow.isDestroyed()) {
+        uiWindow.focus();
+      }
+    }, 100);
+  } else if (preMaximizeBounds) {
+    mainWindow.setBounds(preMaximizeBounds);
+    preMaximizeBounds = null;
+    if (uiWindow) {
+      uiWindow.webContents.send('window:maximized-state-changed', false);
+    }
+  } else {
+    mainWindow.minimize();
   }
 }
 
@@ -229,10 +258,21 @@ function createWindow() {
 
   const isDev = !app.isPackaged;
 
-  mainWindow.on('focus', () => {
-    if (uiWindow && !uiWindow.isDestroyed()) {
-      uiWindow.focus();
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.key === 'Escape' && input.type === 'keyDown') {
+      event.preventDefault();
+      handleWindowEscape();
     }
+  });
+
+  mainWindow.on('focus', () => {
+    // Defer focus transfer to next iteration of the event loop, after the current event loop phase completes.
+    // This allows mainWindow to settle its focus state, preventing swallowed keyboard inputs during the transition.
+    setImmediate(() => {
+      if (uiWindow && !uiWindow.isDestroyed()) {
+        uiWindow.focus();
+      }
+    });
 
     if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed() && subtitlesLookupWindow.isVisible()) {
       subtitlesLookupWindow.hide();
@@ -252,12 +292,25 @@ function createWindow() {
   });
 
   const syncWindowGeometry = () => {
-    if (!mainWindow || !uiWindow || uiWindow.isDestroyed() || (videoWindow && videoWindow.isDestroyed()) || mainWindow.isMinimized()) {
+    if (!mainWindow || !uiWindow || uiWindow.isDestroyed()) {
       return;
     }
 
-    // Always hide the video window immediately at the start of any geometry change to prevent flickering
-    videoWindow?.hide();
+    // If the main window is minimized, absolutely enforce that children are hidden too.
+    if (mainWindow.isMinimized()) {
+      if (videoWindow && !videoWindow.isDestroyed() && videoWindow.isVisible()) {
+        videoWindow.hide();
+      }
+      if (uiWindow.isVisible()) {
+        uiWindow.hide();
+      }
+      return;
+    }
+
+    // Hide video window immediately during movement to prevent visual desync
+    if (videoWindow && !videoWindow.isDestroyed() && videoWindow.isVisible()) {
+      videoWindow.hide();
+    }
 
     if (showVideoTimeout) {
       clearTimeout(showVideoTimeout);
@@ -288,6 +341,7 @@ function createWindow() {
     updateUiWindowShape();
 
     showVideoTimeout = setTimeout(() => {
+      // Re-verify state before showing: if the user minimized the app during this 250ms delay, do NOT show the video.
       if (videoWindow && !videoWindow.isDestroyed() && mainWindow && !mainWindow.isMinimized() && isVideoWindowVisible) {
         videoWindow.showInactive();
       }
@@ -295,6 +349,16 @@ function createWindow() {
   };
 
   mainWindow.on('resize', () => {
+    // If user manually resizes window, invalidate the "restore" bounds.
+    if (!isProgrammaticResize && !isEnteringFullscreen && !isFixingMaximize && !mainWindow?.isMaximized()) {
+      if (preMaximizeBounds) {
+        preMaximizeBounds = null;
+        if (uiWindow) {
+          uiWindow.webContents.send('window:maximized-state-changed', false);
+        }
+      }
+    }
+
     // Always run the core geometry sync logic immediately
     syncWindowGeometry();
 
@@ -395,9 +459,19 @@ function createWindow() {
   });
 
   mainWindow.on('restore', () => {
-    videoWindow?.showInactive();
-    uiWindow?.showInactive();
-    syncWindowGeometry();
+    setTimeout(() => {
+      // Check state again after the timeout. If the user minimized in the meantime, abort.
+      if (!mainWindow || mainWindow.isMinimized()) {
+        return;
+      }
+
+      if (uiWindow && !uiWindow.isDestroyed()) {
+        uiWindow.showInactive();
+        uiWindow.focus();
+      }
+
+      syncWindowGeometry(); // Handles showing the videoWindow properly
+    }, 100);
   });
 
   mainWindow.on('closed', () => {
@@ -424,7 +498,6 @@ function createWindow() {
   });
 
   mainWindow.on('enter-full-screen', () => {
-    isFullScreen = true;
     isEnteringFullscreen = true;
 
     if (uiWindow) {
@@ -435,7 +508,6 @@ function createWindow() {
   });
 
   mainWindow.on('leave-full-screen', () => {
-    isFullScreen = false;
     isEnteringFullscreen = false;
 
     if (mainWindow) {
@@ -571,7 +643,7 @@ if (!gotTheLock) {
 
     ipcMain.on('window:toggle-fullscreen', () => {
       if (mainWindow) {
-        mainWindow.setFullScreen(!isFullScreen);
+        mainWindow.setFullScreen(!mainWindow.isFullScreen());
       }
     });
 
@@ -580,7 +652,7 @@ if (!gotTheLock) {
         return;
       }
 
-      if (isFullScreen) {
+      if (mainWindow.isFullScreen()) {
         mainWindow.setFullScreen(false);
       } else {
         mainWindow.setFullScreen(true);
@@ -588,24 +660,7 @@ if (!gotTheLock) {
     });
 
     ipcMain.on('window:escape', () => {
-      if (!mainWindow) {
-        return;
-      }
-
-      if (isFullScreen) {
-        // If fullscreen, exit fullscreen
-        mainWindow.setFullScreen(false);
-      } else if (preMaximizeBounds) {
-        // If maximized, unmaximize
-        mainWindow.setBounds(preMaximizeBounds);
-        preMaximizeBounds = null;
-        if (uiWindow) {
-          uiWindow.webContents.send('window:maximized-state-changed', false);
-        }
-      } else {
-        // If normal, minimize.
-        mainWindow.minimize();
-      }
+      handleWindowEscape();
     });
 
     ipcMain.on('window:close', () => {
@@ -831,6 +886,14 @@ if (!gotTheLock) {
       });
 
       videoWindow.setIgnoreMouseEvents(true);
+
+      // Failsafe listener: even though focusable is false for videoWindow, if it somehow gets input, handle ESC.
+      videoWindow.webContents.on('before-input-event', (event, input) => {
+        if (input.key === 'Escape' && input.type === 'keyDown') {
+          event.preventDefault();
+          handleWindowEscape();
+        }
+      });
 
       // uiWindow is the child of videoWindow to always be on top and prevent stacking order issues:
       uiWindow.setParentWindow(videoWindow);

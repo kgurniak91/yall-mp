@@ -51,7 +51,7 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
   {
     action: KeyboardAction.OpenHelpDialog,
     key: 'F1',
-    description: 'Open this Help & About dialog',
+    description: 'Open this "Help & About" dialog',
     displayKeys: ['F1'],
     scope: KeyboardShortcutScope.Global,
     type: ActionType.SingleShot,
@@ -60,7 +60,7 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
   {
     action: KeyboardAction.OpenGlobalSettings,
     key: 'o',
-    description: 'Open Global Settings',
+    description: 'Open global settings',
     displayKeys: ['O'],
     scope: KeyboardShortcutScope.Global,
     type: ActionType.SingleShot,
@@ -72,7 +72,7 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
     description: 'Close active dialog, exit fullscreen, or minimize',
     displayKeys: ['Esc'],
     scope: KeyboardShortcutScope.Global,
-    type: ActionType.SingleShot,
+    type: ActionType.Instant,
     group: KeyboardShortcutGroup.Global
   },
   {
