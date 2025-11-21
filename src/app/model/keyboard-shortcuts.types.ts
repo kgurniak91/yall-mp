@@ -58,6 +58,15 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
     group: KeyboardShortcutGroup.Global
   },
   {
+    action: KeyboardAction.ToggleFullScreen,
+    key: 'F11',
+    description: 'Toggle fullscreen mode',
+    displayKeys: ['F11'],
+    scope: KeyboardShortcutScope.Global,
+    type: ActionType.SingleShot,
+    group: KeyboardShortcutGroup.Global
+  },
+  {
     action: KeyboardAction.OpenGlobalSettings,
     key: 'o',
     description: 'Open global settings',

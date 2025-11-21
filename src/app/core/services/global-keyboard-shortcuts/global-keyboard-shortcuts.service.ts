@@ -88,6 +88,9 @@ export class GlobalKeyboardShortcutsService implements OnDestroy {
       case KeyboardAction.OpenGlobalSettings:
         this.dialogOrchestrationService.openGlobalSettingsDialog();
         break;
+      case KeyboardAction.ToggleFullScreen:
+        window.electronAPI.windowToggleFullScreen();
+        break;
       case KeyboardAction.CloseDialogOrEsc:
         this.handleEscapeKey();
 

@@ -228,6 +228,40 @@ function handleWindowEscape() {
   }
 }
 
+function blockDefaultBrowserShortcuts(event: Electron.Event, input: Electron.Input): void {
+  // Block app reloading
+  if (input.type === 'keyDown') {
+    if (
+      (input.control && input.key.toLowerCase() === 'r') ||
+      input.key === 'F5'
+    ) {
+      event.preventDefault();
+    }
+  }
+
+  // Block zooming
+  if (input.control && input.type === 'keyDown') {
+    if (input.key === '=' || input.key === '-' || input.key === '0') {
+      event.preventDefault();
+    }
+  }
+
+  // Block opening DevTools
+  if (input.type === 'keyDown') {
+    if (
+      input.key === 'F12' ||
+      (input.control && input.shift && input.key.toLowerCase() === 'i')
+    ) {
+      event.preventDefault();
+    }
+  }
+
+  // Block "Find in Page"
+  if (input.control && input.key.toLowerCase() === 'f' && input.type === 'keyDown') {
+    event.preventDefault();
+  }
+}
+
 function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
   const workArea = primaryDisplay.workArea;
@@ -262,7 +296,10 @@ function createWindow() {
     if (input.key === 'Escape' && input.type === 'keyDown') {
       event.preventDefault();
       handleWindowEscape();
+      return;
     }
+
+    blockDefaultBrowserShortcuts(event, input);
   });
 
   mainWindow.on('focus', () => {
@@ -289,6 +326,10 @@ function createWindow() {
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js')
     },
+  });
+
+  uiWindow.webContents.on('before-input-event', (event, input) => {
+    blockDefaultBrowserShortcuts(event, input);
   });
 
   const syncWindowGeometry = () => {
@@ -892,7 +933,10 @@ if (!gotTheLock) {
         if (input.key === 'Escape' && input.type === 'keyDown') {
           event.preventDefault();
           handleWindowEscape();
+          return;
         }
+
+        blockDefaultBrowserShortcuts(event, input);
       });
 
       // uiWindow is the child of videoWindow to always be on top and prevent stacking order issues:

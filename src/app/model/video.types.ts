@@ -37,6 +37,7 @@ export enum KeyboardAction {
   ZoomIn = 'ZoomIn',
   ZoomOut = 'ZoomOut',
   OpenHelpDialog = 'OpenHelpDialog',
+  ToggleFullScreen = 'ToggleFullScreen',
   OpenGlobalSettings = 'OpenGlobalSettings',
   CloseDialogOrEsc = 'CloseDialogOrEsc',
   ConfirmDialog = 'ConfirmDialog',
