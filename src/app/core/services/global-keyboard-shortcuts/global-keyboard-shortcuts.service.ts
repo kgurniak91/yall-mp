@@ -124,6 +124,7 @@ export class GlobalKeyboardShortcutsService implements OnDestroy {
     }
 
     // If no dialogs or drawers are open, perform the window action (exit fullscreen mode or minimize)
+    this.activeKeys.delete('Escape'); // Manually remove ESC from activeKeys because the window won't receive keyup event when minimized
     window.electronAPI.windowEscape();
   }
 
