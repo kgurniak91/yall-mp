@@ -4,7 +4,7 @@ import {
   effect,
   ElementRef,
   inject, input,
-  OnDestroy,
+  OnDestroy, OnInit,
   output,
   signal,
   untracked,
@@ -17,6 +17,7 @@ import {VideoClip} from '../../../model/video.types';
 import {ClipsStateService} from '../../../state/clips/clips-state.service';
 import {SpinnerComponent} from '../../../shared/components/spinner/spinner.component';
 import {AppStateService} from '../../../state/app/app-state.service';
+import {GlobalSettingsStateService} from '../../../state/global-settings/global-settings-state.service';
 
 const INITIAL_ZOOM = 100;
 const MIN_ZOOM = 20;
@@ -31,12 +32,12 @@ const ZOOM_FACTOR = 1.2;
   templateUrl: './timeline-editor.component.html',
   styleUrl: './timeline-editor.component.scss'
 })
-export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
+export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit {
   public readonly contextMenuRequested = output<{ event: MouseEvent, clipId: string }>();
   public readonly hideContextMenuRequested = output<void>();
   protected readonly timelineContainer = viewChild.required<ElementRef<HTMLDivElement>>('timeline');
-  protected readonly loading = signal(true);
   protected videoStateService = inject(VideoStateService);
+  private globalSettingsStateService = inject(GlobalSettingsStateService);
   private readonly isWaveSurferReady = signal(false);
   private clipsStateService = inject(ClipsStateService);
   private appStateService = inject(AppStateService);
@@ -65,6 +66,10 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
         this.videoStateService.clearZoomOutRequest();
       }
     });
+  }
+
+  ngOnInit(): void {
+    this.videoStateService.setTimelineLoading(true);
   }
 
   ngAfterViewInit(): void {
@@ -130,7 +135,13 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
     const audioPeaks = project?.audioPeaks;
     const duration = this.videoStateService.duration();
     const container = this.timelineContainer()?.nativeElement;
+    const expectPeaks = this.globalSettingsStateService.generateAudioPeaks();
     this.clipsStateService.activeTrackClipIndex();
+
+    // Audio peaks are generating in the background but are not available yet
+    if (expectPeaks && !audioPeaks) {
+      return;
+    }
 
     if (!this.wavesurfer && duration > 0 && container) {
       this.initializeWaveSurfer(audioPeaks, duration, container);
@@ -155,8 +166,8 @@ export class TimelineEditorComponent implements OnDestroy, AfterViewInit {
       }
 
       // Once the first set of regions is drawn, hide the loader
-      if (this.loading()) {
-        this.loading.set(false);
+      if (this.videoStateService.isTimelineLoading()) {
+        this.videoStateService.setTimelineLoading(false);
 
         // Scroll the timeline to the initial playback position automatically:
         if (!this.hasPerformedInitialSync()) {

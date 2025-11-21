@@ -1,3 +1,7 @@
+@if (videoStateService.isBusy()) {
+  <div class="interaction-blocker" [title]="interactionBlockerTooltipText()"></div>
+}
+
 <div class="content-wrapper">
   <div class="video-area" (click)="onVideoAreaClick()">
     <app-video-controller #videoController (ready)="onPlayerReady()"/>

@@ -64,6 +64,7 @@ let ffprobePath = '';
 let draggableHeaderZones: Rectangle[] = [];
 let isInitialResizeComplete = false;
 let hasRequestedInitialSeek = false;
+let isVideoWindowVisible = false; // Has the video window been initialized and shown for the first time?
 let isSaving = false;
 let coreConfigToSave: CoreConfig | null = null;
 const projectsToSave = new Map<string, Project>();
@@ -185,6 +186,7 @@ function updateUiWindowShape() {
 function tryShowVideoWindowAndNotifyUI() {
   if (isInitialResizeComplete && hasRequestedInitialSeek && videoWindow && !videoWindow.isDestroyed() && uiWindow && mainWindow) {
     console.log('[Main Process] All startup conditions met. Showing video window and notifying UI.');
+    isVideoWindowVisible = true;
 
     videoWindow.showInactive();
     uiWindow.showInactive();
@@ -286,7 +288,7 @@ function createWindow() {
     updateUiWindowShape();
 
     showVideoTimeout = setTimeout(() => {
-      if (videoWindow && !videoWindow.isDestroyed() && mainWindow && !mainWindow.isMinimized()) {
+      if (videoWindow && !videoWindow.isDestroyed() && mainWindow && !mainWindow.isMinimized() && isVideoWindowVisible) {
         videoWindow.showInactive();
       }
     }, 250);
@@ -811,6 +813,7 @@ if (!gotTheLock) {
 
       isInitialResizeComplete = false;
       hasRequestedInitialSeek = false;
+      isVideoWindowVisible = false;
 
       // Clean up any old instances
       videoWindow?.close();
@@ -852,7 +855,9 @@ if (!gotTheLock) {
         // This ignores the premature playback-restart at t=0.
         if (status.event === 'playback-restart' && hasRequestedInitialSeek) {
           console.log('[Main Process] Confirmed playback-restart AFTER seek request.');
+
           tryShowVideoWindowAndNotifyUI();
+
           // This is only needed once:
           mpvManager?.removeListener('status', onMpvStatus);
         }
@@ -932,7 +937,9 @@ if (!gotTheLock) {
           isInitialResizeComplete = true;
           tryShowVideoWindowAndNotifyUI();
         } else {
-          videoWindow.showInactive();
+          if (isVideoWindowVisible) {
+            videoWindow.showInactive();
+          }
         }
       } catch (e) {
         console.error("Error during viewport resize:", e);

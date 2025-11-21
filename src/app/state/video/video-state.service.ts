@@ -1,4 +1,4 @@
-import {DestroyRef, inject, Injectable, Injector, OnDestroy, Signal, signal} from '@angular/core';
+import {computed, DestroyRef, inject, Injectable, Injector, OnDestroy, Signal, signal} from '@angular/core';
 import {PlayerState, SeekType} from '../../model/video.types';
 import {AppStateService} from '../app/app-state.service';
 import {auditTime, filter, from, map, of} from 'rxjs';
@@ -20,7 +20,8 @@ export class VideoStateService implements OnDestroy {
   private readonly _ankiExportRequest = signal<number | null>(null);
   private readonly _forceResizeRequest = signal<number | null>(null);
   private readonly _isPaused = signal(true);
-  private readonly _isBusy = signal(true);
+  private readonly _isVideoLoading = signal(true);
+  private readonly _isTimelineLoading = signal(true);
   private readonly _assRendererSyncRequest = signal<number | null>(null);
   private readonly _toggleSubtitlesRequest = signal<number | null>(null);
   private readonly _zoomInRequest = signal<number | null>(null);
@@ -51,7 +52,9 @@ export class VideoStateService implements OnDestroy {
   public readonly ankiExportRequest = this._ankiExportRequest.asReadonly();
   public readonly forceResizeRequest = this._forceResizeRequest.asReadonly();
   public readonly isPaused = this._isPaused.asReadonly();
-  public readonly isBusy = this._isBusy.asReadonly();
+  public readonly isVideoLoading = this._isVideoLoading.asReadonly();
+  public readonly isTimelineLoading = this._isTimelineLoading.asReadonly();
+  public readonly isBusy = computed(() => this._isVideoLoading() || this._isTimelineLoading());
   public readonly assRendererSyncRequest = this._assRendererSyncRequest.asReadonly();
   public readonly toggleSubtitlesRequest = this._toggleSubtitlesRequest.asReadonly();
   public readonly zoomInRequest = this._zoomInRequest.asReadonly();
@@ -159,8 +162,12 @@ export class VideoStateService implements OnDestroy {
     this._duration.set(duration);
   }
 
-  public setIsBusy(isBusy: boolean): void {
-    this._isBusy.set(isBusy);
+  public setVideoLoading(isLoading: boolean): void {
+    this._isVideoLoading.set(isLoading);
+  }
+
+  public setTimelineLoading(isLoading: boolean): void {
+    this._isTimelineLoading.set(isLoading);
   }
 
   public toggleSubtitlesVisible(): void {

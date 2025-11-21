@@ -1,4 +1,4 @@
-@if (loading()) {
+@if (videoStateService.isTimelineLoading()) {
   <div class="loader-wrapper">
     <app-spinner/>
     <p>
@@ -6,4 +6,8 @@
     </p>
   </div>
 }
-<div [style.visibility]="loading() ? 'hidden' : 'visible'" id="timeline" #timeline (wheel)="onWheel($event)"></div>
+
+<div [style.visibility]="videoStateService.isTimelineLoading() ? 'hidden' : 'visible'"
+     id="timeline"
+     #timeline
+     (wheel)="onWheel($event)"></div>

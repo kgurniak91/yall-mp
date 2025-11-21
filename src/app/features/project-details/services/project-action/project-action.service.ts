@@ -56,6 +56,10 @@ export class ProjectActionService {
   }
 
   private executeAction(action: KeyboardAction): void {
+    if (this.videoStateService.isBusy()) {
+      return;
+    }
+
     if (action.startsWith('SwitchToTrack')) {
       const trackNumber = parseInt(action.replace('SwitchToTrack', ''), 10);
       if (!isNaN(trackNumber) && trackNumber >= 1 && trackNumber <= 9) {

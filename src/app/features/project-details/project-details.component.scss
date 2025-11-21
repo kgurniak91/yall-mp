@@ -142,3 +142,13 @@ app-timeline-editor {
     align-items: center;
   }
 }
+
+.interaction-blocker {
+  position: fixed;
+  top: var(--app-header-height); /* Don't block the header */
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 999; /* Below header p-menu overlay */
+  cursor: wait;
+}

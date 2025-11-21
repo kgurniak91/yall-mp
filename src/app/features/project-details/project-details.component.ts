@@ -191,6 +191,24 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     return !nextSubtitledClipExists;
   });
 
+  protected interactionBlockerTooltipText = computed(() => {
+    if (!this.videoStateService.isBusy()) {
+      return undefined;
+    }
+
+    const thingsBeingLoaded: string[] = [];
+
+    if (this.videoStateService.isVideoLoading()) {
+      thingsBeingLoaded.push('the video');
+    }
+
+    if (this.videoStateService.isTimelineLoading()) {
+      thingsBeingLoaded.push('the timeline');
+    }
+
+    return `Please wait for ${thingsBeingLoaded.join(' and ')} to finish loading`;
+  });
+
   protected readonly commandHistoryStateService = inject(CommandHistoryStateService);
   protected readonly videoStateService = inject(VideoStateService);
   protected readonly ankiStateService = inject(AnkiStateService);
@@ -333,11 +351,11 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   async ngOnInit() {
     const foundProject = this.route.snapshot.data['project'] as Project;
     const projectId = foundProject.id;
-    this.videoStateService.setIsBusy(true);
+    this.videoStateService.setVideoLoading(true);
 
     this.cleanupInitialSeekListener = window.electronAPI.onMpvInitialSeekComplete(() => {
       console.log('[ProjectDetails] Received initial-seek-complete. Hiding spinner.');
-      setTimeout(() => this.videoStateService.setIsBusy(false), 25);
+      setTimeout(() => this.videoStateService.setVideoLoading(false), 25);
     });
 
     this.cleanupAddNoteListener = window.electronAPI.onProjectAddNote((note) => {
@@ -353,17 +371,8 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     }
 
     if (this.globalSettingsStateService.generateAudioPeaks() && !foundProject.audioPeaks) {
-      console.log('[ProjectDetails] No waveform peaks found. Generating new ones.');
-      try {
-        const audioPeaks = await window.electronAPI.generateAudioPeaks(projectId, foundProject.mediaPath);
-        if (audioPeaks) {
-          this.appStateService.updateProject(projectId, {audioPeaks});
-        } else {
-          this.toastService.error('Failed to generate timeline waveform.');
-        }
-      } catch (e: any) {
-        this.toastService.error(`Failed to generate timeline waveform: ${e.message}`);
-      }
+      this.videoStateService.setTimelineLoading(true);
+      this.generateAudioPeaksInBackground(projectId, foundProject.mediaPath);
     }
 
     this.videoStateService.setSubtitlesVisible(foundProject.settings.subtitlesVisible);
@@ -431,7 +440,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     } catch (e: any) {
       console.error('MPV failed to initialize unexpectedly', e);
       this.toastService.error(`The media player failed to start: ${e.message || 'The file may be corrupt or unsupported.'}`);
-      this.videoStateService.setIsBusy(false);
+      this.videoStateService.setVideoLoading(false);
       this.router.navigate(['/projects']);
     }
   }
@@ -991,13 +1000,13 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   private startPlaybackSequence(): void {
     const project = this.project();
     if (!project) {
-      this.videoStateService.setIsBusy(false);
+      this.videoStateService.setVideoLoading(false);
       return;
     }
 
     const duration = this.videoStateService.duration();
     if (duration <= 0) {
-      this.videoStateService.setIsBusy(false);
+      this.videoStateService.setVideoLoading(false);
       return;
     }
 
@@ -1097,5 +1106,25 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     selectionArray.push(text);
 
     this.appStateService.updateProject(project.id, {notes: newProjectNotes});
+  }
+
+  private generateAudioPeaksInBackground(projectId: string, mediaPath: string): void {
+    console.log('[ProjectDetails] No waveform peaks found. Generating new waveform peaks in the background...');
+    window.electronAPI.generateAudioPeaks(projectId, mediaPath)
+      .then(audioPeaks => {
+        if (audioPeaks) {
+          // Success: Update store. Timeline component effect will pick this up and render.
+          this.appStateService.updateProject(projectId, {audioPeaks});
+        } else {
+          console.warn('[ProjectDetails] Failed to generate timeline waveform (result was null). Fallback to empty waveform.');
+          // Fallback: Update with empty peaks so timeline stops waiting and renders empty waveform
+          this.appStateService.updateProject(projectId, {audioPeaks: [[0]]});
+        }
+      })
+      .catch(e => {
+        console.error(`[ProjectDetails] Failed to generate timeline waveform: ${e.message}`);
+        // Error: Update with empty peaks so timeline stops waiting
+        this.appStateService.updateProject(projectId, {audioPeaks: [[0]]});
+      });
   }
 }
