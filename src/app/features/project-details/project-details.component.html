@@ -129,6 +129,12 @@
           <span class="text-gray-500 mx-1">/</span>
           <span class="text-gray-400">{{ videoStateService.duration() * 1000 | date:'HH:mm:ss':'UTC' }}</span>
         </div>
+      } @else {
+        <div class="ml-2 mr-2">
+          <span>--:--:--</span>
+          <span class="text-gray-500 mx-1">/</span>
+          <span class="text-gray-400">--:--:--</span>
+        </div>
       }
 
       @let subtitlesVisible = videoStateService.subtitlesVisible();
