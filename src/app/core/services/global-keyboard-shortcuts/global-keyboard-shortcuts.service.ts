@@ -32,6 +32,12 @@ export class GlobalKeyboardShortcutsService implements OnDestroy {
   };
 
   private readonly handleKeyDown = (event: KeyboardEvent): void => {
+    // If Escape is pressed while a menu/overlay is open, return immediately.
+    // This allows the event to propagate to PrimeNG's listeners so they can close the overlay.
+    if (event.key === 'Escape' && this.isAnyMenuOpen()) {
+      return;
+    }
+
     const target = event.target as HTMLElement;
     const isTyping = (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA');
 
@@ -94,8 +100,9 @@ export class GlobalKeyboardShortcutsService implements OnDestroy {
       case KeyboardAction.CloseDialogOrEsc:
         this.handleEscapeKey();
 
-        // If the drawer was NOT open, the escape key's default window action should be prevented.
-        if (!this.isDrawerOpen()) {
+        // If the drawer or menu was NOT open, the escape key's default window action should be prevented.
+        // In that case PrimeNG / ProjectKeyboardShortcutsService should not handle it.
+        if (!this.isDrawerOpen() && !this.isAnyMenuOpen()) {
           event.preventDefault();
         }
 
@@ -104,7 +111,12 @@ export class GlobalKeyboardShortcutsService implements OnDestroy {
   }
 
   private handleEscapeKey(): void {
-    // If the drawer is open, do nothing and let the event propagate to the ProjectKeyboardShortcutsService
+    // Failsafe: if the menu or other overlay is open, do nothing here and let the event propagate to PrimeNG's listeners, which will handle closing it
+    if (this.isAnyMenuOpen()) {
+      return;
+    }
+
+    // If the drawer is open, do nothing here and let the event propagate to the ProjectKeyboardShortcutsService to close it
     if (this.isDrawerOpen()) {
       return;
     }
@@ -123,7 +135,7 @@ export class GlobalKeyboardShortcutsService implements OnDestroy {
       return;
     }
 
-    // If no dialogs or drawers are open, perform the window action (exit fullscreen mode or minimize)
+    // If no other UI overlays are open (like dialogs, drawers or menus), perform the window action (exit fullscreen mode or minimize)
     this.activeKeys.delete('Escape'); // Manually remove ESC from activeKeys because the window won't receive keyup event when minimized
     window.electronAPI.windowEscape();
   }
@@ -167,5 +179,20 @@ export class GlobalKeyboardShortcutsService implements OnDestroy {
 
   private isDrawerOpen(): boolean {
     return Boolean(document.querySelector('.p-drawer-active app-current-project-settings'));
+  }
+
+  private isAnyMenuOpen(): boolean {
+    const selector = '.p-menu-overlay, .p-contextmenu, .p-connected-overlay, .p-overlay, .p-datepicker';
+    const overlays = document.querySelectorAll(selector);
+
+    for (let i = 0; i < overlays.length; i++) {
+      const el = overlays[i] as HTMLElement;
+      // An element is considered "open" if it is in the DOM, visible, and part of the layout
+      if (el.style.display !== 'none' && el.offsetParent !== null) {
+        return true;
+      }
+    }
+
+    return false;
   }
 }
