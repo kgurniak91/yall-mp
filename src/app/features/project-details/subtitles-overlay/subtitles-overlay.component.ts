@@ -39,6 +39,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   public readonly isContextMenuOpen = input.required<boolean>();
   public readonly contextMenuRequested = output<{ event: MouseEvent, text: string }>();
   public readonly defaultActionRequested = output<string>();
+  private lastMouseEvent: MouseEvent | null = null;
 
   protected readonly shouldBeHidden = computed(() => {
     if (this.videoStateService.playerState() === PlayerState.Seeking) {
@@ -213,14 +214,40 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       });
 
       const handleMouseDown = (event: MouseEvent) => this.handleMouseDown(event);
-      const handleMouseMove = (event: MouseEvent) => this.handleMouseMove(event);
+      const handleMouseMove = (event: MouseEvent) => {
+        this.lastMouseEvent = event;
+        this.handleMouseMove(event);
+      };
       const handleMouseUp = (event: MouseEvent) => this.handleMouseUp(event);
       const handleContextMenu = (event: MouseEvent) => this.handleContextMenu(event);
+      const handleKeyChange = (event: KeyboardEvent) => {
+        if (event.key === 'Control' && this.lastMouseEvent && !this.isSelecting()) {
+          // Use coordinates from the last known mouse position, but the 'ctrlKey' flag from the current keyboard event.
+          // Thanks to this user can toggle between selecting single character and word/phrase without moving the mouse.
+          const syntheticEvent = new MouseEvent('mousemove', {
+            clientX: this.lastMouseEvent.clientX,
+            clientY: this.lastMouseEvent.clientY,
+            ctrlKey: event.ctrlKey
+          });
+
+          const rect = this.getWordRectFromEvent(syntheticEvent);
+
+          if (rect) {
+            this.showHighlight(rect);
+            this.isWordHovered.set(true);
+          } else {
+            this.subtitlesHighlighterService.hide();
+            this.isWordHovered.set(false);
+          }
+        }
+      };
 
       container.addEventListener('mousedown', handleMouseDown);
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       document.addEventListener('contextmenu', handleContextMenu);
+      document.addEventListener('keydown', handleKeyChange);
+      document.addEventListener('keyup', handleKeyChange);
 
       this.mutationObserver?.disconnect();
       this.mutationObserver = new MutationObserver(() => {
@@ -238,6 +265,8 @@ export class SubtitlesOverlayComponent implements OnDestroy {
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
         document.removeEventListener('contextmenu', handleContextMenu);
+        document.removeEventListener('keydown', handleKeyChange);
+        document.removeEventListener('keyup', handleKeyChange);
         this.mutationObserver?.disconnect();
       });
     });
@@ -572,7 +601,27 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       if (isWithinNode) {
         const tempRange = document.caretRangeFromPoint(event.clientX, event.clientY);
         if (tempRange) {
-          const boundaries = this.getWordBoundaries(node, tempRange.startOffset);
+          const text = node.textContent || '';
+          const offset = tempRange.startOffset;
+
+          // If Ctrl is held, bypass tokenization and select single character
+          if (event.ctrlKey) {
+            // Ensure cursor is not outside bounds or at empty text
+            if (offset < text.length) {
+              // Ensure cursor is not at whitespace
+              if (/\s/.test(text[offset])) {
+                return null;
+              }
+
+              return {
+                node,
+                start: offset,
+                end: offset + 1
+              };
+            }
+          }
+
+          const boundaries = this.getWordBoundaries(node, offset);
           if (boundaries) {
             return {node, ...boundaries};
           }
