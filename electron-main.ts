@@ -666,6 +666,8 @@ if (!gotTheLock) {
         return;
       }
 
+      isProgrammaticResize = true;
+
       if (preMaximizeBounds) {
         mainWindow.setBounds(preMaximizeBounds);
         preMaximizeBounds = null;
@@ -680,6 +682,8 @@ if (!gotTheLock) {
           uiWindow.webContents.send('window:maximized-state-changed', true);
         }
       }
+
+      isProgrammaticResize = false;
     });
 
     ipcMain.on('window:toggle-fullscreen', () => {
