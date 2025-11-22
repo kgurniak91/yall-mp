@@ -65,6 +65,7 @@ let isInitialResizeComplete = false;
 let hasRequestedInitialSeek = false;
 let isVideoWindowVisible = false; // Has the video window been initialized and shown for the first time?
 let isSaving = false;
+let isRestoring = false;
 let coreConfigToSave: CoreConfig | null = null;
 const projectsToSave = new Map<string, Project>();
 let showVideoTimeout: NodeJS.Timeout | null = null;
@@ -189,13 +190,12 @@ function tryShowVideoWindowAndNotifyUI() {
     return;
   }
 
-  if (isInitialResizeComplete && hasRequestedInitialSeek && videoWindow && !videoWindow.isDestroyed() && uiWindow && mainWindow) {
+  if (!isRestoring && isInitialResizeComplete && hasRequestedInitialSeek && videoWindow && !videoWindow.isDestroyed() && uiWindow && mainWindow) {
     console.log('[Main Process] All startup conditions met. Showing video window and notifying UI.');
     isVideoWindowVisible = true;
 
-    videoWindow.showInactive();
-    uiWindow.showInactive();
-    uiWindow.focus();
+    safeShowVideoWindow();
+    safeShowUiWindow();
     uiWindow.webContents.send('mpv:initial-seek-complete');
 
     // Reset flags to prevent this from ever running again for this project instance.
@@ -340,7 +340,8 @@ function createWindow() {
     // If the main window is minimized, absolutely enforce that children are hidden too.
     if (mainWindow.isMinimized()) {
       if (videoWindow && !videoWindow.isDestroyed() && videoWindow.isVisible()) {
-        videoWindow.hide();
+        safeHideVideoWindow();
+        safeHideUiWindow();
       }
       if (uiWindow.isVisible()) {
         uiWindow.hide();
@@ -349,8 +350,8 @@ function createWindow() {
     }
 
     // Hide video window immediately during movement to prevent visual desync
-    if (videoWindow && !videoWindow.isDestroyed() && videoWindow.isVisible()) {
-      videoWindow.hide();
+    if (!isRestoring && videoWindow && !videoWindow.isDestroyed() && videoWindow.isVisible()) {
+      safeHideVideoWindow();
     }
 
     if (showVideoTimeout) {
@@ -383,8 +384,12 @@ function createWindow() {
 
     showVideoTimeout = setTimeout(() => {
       // Re-verify state before showing: if the user minimized the app during this 250ms delay, do NOT show the video.
-      if (videoWindow && !videoWindow.isDestroyed() && mainWindow && !mainWindow.isMinimized() && isVideoWindowVisible) {
-        videoWindow.showInactive();
+      if (!isRestoring && videoWindow && !videoWindow.isDestroyed() && mainWindow && !mainWindow.isMinimized() && isVideoWindowVisible) {
+        safeShowVideoWindow();
+        safeShowUiWindow(); // Ensure UI comes back with video
+      } else if (!isRestoring && uiWindow && !uiWindow.isDestroyed() && mainWindow && !mainWindow.isMinimized()) {
+        // Fallback: If video isn't ready, at least show UI (e.g. if file not loaded yet)
+        safeShowUiWindow();
       }
     }, 250);
   };
@@ -495,24 +500,31 @@ function createWindow() {
   });
 
   mainWindow.on('minimize', () => {
-    videoWindow?.hide();
-    uiWindow?.hide();
+    isRestoring = true;
+    safeHideVideoWindow();
+    safeHideUiWindow();
   });
 
   mainWindow.on('restore', () => {
+    // Ensure video and UI remain hidden during restore animation (OS might try to restore children automatically)
+    safeHideVideoWindow();
+    safeHideUiWindow();
+
+    // Tell UI to show spinner immediately (reusing the resize event logic)
+    if (uiWindow && !uiWindow.isDestroyed()) {
+      uiWindow.webContents.send('mpv:mainWindowMovedOrResized');
+    }
+
+    // Wait for OS window animation to finish
     setTimeout(() => {
       // Check state again after the timeout. If the user minimized in the meantime, abort.
       if (!mainWindow || mainWindow.isMinimized()) {
         return;
       }
 
-      if (uiWindow && !uiWindow.isDestroyed()) {
-        uiWindow.showInactive();
-        uiWindow.focus();
-      }
-
-      syncWindowGeometry(); // Handles showing the videoWindow properly
-    }, 100);
+      isRestoring = false;
+      syncWindowGeometry(); // Handles showing the video and UI properly
+    }, 250);
   });
 
   mainWindow.on('closed', () => {
@@ -916,6 +928,10 @@ if (!gotTheLock) {
       isVideoWindowVisible = false;
 
       // Clean up any old instances
+      if (uiWindow && !uiWindow.isDestroyed()) {
+        // Ensure state is reset to hidden when recreating the viewport
+        uiWindow.webContents.send('mpv:video-visibility-change', false);
+      }
       videoWindow?.close();
       mpvManager?.stop();
 
@@ -1014,7 +1030,7 @@ if (!gotTheLock) {
         // Fallback if the aspect ratio isn't available yet.
         if (!videoAspectRatio || videoAspectRatio <= 0) {
           if (!videoWindow.isVisible()) {
-            videoWindow.showInactive();
+            safeShowVideoWindow();
           }
           return;
         }
@@ -1048,8 +1064,8 @@ if (!gotTheLock) {
           isInitialResizeComplete = true;
           tryShowVideoWindowAndNotifyUI();
         } else {
-          if (isVideoWindowVisible) {
-            videoWindow.showInactive();
+          if (!isRestoring && isVideoWindowVisible) {
+            safeShowVideoWindow();
           }
         }
       } catch (e) {
@@ -2310,4 +2326,40 @@ function getFilesFromArgv(argv: string[]): string[] {
       return false;
     }
   });
+}
+
+function safeHideVideoWindow() {
+  if (videoWindow && !videoWindow.isDestroyed()) {
+    videoWindow.setOpacity(0);
+    videoWindow.hide();
+    if (uiWindow && !uiWindow.isDestroyed()) {
+      uiWindow.webContents.send('mpv:video-visibility-change', false);
+    }
+  }
+}
+
+function safeShowVideoWindow() {
+  if (videoWindow && !videoWindow.isDestroyed()) {
+    videoWindow.setOpacity(1);
+    videoWindow.showInactive();
+    if (uiWindow && !uiWindow.isDestroyed()) {
+      uiWindow.webContents.send('mpv:video-visibility-change', true);
+    }
+  }
+}
+
+function safeHideUiWindow() {
+  if (uiWindow && !uiWindow.isDestroyed()) {
+    uiWindow.setOpacity(0);
+    // Do NOT call uiWindow.hide() here because the renderer must remain active and process IPC events (like resizing/spinner logic),
+    // just make visually invisible to the user to prevent graphical artifacts.
+  }
+}
+
+function safeShowUiWindow() {
+  if (uiWindow && !uiWindow.isDestroyed()) {
+    uiWindow.setOpacity(1);
+    uiWindow.showInactive();
+    uiWindow.focus();
+  }
 }

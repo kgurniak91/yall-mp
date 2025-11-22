@@ -50,6 +50,10 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       return true;
     }
 
+    if (!this.videoStateService.isVideoWindowVisible()) {
+      return true;
+    }
+
     if (this.rawAssContent()) {
       if (this.projectSettingsStateService.useMpvSubtitles()) {
         // User switched to native MPV subtitles, hide interactive subtitles layer

@@ -29,6 +29,7 @@ export class VideoStateService implements OnDestroy {
   private readonly _playerState = signal<PlayerState>(PlayerState.Idle);
   private readonly _nextMediaPath = signal<string | null>(null);
   private readonly _prevMediaPath = signal<string | null>(null);
+  private readonly _isVideoWindowVisible = signal(false);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly appStateService = inject(AppStateService);
@@ -37,6 +38,7 @@ export class VideoStateService implements OnDestroy {
   private cleanupMpvListener: (() => void) | null = null;
   private cleanupPlaybackListener: (() => void) | null = null;
   private cleanupRepeatSeekListener: (() => void) | null = null;
+  private cleanupVideoVisibilityListener: (() => void) | null = null;
   private isDestroyed = false;
 
   public readonly mediaPath: Signal<string | null> = this._mediaPath.asReadonly();
@@ -62,6 +64,7 @@ export class VideoStateService implements OnDestroy {
   public readonly playerState = this._playerState.asReadonly();
   public readonly nextMediaPath = this._nextMediaPath.asReadonly();
   public readonly prevMediaPath = this._prevMediaPath.asReadonly();
+  public readonly isVideoWindowVisible = this._isVideoWindowVisible.asReadonly();
 
   constructor() {
     this.cleanupMpvListener = window.electronAPI.onMpvEvent((status) => {
@@ -79,6 +82,10 @@ export class VideoStateService implements OnDestroy {
 
     this.cleanupRepeatSeekListener = window.electronAPI.onRepeatSeekCompleted(() => {
       this._seekCompleted.set(Date.now());
+    });
+
+    this.cleanupVideoVisibilityListener = window.electronAPI.onMpvVideoVisibilityChange((isVisible) => {
+      this._isVideoWindowVisible.set(isVisible);
     });
 
     toObservable(this.mediaPath).pipe(
@@ -115,6 +122,10 @@ export class VideoStateService implements OnDestroy {
     if (this.cleanupRepeatSeekListener) {
       this.cleanupRepeatSeekListener();
       this.cleanupRepeatSeekListener = null;
+    }
+    if (this.cleanupVideoVisibilityListener) {
+      this.cleanupVideoVisibilityListener();
+      this.cleanupVideoVisibilityListener = null;
     }
 
     // Only auto-save if manual cleanup inside `performCleanup` hasn't run

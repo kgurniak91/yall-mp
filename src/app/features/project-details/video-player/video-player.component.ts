@@ -51,7 +51,7 @@ export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
     this.resizeObserver = new ResizeObserver(() => this.handleResize());
     this.resizeObserver.observe(this.mpvPlaceholderRef().nativeElement);
 
-    this.cleanupMainWindowMovedListener = window.electronAPI.onMainWindowMoved(() => {
+    this.cleanupMainWindowMovedListener = window.electronAPI.onMainWindowMovedOrResized(() => {
       this.handleResize();
     });
   }
@@ -102,6 +102,6 @@ export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
       } finally {
         this.videoStateService.setVideoLoading(false);
       }
-    }, 50);
+    }, 250);
   }
 }

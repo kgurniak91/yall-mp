@@ -78,7 +78,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('mpv:event', subscription);
     return () => ipcRenderer.removeListener('mpv:event', subscription); // return cleanup function
   },
-  onMainWindowMoved: (callback) => {
+  onMainWindowMovedOrResized: (callback) => {
     const subscription = () => callback();
     ipcRenderer.on('mpv:mainWindowMovedOrResized', subscription);
     return () => ipcRenderer.removeListener('mpv:mainWindowMovedOrResized', subscription);
@@ -92,6 +92,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const subscription = () => callback();
     ipcRenderer.on('mpv:initial-seek-complete', subscription);
     return () => ipcRenderer.removeListener('mpv:initial-seek-complete', subscription); // return cleanup function
+  },
+  onMpvVideoVisibilityChange: (callback) => {
+    const subscription = (_event, isVisible) => callback(isVisible);
+    ipcRenderer.on('mpv:video-visibility-change', subscription);
+    return () => ipcRenderer.removeListener('mpv:video-visibility-change', subscription);
   },
   // --- Storage
   getAppData: () => ipcRenderer.invoke('app:get-data'),

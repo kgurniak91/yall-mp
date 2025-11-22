@@ -86,9 +86,10 @@ export interface IElectronAPI {
   mpvHideSubtitles: () => Promise<void>;
   onMpvDestroyViewport: () => Promise<void>;
   onMpvEvent: (callback: (status: any) => void) => (() => void);
-  onMainWindowMoved: (callback: () => void) => (() => void);
+  onMainWindowMovedOrResized: (callback: () => void) => (() => void);
   onMpvManagerReady: (callback: () => void) => (() => void);
   onMpvInitialSeekComplete: (callback: () => void) => (() => void);
+  onMpvVideoVisibilityChange: (callback: (isVisible: boolean) => void) => (() => void);
   // --- Storage
   getAppData: () => Promise<AppData | null>;
   getProjectById: (projectId: string) => Promise<Project | null>;
