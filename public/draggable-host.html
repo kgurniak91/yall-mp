@@ -11,12 +11,26 @@
       padding: 0;
       background-color: black;
       -webkit-app-region: drag;
+      overflow: hidden;
+    }
+
+    .view-container {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    .hidden {
+      display: none !important;
     }
 
     .skeleton-wrapper {
       display: flex;
       flex-direction: column;
       height: 100%;
+      background-color: black;
     }
 
     .skeleton-header {
@@ -46,10 +60,30 @@
       display: flex;
       background-color: #252525;
     }
+
+    .loading-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100%;
+      background-color: #1e1e1e;
+      z-index: 100;
+    }
+
+    .splash-logo {
+      width: 25vmin;
+      height: 25vmin;
+      background-color: #ceced1;
+      -webkit-mask-image: url('./yall-mp-logo.svg');
+      -webkit-mask-size: contain;
+      -webkit-mask-repeat: no-repeat;
+      -webkit-mask-position: center;
+    }
   </style>
 </head>
 <body>
-<div class="skeleton-wrapper">
+
+<div id="skeleton-view" class="view-container skeleton-wrapper hidden">
   <div class="skeleton-header">
     <div class="icon-wrapper">
       <svg width="1.75rem" height="1.75rem" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -74,5 +108,10 @@
   <div class="skeleton-controls"></div>
   <div class="skeleton-timeline"></div>
 </div>
+
+<div id="loading-view" class="view-container loading-wrapper">
+  <div class="splash-logo"></div>
+</div>
+
 </body>
 </html>
