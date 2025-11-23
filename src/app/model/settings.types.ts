@@ -108,12 +108,19 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   generateAudioPeaks: false
 };
 
+export enum BuiltInSettingsPreset {
+  LISTENING = 'LISTENING',
+  SPEAKING = 'SPEAKING'
+}
+
 export interface SettingsPreset {
+  id: string;
   name: string;
   settings: Partial<ProjectSettings>;
 }
 
 export const ListeningPracticeSettingsPreset: SettingsPreset = {
+  id: BuiltInSettingsPreset.LISTENING,
   name: 'Listening Practice',
   settings: {
     autoPauseAtStart: false,
@@ -123,10 +130,11 @@ export const ListeningPracticeSettingsPreset: SettingsPreset = {
 };
 
 export const SpeakingPracticeSettingsPreset: SettingsPreset = {
+  id: BuiltInSettingsPreset.SPEAKING,
   name: 'Speaking Practice',
   settings: {
     autoPauseAtStart: true,
-    autoPauseAtEnd: false,
+    autoPauseAtEnd: true,
     subtitleBehavior: SubtitleBehavior.ForceShow
   }
 };

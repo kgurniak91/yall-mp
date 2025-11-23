@@ -18,6 +18,37 @@
                   (ngModelChange)="onSettingsPresetChange($event)">
         </p-select>
       </div>
+
+      @if (selectedSettingsPreset(); as preset) {
+        <p-message severity="secondary" styleClass="w-full">
+          <div class="p-0 m-0 font-normal line-height-3">
+            @if (preset.id === BuiltInSettingsPreset.LISTENING) {
+              <p class="mt-0 mb-2">
+                Clips play without subtitles and pause automatically at the end.
+                <br><br>
+                <strong>Goal:</strong> Listen and figure out what was said.
+              </p>
+              <ul class="pl-3 m-0 mb-2">
+                <li>Not sure? Press <b>↑</b> to replay the audio.</li>
+                <li>Ready? Press <b>C</b> to reveal subtitles and check your answer.</li>
+              </ul>
+            } @else if (preset.id === BuiltInSettingsPreset.SPEAKING) {
+              <p class="mt-0 mb-2">
+                Clips start paused automatically and with subtitles visible.
+                <br><br>
+                <strong>Goal:</strong> Read the subtitles out loud and practice your pronunciation.
+              </p>
+              <ul class="pl-3 m-0 mb-2">
+                <li>Press <b>Spacebar</b> to hear the native audio and compare it with your speech.</li>
+                <li>The clip automatically pauses at the end so you can press <b>↑</b> to replay and perfect your accent.</li>
+              </ul>
+            }
+            <p class="m-0 p-0">
+              To move to the next clip, press <b>Spacebar</b> (unpause) or <b>↓</b> (force continue).
+            </p>
+          </div>
+        </p-message>
+      }
     </p-fieldset>
   </div>
 

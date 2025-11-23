@@ -1,6 +1,6 @@
 import {Component, computed, inject, input, output} from '@angular/core';
 import {MediaTrack} from '../../../../../shared/types/media.type';
-import {ProjectSettings, SettingsPreset} from '../../../model/settings.types';
+import {BuiltInSettingsPreset, ProjectSettings, SettingsPreset} from '../../../model/settings.types';
 import {Fieldset} from 'primeng/fieldset';
 import {Select} from 'primeng/select';
 import {
@@ -48,6 +48,7 @@ export class CurrentProjectSettingsComponent {
   public readonly ankiTagsChange = output<string[]>();
   public readonly settingsChange = output<ProjectSettings>();
   public readonly selectedSettingsPresetChange = output<SettingsPreset | null>();
+  protected readonly BuiltInSettingsPreset = BuiltInSettingsPreset;
   protected readonly audioTrackOptions = computed(() => {
     return this.audioTracks().map(track => ({
       label: track.label || `Track ${track.index}`,
