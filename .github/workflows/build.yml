@@ -1,0 +1,71 @@
+name: Build/Release
+
+on:
+  # Trigger on official tags
+  push:
+    tags:
+      - 'v*'
+  # Allow manual trigger button
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Required for 'font-scanner' to compile during npm install
+      - name: Install Linux Build Dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfontconfig1-dev libarchive-tools
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build Source
+        run: npm run electron:build
+
+      # Official release handler (via git tag)
+      - name: Build & Publish Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: samuelmeuli/action-electron-builder@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          release: true
+
+      # Manual trigger handler (no git tag) - build but don't publish...
+      - name: Build (Test Mode)
+        if: startsWith(github.ref, 'refs/tags/v') == false
+        uses: samuelmeuli/action-electron-builder@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          release: false
+          # This tells electron-builder just to build, not to talk to GitHub Releases API
+          args: "--publish never"
+
+      # ...instead, upload the exe/dmg/AppImage as a download artifact:
+      - name: Upload Artifacts (Test Mode)
+        if: startsWith(github.ref, 'refs/tags/v') == false
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.os }}-build
+          path: |
+            dist_electron/*.exe
+            dist_electron/*.dmg
+            dist_electron/*.AppImage
+            dist_electron/*.snap
+            dist_electron/*.deb
+          retention-days: 5

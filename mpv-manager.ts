@@ -4,6 +4,8 @@ import Mpv, {StatusObject} from 'node-mpv';
 import type {SubtitleSelection} from './src/app/model/project.types';
 import path from 'path';
 import {MediaTrack} from './shared/types/media.type';
+import {execSync} from 'child_process';
+import * as fs from 'fs';
 
 const TIME_UPDATE_FPS = 60;
 
@@ -34,7 +36,7 @@ export class MpvManager extends EventEmitter {
     const args = [
       `--wid=${this.win.getNativeWindowHandle().readInt32LE(0)}`,
       '--no-config',
-      '--vo=gpu',
+      '--vo=gpu,xv,x11',
       '--no-osc',
       '--no-osd-bar',
       '--no-border',
@@ -45,6 +47,7 @@ export class MpvManager extends EventEmitter {
       '--sub-visibility=no',
       '--hr-seek=yes',
       '--cache=no',
+      '--ontop=no'
     ];
 
     if (audioTrackIndex !== null) {
@@ -208,18 +211,40 @@ export class MpvManager extends EventEmitter {
   }
 
   private getMpvExecutablePath(): string {
-    const basePath = app.isPackaged ? process.resourcesPath : app.getAppPath();
     const platform = process.platform;
-    let executablePath = '';
 
+    // On Windows, use the downloaded binary
     if (platform === 'win32') {
-      executablePath = path.join(basePath, 'electron-resources', 'windows', 'mpv.exe');
-    } else if (platform === 'darwin') { // macOS
-      executablePath = path.join(basePath, 'electron-resources', 'mac', 'mpv');
-    } else { // linux
-      executablePath = path.join(basePath, 'electron-resources', 'linux', 'mpv');
+      const basePath = app.isPackaged ? process.resourcesPath : app.getAppPath();
+      return path.join(basePath, 'electron-resources', 'windows', 'mpv.exe');
     }
 
-    return executablePath;
+    // On macOS/Linux, resolve absolute system path
+    try {
+      // Try the 'which' command first (works for most Linux terminal starts)
+      const resolvedPath = execSync('which mpv').toString().trim();
+      if (resolvedPath && fs.existsSync(resolvedPath)) {
+        return resolvedPath;
+      }
+    } catch (e) {
+      // 'which' failed (common in macOS GUI apps or restrictive Linux envs)
+    }
+
+    // Fallback: Check common install locations manually
+    const commonPaths = [
+      '/usr/bin/mpv',           // Standard Linux
+      '/usr/local/bin/mpv',     // Intel Mac / Linux user
+      '/opt/homebrew/bin/mpv',  // Apple Silicon Mac
+      '/sw/bin/mpv'             // Fink/MacPorts
+    ];
+
+    for (const p of commonPaths) {
+      if (fs.existsSync(p)) {
+        return p;
+      }
+    }
+
+    // Last resort - the global PATH
+    return 'mpv';
   }
 }

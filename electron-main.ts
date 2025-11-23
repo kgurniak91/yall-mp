@@ -625,7 +625,8 @@ if (!gotTheLock) {
     }
   });
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
+    await checkSystemDependencies();
     ensureProjectsDirExists();
     pendingFilesToOpen = getFilesFromArgv(process.argv); // Handle "Open with"
 
@@ -2213,13 +2214,31 @@ async function generateAudioPeaks(projectId: string, mediaPath: string): Promise
   await ensureFFmpegPaths();
 
   const platform = process.platform;
-  const basePath = app.isPackaged ? process.resourcesPath : app.getAppPath();
-  let audiowaveformPath = '';
+  let audiowaveformPath: string | undefined;
 
   if (platform === 'win32') {
+    // On Windows, use the downloaded binary
+    const basePath = app.isPackaged ? process.resourcesPath : app.getAppPath();
     audiowaveformPath = path.join(basePath, 'electron-resources', 'windows', 'audiowaveform.exe');
   } else {
-    // TODO: Add paths for macOS and Linux
+    // On macOS/Linux, try to resolve absolute path
+    try {
+      audiowaveformPath = require('child_process').execSync('which audiowaveform').toString().trim();
+    } catch (e) {
+      // Fallback: Check common install locations manually
+      const commonPaths = [
+        '/usr/bin/audiowaveform',
+        '/usr/local/bin/audiowaveform',
+        '/opt/homebrew/bin/audiowaveform'
+      ];
+      const fs = require('fs');
+      audiowaveformPath = commonPaths.find(p => fs.existsSync(p));
+    }
+  }
+
+  // Last resort - the global PATH
+  if (!audiowaveformPath) {
+    audiowaveformPath = 'audiowaveform';
   }
 
   for (const exePath of [audiowaveformPath, ffmpegPath]) {
@@ -2391,4 +2410,65 @@ function setMainWindowLoadingState(isLoading: boolean) {
   mainWindow.webContents.executeJavaScript(code).catch((e) => {
     console.error('setMainWindowLoadingState execution failed:', e);
   });
+}
+
+async function checkSystemDependencies() {
+  // Only check on non-Windows platforms because Windows bundles its own binaries
+  if (process.platform === 'win32') {
+    return;
+  }
+
+  const dependencies = [
+    {
+      name: 'mpv',
+      installCmd: process.platform === 'darwin' ? 'brew install mpv' : 'sudo apt install mpv'
+    },
+    {
+      name: 'audiowaveform',
+      installCmd: process.platform === 'darwin' ? 'brew tap bbc/audiowaveform && brew install audiowaveform' : 'See https://github.com/bbc/audiowaveform'
+    }
+  ];
+
+  const missing: string[] = [];
+
+  for (const dep of dependencies) {
+    try {
+      await new Promise<void>((resolve, reject) => {
+        // Try to run with "--version" flag to see if dependency exists
+        const check = spawn(dep.name, ['--version']);
+        check.on('error', () => reject()); // Error means command not found
+        check.on('close', (code) => {
+          if (code === 0) {
+            resolve();
+          } else {
+            reject();
+          }
+        });
+      });
+    } catch (e) {
+      missing.push(`${dep.name}\n   (Install: ${dep.installCmd})`);
+    }
+  }
+
+  if (missing.length > 0) {
+    const response = await dialog.showMessageBox({
+      type: 'error',
+      title: 'Missing Dependencies',
+      message: 'Y\'ALL MP requires external tools to run on this operating system.',
+      detail: `Please install the following:\n\n${missing.join('\n\n')}`,
+      buttons: ['Quit', 'I installed them, try again', 'Open Build Instructions'],
+      defaultId: 0,
+      cancelId: 0
+    });
+
+    if (response.response === 0) { // Quit
+      app.quit();
+    } else if (response.response === 1) { // Try again
+      // Recursively check again
+      checkSystemDependencies();
+    } else if (response.response === 2) { // Open instructions
+      shell.openExternal('https://github.com/kgurniak91/yall-mp#readme');
+      app.quit();
+    }
+  }
 }
