@@ -1,19 +1,24 @@
 <div class="flex flex-column gap-4">
   <p-fieldset legend="About">
-    <div class="flex flex-column gap-3">
-      <div class="flex align-items-center gap-2">
-        <h2 class="m-0">Y'ALL MP</h2>
-        <p-tag [value]="'v' + appVersion()" severity="info"></p-tag>
+    <div class="flex gap-3 flex-wrap">
+      <div class="flex flex-column flex-1 gap-3">
+        <div class="flex align-items-center gap-2">
+          <h2 class="m-0">Y'ALL MP</h2>
+          <p-tag [value]="'v' + appVersion()" severity="info"></p-tag>
+        </div>
+        <p class="m-0"><b>Y</b>et <b>A</b>nother <b>L</b>anguage <b>L</b>earning <b>M</b>edia <b>P</b>layer</p>
+        <div class="flex flex-wrap gap-2">
+          <p-button label="Website" icon="fa-solid fa-globe" severity="info"
+                    (click)="onExternalLinkClick('https://yall.mp', $event)"></p-button>
+          <p-button label="GitHub" icon="fa-brands fa-github" severity="info"
+                    (click)="onExternalLinkClick('https://github.com/kgurniak91/yall-mp', $event)"></p-button>
+        </div>
+        <div>
+          <span>Created by <b>Krzysztof&nbsp;Gurniak</b> (kgurniak91&#64;gmail.com)</span>
+        </div>
       </div>
-      <p class="m-0"><b>Y</b>et <b>A</b>nother <b>L</b>anguage <b>L</b>earning <b>M</b>edia <b>P</b>layer</p>
-      <div class="flex flex-wrap gap-2">
-        <p-button label="Website" icon="fa-solid fa-globe"
-                  (click)="onExternalLinkClick('https://yall.mp', $event)"></p-button>
-        <p-button label="GitHub" icon="fa-brands fa-github"
-                  (click)="onExternalLinkClick('https://github.com/kgurniak91/yall-mp', $event)"></p-button>
-      </div>
-      <div>
-        <span>Created by <b>Krzysztof Gurniak</b> (kgurniak91&#64;gmail.com)</span>
+      <div class="flex justify-content-center align-items-center">
+        <app-logo size="10rem"/>
       </div>
     </div>
   </p-fieldset>

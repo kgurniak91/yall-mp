@@ -7,6 +7,7 @@ import {KeyboardShortcutGroup} from '../../model/keyboard-shortcuts.types';
 import {
   KeyboardShortcutsHelperService
 } from '../../core/services/keyboard-shortcuts-helper/keyboard-shortcuts-helper.service';
+import {LogoComponent} from '../../shared/components/logo/logo.component';
 
 @Component({
   selector: 'app-help-dialog',
@@ -14,7 +15,8 @@ import {
     TableModule,
     Tag,
     Fieldset,
-    Button
+    Button,
+    LogoComponent
   ],
   templateUrl: './help-dialog.component.html',
   styleUrl: './help-dialog.component.scss',

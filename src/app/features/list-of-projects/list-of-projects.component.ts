@@ -6,6 +6,7 @@ import {Button} from 'primeng/button';
 import {DataView} from 'primeng/dataview';
 import {ConfirmationService} from 'primeng/api';
 import {ProjectListItemComponent} from './project-list-item/project-list-item.component';
+import {LogoComponent} from '../../shared/components/logo/logo.component';
 
 @Component({
   selector: 'app-list-of-projects',
@@ -13,7 +14,8 @@ import {ProjectListItemComponent} from './project-list-item/project-list-item.co
     Button,
     DataView,
     RouterLink,
-    ProjectListItemComponent
+    ProjectListItemComponent,
+    LogoComponent
   ],
   templateUrl: './list-of-projects.component.html',
   styleUrl: './list-of-projects.component.scss'

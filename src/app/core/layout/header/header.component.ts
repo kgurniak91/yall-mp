@@ -21,13 +21,15 @@ import {DialogOrchestrationService} from '../../services/dialog-orchestration/di
 import {
   HeaderCurrentProjectActionBridgeService
 } from '../../services/header-current-project-action-bridge/header-current-project-action-bridge.service';
+import {LogoComponent} from '../../../shared/components/logo/logo.component';
 
 @Component({
   selector: 'app-header',
   imports: [
     Button,
     Menu,
-    Tooltip
+    Tooltip,
+    LogoComponent
   ],
   templateUrl: './header.component.html',
   styleUrl: './header.component.scss'
