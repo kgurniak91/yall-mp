@@ -1,6 +1,7 @@
 {
   "name": "yall-mp",
   "description": "Yet Another Language Learning Media Player",
+  "author": "Krzysztof Gurniak <kgurniak91@gmail.com> (https://kgurniak91.github.io)",
   "version": "0.0.0",
   "main": "electron-main.js",
   "scripts": {

@@ -41,7 +41,7 @@ As I do not have access to **macOS** hardware, specific layout quirks or pathing
 
 ### ✂️ Fully Interactive Timeline
 *   **Visual Editing:** Your subtitles are not perfect? Not a problem! Adjust subtitle timings instantly by dragging clip edges on the timeline.
-*   **On-the-Fly Corrections:** Fix typos or rewrite subtitle text entirely, directly within the player without leaving the flow.
+*   **On-the-Fly Corrections:** Fix typos or rewrite subtitle text entirely, directly within the player, without leaving the flow.
 *   **Clip Management:** Split long sentences, merge broken lines or even add own subtitles.
 
 ### 📺 Professional Playback
@@ -66,6 +66,7 @@ As I do not have access to **macOS** hardware, specific layout quirks or pathing
 
 ---
 
+<a id="system-requirements"></a>
 ## ⚙️ System Requirements
 
 Depending on your operating system, you may need to install external dependencies for the **Y'ALL MP** to work.
@@ -164,7 +165,7 @@ This application is not code-signed (which requires a paid Apple Developer accou
 ### Prerequisites
 *   **Node.js** (v22+ recommended)
 *   **npm**
-*   **System Dependencies:** Ensure you have installed the requirements listed in the [System Requirements](#-system-requirements) section above.
+*   **System Dependencies:** Ensure you have installed the requirements listed in the [System Requirements](#system-requirements) section above.
 
 ### Setup
 
@@ -191,8 +192,17 @@ To run in development mode with hot-reloading (Angular + Electron):
     *Wait until the initial build completes.*
 
 2.  **Launch the Electron shell (in a new terminal):**
+
+    On Windows:
+
     ```bash
     npm run electron:watch:run
+    ```
+
+    On Linux:
+
+    ```bash
+    npm run electron:watch:run -- --no-sandbox
     ```
 
 ### Testing

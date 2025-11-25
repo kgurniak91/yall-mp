@@ -8,6 +8,7 @@ import {
   KeyboardShortcutsHelperService
 } from '../../core/services/keyboard-shortcuts-helper/keyboard-shortcuts-helper.service';
 import {LogoComponent} from '../../shared/components/logo/logo.component';
+import {Tooltip} from 'primeng/tooltip';
 
 @Component({
   selector: 'app-help-dialog',
@@ -16,7 +17,8 @@ import {LogoComponent} from '../../shared/components/logo/logo.component';
     Tag,
     Fieldset,
     Button,
-    LogoComponent
+    LogoComponent,
+    Tooltip
   ],
   templateUrl: './help-dialog.component.html',
   styleUrl: './help-dialog.component.scss',
