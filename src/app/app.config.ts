@@ -10,12 +10,14 @@ import {DialogService} from 'primeng/dynamicdialog';
 import {AppStateService} from './state/app/app-state.service';
 import {definePreset} from '@primeng/themes';
 import {AppRouteReuseStrategy} from './app-route-reuse-strategy';
+import {provideHttpClient} from '@angular/common/http';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({eventCoalescing: true}),
     provideRouter(routes),
     provideAnimationsAsync(),
+    provideHttpClient(),
     providePrimeNG({
       theme: {
         preset: definePreset(Nora, {

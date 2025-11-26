@@ -36,7 +36,7 @@ export class DialogOrchestrationService {
 
     this.dialogService.open(HelpDialogComponent, {
       header: 'Help & About',
-      width: 'clamp(20rem, 95vw, 55rem)',
+      width: 'clamp(20rem, 95vw, 60rem)',
       focusOnShow: false,
       closable: true,
       modal: true,

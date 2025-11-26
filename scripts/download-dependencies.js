@@ -13,6 +13,20 @@ const URLS = {
   }
 };
 
+const preserveLicense = (sourceDir, destDir, binaryName) => {
+  const possibleNames = ['LICENSE', 'COPYING', 'GPL', 'Copyright'];
+  const files = fs.readdirSync(sourceDir);
+
+  for (const file of files) {
+    if (possibleNames.some(name => file.toUpperCase().includes(name))) {
+      const extension = path.extname(file);
+      const newName = `${binaryName}-LICENSE${extension || '.txt'}`;
+      fs.copyFileSync(path.join(sourceDir, file), path.join(destDir, newName));
+      console.log(`   📄 Saved license for ${binaryName}`);
+    }
+  }
+};
+
 const downloadFile = (url, destPath) => {
   return new Promise((resolve, reject) => {
     const file = fs.createWriteStream(destPath);
@@ -82,6 +96,7 @@ async function main() {
     console.log(`Downloading MPV...`);
     await downloadFile(URLS.win32.mpv, mpvArchive);
     extractArchive(mpvArchive, targetDir);
+    preserveLicense(targetDir, targetDir, 'mpv');
     fs.unlinkSync(mpvArchive);
   } else {
     console.log(`MPV found, skipping.`);
@@ -93,6 +108,7 @@ async function main() {
     console.log(`Downloading Audiowaveform...`);
     await downloadFile(URLS.win32.audiowaveform, awArchive);
     extractArchive(awArchive, targetDir);
+    preserveLicense(targetDir, targetDir, 'audiowaveform');
     fs.unlinkSync(awArchive);
   } else {
     console.log(`Audiowaveform found, skipping.`);

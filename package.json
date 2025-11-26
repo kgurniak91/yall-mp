@@ -2,6 +2,11 @@
   "name": "yall-mp",
   "description": "Yet Another Language Learning Media Player",
   "author": "Krzysztof Gurniak <kgurniak91@gmail.com> (https://kgurniak91.github.io)",
+  "license": "GPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kgurniak91/yall-mp"
+  },
   "version": "0.0.0",
   "main": "electron-main.js",
   "scripts": {
@@ -13,13 +18,14 @@
     "test:angular": "ng test --no-watch --no-progress --browsers=ChromeHeadless",
     "test:electron": "tsc --project tsconfig.electron.json && vitest run",
     "test:all": "npm run test:angular && npm run test:electron",
-    "electron:build": "ng build --configuration=electron && tsc --project tsconfig.electron.json",
-    "electron:watch:build": "concurrently \"ng build --watch --configuration=electron\" \"tsc --watch --project tsconfig.electron.json\"",
+    "generate:licenses": "node scripts/generate-licenses.js",
+    "electron:build": "npm run generate:licenses && ng build --configuration=electron && tsc --project tsconfig.electron.json",
+    "electron:watch:build": "npm run generate:licenses && concurrently \"ng build --watch --configuration=electron\" \"tsc --watch --project tsconfig.electron.json\"",
     "electron:watch:run": "nodemon",
     "package:win": "npm run electron:build && electron-builder --win",
     "package:mac": "npm run electron:build && electron-builder --mac",
     "package:linux": "npm run electron:build && electron-builder --linux",
-    "postinstall": "node scripts/download-dependencies.js"
+    "postinstall": "node scripts/download-dependencies.js && npm run generate:licenses"
   },
   "build": {
     "appId": "com.yall-mp.app",
@@ -41,6 +47,12 @@
       "preload.js",
       "subtitles-lookup-host-preload.js",
       "subtitles-lookup-preload.js"
+    ],
+    "extraFiles": [
+      {
+        "from": "public/THIRD-PARTY-NOTICES.txt",
+        "to": "."
+      }
     ],
     "asarUnpack": [
       "**/node_modules/ffmpeg-static/**",
@@ -220,6 +232,7 @@
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
+    "license-checker-rseidelsohn": "^4.4.2",
     "lodash-es": "^4.17.21",
     "ng-mocks": "^14.13.5",
     "nodemon": "^3.1.10",

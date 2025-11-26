@@ -10,3 +10,23 @@
     vertical-align: middle;
   }
 }
+
+:host p-accordion ::ng-deep {
+  .p-accordioncontent-content {
+    padding: 0 !important;
+  }
+
+  p-accordion-header .p-iconwrapper {
+    transform: rotate(180deg); // fix for https://github.com/primefaces/primeng/issues/18444
+  }
+}
+
+.license-raw-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: monospace;
+  background-color: var(--surface-ground);
+  padding: 1rem;
+  border-radius: 6px;
+  overflow-x: hidden;
+}

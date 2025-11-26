@@ -1,53 +1,134 @@
-<div class="flex flex-column gap-4">
-  <p-fieldset legend="About">
-    <div class="flex gap-3 flex-wrap">
-      <div class="flex flex-column flex-1 gap-3">
-        <div class="flex align-items-center gap-2">
-          <h2 class="m-0">Y'ALL MP</h2>
-          <p-tag [value]="'v' + appVersion()" severity="info"></p-tag>
-        </div>
-        <p class="m-0"><b>Y</b>et <b>A</b>nother <b>L</b>anguage <b>L</b>earning <b>M</b>edia <b>P</b>layer</p>
-        <div class="flex flex-wrap gap-2">
-          <p-button label="Website" icon="fa-solid fa-globe" severity="info"
-                    (click)="onExternalLinkClick('https://yallmp.com', $event)"></p-button>
-          <p-button label="GitHub" icon="fa-brands fa-github" severity="info"
-                    (click)="onExternalLinkClick('https://github.com/kgurniak91/yall-mp', $event)"></p-button>
-        </div>
-        <div>
-          <p class="m-0 p-0">
-            Created by
-            <a href="#"
-               class="font-bold no-underline"
-               pTooltip="Visit portfolio website"
-               (click)="onExternalLinkClick('https://kgurniak91.github.io', $event)">
-              Krzysztof&nbsp;Gurniak
-            </a>
-          </p>
-        </div>
-      </div>
-      <div class="flex justify-content-center align-items-center">
-        <app-logo size="10rem"/>
-      </div>
-    </div>
-  </p-fieldset>
+<p-tabs [(value)]="selectedTabIndex" scrollable>
+  <p-tablist>
+    <p-tab [value]="HelpDialogTab.About">About</p-tab>
+    <p-tab [value]="HelpDialogTab.KeyboardShortcuts">Keyboard Shortcuts</p-tab>
+    <p-tab [value]="HelpDialogTab.ThirdPartyLicenses">Third-Party Licenses</p-tab>
+  </p-tablist>
+  <p-tabpanels>
 
-  <p-fieldset legend="Keyboard Shortcuts">
-    @for (group of shortcutGroups; track group.name) {
-      <h3 class="mt-4 mb-2">{{ group.name }}</h3>
-      <p-table [value]="group.shortcuts" styleClass="p-datatable-sm">
-        <ng-template pTemplate="body" let-shortcut>
-          <tr>
-            <td style="width: 35%">
-              <div class="flex gap-1 flex-wrap">
-                @for (key of shortcut.displayKeys; track key) {
-                  <p-tag [value]="key" severity="info"></p-tag>
-                }
-              </div>
-            </td>
-            <td>{{ shortcut.description }}</td>
-          </tr>
-        </ng-template>
-      </p-table>
-    }
-  </p-fieldset>
-</div>
+    <p-tabpanel [value]="HelpDialogTab.About">
+      <div class="flex gap-3 flex-wrap">
+        <div class="flex flex-column flex-1 gap-3">
+          <div class="flex align-items-center gap-2">
+            <h2 class="m-0">Y'ALL MP</h2>
+            <p-tag [value]="'v' + appVersion()" severity="primary"></p-tag>
+          </div>
+          <p class="m-0"><b>Y</b>et <b>A</b>nother <b>L</b>anguage <b>L</b>earning <b>M</b>edia <b>P</b>layer</p>
+          <div class="flex flex-wrap gap-2">
+            <p-button label="Website" icon="fa-solid fa-globe" severity="primary"
+                      (click)="onExternalLinkClick('https://yallmp.com', $event)"></p-button>
+            <p-button label="GitHub" icon="fa-brands fa-github" severity="primary"
+                      (click)="onExternalLinkClick('https://github.com/kgurniak91/yall-mp', $event)"></p-button>
+          </div>
+          <div>
+            <p class="m-0 p-0">
+              Created by
+              <a href="#"
+                 class="font-bold no-underline"
+                 pTooltip="Visit portfolio website"
+                 (click)="onExternalLinkClick('https://kgurniak91.github.io', $event)">
+                Krzysztof&nbsp;Gurniak
+              </a>
+            </p>
+          </div>
+        </div>
+        <div class="flex justify-content-center align-items-center">
+          <app-logo size="10rem"/>
+        </div>
+      </div>
+    </p-tabpanel>
+
+    <p-tabpanel [value]="HelpDialogTab.KeyboardShortcuts">
+      @for (group of shortcutGroups; track group.name) {
+        <h3 [class.mt-4]="!$first" [class.mt-0]="$first" class="mb-2">{{ group.name }}</h3>
+        <p-table [value]="group.shortcuts" styleClass="p-datatable-sm">
+          <ng-template pTemplate="body" let-shortcut>
+            <tr>
+              <td style="width: 10rem;">
+                <div class="flex gap-1 flex-wrap">
+                  @for (key of shortcut.displayKeys; track key) {
+                    <p-tag [value]="key" severity="primary"></p-tag>
+                  }
+                </div>
+              </td>
+              <td>{{ shortcut.description }}</td>
+            </tr>
+          </ng-template>
+        </p-table>
+      }
+    </p-tabpanel>
+
+    <p-tabpanel [value]="HelpDialogTab.ThirdPartyLicenses">
+      @if (selectedTabIndex() === HelpDialogTab.ThirdPartyLicenses) {
+        <p-scrollpanel [style]="{width: '100%', height: '30rem'}">
+          <div class="surface-ground p-2 border-round text-sm line-height-3 mb-4">
+            <p class="m-0 font-semibold mb-2">Open Source Compliance</p>
+
+            <p class="m-0 text-600 mb-2">
+              Licensed under the <strong>GNU GPLv3</strong>.
+              <br>
+              The Windows version bundles unmodified binaries of
+              <a href="#" class="text-primary no-underline font-medium hover:underline"
+                 (click)="onExternalLinkClick('https://github.com/shinchiro/mpv-winbuild-cmake/releases', $event)">mpv</a>,
+              <a href="#" class="text-primary no-underline font-medium hover:underline"
+                 (click)="onExternalLinkClick('https://github.com/bbc/audiowaveform/releases', $event)">audiowaveform</a>,
+              and
+              <a href="#" class="text-primary no-underline font-medium hover:underline"
+                 (click)="onExternalLinkClick('https://ffmpeg.org/download.html', $event)">FFmpeg</a>.
+              <br>
+              Linux and macOS versions bundle <a href="#" class="text-primary no-underline font-medium hover:underline"
+                                                 (click)="onExternalLinkClick('https://ffmpeg.org/download.html', $event)">FFmpeg</a>
+              and link against system installations of mpv and audiowaveform.
+            </p>
+
+            <p class="m-0 text-600 font-italic">
+              Source code is available at the links above.
+              In accordance with the GPL, you may also request the exact source code corresponding to the binaries
+              distributed in this application by opening an issue on the project's GitHub repository.
+            </p>
+          </div>
+
+          <p class="mt-0 mb-3 text-sm text-600">
+            The following sets forth attribution notices for third party software that may be contained in this application.
+          </p>
+
+          <p-accordion [multiple]="true" [(value)]="openedLicenses">
+            @for (pkg of licenses(); track pkg.name) {
+              <p-accordion-panel [value]="pkg.name">
+                <p-accordion-header>
+                  <div class="flex align-items-center w-full gap-3">
+                    <span class="font-bold">{{ pkg.name }}</span>
+
+                    <p-tag [value]="formatLicense(pkg.licenses)"
+                           severity="primary"
+                           [rounded]="true"
+                           styleClass="text-xs"></p-tag>
+                  </div>
+                </p-accordion-header>
+                <p-accordion-content>
+                  @if (openedLicenses().includes(pkg.name)) {
+                    <div class="flex flex-column gap-2 p-2">
+                      @if (pkg.repository) {
+                        <p-button label="View Source" icon="fa-brands fa-github" severity="primary"
+                                  (click)="onExternalLinkClick(pkg.repository, $event)"></p-button>
+                      }
+
+                      @if (pkg.publisher) {
+                        <div class="text-sm font-italic text-600">
+                          Publisher: {{ pkg.publisher }}
+                        </div>
+                      }
+
+                      <pre class="license-raw-text">{{ pkg.licenseText }}</pre>
+                    </div>
+                  }
+                </p-accordion-content>
+              </p-accordion-panel>
+            }
+          </p-accordion>
+        </p-scrollpanel>
+      }
+    </p-tabpanel>
+
+  </p-tabpanels>
+</p-tabs>

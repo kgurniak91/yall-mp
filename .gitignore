@@ -59,3 +59,7 @@ playback-manager.js.map
 /src/app/model/*.js
 /src/app/model/*.js.map
 /electron-resources
+
+# Generated License Files
+public/licenses.json
+public/THIRD-PARTY-NOTICES.txt
