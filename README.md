@@ -142,6 +142,7 @@ brew install audiowaveform
 
 ---
 
+<a id="installation"></a>
 ## 📥 Installation & Usage
 
 ### Download

@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Y'ALL MP - Yet Another Language Learning Media Player</title>
+  <meta name="description"
+        content="Turn any media files into interactive learning materials. Edit subtitles on the fly, perform dictionary lookups, export to Anki and much more.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="site-header">
+  <div class="container header-inner">
+
+    <div class="logo-area">
+      <div class="logo-text">
+        <span class="highlight">Y'ALL</span> <span class="highlight">M</span>edia <span class="highlight">P</span>layer
+      </div>
+      <span class="badge">BETA v0.8.0</span>
+    </div>
+
+    <button class="mobile-menu-btn" aria-label="Toggle Menu">
+      <span>&#9776;</span>
+    </button>
+
+    <nav class="main-nav">
+      <ul>
+        <li><a href="#concept">Concept</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#download">Download</a></li>
+        <li><a href="#faq">FAQ</a></li>
+        <li><a href="https://github.com/kgurniak91/yall-mp" target="_blank">GitHub</a></li>
+
+        <li class="lang-item">
+          <button class="lang-toggle" aria-label="Switch Language">
+            <span class="active">EN</span><span class="sep">/</span><span>PL</span>
+          </button>
+        </li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- HERO -->
+  <section class="hero">
+    <div class="container hero-brand-area">
+      <div class="hero-brand">
+        <div class="brand-logo">
+          <svg class="logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <mask id="logo-cutout">
+                <rect width="100" height="100" fill="white"/>
+                <path fill-rule="evenodd"
+                      clip-rule="evenodd"
+                      d="M50 20C33.4315 20 20 33.4315 20 50C20 56.219 21.893 61.993 25.15 66.806L22.5 77.5L33.662 73.607C38.357 77.635 44.474 80 51.1 80C67.6685 80 81.1 66.5685 81.1 50C81.1 33.4315 67.6685 20 51.1 20H50Z"
+                      fill="black"/>
+              </mask>
+            </defs>
+            <circle cx="50" cy="50" r="50" fill="currentColor" mask="url(#logo-cutout)"/>
+            <path d="M43 38L64 50.5L43 63V38Z"
+                  fill="currentColor"
+                  stroke="currentColor"
+                  stroke-width="4"
+                  stroke-linejoin="round"/>
+          </svg>
+        </div>
+
+        <div class="brand-text">
+          <div class="brand-breakdown">
+            <span class="highlight">Y</span>et
+            <span class="highlight">A</span>nother
+            <span class="highlight">L</span>anguage
+            <span class="highlight">L</span>earning
+            <br>
+            <span class="highlight">M</span>edia
+            <span class="highlight">P</span>layer
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-strip hero-strip">
+      <div class="container">
+        <h1 class="hero-title">
+          Turn
+          <span class="txt-rotate"
+                data-period="2000"
+                data-rotate='[ "movies", "TV shows", "audiobooks", "anime", "podcasts", "songs" ]'>
+            media
+          </span>
+          <br>into interactive learning materials!
+        </h1>
+      </div>
+    </div>
+
+    <div class="container hero-content">
+      <p class="hero-sub">
+        Stop casually consuming media in a foreign language and just hoping for the best.
+        <br>
+        Turn your <b class="highlight">passive media consumption</b> into <b class="highlight">active, deliberate practice</b>.
+      </p>
+
+      <div class="hero-actions">
+        <a href="#concept" class="btn btn-secondary">How does it work?</a>
+        <a href="#features" class="btn btn-secondary">See Features</a>
+        <a href="#download" class="btn btn-primary">Download</a>
+      </div>
+
+      <p class="hero-sub">
+        <b class="highlight">Y'ALL Media Player</b> generates an interactive timeline from subtitles that you can edit
+        on the fly, while letting you look up words instantly, export cards to Anki and much more!
+      </p>
+
+      <div class="app-showcase">
+        <img src="assets/app-screenshot-main.png"
+             alt="Y'ALL MP Interface showing waveform timeline"
+             width="1200"
+             height="675"
+             loading="eager">
+      </div>
+    </div>
+  </section>
+
+  <!-- CONCEPT -->
+  <section id="concept" class="section-concept">
+    <div class="container">
+      <div class="concept-grid">
+        <div class="concept-text">
+          <h2>The <span class="highlight">Timeline</span> changes everything.</h2>
+          <p>
+            Most media players just render static text on top of a video and call it a day.
+            <br>
+            <b class="highlight">Y'ALL Media Player</b> gives you full control over its <b class="highlight">interactive
+            timeline</b>:
+          </p>
+          <ul class="concept-list">
+            <li>
+              <strong class="highlight">Visualize Audio:</strong>
+              See peaks and silence. Know exactly when a sentence begins and ends.
+            </li>
+            <li>
+              <strong class="highlight">Adjust timing:</strong>
+              Subtitles out of sync? Just drag the edge of the clip on the timeline to fix it.
+            </li>
+            <li>
+              <strong class="highlight">Edit on the fly:</strong>
+              Change the text of subtitles or add your own, directly in the app.
+            </li>
+            <li>
+              <strong class="highlight">Split & Merge:</strong>
+              Instantly fix broken sentence parsing by merging clips or splitting long ones.
+            </li>
+          </ul>
+        </div>
+        <div class="concept-visual">
+          <div class="media-placeholder">
+            <span class="placeholder-text">VIDEO: Dragging timeline edges & audio waveform</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="features" class="section-features">
+    <div class="container">
+      <h2>Features</h2>
+      <div class="features-grid">
+
+        <article class="feature-card">
+          <div class="feature-icon">🎬</div>
+          <h3 class="highlight">Interactive Timeline</h3>
+          <p>
+            A visual timeline representing the audio waveform. Adjust subtitle timing just by dragging edges, edit
+            text, split clips, and merge lines. Essential for fixing out-of-sync or not-perfect-enough subtitles.
+          </p>
+        </article>
+
+        <article class="feature-card">
+          <div class="feature-icon">🔍</div>
+          <h3 class="highlight">Universal Lookup</h3>
+          <p>
+            Click on any word or click and drag to select a phrase to search it online instantly. Use the built-in
+            browser to look up terms on Google, online dictionaries, or any other website you configure.
+          </p>
+        </article>
+
+        <article class="feature-card">
+          <div class="feature-icon">⚡</div>
+          <h3 class="highlight">Anki integration</h3>
+          <p>
+            Generate Anki flashcards with a single click. Supports custom templates, allowing you to export multiple
+            card types (Reading, Listening, Sentence etc.) at the same time.
+          </p>
+        </article>
+
+        <article class="feature-card">
+          <div class="feature-icon">🖥️</div>
+          <h3 class="highlight">Hybrid Rendering</h3>
+          <p>
+            Combines the performance of MPV for video playback with a modern HTML overlay. This ensures smooth playback
+            while making every subtitle character interactive and selectable.
+          </p>
+        </article>
+
+        <article class="feature-card">
+          <div class="feature-icon">⏸️</div>
+          <h3 class="highlight">Auto-Pause</h3>
+          <p>
+            Automatically pauses playback at the start and/or end of every subtitle line, if you want. Gives you time
+            to read, shadow practice, or process the sentence before moving on.
+          </p>
+        </article>
+
+        <article class="feature-card">
+          <div class="feature-icon">⏩</div>
+          <h3 class="highlight">Smart Speed</h3>
+          <p>
+            Set different playback speeds for dialogue versus silence. Skim through quiet scenes efficiently, or skip
+            them altogether, while keeping dialogue at a comprehensible speed.
+          </p>
+        </article>
+
+        <article class="feature-card">
+          <div class="feature-icon">💾</div>
+          <h3 class="highlight">Resume Anywhere</h3>
+          <p>
+            Every media file is treated as a separate project. The app remembers the exact playback position, subtitle
+            adjustments, and your <b>notes</b>, so you can pick up exactly where you left off and track progress.
+          </p>
+        </article>
+
+        <article class="feature-card">
+          <div class="feature-icon">🎓</div>
+          <h3 class="highlight">Practice Presets</h3>
+          <p>
+            Switch learning modes based on your goals. Use <strong>Listening Practice</strong> to hide subtitles until
+            you verify what you heard, or <strong>Speaking Practice</strong> to read first and compare your
+            pronunciation with native audio.
+          </p>
+        </article>
+
+        <article class="feature-card">
+          <div class="feature-icon">⌛</div>
+          <h3 class="highlight">Coming Soon</h3>
+          <p>
+            Full support for offline dictionaries is currently in development. This will allow for instant,
+            zero-latency lookups without an internet connection.
+          </p>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- DOWNLOAD -->
+  <section id="download" class="section-download">
+    <div class="container download-inner">
+      <h2>Download</h2>
+      <p class="download-sub">Open Source (GPLv3). Free. No Account Required.</p>
+
+      <div class="download-box">
+        <div class="os-section">
+          <h3>Windows</h3>
+          <a href="https://github.com/kgurniak91/yall-mp/releases/latest" class="btn btn-large">
+            <svg class="win-icon" viewBox="0 0 24 24" width="24" height="24">
+              <path fill="currentColor"
+                    d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/>
+            </svg>
+            <span>Download Installer (.exe)</span>
+          </a>
+          <span class="version-info">Beta v0.8.0 | Includes mpv, FFmpeg & audiowaveform</span>
+        </div>
+
+        <hr class="divider">
+
+        <div class="os-section">
+          <h3>Linux & macOS</h3>
+          <p>
+            Experimental support 🧪 (in BETA)
+            <br>
+            Requires manual installation of external dependencies (mpv, audiowaveform, etc.)
+          </p>
+          <a href="https://github.com/kgurniak91/yall-mp#installation" class="text-link">
+            Click here for installation instructions on GitHub &rarr;
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" class="section-faq">
+    <div class="container">
+      <h2>FAQ</h2>
+      <div class="faq-item">
+        <details>
+          <summary>How do I set up Anki integration?</summary>
+          <p>
+            Y'ALL Media Player connects seamlessly with Anki via the AnkiConnect add-on.<br>
+            You can create cards with audio, screenshots, and video clips in one click.<br>
+            <a href="https://github.com/kgurniak91/yall-mp#installation" class="text-link">
+              Click here for detailed integration instructions &rarr;
+            </a>
+          </p>
+        </details>
+      </div>
+      <div class="faq-item">
+        <details>
+          <summary>Is it really free?</summary>
+          <p>
+            Yes. The source code is available on GitHub under the GPLv3 license.
+          </p>
+        </details>
+      </div>
+      <div class="faq-item">
+        <details>
+          <summary>Does it work offline?</summary>
+          <p>
+            Video playback, timeline editing, and Anki export work fully offline. Dictionary lookups currently require
+            an internet connection, but offline dictionaries are planned for future updates.
+          </p>
+        </details>
+      </div>
+      <div class="faq-item">
+        <details>
+          <summary>Is streaming from platforms like Youtube supported?</summary>
+          <p>
+            No, sorry. Only local files are supported, because their entire content needs to be known upfront for all
+            the features to work properly. There are many services online which let your download videos with subtitles
+            from Youtube etc., so you should never run out of the content to watch!
+          </p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container footer-inner">
+    <div class="col-left">
+      <p>
+        &copy; 2025 <b>Y'ALL Media Player</b>.
+        <span class="footer-break">
+          Created by <a class="highlight" href="https://kgurniak91.github.io" target="_blank"><b>Krzysztof Gurniak</b></a>.
+        </span>
+      </p>
+    </div>
+    <div class="col-right">
+      <a href="https://github.com/kgurniak91/yall-mp" target="_blank">GitHub</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Mobile Menu
+  const menuBtn = document.querySelector('.mobile-menu-btn');
+  const nav = document.querySelector('.main-nav');
+
+  menuBtn.addEventListener('click', () => {
+    nav.classList.toggle('active');
+  });
+
+  // Close menu on link click
+  nav.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => {
+      nav.classList.remove('active');
+      menuBtn.querySelector('span').innerHTML = '&#9776;';
+    });
+  });
+
+  // Text Rotation
+  class TxtRotate {
+    constructor(el, toRotate, period) {
+      this.toRotate = toRotate;
+      this.el = el;
+      this.loopNum = 0;
+      this.period = parseInt(period, 10) || 2000;
+      this.txt = '';
+      this.isDeleting = false;
+      this.tick();
+    }
+
+    tick() {
+      let i = this.loopNum % this.toRotate.length;
+      let fullTxt = this.toRotate[i];
+      if (this.isDeleting) {
+        this.txt = fullTxt.substring(0, this.txt.length - 1);
+      } else {
+        this.txt = fullTxt.substring(0, this.txt.length + 1);
+      }
+      this.el.innerHTML = '<span class="wrap">' + this.txt + '</span>';
+      let delta = 200 - Math.random() * 100;
+      if (this.isDeleting) {
+        delta /= 2;
+      }
+      if (!this.isDeleting && this.txt === fullTxt) {
+        delta = this.period;
+        this.isDeleting = true;
+      } else if (this.isDeleting && this.txt === '') {
+        this.isDeleting = false;
+        this.loopNum++;
+        delta = 500;
+      }
+      setTimeout(() => this.tick(), delta);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    let elements = document.getElementsByClassName('txt-rotate');
+    for (let i = 0; i < elements.length; i++) {
+      let toRotate = elements[i].getAttribute('data-rotate');
+      let period = elements[i].getAttribute('data-period');
+      if (toRotate) {
+        new TxtRotate(elements[i], JSON.parse(toRotate), period);
+      }
+    }
+  });
+</script>
+</body>
+</html>
