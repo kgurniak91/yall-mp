@@ -1,14 +1,20 @@
 # Y'ALL Media Player
 
-<div align="center">
-  <img src="./public/yall-mp-logo.svg" alt="Y'ALL MP Logo" width="150"/>
+<div align="center" style="font-size: 2rem;">
+  <img src="./public/yall-mp-logo-blue.svg" alt="Y'ALL MP Logo" width="200"/>
   <br>
-  <b>Y</b>et <b>A</b>nother <b>L</b>anguage <b>L</b>earning <b>M</b>edia <b>P</b>layer
+  <b style="color: #2563EB;">Y</b>et
+  <b style="color: #2563EB;">A</b>nother
+  <b style="color: #2563EB;">L</b>anguage
+  <b style="color: #2563EB;">L</b>earning
+  <br>
+  <b style="color: #2563EB;">M</b>edia
+  <b style="color: #2563EB;">P</b>layer
   <br><br>
 </div>
 
 **Y'ALL MP** is not just a media player; it is a comprehensive tool designed to bridge the gap between passive listening and active learning.
-It combines high-performance media playback with advanced tools to edit subtitle text and adjust timing, instant dictionary lookups, and seamless **Anki** flashcard creation.
+It combines high-performance media playback with advanced tools to edit subtitle text and adjust timing, provides instant dictionary lookups, and seamless **Anki** flashcards creation.
 
 ![App Screenshot](docs/yall-mp-screenshot.png)
 

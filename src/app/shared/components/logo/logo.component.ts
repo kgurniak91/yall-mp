@@ -15,5 +15,5 @@ import {Component, input} from '@angular/core';
 })
 export class LogoComponent {
   size = input.required<string>();
-  color = input<string>('#234E76');
+  color = input<string>('#2563EB');
 }
