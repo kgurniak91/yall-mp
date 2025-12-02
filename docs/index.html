@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Y'ALL MP - Yet Another Language Learning Media Player</title>
+  <title>Y'ALL Media Player</title>
   <meta name="description"
-        content="Turn any media files into interactive learning materials. Edit subtitles on the fly, perform dictionary lookups, export to Anki and much more.">
+        content="Turn any media files into interactive learning materials. Sentence mine movies, edit subtitles on the fly, and export to Anki.">
   <link rel="stylesheet" href="styles.css">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
@@ -28,8 +28,7 @@
 
     <nav class="main-nav">
       <ul>
-        <li><a href="#concept">Concept</a></li>
-        <li><a href="#features">Features</a></li>
+        <li><a href="#workflow">How It Works</a></li>
         <li><a href="#download">Download</a></li>
         <li><a href="#faq">FAQ</a></li>
         <li><a href="https://github.com/kgurniak91/yall-mp" target="_blank">GitHub</a></li>
@@ -93,24 +92,20 @@
 
     <div class="container hero-content">
       <p class="hero-sub">
-        Stop casually consuming media in a foreign language and just hoping for the best.
-        <br>
-        Turn your <b class="highlight">passive media consumption</b> into <b class="highlight">active, deliberate practice</b>.
+        <b><span class="highlight">Y'ALL</span> <span class="highlight">M</span>edia <span class="highlight">P</span>layer</b>
+        lets you master <b class="highlight">vocabulary</b>, <b
+        class="highlight">listening comprehension</b> and <b class="highlight">pronunciation</b> by turning any media
+        into an interactive
+        study&nbsp;session with integrated dictionary lookups, subtitles editing, Anki flashcard creation and more!
       </p>
 
       <div class="hero-actions">
-        <a href="#concept" class="btn btn-secondary">How does it work?</a>
-        <a href="#features" class="btn btn-secondary">See Features</a>
+        <a href="#workflow" class="btn btn-secondary">How does it work?</a>
         <a href="#download" class="btn btn-primary">Download</a>
       </div>
 
-      <p class="hero-sub">
-        <b class="highlight">Y'ALL Media Player</b> generates an interactive timeline from subtitles that you can edit
-        on the fly, while letting you look up words instantly, export cards to Anki and much more!
-      </p>
-
       <div class="app-showcase">
-        <img src="assets/app-screenshot-main.png"
+        <img src="yall-mp-screenshot.png"
              alt="Y'ALL MP Interface showing waveform timeline"
              width="1200"
              height="675"
@@ -119,134 +114,248 @@
     </div>
   </section>
 
-  <!-- CONCEPT -->
-  <section id="concept" class="section-concept">
+  <!-- HOW IT WORKS -->
+  <section id="workflow" class="section-workflow">
     <div class="container">
-      <div class="concept-grid">
-        <div class="concept-text">
-          <h2>The <span class="highlight">Timeline</span> changes everything.</h2>
+      <div class="workflow-header">
+        <h2>
+          From <b class="highlight">passive media consumption</b>
+          <br>
+          to <b class="highlight">active</b>, <b class="highlight">deliberate practice</b>.
+        </h2>
+        <br>
+        <p>
+          <b><span class="highlight">Y'ALL</span> <span class="highlight">M</span>edia <span class="highlight">P</span>layer</b>
+          is a specialized tool designed for immersion learning.
+          It seamlessly integrates video playback, subtitle management, dictionary lookups, and Anki flashcard creation
+          into a single workflow, optimizing the time spent learning native content:
+        </p>
+        <ol>
+          <li>
+            Open any media file with subtitles in the <b>same</b> target language (either embedded or from external
+            file).
+          </li>
+          <li>
+            The player automatically parses the subtitles and transforms them into a series of <b>clips</b>, presented
+            on an
+            <b>interactive timeline</b>, that you can edit on the fly.
+          </li>
+          <li>
+            The timeline distinguishes between segments with dialogue (<b>subtitled clips</b>) and those without (<b>gaps</b>).
+            You
+            can configure different behaviors - such as playback speed or auto-pausing - for each type separately.
+          </li>
+          <li>
+            Select a configuration preset based on your current goal - e.g., <b>listening comprehension</b> or <b>pronunciation</b>
+            - or customize every setting to fit your personal workflow.
+          </li>
+        </ol>
+      </div>
+
+      <div class="workflow-row">
+        <div class="workflow-text">
+          <div class="workflow-title">
+            <div class="workflow-icon">🎬</div>
+            <h3>Interactive Timeline</h3>
+          </div>
           <p>
             Most media players just render static text on top of a video and call it a day.
-            <br>
-            <b class="highlight">Y'ALL Media Player</b> gives you full control over its <b class="highlight">interactive
-            timeline</b>:
+            <b><span class="highlight">Y'ALL</span> <span class="highlight">M</span>edia <span
+              class="highlight">P</span>layer</b> gives you full control over its dynamic, interactive timeline:
           </p>
-          <ul class="concept-list">
+          <ul>
             <li>
-              <strong class="highlight">Visualize Audio:</strong>
-              See peaks and silence. Know exactly when a sentence begins and ends.
+              <b class="highlight">Visualize Audio</b>: Enable waveform visualization in Global Settings to see peaks
+              and silence. Know exactly when a sentence
+              begins and ends.
             </li>
             <li>
-              <strong class="highlight">Adjust timing:</strong>
-              Subtitles out of sync? Just drag the edge of the clip on the timeline to fix it.
+              <b class="highlight">Adjust timing</b>: Subtitles out of sync? Simply drag the edges of a clip on the
+              timeline to fix start and end
+              times instantly.
             </li>
             <li>
-              <strong class="highlight">Edit on the fly:</strong>
-              Change the text of subtitles or add your own, directly in the app.
+              <b class="highlight">Edit on the fly</b>: Change the text of subtitles, or add your own, directly in the
+              app.
             </li>
             <li>
-              <strong class="highlight">Split & Merge:</strong>
-              Instantly fix broken sentence parsing by merging clips or splitting long ones.
+              <b class="highlight">Split & Merge</b>: Fix broken sentence parsing immediately by splitting long clips or
+              merging fragmented ones.
+            </li>
+            <li>
+              <b class="highlight">Multi-Track Support</b>: Easily access and manage parallel tracks found in advanced
+              subtitle formats like
+              ASS/SSA.
             </li>
           </ul>
         </div>
-        <div class="concept-visual">
-          <div class="media-placeholder">
-            <span class="placeholder-text">VIDEO: Dragging timeline edges & audio waveform</span>
+        <div class="workflow-media">
+          <div class="media-wrapper">
+            <img src="feature-1.png"
+                 alt="Interactive Timeline"
+                 class="feature-img"
+                 loading="lazy">
           </div>
         </div>
       </div>
-    </div>
-  </section>
 
-  <!-- FEATURES -->
-  <section id="features" class="section-features">
-    <div class="container">
-      <h2>Features</h2>
-      <div class="features-grid">
-
-        <article class="feature-card">
-          <div class="feature-icon">🎬</div>
-          <h3 class="highlight">Interactive Timeline</h3>
+      <div class="workflow-row">
+        <div class="workflow-text">
+          <div class="workflow-title">
+            <div class="workflow-icon">⚡</div>
+            <h3>Optimized Playback</h3>
+          </div>
           <p>
-            A visual timeline representing the audio waveform. Adjust subtitle timing just by dragging edges, edit
-            text, split clips, and merge lines. Essential for fixing out-of-sync or not-perfect-enough subtitles.
+            Don't waste your time watching scenery - focus on the dialogue.
+            <b><span class="highlight">Y'ALL</span> <span
+              class="highlight">M</span>edia <span class="highlight">P</span>layer</b> treats media as a consecutive
+            playlist of two
+            distinct clip types: <b>Subtitled Clips</b> and <b>Gaps</b> between them.
           </p>
-        </article>
-
-        <article class="feature-card">
-          <div class="feature-icon">🔍</div>
-          <h3 class="highlight">Universal Lookup</h3>
           <p>
-            Click on any word or click and drag to select a phrase to search it online instantly. Use the built-in
-            browser to look up terms on Google, online dictionaries, or any other website you configure.
+            Increase the <b>Gaps</b> speed to fast-forward the silence automatically and get faster to <b>Subtitled
+            Clips</b> which can be played at normal speed. You can also skip the <b>Gaps</b> altogether and just jump to
+            the
+            nearest <b>Subtitled Clip</b>.
           </p>
-        </article>
-
-        <article class="feature-card">
-          <div class="feature-icon">⚡</div>
-          <h3 class="highlight">Anki integration</h3>
           <p>
-            Generate Anki flashcards with a single click. Supports custom templates, allowing you to export multiple
-            card types (Reading, Listening, Sentence etc.) at the same time.
+            Transform a ~40-minute episode into ~30 minutes of pure, high-density input.
           </p>
-        </article>
+        </div>
+        <div class="workflow-media">
+          <div class="media-wrapper">
+            <img src="feature-2.png"
+                 alt="Optimized Playback"
+                 class="feature-img"
+                 loading="lazy">
+          </div>
+        </div>
+      </div>
 
-        <article class="feature-card">
-          <div class="feature-icon">🖥️</div>
-          <h3 class="highlight">Hybrid Rendering</h3>
+      <div class="workflow-row">
+        <div class="workflow-text">
+          <div class="workflow-title">
+            <div class="workflow-icon">🔍</div>
+            <h3>Instant Dictionary Lookups</h3>
+          </div>
           <p>
-            Combines the performance of MPV for video playback with a modern HTML overlay. This ensures smooth playback
-            while making every subtitle character interactive and selectable.
+            Stop Alt-Tabbing to a web browser and breaking your immersion:
           </p>
-        </article>
+          <ul>
+            <li>
+              <b class="highlight">Smart Selection</b>: Hover over subtitles to see intelligent word boundaries. Click
+              any word to instantly open the Built-in Browser to your preferred preconfigured website.
+            </li>
+            <li>
+              <b class="highlight">Precision Control</b>: Hold Ctrl to select specific characters or click-and-drag to
+              select entire phrases.
+            </li>
+            <li>
+              <b class="highlight">Zero-Friction Notes</b>: Highlight a definition in the built-in browser and save it
+              directly
+              to your card notes via the right-click menu or a keyboard shortcut (CTRL+SHIFT+S) - no tedious
+              copy-pasting required.
+            </li>
+          </ul>
+          <p style="margin-top: 0.5rem;">
+            <i>Currently only online dictionary lookups are available, full support
+              for offline dictionaries is scheduled for future versions.</i>
+          </p>
+        </div>
+        <div class="workflow-media">
+          <div class="media-wrapper">
+            <img src="feature-3.png"
+                 alt="Instant Dictionary Lookups"
+                 class="feature-img"
+                 loading="lazy">
+          </div>
+        </div>
+      </div>
 
-        <article class="feature-card">
-          <div class="feature-icon">⏸️</div>
-          <h3 class="highlight">Auto-Pause</h3>
+      <div class="workflow-row">
+        <div class="workflow-text">
+          <div class="workflow-title">
+            <div class="workflow-icon">🧠</div>
+            <h3>Anki Integration</h3>
+          </div>
           <p>
-            Automatically pauses playback at the start and/or end of every subtitle line, if you want. Gives you time
-            to read, shadow practice, or process the sentence before moving on.
+            Found a sentence worth remembering? Press <b class="highlight">E</b> to export it to
+            <a class="highlight" href="https://apps.ankiweb.net/" target="_blank">Anki</a> and remember it forever.
           </p>
-        </article>
-
-        <article class="feature-card">
-          <div class="feature-icon">⏩</div>
-          <h3 class="highlight">Smart Speed</h3>
           <p>
-            Set different playback speeds for dialogue versus silence. Skim through quiet scenes efficiently, or skip
-            them altogether, while keeping dialogue at a comprehensible speed.
+            The player automatically extracts the <b>audio</b>, captures a <b>screenshot</b> or <b>entire video clip</b>,
+            grabs
+            the <b>text</b> with your <b>notes</b>, and sends a high-quality flashcard directly to
+            <a class="highlight" href="https://apps.ankiweb.net/" target="_blank">Anki</a>
+            via <a class="highlight" href="https://ankiweb.net/shared/info/2055492159" target="_blank">AnkiConnect</a>.
+            Zero friction.
           </p>
-        </article>
+        </div>
+        <div class="workflow-media">
+          <div class="media-wrapper">
+            <img src="feature-4.png"
+                 alt="Anki Integration"
+                 class="feature-img"
+                 loading="lazy">
+          </div>
+        </div>
+      </div>
 
-        <article class="feature-card">
-          <div class="feature-icon">💾</div>
-          <h3 class="highlight">Resume Anywhere</h3>
+      <div class="workflow-row">
+        <div class="workflow-text">
+          <div class="workflow-title">
+            <div class="workflow-icon">🎧</div>
+            <h3>Settings Presets</h3>
+          </div>
           <p>
-            Every media file is treated as a separate project. The app remembers the exact playback position, subtitle
-            adjustments, and your <b>notes</b>, so you can pick up exactly where you left off and track progress.
+            Switch learning modes instantly based on your current goals:
           </p>
-        </article>
+          <ul>
+            <li>
+              <b class="highlight">Listening Practice</b>: Auto-hides subtitles until you toggle them, then auto-pauses
+              the clip at the end, allowing you to verify first what you heard, before revealing the subtitles.
+            </li>
+            <li>
+              <b class="highlight">Speaking Practice</b>: Auto-pauses at the start of a clip, letting you read the text
+              before resuming the clip and comparing your pronunciation with the native audio.
+            </li>
+            <li>
+              <b class="highlight">Custom</b>: Tweak every setting to create your own ideal configuration.
+            </li>
+          </ul>
+        </div>
+        <div class="workflow-media">
+          <div class="media-wrapper">
+            <img src="feature-5.png"
+                 alt="Deliberate Practice Modes"
+                 class="feature-img"
+                 loading="lazy">
+          </div>
+        </div>
+      </div>
 
-        <article class="feature-card">
-          <div class="feature-icon">🎓</div>
-          <h3 class="highlight">Practice Presets</h3>
+      <div class="workflow-row">
+        <div class="workflow-text">
+          <div class="workflow-title">
+            <div class="workflow-icon">🚀</div>
+            <h3>Progress Tracking</h3>
+          </div>
           <p>
-            Switch learning modes based on your goals. Use <strong>Listening Practice</strong> to hide subtitles until
-            you verify what you heard, or <strong>Speaking Practice</strong> to read first and compare your
-            pronunciation with native audio.
+            Every media file is treated as a separate project. The app remembers last playback position, timeline
+            adjustments, and your manual notes, so you can pick up exactly where you left off and track progress.
           </p>
-        </article>
-
-        <article class="feature-card">
-          <div class="feature-icon">⌛</div>
-          <h3 class="highlight">Coming Soon</h3>
           <p>
-            Full support for offline dictionaries is currently in development. This will allow for instant,
-            zero-latency lookups without an internet connection.
+            This transforms media from a fleeting stream of content into a concrete list of sentences to be learned.
           </p>
-        </article>
-
+        </div>
+        <div class="workflow-media">
+          <div class="media-wrapper">
+            <img src="feature-6.png"
+                 alt="Progress Tracking"
+                 class="feature-img"
+                 loading="lazy">
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -255,7 +364,7 @@
   <section id="download" class="section-download">
     <div class="container download-inner">
       <h2>Download</h2>
-      <p class="download-sub">Open Source (GPLv3). Free. No Account Required.</p>
+      <p class="download-sub">Open Source (GPLv3). <b class="highlight">Free</b>. No Account Required.</p>
 
       <div class="download-box">
         <div class="os-section">
@@ -267,7 +376,7 @@
             </svg>
             <span>Download Installer (.exe)</span>
           </a>
-          <span class="version-info">Beta v0.8.0 | Includes mpv, FFmpeg & audiowaveform</span>
+          <span class="version-info">Beta v0.8.0 | Includes mpv player, FFmpeg & audiowaveform</span>
         </div>
 
         <hr class="divider">
@@ -277,7 +386,9 @@
           <p>
             Experimental support 🧪 (in BETA)
             <br>
-            Requires manual installation of external dependencies (mpv, audiowaveform, etc.)
+            Requires manual installation of external dependencies
+            <br>
+            (mpv player, audiowaveform, etc.)
           </p>
           <a href="https://github.com/kgurniak91/yall-mp#installation" class="text-link">
             Click here for installation instructions on GitHub &rarr;
@@ -293,10 +404,25 @@
       <h2>FAQ</h2>
       <div class="faq-item">
         <details>
+          <summary>Why can't I see the audio waveform on the timeline?</summary>
+          <p>
+            Audio waveform generation is a performance-heavy process that takes a long time once per project (around ~1
+            minute for ~2h video on a high-end PC).
+            <br>
+            During that time, while the timeline is being generated, the video playback is unavailable.
+            <br>
+            Because of that, and for performance reasons, it's disabled by default.
+            <br>
+            You can enable it manually in the global settings inside the app.
+          </p>
+        </details>
+      </div>
+      <div class="faq-item">
+        <details>
           <summary>How do I set up Anki integration?</summary>
           <p>
             Y'ALL Media Player connects seamlessly with Anki via the AnkiConnect add-on.<br>
-            You can create cards with audio, screenshots, and video clips in one click.<br>
+            You can create cards with text, audio, screenshots, and video clips in one click.<br>
             <a href="https://github.com/kgurniak91/yall-mp#installation" class="text-link">
               Click here for detailed integration instructions &rarr;
             </a>
@@ -340,14 +466,15 @@
   <div class="container footer-inner">
     <div class="col-left">
       <p>
-        &copy; 2025 <b>Y'ALL Media Player</b>.
-        <span class="footer-break">
-          Created by <a class="highlight" href="https://kgurniak91.github.io" target="_blank"><b>Krzysztof Gurniak</b></a>.
-        </span>
+        &copy; 2025 <b><span class="highlight">Y'ALL</span> <span class="highlight">M</span>edia <span
+        class="highlight">P</span>layer</b>.
       </p>
     </div>
     <div class="col-right">
-      <a href="https://github.com/kgurniak91/yall-mp" target="_blank">GitHub</a>
+      <span class="footer-break">
+          Created by <a class="highlight" href="https://kgurniak91.github.io"
+                        target="_blank"><b>Krzysztof Gurniak</b></a>.
+        </span>
     </div>
   </div>
 </footer>
