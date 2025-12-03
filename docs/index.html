@@ -4,8 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Y'ALL Media Player</title>
+  <meta name="title"
+        content="Y'ALL Media Player - Yet Another Language Learning Media Player">
   <meta name="description"
-        content="Turn any media files into interactive learning materials. Sentence mine movies, edit subtitles on the fly, and export to Anki.">
+        content="Free open-source media player for immersion learning. Turns any media file into interactive learning material. Sentence mining, edit subtitles, and export flashcards to Anki instantly.">
+  <meta name="keywords"
+        content="language learning, mpv, anki, immersion, sentence mining, subtitles, timeline, flashcards, pronunciation, listening comprehension">
+  <meta name="author" content="Krzysztof Gurniak">
+  <link rel="canonical" href="https://yallmp.com/">
   <link rel="stylesheet" href="styles.css">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
@@ -19,7 +25,6 @@
       <div class="logo-text">
         <span class="highlight">Y'ALL</span> <span class="highlight">M</span>edia <span class="highlight">P</span>layer
       </div>
-      <span class="badge">BETA v0.8.0</span>
     </div>
 
     <button class="mobile-menu-btn" aria-label="Toggle Menu">
@@ -33,7 +38,7 @@
         <li><a href="#faq">FAQ</a></li>
         <li><a href="https://github.com/kgurniak91/yall-mp" target="_blank">GitHub</a></li>
 
-        <li class="lang-item">
+        <li class="lang-item" style="display: none;">
           <button class="lang-toggle" aria-label="Switch Language">
             <span class="active">EN</span><span class="sep">/</span><span>PL</span>
           </button>
@@ -94,7 +99,7 @@
       <p class="hero-sub">
         <b><span class="highlight">Y'ALL</span> <span class="highlight">M</span>edia <span class="highlight">P</span>layer</b>
         lets you master <b class="highlight">vocabulary</b>, <b
-        class="highlight">listening comprehension</b> and <b class="highlight">pronunciation</b> by turning any media
+          class="highlight">listening comprehension</b> and <b class="highlight">pronunciation</b> by turning any media
         into an interactive
         study&nbsp;session with integrated dictionary lookups, subtitles editing, Anki flashcard creation and more!
       </p>
@@ -105,7 +110,7 @@
       </div>
 
       <div class="app-showcase">
-        <img src="yall-mp-screenshot.png"
+        <img src="images/yall-mp-screenshot.png"
              alt="Y'ALL MP Interface showing waveform timeline"
              width="1200"
              height="675"
@@ -161,7 +166,7 @@
           <p>
             Most media players just render static text on top of a video and call it a day.
             <b><span class="highlight">Y'ALL</span> <span class="highlight">M</span>edia <span
-              class="highlight">P</span>layer</b> gives you full control over its dynamic, interactive timeline:
+                class="highlight">P</span>layer</b> gives you full control over its dynamic, interactive timeline:
           </p>
           <ul>
             <li>
@@ -191,7 +196,7 @@
         </div>
         <div class="workflow-media">
           <div class="media-wrapper">
-            <img src="feature-1.png"
+            <img src="images/features/feature-1.png"
                  alt="Interactive Timeline"
                  class="feature-img"
                  loading="lazy">
@@ -208,7 +213,7 @@
           <p>
             Don't waste your time watching scenery - focus on the dialogue.
             <b><span class="highlight">Y'ALL</span> <span
-              class="highlight">M</span>edia <span class="highlight">P</span>layer</b> treats media as a consecutive
+                class="highlight">M</span>edia <span class="highlight">P</span>layer</b> treats media as a consecutive
             playlist of two
             distinct clip types: <b>Subtitled Clips</b> and <b>Gaps</b> between them.
           </p>
@@ -224,7 +229,7 @@
         </div>
         <div class="workflow-media">
           <div class="media-wrapper">
-            <img src="feature-2.png"
+            <img src="images/features/feature-2.png"
                  alt="Optimized Playback"
                  class="feature-img"
                  loading="lazy">
@@ -264,7 +269,7 @@
         </div>
         <div class="workflow-media">
           <div class="media-wrapper">
-            <img src="feature-3.png"
+            <img src="images/features/feature-3.png"
                  alt="Instant Dictionary Lookups"
                  class="feature-img"
                  loading="lazy">
@@ -293,7 +298,7 @@
         </div>
         <div class="workflow-media">
           <div class="media-wrapper">
-            <img src="feature-4.png"
+            <img src="images/features/feature-4.png"
                  alt="Anki Integration"
                  class="feature-img"
                  loading="lazy">
@@ -326,7 +331,7 @@
         </div>
         <div class="workflow-media">
           <div class="media-wrapper">
-            <img src="feature-5.png"
+            <img src="images/features/feature-5.png"
                  alt="Deliberate Practice Modes"
                  class="feature-img"
                  loading="lazy">
@@ -350,7 +355,7 @@
         </div>
         <div class="workflow-media">
           <div class="media-wrapper">
-            <img src="feature-6.png"
+            <img src="images/features/feature-6.png"
                  alt="Progress Tracking"
                  class="feature-img"
                  loading="lazy">
@@ -376,7 +381,7 @@
             </svg>
             <span>Download Installer (.exe)</span>
           </a>
-          <span class="version-info">Beta v0.8.0 | Includes mpv player, FFmpeg & audiowaveform</span>
+          <span class="version-info">Beta version | Includes mpv player, FFmpeg & audiowaveform</span>
         </div>
 
         <hr class="divider">
@@ -407,7 +412,7 @@
           <summary>Why can't I see the audio waveform on the timeline?</summary>
           <p>
             Audio waveform generation is a performance-heavy process that takes a long time once per project (around ~1
-            minute for ~2h video on a high-end PC).
+            minute for ~2h video on a high-end computer).
             <br>
             During that time, while the timeline is being generated, the video playback is unavailable.
             <br>
@@ -423,7 +428,7 @@
           <p>
             Y'ALL Media Player connects seamlessly with Anki via the AnkiConnect add-on.<br>
             You can create cards with text, audio, screenshots, and video clips in one click.<br>
-            <a href="https://github.com/kgurniak91/yall-mp#installation" class="text-link">
+            <a href="anki.html" class="text-link">
               Click here for detailed integration instructions &rarr;
             </a>
           </p>
@@ -456,6 +461,21 @@
           </p>
         </details>
       </div>
+      <div class="faq-item">
+        <details>
+          <summary>Why is the playback stuttering?</summary>
+          <p>
+            Y'ALL Media Player isn't designed for regular, continuous playback of media, like conventional media players.
+            <br>
+            Instead, it creates a playlist of clips, that are played on by one, with different settings, depending
+            whether they have subtitles or not.
+            <br>
+            The moment of switching clips takes time, which may seem like stuttering, but it's negligible once you start
+            using one of the preconfigured learning modes (listening or speaking practice), because they auto-pause
+            after each subtitled clip, awaiting for your explicit action to continue playback.
+          </p>
+        </details>
+      </div>
     </div>
   </section>
 
@@ -467,7 +487,7 @@
     <div class="col-left">
       <p>
         &copy; 2025 <b><span class="highlight">Y'ALL</span> <span class="highlight">M</span>edia <span
-        class="highlight">P</span>layer</b>.
+          class="highlight">P</span>layer</b>.
       </p>
     </div>
     <div class="col-right">

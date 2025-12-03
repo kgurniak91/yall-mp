@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Y'ALL Media Player</title>
+  <meta name="title"
+        content="Y'ALL Media Player - Yet Another Language Learning Media Player">
+  <meta name="description"
+        content="Free open-source media player for immersion learning. Turns any media file into interactive learning material. Sentence mining, edit subtitles, and export flashcards to Anki instantly.">
+  <meta name="keywords"
+        content="language learning, mpv, anki, immersion, sentence mining, subtitles, timeline, flashcards, pronunciation, listening comprehension">
+  <meta name="author" content="Krzysztof Gurniak">
+  <link rel="canonical" href="https://yallmp.com/">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="site-header">
+  <div class="container header-inner">
+
+    <div class="logo-area">
+      <div class="logo-text">
+        <span class="highlight">Y'ALL</span> <span class="highlight">M</span>edia <span class="highlight">P</span>layer
+      </div>
+    </div>
+
+    <button class="mobile-menu-btn" aria-label="Toggle Menu">
+      <span>&#9776;</span>
+    </button>
+
+    <nav class="main-nav">
+      <ul>
+        <li><a href="index.html#workflow">How It Works</a></li>
+        <li><a href="index.html#download">Download</a></li>
+        <li><a href="index.html#faq">FAQ</a></li>
+        <li><a href="https://github.com/kgurniak91/yall-mp" target="_blank">GitHub</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="section-anki">
+    <div class="container">
+      <div class="anki-header">
+        <h1>
+          <b class="highlight">Anki</b> integration manual
+        </h1>
+        <br>
+        <p>
+          <b class="highlight">Anki</b> is a flashcard program that helps you spend more time on challenging material,
+          and less on what you already know.
+        </p>
+        <ol>
+          <li>
+            Install <a class="highlight" href="https://apps.ankiweb.net/" target="_blank">Anki</a> on your computer
+            and log in with your free account.
+          </li>
+          <li>
+            Install the <a class="highlight" href="https://ankiweb.net/shared/info/2055492159"
+                           target="_blank">AnkiConnect</a> add-on in Anki.
+            After installation, restart Anki for the changes to take effect.
+            Verify that it was installed properly by visiting the
+            <a class="highlight" href="http://localhost:8765" target="_blank">localhost:8765</a> address in the browser.
+            You should see something similar to <code>&#123;"apiVersion": "AnkiConnect v.6"&#125;</code>
+          </li>
+          <li>
+            Create new deck in Anki ("Create Deck" at the bottom of the page) and name it accordingly (e.g., "English
+            pronunciation", "Spanish sentence cards" etc.).
+            Configuring specific deck options is beyond the scope of this manual - check official Anki documentation for
+            that - but you should be fine with default settings for now.
+          </li>
+          <li>
+            In Anki, select "Tools" -> "Manage Note Types" from the menu:<br>
+            • Click the "Add" button.<br>
+            • Click "OK" with option "Add: Basic" selected.<br>
+            • Give your card template some name, for example "yall-mp", confirm.<br>
+            • The note will appear on the list of note types:<br><br>
+            <img src="images/anki/anki-1.png" alt="New note type on the list">
+            <br>
+          </li>
+          <li>
+            With the new note type highlighted (just like in the screenshot above), click on the "Fields" button - new
+            dialog window will appear:<br>
+            • Here you can configure fields for different elements that Y'ALL Media Player can export.<br>
+            • You need a separate field for "id" and at least 1 field out of: "subtitle_text", "audio", "screenshot",
+            "video_clip", "notes".<br>
+            • You can remove the default "Front" and "Back" fields.<br>
+            • You should end up with something like this:<br><br>
+            <img src="images/anki/anki-2.png" alt="List of fields for note type">
+            <i>
+              Here I am using all the fields available, but you don't have to define them all.
+              If you are 100% sure you won't need video clip for example, you can omit the "video_clip" field etc.
+              Keep in mind that "id" field and at least 1 other is required later to integrate properly.
+            </i>
+            <br><br>
+            • After adding all the fields that you need, click "Save" to exit the "Fields" dialog and go back to "Note
+            Types" dialog.
+          </li>
+          <li>
+            Now for the <b>final step</b>, make sure your new note type is still selected, then click on "Cards" button:<br>
+            • Here, you can configure the "front" and "back" of your flashcard - which of the configured fields will be
+            displayed where etc.<br>
+            • You can define any HTML and CSS you want, but for simplicity we will create the most barebone card
+            template possible.<br>
+            • It all depends what type of card you want to achieve. Y'ALL Media Player supports exporting multiple
+            flashcard types at once, so you can define as many card templates as you want.<br>
+            • To keep it simple, let's assume you want a card for listening comprehension - "audio" on the front,
+            "subtitle_text" on the back.<br>
+            • Select "Front template" radio button (should be selected by default) and put the code <code>&#123;&#123;audio&#125;&#125;</code>
+            in the large textarea below it:<br><br>
+            <img src="images/anki/anki-3.png" alt="Defining the front side of Anki card template">
+            <br>
+            Now select "Back template" radio button and put the following code in the large textarea below it:
+            <br><br>
+            <div style="background-color: darkgray; color: black;">
+              <code>&#123;&#123;FrontSide&#125;&#125;</code><br>
+              <code>&lt;hr id=answer&gt;</code><br>
+              <code>&#123;&#123;subtitle_text&#125;&#125;</code><br>
+            </div>
+            <br><br>
+            <img src="images/anki/anki-4.png" alt="Defining the back side of Anki card template">
+            <br>
+            • Click "Save" to confirm and exit the dialog, then also close the "Note Types" dialog.<br>
+            • That is of course the simplest card template you could possibly make - to learn more, consult the
+            official Anki documentation.<br>
+            • Add as many card templates as you need - for example you might want a separate template for reading
+            comprehension (text on the front, audio on the back) etc.
+          </li>
+          <li>
+            <b class="highlight">Always keep Anki open in the background when using Y'ALL Media Player. It will be
+              automatically
+              detected by the app.</b>
+          </li>
+          <li>
+            In Y'ALL Media Player, open global settings from the main menu (keyboard shortcut: <b
+            class="highlight">O</b>), go to the
+            "Anki integration" tab and configure new Anki template(s) - you should be able to see your Anki deck,
+            created note type etc.:
+            <br><br>
+            <img src="images/anki/anki-5.png" alt="Defining new Anki card template in Y'ALL Media Player">
+            <br>
+          </li>
+          <li>
+            Everything should work now. Play some subtitled clip and either press <b class="highlight">E</b> keyboard
+            shortcut or
+            right click the clip on the timeline and select "Export to Anki". Remember to select the card template(s)
+            you want to use and press Export:
+            <br><br>
+            <img src="images/anki/anki-6.png" alt="Anki export dialog in Y'ALL Media Player">
+          </li>
+        </ol>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- FOOTER -->
+<footer style="margin-top: 0;">
+  <div class="container footer-inner">
+    <div class="col-left">
+      <p>
+        &copy; 2025 <b><span class="highlight">Y'ALL</span> <span class="highlight">M</span>edia <span
+        class="highlight">P</span>layer</b>.
+      </p>
+    </div>
+    <div class="col-right">
+      <span class="footer-break">
+          Created by <a class="highlight" href="https://kgurniak91.github.io"
+                        target="_blank"><b>Krzysztof Gurniak</b></a>.
+        </span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Mobile Menu
+  const menuBtn = document.querySelector('.mobile-menu-btn');
+  const nav = document.querySelector('.main-nav');
+
+  menuBtn.addEventListener('click', () => {
+    nav.classList.toggle('active');
+  });
+
+  // Close menu on link click
+  nav.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => {
+      nav.classList.remove('active');
+      menuBtn.querySelector('span').innerHTML = '&#9776;';
+    });
+  });
+</script>
+</body>
+</html>

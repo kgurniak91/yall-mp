@@ -43,13 +43,13 @@ nav ul {
   list-style: none;
 }
 
-.section-workflow ol li {
+ol li {
   text-align: left;
   margin-bottom: 0.5rem;
   font-size: 1.25rem;
 }
 
-.section-workflow ol li::marker {
+ol li::marker {
   color: var(--primary);
 }
 
@@ -548,6 +548,38 @@ details p {
   padding: 0 1.5rem 1.5rem 1.5rem;
   color: var(--text-muted);
   line-height: 1.7;
+}
+
+/* ANKI MANUAL */
+.section-anki {
+  padding: 2rem 0 1rem;
+  background: var(--card-bg);
+  border-top: 1px solid var(--border);
+}
+
+.section-anki ul {
+  padding-left: 1.25rem;
+}
+
+.anki-header {
+  text-align: center;
+  margin-bottom: 4rem;
+  max-width: 80rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.anki-header h1 {
+  font-size: 2.5rem;
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+}
+
+.anki-header p {
+  color: var(--text-main);
+  font-size: 1.2rem;
+  text-align: left;
+  margin-bottom: 0.5rem;
 }
 
 /* FOOTER */
