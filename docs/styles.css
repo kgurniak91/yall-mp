@@ -462,12 +462,21 @@ img, video {
   font-size: 1.4rem;
 }
 
-.version-info {
+.version-info, .version-number {
   display: block;
   margin-top: 0.5rem;
-  color: var(--text-muted);
-  font-size: 0.9rem;
   text-align: center;
+}
+
+.version-info {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+.version-number {
+  font-weight: bold;
+  font-size: 1.25rem;
 }
 
 .btn-large {

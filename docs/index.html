@@ -374,14 +374,15 @@
       <div class="download-box">
         <div class="os-section">
           <h3>Windows</h3>
-          <a href="https://github.com/kgurniak91/yall-mp/releases/latest" class="btn btn-large">
+          <a id="win-download-btn" href="https://github.com/kgurniak91/yall-mp/releases/latest" class="btn btn-large">
             <svg class="win-icon" viewBox="0 0 24 24" width="24" height="24">
               <path fill="currentColor"
                     d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/>
             </svg>
             <span>Download Installer (.exe)</span>
           </a>
-          <span class="version-info">Beta version | Includes mpv player, FFmpeg & audiowaveform</span>
+          <span class="version-info">Includes mpv player, FFmpeg & audiowaveform</span>
+          <span id="version-text" class="version-number highlight">Loading latest version...</span>
         </div>
 
         <hr class="divider">
@@ -563,6 +564,31 @@
       }
     }
   });
+
+  // Fetch latest version from GitHub API
+  fetch('https://api.github.com/repos/kgurniak91/yall-mp/releases/latest')
+    .then(response => response.json())
+    .then(data => {
+      //  Update Version Text
+      const versionSpan = document.getElementById('version-text');
+      if (versionSpan) {
+        versionSpan.innerText = data.tag_name;
+      }
+
+      // Find the .exe asset
+      const winAsset = data.assets.find(asset => asset.name.endsWith('.exe'));
+
+      if (winAsset) {
+        const btn = document.getElementById('win-download-btn');
+        if (btn) {
+          btn.href = winAsset.browser_download_url;
+        }
+      }
+    })
+    .catch(err => {
+      console.error("Failed to fetch latest release:", err);
+      // Fallback is already in the HTML href by default, so no action needed.
+    });
 </script>
 </body>
 </html>
