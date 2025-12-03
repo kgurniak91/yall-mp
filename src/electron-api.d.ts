@@ -55,7 +55,7 @@ export interface IElectronAPI {
   getProjectFonts: (projectId: string) => Promise<FontData[]>;
   deleteProjectFonts: (projectId: string) => void;
   checkFileExists: (filePath: string) => Promise<boolean>;
-  generateAudioPeaks: (projectId: string, mediaPath: string) => Promise<number[][] | null>;
+  generateAudioPeaks: (projectId: string, mediaPath: string, audioTrackIndex?: number) => Promise<number[][] | null>;
   findAdjacentMedia: (currentPath: string, direction: 'next' | 'previous') => Promise<string | null>;
   findCompanionSubtitle: (mediaPath: string) => Promise<string | null>;
   // --- File Association ("Open with")

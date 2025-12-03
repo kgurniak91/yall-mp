@@ -1150,7 +1150,7 @@ if (!gotTheLock) {
       }
     });
 
-    ipcMain.handle('project:generate-audio-peaks', async (_, projectId, mediaPath) => generateAudioPeaks(projectId, mediaPath));
+    ipcMain.handle('project:generate-audio-peaks', async (_, projectId, mediaPath, audioTrackIndex) => generateAudioPeaks(projectId, mediaPath, audioTrackIndex));
 
     ipcMain.handle('fs:check-file-exists', async (_, filePath: string) => {
       if (!filePath) return false;
@@ -2210,7 +2210,7 @@ async function detectLanguage(text: string): Promise<SupportedLanguage> {
   return 'other';
 }
 
-async function generateAudioPeaks(projectId: string, mediaPath: string): Promise<number[][] | null> {
+async function generateAudioPeaks(projectId: string, mediaPath: string, audioTrackIndex?: number): Promise<number[][] | null> {
   await ensureFFmpegPaths();
 
   const platform = process.platform;
@@ -2250,12 +2250,18 @@ async function generateAudioPeaks(projectId: string, mediaPath: string): Promise
     }
   }
 
-  console.log(`[Peaks] Generating waveform peaks for project ${projectId} using a WAV pipe.`);
+  console.log(`[Peaks] Generating waveform peaks for project ${projectId} using a WAV pipe (audio track index: ${audioTrackIndex ?? 'Default'}).`);
 
   return new Promise((resolve, reject) => {
+    const ffmpegArgs = ['-i', mediaPath];
+
+    if (audioTrackIndex != null) {
+      ffmpegArgs.push('-map', `0:${audioTrackIndex}`);
+    }
+
     // -f wav: Output format is WAV.
     // -ar 16000: Downsample to 16kHz. Still very fast, but slightly better quality than 8kHz.
-    const ffmpegArgs = ['-i', mediaPath, '-vn', '-f', 'wav', '-ac', '1', '-ar', '16000', '-'];
+    ffmpegArgs.push('-vn', '-f', 'wav', '-ac', '1', '-ar', '16000', '-');
 
     // When reading from a pipe (stdin), audiowaveform needs to be explicitly told the input format
     const audiowaveformArgs = [

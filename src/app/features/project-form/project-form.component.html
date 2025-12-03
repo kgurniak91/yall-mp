@@ -21,6 +21,20 @@
       </section>
 
       <section class="form-panel">
+        @if (audioTracks().length > 1) {
+          <h2 class="m-0 mb-3">Audio</h2>
+
+          <div class="mb-3" style="padding-left: 2rem;">
+            <p-select [options]="audioTrackOptions()"
+                      [(ngModel)]="selectedAudioTrackIndex"
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="Select audio track"
+                      styleClass="w-full">
+            </p-select>
+          </div>
+        }
+
         <h2 class="m-0 mb-3">Subtitles</h2>
         <div class="panel-body">
           @if (isProcessingMedia()) {

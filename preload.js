@@ -44,7 +44,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getProjectFonts: (projectId) => ipcRenderer.invoke('fonts:get-fonts', projectId),
   deleteProjectFonts: (projectId) => ipcRenderer.send('fonts:delete-fonts', projectId),
   checkFileExists: (filePath) => ipcRenderer.invoke('fs:check-file-exists', filePath),
-  generateAudioPeaks: (projectId, mediaPath) => ipcRenderer.invoke('project:generate-audio-peaks', projectId, mediaPath),
+  generateAudioPeaks: (projectId, mediaPath, audioTrackIndex) => ipcRenderer.invoke('project:generate-audio-peaks', projectId, mediaPath, audioTrackIndex),
   findAdjacentMedia: (currentPath, direction) => ipcRenderer.invoke('fs:find-adjacent-media', currentPath, direction),
   findCompanionSubtitle: (mediaPath) => ipcRenderer.invoke('fs:find-companion-subtitle', mediaPath),
   // --- File Association ("Open with")

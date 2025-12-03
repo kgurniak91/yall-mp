@@ -39,7 +39,6 @@ import {TagsInputComponent} from '../../../shared/components/tags-input/tags-inp
 })
 export class CurrentProjectSettingsComponent {
   public readonly settings = input.required<ProjectSettings>();
-  public readonly audioTracks = input<MediaTrack[]>([]);
   public readonly settingsPresets = input.required<SettingsPreset[]>();
   public readonly isAssProject = input(false);
   public readonly selectedSettingsPreset = input.required<SettingsPreset | null>();
@@ -49,12 +48,6 @@ export class CurrentProjectSettingsComponent {
   public readonly settingsChange = output<ProjectSettings>();
   public readonly selectedSettingsPresetChange = output<SettingsPreset | null>();
   protected readonly BuiltInSettingsPreset = BuiltInSettingsPreset;
-  protected readonly audioTrackOptions = computed(() => {
-    return this.audioTracks().map(track => ({
-      label: track.label || `Track ${track.index}`,
-      value: track.index
-    }));
-  });
   protected readonly subtitlesLanguageOptions: { label: string, value: SupportedLanguage }[] = [
     {label: 'Japanese', value: 'jpn'},
     {label: 'Chinese (Simplified)', value: 'cmn'},
@@ -83,11 +76,6 @@ export class CurrentProjectSettingsComponent {
 
   protected onSettingsPresetChange(preset: SettingsPreset | null): void {
     this.selectedSettingsPresetChange.emit(preset);
-  }
-
-  protected onAudioTrackChange(trackIndex: number): void {
-    window.electronAPI.mpvSetProperty('aid', trackIndex);
-    this.onSettingChange('selectedAudioTrackIndex', trackIndex);
   }
 
   protected onSettingChange<K extends keyof ProjectSettings>(key: K, value: ProjectSettings[K]): void {

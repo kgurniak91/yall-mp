@@ -1110,8 +1110,19 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
   private generateAudioPeaksInBackground(projectId: string, mediaPath: string): void {
     console.log('[ProjectDetails] No waveform peaks found. Generating new waveform peaks in the background...');
-    window.electronAPI.generateAudioPeaks(projectId, mediaPath)
+
+    const trackIndex = this.project()?.settings.selectedAudioTrackIndex ?? undefined;
+
+    window.electronAPI.generateAudioPeaks(projectId, mediaPath, trackIndex)
       .then(audioPeaks => {
+        // Check if the project still exists in state before updating (user could have deleted it while the timeline was being generated)
+        const projectStillExists = this.appStateService.projects().some(p => p.id === projectId);
+
+        if (!projectStillExists) {
+          console.log('[ProjectDetails] Project no longer exists or was closed. Skipping waveform update.');
+          return;
+        }
+
         if (audioPeaks) {
           // Success: Update store. Timeline component effect will pick this up and render.
           this.appStateService.updateProject(projectId, {audioPeaks});
@@ -1123,7 +1134,13 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       })
       .catch(e => {
         console.error(`[ProjectDetails] Failed to generate timeline waveform: ${e.message}`);
-        // Error: Update with empty peaks so timeline stops waiting
+
+        const projectStillExists = this.appStateService.projects().some(p => p.id === projectId);
+        if (!projectStillExists) {
+          return;
+        }
+
+        // Error fallback: Update with empty peaks so timeline stops waiting
         this.appStateService.updateProject(projectId, {audioPeaks: [[0]]});
       });
   }

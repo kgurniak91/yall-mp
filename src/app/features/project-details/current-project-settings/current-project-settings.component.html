@@ -29,8 +29,12 @@
                 <strong>Goal:</strong> Listen and figure out what was said.
               </p>
               <ul class="pl-3 m-0 mb-2">
-                <li>Not sure? Press <b>↑</b> to replay the audio.</li>
-                <li>Ready? Press <b>C</b> to reveal subtitles and check your answer.</li>
+                <li>
+                  Not sure? Press <b>↑</b> to replay the audio.
+                </li>
+                <li>
+                  Ready? Press <b>C</b> to reveal subtitles and check your answer.
+                </li>
               </ul>
             } @else if (preset.id === BuiltInSettingsPreset.SPEAKING) {
               <p class="mt-0 mb-2">
@@ -39,8 +43,12 @@
                 <strong>Goal:</strong> Read the subtitles out loud and practice your pronunciation.
               </p>
               <ul class="pl-3 m-0 mb-2">
-                <li>Press <b>Spacebar</b> to hear the native audio and compare it with your speech.</li>
-                <li>The clip automatically pauses at the end so you can press <b>↑</b> to replay and perfect your accent.</li>
+                <li>
+                  Press <b>Spacebar</b> to hear the native audio and compare it with your speech.
+                </li>
+                <li>
+                  The clip automatically pauses at the end so you can press <b>↑</b> to replay and perfect your accent.
+                </li>
               </ul>
             }
             <p class="m-0 p-0">
@@ -83,8 +91,11 @@
     </div>
   </p-fieldset>
 
-  <p-fieldset legend="Subtitles language" [toggleable]="false">
+  <p-fieldset legend="Subtitles Language Detection" [toggleable]="false">
     <div class="setting-item-column">
+      <small class="block">
+        This option changes how words are detected in subtitles when hovering over them with a mouse cursor.
+      </small>
       <div class="flex align-items-center gap-2">
         <p-select inputId="sub-lang"
                   [options]="subtitlesLanguageOptions"
@@ -100,27 +111,10 @@
                   styleClass="p-button-secondary"/>
       </div>
       <small class="block">
-        Changes how words are detected in subtitles when hovering.
+        If you want to change the language of the subtitles, you need to go to the main menu and select "Edit current project".
       </small>
     </div>
   </p-fieldset>
-
-  @if (audioTracks().length > 1) {
-    <p-fieldset legend="Audio" [toggleable]="false">
-      <div class="setting-item-column">
-        <label for="audio" class="font-semibold">
-          Audio Track
-        </label>
-        <p-select inputId="audio"
-                  [options]="audioTrackOptions()"
-                  [ngModel]="settings().selectedAudioTrackIndex"
-                  (ngModelChange)="onAudioTrackChange($event)"
-                  styleClass="w-full"
-                  optionLabel="label"
-                  optionValue="value"></p-select>
-      </div>
-    </p-fieldset>
-  }
 
   @if (isAssProject()) {
     <p-fieldset legend="Subtitles Renderer" [toggleable]="false">

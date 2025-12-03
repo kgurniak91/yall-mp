@@ -27,6 +27,7 @@ This action will reset all your progress:
 <li>Playback position</li>
 <li>Clip timings</li>
 <li>Subtitle edits</li>
+<li>Audio waveform</li>
 </ul>
 This action cannot be undone.
 `;
@@ -56,7 +57,14 @@ export class ProjectFormComponent implements OnInit {
   protected readonly subtitleTracks = signal<MediaTrack[]>([]);
   protected readonly selectedSubtitleOption = signal<'embedded' | 'external' | 'none'>('external');
   protected readonly selectedEmbeddedSubtitleTrackIndex = signal<number | null>(null);
+  protected readonly selectedAudioTrackIndex = signal<number | null>(null);
   protected readonly isProcessingMedia = signal(false);
+  protected readonly audioTrackOptions = computed(() => {
+    return this.audioTracks().map(track => ({
+      label: track.label || `Track ${track.index}`,
+      value: track.index
+    }));
+  });
   protected readonly isValid = computed(() => {
     if (!this.mediaFilePath()) {
       return false;
@@ -127,6 +135,7 @@ export class ProjectFormComponent implements OnInit {
           this.subtitleTracks.set(project.subtitleTracks);
           this.videoWidth.set(project.videoWidth);
           this.videoHeight.set(project.videoHeight);
+          this.selectedAudioTrackIndex.set(project.settings.selectedAudioTrackIndex);
         }
 
         this.selectedSubtitleOption.set(project.subtitleSelection.type);
@@ -163,6 +172,7 @@ export class ProjectFormComponent implements OnInit {
       this.subtitleTracks.set([]);
       this.videoWidth.set(undefined);
       this.videoHeight.set(undefined);
+      this.selectedAudioTrackIndex.set(null);
       return;
     }
 
@@ -183,6 +193,11 @@ export class ProjectFormComponent implements OnInit {
       this.videoWidth.set(metadata.videoWidth);
       this.videoHeight.set(metadata.videoHeight);
 
+      // Auto-select first audio track by default:
+      if (metadata.audioTracks.length > 0) {
+        this.selectedAudioTrackIndex.set(metadata.audioTracks[0].index);
+      }
+
       if (metadata.subtitleTracks.length > 0) {
         this.selectedSubtitleOption.set('embedded');
         this.selectedEmbeddedSubtitleTrackIndex.set(null);
@@ -195,6 +210,7 @@ export class ProjectFormComponent implements OnInit {
       this.subtitleTracks.set([]);
       this.videoWidth.set(undefined);
       this.videoHeight.set(undefined);
+      this.selectedAudioTrackIndex.set(null);
     }
   }
 
@@ -258,7 +274,6 @@ export class ProjectFormComponent implements OnInit {
     const mediaPath = this.mediaFilePath()!;
     const now = Date.now();
     const {subtitleSelection, subtitleFileName} = this.buildSubtitleSelection();
-    const firstAudioTrack = this.audioTracks()[0];
     const mediaFileName = this.getBaseName(mediaPath);
     const generatedAnkiTag = generateTagFromFileName(mediaFileName);
 
@@ -274,7 +289,7 @@ export class ProjectFormComponent implements OnInit {
       lastPlaybackTime: 0,
       settings: {
         ...this.globalSettingsStateService.defaultProjectSettings(),
-        selectedAudioTrackIndex: firstAudioTrack ? firstAudioTrack.index : null
+        selectedAudioTrackIndex: this.selectedAudioTrackIndex()
       },
       subtitles: [],
       lastSubtitleEndTime: 0,
@@ -299,12 +314,15 @@ export class ProjectFormComponent implements OnInit {
 
     const mediaPath = this.mediaFilePath()!;
     const {subtitleSelection, subtitleFileName} = this.buildSubtitleSelection();
-    const firstAudioTrack = this.audioTracks()[0];
     const existingProject = await this.appStateService.getProjectById(projectId);
+
     if (!existingProject) {
       this.toastService.error('Could not find the project to update.');
       return;
     }
+
+    const isAudioChanged = (existingProject.settings.selectedAudioTrackIndex !== this.selectedAudioTrackIndex());
+    const isMediaChanged = (existingProject.mediaPath !== mediaPath);
 
     const updates: Partial<Project> = {
       mediaPath: mediaPath,
@@ -316,13 +334,18 @@ export class ProjectFormComponent implements OnInit {
       subtitles: [],
       settings: {
         ...existingProject.settings,
-        selectedAudioTrackIndex: firstAudioTrack ? firstAudioTrack.index : null
+        selectedAudioTrackIndex: this.selectedAudioTrackIndex()
       },
       audioTracks: this.audioTracks(),
       subtitleTracks: this.subtitleTracks(),
       videoWidth: this.videoWidth(),
       videoHeight: this.videoHeight()
     };
+
+    if (isAudioChanged || isMediaChanged) {
+      updates.audioPeaks = undefined; // Force regeneration of audio waveform
+    }
+
     this.appStateService.updateProject(projectId, updates);
     this.toastService.success('Project updated successfully');
     this.router.navigate(['/project', projectId]);
