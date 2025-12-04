@@ -503,6 +503,32 @@ img, video {
   margin: 2rem 0;
 }
 
+.security-note {
+  margin-top: 12px;
+  background-color: #f0f7ff;
+  border: 1px solid #cce5ff;
+  border-radius: 6px;
+  padding: 1rem;
+  display: flex;
+  gap: 1rem;
+  text-align: left;
+  font-size: 0.85rem;
+  color: #333;
+}
+
+.note-icon {
+  font-size: 1.2rem;
+}
+
+.note-text a {
+  color: #0066cc;
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: 500;
+  display: inline-block;
+  margin-top: 1rem;
+}
+
 /* FAQ */
 .section-faq {
   padding: 3rem 0;

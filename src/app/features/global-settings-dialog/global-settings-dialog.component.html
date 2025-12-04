@@ -23,8 +23,11 @@
       <p class="mt-0">
         <a href="#" (click)="onExternalLinkClick('https://apps.ankiweb.net/', $event)">Anki</a> is a smart spaced repetition flashcard program.
         Make sure you have the <a href="#" (click)="onExternalLinkClick('https://ankiweb.net/shared/info/2055492159', $event)">AnkiConnect</a> addon installed.
+        <br>
         Open the Anki program and go to <a href="#" (click)="onExternalLinkClick('http://localhost:8765/', $event)">http://localhost:8765/</a> - you should see something like this:
-        <code>&#123;"apiVersion": "AnkiConnect v.6"&#125;</code>
+        <code>&#123;"apiVersion": "AnkiConnect v.6"&#125;</code>.
+        <br>
+        If you need more detailed integration instructions, read <a href="#" (click)="onExternalLinkClick('https://yallmp.com/anki.html', $event)">official Anki integration guide</a>.
       </p>
       <app-anki-settings/>
     </p-tabpanel>

@@ -8,7 +8,7 @@ const RESOURCES_DIR = path.join(__dirname, '..', 'electron-resources');
 
 const URLS = {
   win32: {
-    mpv: 'https://github.com/shinchiro/mpv-winbuild-cmake/releases/download/20251123/mpv-x86_64-v3-20251123-git-f6c1164.7z',
+    mpv: 'https://github.com/shinchiro/mpv-winbuild-cmake/releases/download/20251201/mpv-x86_64-20251201-git-72dbcf1.7z',
     audiowaveform: 'https://github.com/bbc/audiowaveform/releases/download/1.10.2/audiowaveform-1.10.2-win64.zip'
   }
 };

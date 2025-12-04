@@ -7,10 +7,17 @@
   <meta name="title"
         content="Y'ALL Media Player - Yet Another Language Learning Media Player">
   <meta name="description"
-        content="Free open-source media player for immersion learning. Turns any media file into interactive learning material. Sentence mining, edit subtitles, and export flashcards to Anki instantly.">
+        content="Free media player for language learning. Master listening comprehension and pronunciation, adjust subtitles, look up words, and export flashcards to Anki.">
   <meta name="keywords"
         content="language learning, mpv, anki, immersion, sentence mining, subtitles, timeline, flashcards, pronunciation, listening comprehension">
   <meta name="author" content="Krzysztof Gurniak">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://yallmp.com/">
+  <meta property="og:title"
+        content="Y'ALL Media Player - Yet Another Language Learning Media Player">
+  <meta property="og:description"
+        content="Free media player for language learning. Master listening comprehension and pronunciation, adjust subtitles, look up words, and export flashcards to Anki.">
+  <meta property="og:image" content="https://yallmp.com/images/yall-mp-screenshot.png">
   <link rel="canonical" href="https://yallmp.com/">
   <link rel="stylesheet" href="styles.css">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
@@ -385,6 +392,22 @@
           <span id="version-text" class="version-number highlight">Loading latest version...</span>
         </div>
 
+        <div class="security-note">
+          <div class="note-icon">ℹ️</div>
+          <div class="note-text">
+            <strong>SmartScreen warning on Windows?</strong><br>
+            <p>
+              All new versions are submitted to Microsoft for verification immediately.
+              If this is a new release, <b>it hasn't had enough time to be verified yet.</b>
+            </p>
+            <p>
+              You can safely ignore the warning (it is a false positive):
+              <br>
+              Click <b>More Info</b> &rarr; <b>Run Anyway</b>
+            </p>
+          </div>
+        </div>
+
         <hr class="divider">
 
         <div class="os-section">
@@ -410,6 +433,21 @@
       <h2>FAQ</h2>
       <div class="faq-item">
         <details>
+          <summary>Why do I see SmartScreen warning on Windows?</summary>
+          <p>
+            All new versions are submitted to Microsoft for verification immediately.
+            <br>
+            If this is a new release, <b>it hasn't had enough time to be verified yet.</b>
+          </p>
+          <p>
+            You can safely ignore the warning (it is a false positive):
+            <br>
+            Click <b>More Info</b> &rarr; <b>Run Anyway</b>
+          </p>
+        </details>
+      </div>
+      <div class="faq-item">
+        <details>
           <summary>Why can't I see the audio waveform on the timeline?</summary>
           <p>
             Audio waveform generation is a performance-heavy process that takes a long time once per project (around ~1
@@ -417,9 +455,9 @@
             <br>
             During that time, while the timeline is being generated, the video playback is unavailable.
             <br>
-            Because of that, and for performance reasons, it's disabled by default.
+            Because of that, and for performance reasons, it's <b>disabled by default</b>.
             <br>
-            You can enable it manually in the global settings inside the app.
+            You can <b>enable it manually</b> in the global settings inside the app.
           </p>
         </details>
       </div>
