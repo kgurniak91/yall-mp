@@ -25,6 +25,7 @@
     "package:win": "npm run electron:build && electron-builder --win",
     "package:mac": "npm run electron:build && electron-builder --mac",
     "package:linux": "npm run electron:build && electron-builder --linux",
+    "build:github-pages": "node github-pages/build.js",
     "postinstall": "node scripts/download-dependencies.js && npm run generate:licenses"
   },
   "build": {
@@ -226,6 +227,7 @@
     "concurrently": "^9.2.0",
     "electron": "^37.2.1",
     "electron-builder": "^26.0.12",
+    "fs-extra": "^11.3.2",
     "jasmine-core": "~5.6.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.2.0",
@@ -234,6 +236,7 @@
     "karma-jasmine-html-reporter": "~2.1.0",
     "license-checker-rseidelsohn": "^4.4.2",
     "lodash-es": "^4.17.21",
+    "mustache": "^4.2.0",
     "ng-mocks": "^14.13.5",
     "nodemon": "^3.1.10",
     "primeflex": "^4.0.0",

@@ -1,0 +1,197 @@
+{
+  "lang": "pl",
+  "rootPath": "../",
+  "meta": {
+    "title": "Y'ALL Media Player",
+    "description": "Darmowy odtwarzacz do nauki języków obcych. Opanuj rozumienie ze słuchu i wymowę, dostosuj napisy, sprawdzaj słowa w słowniku i eksportuj fiszki do Anki.",
+    "keywords": "nauka języków, mpv, anki, immersja, sentence mining, napisy, oś czasu, fiszki, wymowa, rozumienie ze słuchu",
+    "og_type": "website",
+    "og_url": "https://yallmp.com/pl/",
+    "og_image": "https://yallmp.com/images/yall-mp-screenshot.png",
+    "canonical": "https://yallmp.com/pl/"
+  },
+  "anki_meta": {
+    "title": "Y'ALL Media Player - integracja z Anki",
+    "description": "Poradnik krok po kroku jak połączyć Y'ALL Media Player z Anki. Dowiedz się jak eksportować klipy wideo, audio i napisy bezpośrednio do fiszek używając AnkiConnect.",
+    "keywords": "nauka języków, mpv, anki, immersja, ankiconnect, sentence mining, fiszki, poradnik integracji anki",
+    "og_type": "article",
+    "og_url": "https://yallmp.com/pl/anki.html",
+    "og_image": "https://yallmp.com/images/yall-mp-screenshot.png",
+    "canonical": "https://yallmp.com/pl/anki.html"
+  },
+  "navigation": [
+    {
+      "label": "Sposób działania",
+      "link": "#workflow"
+    },
+    {
+      "label": "Pobierz",
+      "link": "#download"
+    },
+    {
+      "label": "FAQ",
+      "link": "#faq"
+    },
+    {
+      "label": "GitHub",
+      "link": "https://github.com/kgurniak91/yall-mp",
+      "target": "_blank"
+    }
+  ],
+  "lang_switch": {
+    "link": "../index.html",
+    "label_html": "<span>EN</span><span class=\"sep\">/</span><span class=\"active\">PL</span>"
+  },
+  "footer_text": "Autor:",
+  "hero": {
+    "title_start": "Zmień",
+    "title_rotate_json": "[ \"filmy\", \"seriale\", \"audiobooki\", \"anime\", \"podcasty\", \"piosenki\" ]",
+    "title_rotate_default": "media",
+    "title_end": "w interaktywne materiały do nauki!",
+    "description": "pozwala opanować <b class=\"highlight\">słownictwo</b>, <b class=\"highlight\">rozumienie ze słuchu</b> oraz <b class=\"highlight\">wymowę</b>, zmieniając dowolny plik multimedialny w interaktywną sesję nauki ze zintegrowanymi słownikami, edycją napisów, tworzeniem fiszek w Anki i nie tylko!",
+    "btn_workflow": "Jak to działa?",
+    "btn_download": "Pobierz",
+    "screenshot_alt": "Interfejs Y'ALL MP pokazujący oś czasu z falą dźwiękową",
+    "screenshot_caption": "Źródło obrazu: \"Diuna: Część druga - Oficjalny Zwiastun\" (Warner Bros. Pictures)"
+  },
+  "workflow": {
+    "header": "Od <b class=\"highlight\">pasywnego konsumowania treści</b><br>do <b class=\"highlight\">aktywnej</b>, <b class=\"highlight\">świadomej nauki</b>.",
+    "intro": "<b><span class=\"highlight\">Y'ALL</span> <span class=\"highlight\">M</span>edia <span class=\"highlight\">P</span>layer</b> to narzędzie, które łączy w sobie odtwarzanie audio i wideo, zarządzanie napisami, integrację ze słownikami oraz tworzenie fiszek Anki w jeden spójny proces, optymalizując czas przeznaczony na naukę języków obcych:",
+    "step1": "Otwórz dowolny plik z napisami w <b>tym samym</b> języku, którego się uczysz (wbudowanymi lub z pliku zewnętrznego).",
+    "step2": "Program automatycznie przetworzy napisy i zamieni je w serię <b>klipów</b> na <b>interaktywnej osi czasu</b>, którą możesz dowolnie edytować.",
+    "step3": "<b>Oś czasu</b> rozróżnia fragmenty z napisami (<b>Dialogi</b>) i te bez nich (<b>Przerwy</b>). Możesz skonfigurować różne zachowania - np. prędkość odtwarzania lub auto-pauzę - dla każdego typu osobno.",
+    "step4": "Wybierz gotowy zestaw ustawień w zależności od celu nauki - np. <b>rozumienie ze słuchu</b> lub <b>ćwiczenie wymowy</b> - albo dostosuj dowolnie wszystkie ustawienia.",
+    "feature_timeline": {
+      "title": "Interaktywna oś czasu",
+      "desc": "Większość odtwarzaczy multimedialnych po prostu wyświetla napisy jako statyczny tekst i na tym poprzestaje.<br><b><span class=\"highlight\">Y'ALL</span> <span class=\"highlight\">M</span>edia <span class=\"highlight\">P</span>layer</b> umieszcza napisy na dynamicznej osi czasu i daje ci nad nią pełną kontrolę:",
+      "list": [
+        "<b class=\"highlight\">Wizualizacja audio</b>: Włącz wizualizację fali dźwiękowej w głównych ustawieniach, aby zobrazować dialogi i ciszę. Zobacz kiedy dane zdanie się zaczyna i kończy.",
+        "<b class=\"highlight\">Dostosuj czas</b>: Napisy są niezsynchronizowane? Po prostu złap za krawędź klipu na osi czasu, aby to poprawić.",
+        "<b class=\"highlight\">Edycja napisów</b>: Zmieniaj tekst napisów lub dodawaj własne, bezpośrednio w aplikacji.",
+        "<b class=\"highlight\">Dziel i łącz</b>: Napraw błędnie podzielone zdania, dzieląc długie klipy lub łącząc pocięte fragmenty.",
+        "<b class=\"highlight\">Równoległe ścieżki</b>: Łatwe zarządzanie wieloma ścieżkami napisów w zaawansowanych formatach plików takich jak ASS/SSA."
+      ]
+    },
+    "feature_playback": {
+      "title": "Optymalne odtwarzanie",
+      "desc_html": "<p>Nie trać czasu na oglądanie krajobrazów - skup się na dialogach. <b><span class=\"highlight\">Y'ALL</span> <span class=\"highlight\">M</span>edia <span class=\"highlight\">P</span>layer</b> traktuje media jak playlistę dwóch typów klipów: <b>Dialogów</b> oraz <b>Przerw</b> między nimi.</p><p>Zwiększ prędkość <b>Przerw</b>, aby automatycznie przewijać ciszę i szybciej trafiać na <b>Dialogi</b>, które mogą być odtwarzane z normalną prędkością. Możesz też całkowicie pomijać <b>Przerwy</b> i skakać od <b>Dialogu</b> do <b>Dialogu</b>.</p><p>Zmień ~40-minutowy odcinek w ~30 minut skondensowanej sesji nauki języka.</p>"
+    },
+    "feature_dict": {
+      "title": "Wyszukiwanie w słownikach",
+      "desc": "Przestań przełączać się do przeglądarki (Alt+Tab) i wybijać się z rytmu nauki:",
+      "list": [
+        "<b class=\"highlight\">Inteligentne zaznaczanie</b>: Najedź kursorem na napisy, aby zobaczyć granice słów. Kliknij na dowolne słowo, aby otworzyć wbudowaną przeglądarkę ze skonfigurowanym słownikiem online.",
+        "<b class=\"highlight\">Precyzyjna kontrola</b>: Przytrzymaj Ctrl, aby zaznaczać konkretne znaki, lub kliknij i przeciągnij myszką, by zaznaczyć całe frazy.",
+        "<b class=\"highlight\">Notatki bez wysiłku</b>: Zaznacz definicję we wbudowanej przeglądarce i zapisz ją bezpośrednio do notatek danego klipu, używając menu kontekstowego (prawy przycisk myszy) lub skrótu klawiszowego (CTRL+SHIFT+S) - bez żmudnego kopiowania i wklejania."
+      ],
+      "note": "Aktualnie wspierane są tylko słowniki online, pełne wsparcie dla słowników offline jest planowane w przyszłych wersjach."
+    },
+    "feature_anki": {
+      "title": "Integracja z Anki",
+      "desc_html": "<p>Widzisz zdanie warte zapamiętania? Naciśnij <b class=\"highlight\">E</b>, aby wyeksportować je do <a class=\"highlight\" href=\"https://apps.ankiweb.net/\" target=\"_blank\">Anki</a> i zapamiętać je na zawsze.</p><p>Odtwarzacz automatycznie zapisuje <b>dźwięk</b>, robi <b>zrzut ekranu</b> lub wycina <b>klip wideo</b>, pobiera <b>tekst</b> napisów wraz z twoimi <b>notatkami</b> i tworzy wysokiej jakości fiszkę bezpośrednio w <a class=\"highlight\" href=\"https://apps.ankiweb.net/\" target=\"_blank\">Anki</a>, korzystając z wtyczki <a class=\"highlight\" href=\"https://ankiweb.net/shared/info/2055492159\" target=\"_blank\">AnkiConnect</a>.</p><p><a href=\"anki.html\" class=\"text-link\">Kliknij tutaj, aby zobaczyć szczegółową instrukcję integracji &rarr;</a></p>"
+    },
+    "feature_presets": {
+      "title": "Tryby nauki",
+      "desc": "Przełączaj tryby nauki natychmiastowo w zależności od celu:",
+      "list": [
+        "<b class=\"highlight\">Rozumienie ze słuchu</b>: Automatycznie ukrywa napisy i zatrzymuje klip na końcu, pozwalając ci najpierw zweryfikować co zostało powiedziane, zanim odsłonisz napisy.",
+        "<b class=\"highlight\">Ćwiczenie wymowy</b>: Zatrzymuje klip na początku, pozwalając ci najpierw przeczytać tekst, zanim ręcznie wznowisz odtwarzanie, by móc porównać swoją wymowę z oryginałem.",
+        "<b class=\"highlight\">Inny cel</b>: Dostosuj każde ustawienie, aby stworzyć idealną konfigurację dla siebie."
+      ]
+    },
+    "feature_progress": {
+      "title": "Śledzenie postępów",
+      "desc_html": "<p>Każdy plik multimedialny jest traktowany jako osobny projekt. Aplikacja pamięta ostatnią pozycję odtwarzania, zmiany na osi czasu oraz twoje notatki, więc możesz wrócić do nauki dokładnie w tym samym miejscu co ostatnio.</p><p>Przekształć dowolny plik multimedialny w konkretną listę zdań do opanowania.</p>"
+    }
+  },
+  "download": {
+    "title": "Pobierz",
+    "subtitle": "Otwarty kod źródłowy (licencja GPLv3). <b class=\"highlight\">Za Darmo</b>. Bez kont i rejestracji.",
+    "win_title": "Windows",
+    "win_btn": "Pobierz Instalator (.exe)",
+    "win_info": "Zawiera mpv player, FFmpeg i audiowaveform",
+    "loading_text": "Szukam nowej wersji...",
+    "smart_screen_title": "Widzisz ostrzeżenie \"System Windows ochronił ten komputer\"?",
+    "smart_screen_link": "Kliknij tutaj aby rozwiązać ten problem &rarr;",
+    "bug_report_title": "Chcesz zgłosić błąd, napisać konstruktywną krytykę lub przesłać pomysł na ulepszenie aplikacji?",
+    "bug_report_link": "Kliknij tutaj, aby skontaktować się z autorem &rarr;",
+    "other_title": "Linux i macOS",
+    "other_desc": "Wsparcie eksperymentalne 🧪 (BETA)<br>Wymaga ręcznej instalacji zależności<br>(mpv player, audiowaveform, itp.)",
+    "other_link": "Instrukcja instalacji na GitHubie &rarr;"
+  },
+  "faq_section_title": "Najczęściej Zadawane Pytania",
+  "faq": [
+    {
+      "id": "faq-smartscreen",
+      "q": "Dlaczego widzę ostrzeżenie na Windows podczas instalacji?",
+      "a": "Każda nowa wersja <b>Y'ALL Media Player</b> jest od razu wysyłana do weryfikacji po stronie Microsoftu. Jednakże budowanie \"reputacji\" dla nowego instalatora zajmuje trochę czasu.<br><br>Jeśli widzisz niebieskie okno z napisem <b>\"System Windows ochronił ten komputer\"</b>, oznacza to po prostu, że jesteś jedną z pierwszych osób testujących świeżo wydaną wersję, która nie zakończyła jeszcze procesu weryfikacji.<br><br><b class=\"highlight\">Oto możliwe rozwiązania:</b><br>1. <b class=\"highlight\">Poczekaj:</b> Spróbuj ponownie później. Zazwyczaj proces weryfikacji zajmuje do 24 godzin od wydania nowej wersji.<br>2. <b class=\"highlight\">Zainstaluj mimo wszystko:</b> Możesz bezpiecznie zignorować ostrzeżenie, ponieważ jest to fałszywy alarm - aplikacja jest bezpieczna i ma otwarty kod źródłowy.<br>Po prostu kliknij <b>Więcej informacji</b> &rarr; <b>Uruchom mimo to</b>.<br>3. <b class=\"highlight\">Użyj poprzedniej wersji:</b> Możesz odwiedzić stronę <a class=\"highlight\" href=\"https://github.com/kgurniak91/yall-mp/releases\" target=\"_blank\">GitHub</a> i zainstalować starszą wersję (szukaj pliku z rozszerzeniem .exe), która na pewno jest już zweryfikowana."
+    },
+    {
+      "id": "faq-bugs",
+      "q": "Jak zgłosić błąd, przesłać opinię lub poprosić o nową funkcjonalność?",
+      "a": "Konstruktywna krytyka jest bardzo mile widziana! To projekt typu open source tworzony przez jedną osobę, więc każda uwaga jest cenna.<br><br>Możesz <a class=\"highlight\" href=\"mailto:kgurniak91@gmail.com\">wysłać mi bezpośrednio maila</a>, albo - jeśli masz konto na GitHubie - <a class=\"highlight\" href=\"https://github.com/kgurniak91/yall-mp/issues\" target=\"_blank\">otworzyć nowe zgłoszenie (issue)</a> w repozytorium projektu."
+    },
+    {
+      "q": "Dlaczego nie widzę fali dźwiękowej na osi czasu?",
+      "a": "Generowanie wizualizacji fali dźwiękowej to wymagający obliczeniowo proces, który zajmuje trochę czasu (około minuty dla 2-godzinnego filmu na szybkim komputerze).<br>W tym czasie odtwarzanie wideo jest niedostępne.<br><br>Z tego powodu, oraz ze względów wydajnościowych, opcja ta jest <b>domyślnie wyłączona</b>.<br>Możesz ją <b>włączyć ręcznie</b> w głównych ustawieniach aplikacji."
+    },
+    {
+      "q": "Jak skonfigurować integrację z Anki?",
+      "a": "<b>Y'ALL Media Player</b> łączy się z Anki przez dodatek AnkiConnect.<br>Możesz tworzyć karty z tekstem, audio, zrzutami ekranu i klipami wideo jednym kliknięciem.<br><a href=\"anki.html\" class=\"text-link\">Kliknij tutaj, aby zobaczyć szczegółową instrukcję integracji &rarr;</a>"
+    },
+    {
+      "q": "Czy to naprawdę jest darmowe?",
+      "a": "Tak. Kod źródłowy jest dostępny na GitHubie na licencji GPLv3."
+    },
+    {
+      "q": "Czy aplikacja działa bez dostępu do internetu?",
+      "a": "Odtwarzanie wideo, edycja osi czasu i eksport do Anki działają w pełni offline. Wyszukiwanie w zintegrowanych słownikach wymaga obecnie połączenia z internetem, ale słowniki offline są planowane w przyszłości."
+    },
+    {
+      "q": "Czy możliwy jest streaming w aplikacji (np. z Youtube)?",
+      "a": "Nie, przykro mi. Wspierane są tylko pliki lokalne, ponieważ aplikacja musi znać całą zawartość pliku z góry, aby wszystkie funkcje (np. generowanie osi czasu) działały poprawnie. W sieci jest jednak mnóstwo serwisów pozwalających pobierać filmy z napisami z Youtube, więc materiałów do nauki nigdy nie zabraknie!"
+    },
+    {
+      "q": "Dlaczego odtwarzanie się czasami zacina?",
+      "a": "<b>Y'ALL Media Player</b> nie służy do odtwarzania filmów w sposób ciągły, jak zwykły odtwarzacz.<br><br>Zamiast tego tworzy on playlistę klipów, które są odtwarzane jeden po drugim z różnymi ustawieniami (zależnie czy mają napisy czy nie).<br><br>Moment przełączenia klipu zajmuje ułamek sekundy, co może sprawiać wrażenie zacinania się, ale jest to pomijalne gdy używasz jednego z dostępnych trybów nauki (np. rozumienie ze słuchu lub ćwiczenie wymowy), ponieważ one i tak automatycznie pauzują odtwarzanie po każdym zdaniu, czekając na twoją reakcję."
+    }
+  ],
+  "anki": {
+    "h1": "Integracja z <b class=\"highlight\">Anki</b>",
+    "intro": "<b class=\"highlight\">Anki</b> to program do fiszek, który pomaga spędzać więcej czasu na nauce nowych rzeczy, a mniej czasu na tym, co już umiesz.",
+    "step1": "Zainstaluj <a class=\"highlight\" href=\"https://apps.ankiweb.net/\" target=\"_blank\">Anki</a> na swoim komputerze i zaloguj się na darmowe konto.",
+    "step2": "Zainstaluj dodatek <a class=\"highlight\" href=\"https://ankiweb.net/shared/info/2055492159\" target=\"_blank\">AnkiConnect</a> w Anki. Po instalacji zrestartuj Anki, aby zmiany weszły w życie. Sprawdź, czy instalacja przebiegła pomyślnie, wchodząc na adres <a class=\"highlight\" href=\"http://localhost:8765\" target=\"_blank\">localhost:8765</a> w przeglądarce. Powinieneś zobaczyć coś w stylu <code>&#123;\"apiVersion\": \"AnkiConnect v.6\"&#125;</code>",
+    "step3": "Stwórz nową talię w Anki (\"Create Deck\" na dole okna) i nazwij ją odpowiednio (np. \"Angielska wymowa\", \"Hiszpańskie rozumienie ze słuchu\" itp.). Konfiguracja opcji talii wykracza poza zakres tego poradnika - sprawdź oficjalną dokumentację Anki, aby dowiedzieć się więcej - jednakże na ten moment domyślne ustawienia powinny wystarczyć.",
+    "step4_intro": "W Anki wybierz \"Tools\" -> \"Manage Note Types\" z menu:",
+    "step4_list_1": "• Kliknij przycisk \"Add\".",
+    "step4_list_2": "• Kliknij \"OK\" z zaznaczoną opcją \"Add: Basic\".",
+    "step4_list_3": "• Nadaj nazwę szablonowi, np. \"yall-mp\", potwierdź.",
+    "step4_list_4": "• Typ notatki pojawi się na liście:",
+    "step4_img_alt": "Nowy typ notatki na liście",
+    "step5_intro": "Z zaznaczonym nowym typem notatki (jak na zrzucie ekranu powyżej), kliknij przycisk \"Fields\" - pojawi się nowe okno:",
+    "step5_list_1": "• Tutaj możesz skonfigurować pola dla elementów eksportowanych przez <b>Y'ALL Media Player</b>.",
+    "step5_list_2": "• Potrzebujesz osobnego pola na \"id\" oraz przynajmniej 1 pola z: \"subtitle_text\", \"audio\", \"screenshot\", \"video_clip\", \"notes\".",
+    "step5_list_3": "• Możesz usunąć domyślne pola \"Front\" i \"Back\".",
+    "step5_list_4": "• Powinieneś uzyskać efekt podobny do tego:",
+    "step5_img_alt": "Lista pól dla typu notatki",
+    "step5_note_1": "Tutaj używam wszystkich dostępnych pól, ale Ty nie musisz tego robić. Jeśli masz pewność, że nie będziesz potrzebować np. klipu wideo, możesz pominąć pole \"video_clip\" itd. Pamiętaj, że pole \"id\" oraz co najmniej 1 inne, z wymienionych powyżej, są wymagane do poprawnej integracji.",
+    "step5_note_2": "• Po dodaniu wszystkich potrzebnych pól, naciśnij \"Save\" aby wyjść z okna dialogowego \"Fields\" i wrócić do okna dialogowego \"Note Types\".",
+    "step6_intro": "Teraz <b>ostatni krok</b>, upewnij się, że twój typ notatki jest nadal zaznaczony, i kliknij przycisk \"Cards\":",
+    "step6_list_1": "• Tutaj możesz skonfigurować przód i tył fiszki - które pola gdzie się wyświetlą itp.",
+    "step6_list_2": "• Możesz użyć dowolnego HTML i CSS, ale dla uproszczenia stworzymy bardzo podstawowy szablon.",
+    "step6_list_3": "• Wszystko zależy od typu karty, jaki chcesz uzyskać. <b>Y'ALL Media Player</b> wspiera eksport wielu typów kart naraz.",
+    "step6_list_4": "• Dla uproszczenia załóżmy kartę do ćwiczenia słuchu - \"audio\" z przodu, \"subtitle_text\" z tyłu.",
+    "step6_list_5": "• Wybierz opcję \"Front Template\" (powinna być domyślnie zaznaczona) i wklej kod \"<code>&#123;&#123;audio&#125;&#125;</code>\" w duże pole tekstowe poniżej:",
+    "step6_img_alt_1": "Definiowanie przodu szablonu karty Anki",
+    "step6_mid_text": "• Teraz wybierz opcję \"Back Template\" i wklej poniższy kod w pole tekstowe:",
+    "step6_img_alt_2": "Definiowanie tyłu szablonu karty Anki",
+    "step6_end_1": "• Kliknij \"Save\" aby zapisać i wyjść, zamknij też okno \"Note Types\".",
+    "step6_end_2": "• To najprostszy możliwy szablon - aby dowiedzieć się więcej, sprawdź dokumentację Anki.",
+    "step6_end_3": "• Możesz dodać tyle szablonów, ile potrzebujesz - np. osobny ćwiczenia wymowy (tekst z przodu, audio z tyłu).",
+    "step7": "Zawsze miej włączone Anki w tle podczas używania <b>Y'ALL Media Player</b>. Aplikacja wykryje Anki automatycznie.",
+    "step8": "W <b>Y'ALL Media Player</b> otwórz ustawienia (skrót: <b class=\"highlight\">O</b>), przejdź do zakładki \"Anki integration\" i skonfiguruj nowy szablon - powinieneś widzieć swoją talię i typ notatki:",
+    "step8_img_alt": "Definiowanie nowego szablonu Anki w <b>Y'ALL Media Player</b>",
+    "step9": "Wszystko powinno działać. Odtwórz klip z napisami i naciśnij <b class=\"highlight\">E</b> lub kliknij prawym przyciskiem na klip i wybierz \"Export to Anki\". Pamiętaj o wybraniu szablonu i kliknięciu Export:",
+    "step9_img_alt": "Okno eksportu Anki w <b>Y'ALL Media Player</b>"
+  }
+}

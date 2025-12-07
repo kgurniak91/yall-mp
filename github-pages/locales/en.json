@@ -1,0 +1,197 @@
+{
+  "lang": "en",
+  "rootPath": "",
+  "meta": {
+    "title": "Y'ALL Media Player",
+    "description": "Free media player for language learning. Master listening comprehension and pronunciation, adjust subtitles, look up words, and export flashcards to Anki.",
+    "keywords": "language learning, mpv, anki, immersion, sentence mining, subtitles, timeline, flashcards, pronunciation, listening comprehension",
+    "og_type": "website",
+    "og_url": "https://yallmp.com/",
+    "og_image": "https://yallmp.com/images/yall-mp-screenshot.png",
+    "canonical": "https://yallmp.com/"
+  },
+  "anki_meta": {
+    "title": "Y'ALL Media Player - Anki Integration",
+    "description": "Step-by-step tutorial on connecting Y'ALL Media Player with Anki. Learn how to export video clips, audio, and subtitles directly to flashcards using AnkiConnect.",
+    "keywords": "language learning, mpv, anki, immersion, ankiconnect, sentence mining, flashcards, anki integration guide",
+    "og_type": "article",
+    "og_url": "https://yallmp.com/anki.html",
+    "og_image": "https://yallmp.com/images/yall-mp-screenshot.png",
+    "canonical": "https://yallmp.com/anki.html"
+  },
+  "navigation": [
+    {
+      "label": "How It Works",
+      "link": "#workflow"
+    },
+    {
+      "label": "Download",
+      "link": "#download"
+    },
+    {
+      "label": "FAQ",
+      "link": "#faq"
+    },
+    {
+      "label": "GitHub",
+      "link": "https://github.com/kgurniak91/yall-mp",
+      "target": "_blank"
+    }
+  ],
+  "lang_switch": {
+    "link": "pl/index.html",
+    "label_html": "<span class=\"active\">EN</span><span class=\"sep\">/</span><span>PL</span>"
+  },
+  "footer_text": "Created by",
+  "hero": {
+    "title_start": "Turn",
+    "title_rotate_json": "[ \"movies\", \"TV shows\", \"audiobooks\", \"anime\", \"podcasts\", \"songs\" ]",
+    "title_rotate_default": "media",
+    "title_end": "into interactive learning materials!",
+    "description": "lets you master <b class=\"highlight\">vocabulary</b>, <b class=\"highlight\">listening comprehension</b> and <b class=\"highlight\">pronunciation</b> by turning any media into an&nbsp;interactive study&nbsp;session with integrated dictionary lookups, subtitles editing, Anki flashcard creation and more!",
+    "btn_workflow": "How does it work?",
+    "btn_download": "Download",
+    "screenshot_alt": "Y'ALL MP Interface showing waveform timeline",
+    "screenshot_caption": "Image source: \"Dune: Part Two - Official Trailer\" (Warner Bros. Pictures)"
+  },
+  "workflow": {
+    "header": "From <b class=\"highlight\">passive media consumption</b><br>to <b class=\"highlight\">active</b>, <b class=\"highlight\">deliberate practice</b>.",
+    "intro": "<b><span class=\"highlight\">Y'ALL</span> <span class=\"highlight\">M</span>edia <span class=\"highlight\">P</span>layer</b> is a specialized tool designed for immersion learning. It seamlessly integrates video playback, subtitle management, dictionary lookups, and Anki flashcard creation into a single workflow, optimizing the time spent learning native content:",
+    "step1": "Open any media file with subtitles in the <b>same</b> target language (either embedded or from external file).",
+    "step2": "The player automatically parses the subtitles and transforms them into a series of <b>clips</b>, presented on an <b>interactive timeline</b>, that you can edit on the fly.",
+    "step3": "The timeline distinguishes between segments with dialogue (<b>subtitled clips</b>) and those without (<b>gaps</b>). You can configure different behaviors - such as playback speed or auto-pausing - for each type separately.",
+    "step4": "Select a configuration preset based on your current goal - e.g., <b>listening comprehension</b> or <b>pronunciation</b> - or customize every setting to fit your personal workflow.",
+    "feature_timeline": {
+      "title": "Interactive timeline",
+      "desc": "Most media players just render static text on top of a video and call it a day.<br><b><span class=\"highlight\">Y'ALL</span> <span class=\"highlight\">M</span>edia <span class=\"highlight\">P</span>layer</b> gives you full control over its dynamic, interactive timeline:",
+      "list": [
+        "<b class=\"highlight\">Visualize audio</b>: Enable waveform visualization in global settings to see peaks and silence. Know exactly when a sentence begins and ends.",
+        "<b class=\"highlight\">Adjust timing</b>: Subtitles out of sync? Simply drag the edges of a clip on the timeline to fix start and end times instantly.",
+        "<b class=\"highlight\">Edit on the fly</b>: Change the text of subtitles, or add your own, directly in the app.",
+        "<b class=\"highlight\">Split & merge</b>: Fix broken sentence parsing by splitting long clips or merging fragmented ones.",
+        "<b class=\"highlight\">Multi-track support</b>: Easily access and manage parallel tracks found in advanced subtitle formats like ASS/SSA."
+      ]
+    },
+    "feature_playback": {
+      "title": "Optimized playback",
+      "desc_html": "<p>Don't waste your time watching scenery - focus on the dialogue. <b><span class=\"highlight\">Y'ALL</span> <span class=\"highlight\">M</span>edia <span class=\"highlight\">P</span>layer</b> treats media as a consecutive playlist of two distinct clip types: <b>Subtitled Clips</b> and <b>Gaps</b> between them.</p><p>Increase the <b>Gaps</b> speed to fast-forward the silence automatically and get faster to <b>Subtitled Clips</b> which can be played at normal speed. You can also skip the <b>Gaps</b> altogether and just jump to the nearest <b>Subtitled Clip</b>.</p><p>Transform a ~40-minute episode into ~30 minutes of pure, high-density input.</p>"
+    },
+    "feature_dict": {
+      "title": "Instant dictionary lookups",
+      "desc": "Stop Alt-Tabbing to a web browser and breaking your immersion:",
+      "list": [
+        "<b class=\"highlight\">Smart selection</b>: Hover over subtitles to see intelligent word boundaries. Click any word to instantly open the Built-in Browser to your preferred preconfigured website.",
+        "<b class=\"highlight\">Precision control</b>: Hold Ctrl to select specific characters or click-and-drag to select entire phrases.",
+        "<b class=\"highlight\">Zero-friction notes</b>: Highlight a definition in the built-in browser and save it directly to your card notes via the right-click menu or a keyboard shortcut (CTRL+SHIFT+S) - no tedious copy-pasting required."
+      ],
+      "note": "Currently only online dictionary lookups are available. Full support for offline dictionaries is scheduled for future versions."
+    },
+    "feature_anki": {
+      "title": "Anki integration",
+      "desc_html": "<p>Found a sentence worth remembering? Press <b class=\"highlight\">E</b> to export it to <a class=\"highlight\" href=\"https://apps.ankiweb.net/\" target=\"_blank\">Anki</a> and remember it forever.</p><p>The player automatically extracts the <b>audio</b>, captures a <b>screenshot</b> or <b>entire video clip</b>, grabs the <b>text</b> with your <b>notes</b>, and sends a high-quality flashcard directly to <a class=\"highlight\" href=\"https://apps.ankiweb.net/\" target=\"_blank\">Anki</a> via <a class=\"highlight\" href=\"https://ankiweb.net/shared/info/2055492159\" target=\"_blank\">AnkiConnect</a>.</p><p><a href=\"anki.html\" class=\"text-link\">Click here for detailed integration instructions &rarr;</a></p>"
+    },
+    "feature_presets": {
+      "title": "Settings presets",
+      "desc": "Switch learning modes instantly based on your current goals:",
+      "list": [
+        "<b class=\"highlight\">Listening practice</b>: Auto-hides subtitles until you toggle them, then auto-pauses the clip at the end, allowing you to verify first what you heard, before revealing the subtitles.",
+        "<b class=\"highlight\">Speaking practice</b>: Auto-pauses at the start of a clip, letting you read the text before resuming the clip and comparing your pronunciation with the native audio.",
+        "<b class=\"highlight\">Custom</b>: Tweak every setting to create your own ideal configuration."
+      ]
+    },
+    "feature_progress": {
+      "title": "Progress tracking",
+      "desc_html": "<p>Every media file is treated as a separate project. The app remembers last playback position, timeline adjustments, and your manual notes, so you can pick up exactly where you left off and track progress.</p><p>This transforms media from a fleeting stream of content into a concrete list of sentences to be learned.</p>"
+    }
+  },
+  "download": {
+    "title": "Download",
+    "subtitle": "Open Source (GPLv3). <b class=\"highlight\">Free</b>. No Account Required.",
+    "win_title": "Windows",
+    "win_btn": "Download Installer (.exe)",
+    "win_info": "Includes mpv player, FFmpeg & audiowaveform",
+    "loading_text": "Loading latest version...",
+    "smart_screen_title": "Are you seeing the \"Windows protected your PC\" warning?",
+    "smart_screen_link": "Click here for the solution &rarr;",
+    "bug_report_title": "Found a bug? Got constructive criticism or a feature request?",
+    "bug_report_link": "Click here to contact the developer &rarr;",
+    "other_title": "Linux & macOS",
+    "other_desc": "Experimental support 🧪 (in BETA)<br>Requires manual installation of external dependencies<br>(mpv player, audiowaveform, etc.)",
+    "other_link": "Click here for installation instructions on GitHub &rarr;"
+  },
+  "faq_section_title": "Frequently Asked Questions",
+  "faq": [
+    {
+      "id": "faq-smartscreen",
+      "q": "Why do I see a warning on Windows when trying to install the app?",
+      "a": "All new versions of <b>Y'ALL Media Player</b> are automatically submitted to Microsoft for security verification. However, building \"reputation\" for a new installer takes time.<br><br>If you see a blue window with <b>\"Windows protected your PC\"</b> warning when trying to install, it simply means you are one of the first people to try a freshly released version that hasn't completed this verification process yet.<br><br><b class=\"highlight\">Here are possible solutions:</b><br>1. <b class=\"highlight\">Wait:</b> You can try again later. Usually, the verification process takes up to 24 hours from release.<br>2. <b class=\"highlight\">Install anyway:</b> You can safely ignore the warning, because it is a false positive - the app is open source and safe.<br>Just click <b>More Info</b> &rarr; <b>Run Anyway</b>.<br>3. <b class=\"highlight\">Use previous version:</b> You can visit the <a class=\"highlight\" href=\"https://github.com/kgurniak91/yall-mp/releases\" target=\"_blank\">GitHub</a> page and install an older version (look for file with .exe extension) which is guaranteed to be verified already."
+    },
+    {
+      "id": "faq-bugs",
+      "q": "How do I report a bug, request a feature or post constructive criticism?",
+      "a": "Feedback is very welcome! This is an open source project developed by one person, so your input helps a lot.<br><br>You can <a class=\"highlight\" href=\"mailto:kgurniak91@gmail.com\">send me an email directly</a> or, if you have a GitHub account, you can <a class=\"highlight\" href=\"https://github.com/kgurniak91/yall-mp/issues\" target=\"_blank\">open a new issue</a> in the repository."
+    },
+    {
+      "q": "Why can't I see the audio waveform on the timeline?",
+      "a": "Audio waveform generation is a performance-heavy process that takes a long time once per project (around ~1 minute for ~2h video on a high-end computer).<br>During that time, while the timeline is being generated, the video playback is unavailable.<br><br>Because of that, and for performance reasons, it's <b>disabled by default</b>.<br>You can <b>enable it manually</b> in the global settings inside the app."
+    },
+    {
+      "q": "How do I set up Anki integration?",
+      "a": "<b>Y'ALL Media Player</b> connects seamlessly with Anki via the AnkiConnect add-on.<br>You can create cards with text, audio, screenshots, and video clips in one click.<br><a href=\"anki.html\" class=\"text-link\">Click here for detailed integration instructions &rarr;</a>"
+    },
+    {
+      "q": "Is it really free?",
+      "a": "Yes. The source code is available on GitHub under the GPLv3 license."
+    },
+    {
+      "q": "Does it work offline?",
+      "a": "Video playback, timeline editing, and Anki export work fully offline. Dictionary lookups currently require an internet connection, but offline dictionaries are planned for future updates."
+    },
+    {
+      "q": "Is streaming from platforms like Youtube supported?",
+      "a": "No, sorry. Only local files are supported, because their entire content needs to be known upfront for all the features to work properly. There are many services online which let your download videos with subtitles from Youtube etc., so you should never run out of the content to watch!"
+    },
+    {
+      "q": "Why is the playback stuttering sometimes?",
+      "a": "<b>Y'ALL Media Player</b> isn't designed for regular, continuous playback of media, like conventional media players.<br><br>Instead, it creates a playlist of clips, that are played on by one, with different settings, depending whether they have subtitles or not.<br><br>The moment of switching clips takes time, which may seem like stuttering, but it's negligible once you start using one of the preconfigured learning modes (listening or speaking practice), because they auto-pause after each subtitled clip, awaiting for your explicit action to continue playback."
+    }
+  ],
+  "anki": {
+    "h1": "<b class=\"highlight\">Anki</b> Integration Guide",
+    "intro": "<b class=\"highlight\">Anki</b> is a flashcard program that helps you spend more time on challenging material, and less on what you already know.",
+    "step1": "Install <a class=\"highlight\" href=\"https://apps.ankiweb.net/\" target=\"_blank\">Anki</a> on your computer and log in with your free account.",
+    "step2": "Install the <a class=\"highlight\" href=\"https://ankiweb.net/shared/info/2055492159\" target=\"_blank\">AnkiConnect</a> add-on in Anki. After installation, restart Anki for the changes to take effect. Verify that it was installed properly by visiting the <a class=\"highlight\" href=\"http://localhost:8765\" target=\"_blank\">localhost:8765</a> address in the browser. You should see something similar to <code>&#123;\"apiVersion\": \"AnkiConnect v.6\"&#125;</code>",
+    "step3": "Create new deck in Anki (\"Create Deck\" at the bottom of the page) and name it accordingly (e.g., \"English pronunciation\", \"Spanish sentence cards\" etc.). Configuring specific deck options is beyond the scope of this manual - check official Anki documentation for that - but you should be fine with default settings for now.",
+    "step4_intro": "In Anki, select \"Tools\" -> \"Manage Note Types\" from the menu:",
+    "step4_list_1": "• Click the \"Add\" button.",
+    "step4_list_2": "• Click \"OK\" with option \"Add: Basic\" selected.",
+    "step4_list_3": "• Give your card template some name, for example \"yall-mp\", confirm.",
+    "step4_list_4": "• The note will appear on the list of note types:",
+    "step4_img_alt": "New note type on the list",
+    "step5_intro": "With the new note type highlighted (just like in the screenshot above), click on the \"Fields\" button - new dialog window will appear:",
+    "step5_list_1": "• Here you can configure fields for different elements that <b>Y'ALL Media Player</b> can export.",
+    "step5_list_2": "• You need a separate field for \"id\" and at least 1 field out of: \"subtitle_text\", \"audio\", \"screenshot\", \"video_clip\", \"notes\".",
+    "step5_list_3": "• You can remove the default \"Front\" and \"Back\" fields.",
+    "step5_list_4": "• You should end up with something like this:",
+    "step5_img_alt": "List of fields for note type",
+    "step5_note_1": "Here I am using all the fields available, but you don't have to define them all. If you are 100% sure you won't need video clip for example, you can omit the \"video_clip\" field etc. Keep in mind that \"id\" field and at least 1 other, from the list above, are required later to integrate properly.",
+    "step5_note_2": "• After adding all the fields that you need, click \"Save\" to exit the \"Fields\" dialog and go back to \"Note Types\" dialog.",
+    "step6_intro": "Now for the <b>final step</b>, make sure your new note type is still selected, then click on \"Cards\" button:",
+    "step6_list_1": "• Here, you can configure the \"front\" and \"back\" of your flashcard - which of the configured fields will be displayed where etc.",
+    "step6_list_2": "• You can define any HTML and CSS you want, but for simplicity we will create the most barebone card template possible.",
+    "step6_list_3": "• It all depends what type of card you want to achieve. <b>Y'ALL Media Player</b> supports exporting multiple flashcard types at once, so you can define as many card templates as you want.",
+    "step6_list_4": "• To keep it simple, let's assume you want a card for listening comprehension - \"audio\" on the front, \"subtitle_text\" on the back.",
+    "step6_list_5": "• Select \"Front Template\" radio button (should be selected by default) and put the code \"<code>&#123;&#123;audio&#125;&#125;</code>\" in the large textarea below it:",
+    "step6_img_alt_1": "Defining the front side of Anki card template",
+    "step6_mid_text": "• Now select \"Back Template\" radio button and put the following code in the large textarea below it:",
+    "step6_img_alt_2": "Defining the back side of Anki card template",
+    "step6_end_1": "• Click \"Save\" to confirm and exit the dialog, then also close the \"Note Types\" dialog.",
+    "step6_end_2": "• That is of course the simplest card template you could possibly make - to learn more, consult the official Anki documentation.",
+    "step6_end_3": "• Add as many card templates as you need - for example you might want a separate template for reading comprehension (text on the front, audio on the back) etc.",
+    "step7": "Always keep Anki open in the background when using <b>Y'ALL Media Player</b>. It will be automatically detected by the app.",
+    "step8": "In <b>Y'ALL Media Player</b>, open global settings from the main menu (keyboard shortcut: <b class=\"highlight\">O</b>), go to the \"Anki integration\" tab and configure new Anki template(s) - you should be able to see your Anki deck, created note type etc.:",
+    "step8_img_alt": "Defining new Anki card template in <b>Y'ALL Media Player</b>",
+    "step9": "Everything should work now. Play some subtitled clip and either press <b class=\"highlight\">E</b> keyboard shortcut or right click the clip on the timeline and select \"Export to Anki\". Remember to select the card template(s) you want to use and press Export:",
+    "step9_img_alt": "Anki export dialog in <b>Y'ALL Media Player</b>"
+  }
+}

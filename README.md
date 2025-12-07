@@ -16,7 +16,7 @@
 **Y'ALL MP** is not just a media player; it is a comprehensive tool designed to bridge the gap between passive listening and active learning.
 It combines high-performance media playback with advanced tools to edit subtitle text and adjust timing, provides instant dictionary lookups, and seamless **Anki** flashcards creation.
 
-![App Screenshot](docs/yall-mp-screenshot.png)
+![App Screenshot](docs/images/yall-mp-screenshot.png)
 
 Whether you are sentence mining, training listening comprehension, or practicing shadowing, **Y'ALL MP** provides the granular control and automation you need.
 

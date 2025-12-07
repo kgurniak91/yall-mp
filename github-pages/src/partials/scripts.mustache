@@ -1,0 +1,75 @@
+<script>
+  // Mobile Menu
+  const menuBtn = document.querySelector('.mobile-menu-btn');
+  const nav = document.querySelector('.main-nav');
+
+  if (menuBtn && nav) {
+    menuBtn.addEventListener('click', () => {
+      nav.classList.toggle('active');
+    });
+
+    // Close menu on link click
+    nav.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', () => {
+        nav.classList.remove('active');
+        menuBtn.querySelector('span').innerHTML = '&#9776;';
+      });
+    });
+  }
+
+  // Dynamic Copyright Year
+  document.addEventListener('DOMContentLoaded', () => {
+    const yearSpan = document.getElementById('copyright-year');
+    if (yearSpan) {
+      const startYear = 2025;
+      const currentYear = new Date().getFullYear();
+      if (currentYear > startYear) {
+        yearSpan.textContent = `${startYear} - ${currentYear}`;
+      }
+    }
+  });
+
+  // Language auto-redirect
+  (function () {
+    const STORAGE_KEY = 'yall_mp_lang_pref';
+    const htmlLang = document.documentElement.lang; // 'en' or 'pl'
+    let storedPref = localStorage.getItem(STORAGE_KEY);
+
+    // Helper to get current filename (index.html, anki.html, etc.)
+    const getPageName = () => {
+      const parts = window.location.pathname.split('/');
+      let lastPart = parts[parts.length - 1];
+      if (lastPart === '' || lastPart === 'pl') {
+        lastPart = 'index.html';
+      }
+      return lastPart;
+    };
+
+    // Handle manual language switch
+    const langLink = document.querySelector('.lang-toggle');
+    if (langLink) {
+      langLink.addEventListener('click', () => {
+        const newLang = (htmlLang === 'en') ? 'pl' : 'en';
+        localStorage.setItem(STORAGE_KEY, newLang);
+      });
+    }
+
+    // If this is a first page visit - check user's browser language
+    if (!storedPref) {
+      const browserLang = navigator.language || navigator.userLanguage;
+      const isBrowserPl = browserLang && browserLang.toLowerCase().startsWith('pl');
+
+      storedPref = isBrowserPl ? 'pl' : 'en';
+      localStorage.setItem(STORAGE_KEY, storedPref);
+    }
+
+    // Compare user preference vs current page language and redirect if needed
+    if (storedPref === 'pl' && htmlLang === 'en') {
+      // User wants PL, currently on EN -> Redirect to PL subdirectory
+      window.location.href = 'pl/' + getPageName();
+    } else if (storedPref === 'en' && htmlLang === 'pl') {
+      // User wants EN, currently on PL -> Redirect to Root
+      window.location.href = '../' + getPageName();
+    }
+  })();
+</script>

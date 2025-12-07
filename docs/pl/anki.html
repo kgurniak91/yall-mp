@@ -1,0 +1,247 @@
+<!--
+⚠️ AUTOMATICALLY GENERATED FILE - DO NOT EDIT DIRECTLY ⚠️
+---------------------------------------------------------
+Generated on: Sun, 07 Dec 2025 10:01:36 GMT
+
+To modify this page:
+1. Edit templates in '/github-pages/src/' folder
+2. Edit content in '/github-pages/locales/' folder
+3. Run 'npm run build:github-pages' to regenerate
+---------------------------------------------------------
+-->
+
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Y'ALL Media Player - integracja z Anki</title>
+  <meta name="title" content="Y'ALL Media Player - integracja z Anki">
+  <meta name="description" content="Poradnik krok po kroku jak połączyć Y'ALL Media Player z Anki. Dowiedz się jak eksportować klipy wideo, audio i napisy bezpośrednio do fiszek używając AnkiConnect.">
+  <meta name="keywords" content="nauka języków, mpv, anki, immersja, ankiconnect, sentence mining, fiszki, poradnik integracji anki">
+  <meta name="author" content="Krzysztof Gurniak">
+
+  <meta property="og:title" content="Y'ALL Media Player - integracja z Anki">
+  <meta property="og:description" content="Poradnik krok po kroku jak połączyć Y'ALL Media Player z Anki. Dowiedz się jak eksportować klipy wideo, audio i napisy bezpośrednio do fiszek używając AnkiConnect.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://yallmp.com/pl/anki.html">
+  <meta property="og:image" content="https://yallmp.com/images/yall-mp-screenshot.png">
+
+  <link rel="canonical" href="https://yallmp.com/pl/anki.html">
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="icon" type="image/x-icon" href="../favicon.ico">
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="site-header">
+  <div class="container header-inner">
+
+    <div class="logo-area">
+      <div class="logo-text">
+        <a href="index.html" style="text-decoration: none; color: inherit;">
+          <span class="highlight">Y'ALL</span> <span class="highlight">M</span>edia <span class="highlight">P</span>layer
+        </a>
+      </div>
+    </div>
+
+    <button class="mobile-menu-btn" aria-label="Toggle Menu">
+      <span>&#9776;</span>
+    </button>
+
+    <nav class="main-nav">
+      <ul>
+          <li><a href="index.html#workflow" >Sposób działania</a></li>
+          <li><a href="index.html#download" >Pobierz</a></li>
+          <li><a href="index.html#faq" >FAQ</a></li>
+          <li><a href="https://github.com/kgurniak91/yall-mp" target="_blank">GitHub</a></li>
+
+        <!-- Language Switcher -->
+        <li class="lang-item">
+          <a href="../anki.html" class="lang-toggle" aria-label="Switch Language"
+             style="text-decoration: none;">
+            <span>EN</span><span class="sep">/</span><span class="active">PL</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="section-anki">
+  <div class="container">
+    <div class="anki-header">
+      <h1>Integracja z <b class="highlight">Anki</b></h1>
+      <br>
+      <p><b class="highlight">Anki</b> to program do fiszek, który pomaga spędzać więcej czasu na nauce nowych rzeczy, a mniej czasu na tym, co już umiesz.</p>
+      <ol>
+        <li>
+          Zainstaluj <a class="highlight" href="https://apps.ankiweb.net/" target="_blank">Anki</a> na swoim komputerze i zaloguj się na darmowe konto.
+        </li>
+        <li>
+          Zainstaluj dodatek <a class="highlight" href="https://ankiweb.net/shared/info/2055492159" target="_blank">AnkiConnect</a> w Anki. Po instalacji zrestartuj Anki, aby zmiany weszły w życie. Sprawdź, czy instalacja przebiegła pomyślnie, wchodząc na adres <a class="highlight" href="http://localhost:8765" target="_blank">localhost:8765</a> w przeglądarce. Powinieneś zobaczyć coś w stylu <code>&#123;"apiVersion": "AnkiConnect v.6"&#125;</code>
+        </li>
+        <li>
+          Stwórz nową talię w Anki ("Create Deck" na dole okna) i nazwij ją odpowiednio (np. "Angielska wymowa", "Hiszpańskie rozumienie ze słuchu" itp.). Konfiguracja opcji talii wykracza poza zakres tego poradnika - sprawdź oficjalną dokumentację Anki, aby dowiedzieć się więcej - jednakże na ten moment domyślne ustawienia powinny wystarczyć.
+        </li>
+        <li>
+          W Anki wybierz "Tools" -> "Manage Note Types" z menu:<br>
+          • Kliknij przycisk "Add".<br>
+          • Kliknij "OK" z zaznaczoną opcją "Add: Basic".<br>
+          • Nadaj nazwę szablonowi, np. "yall-mp", potwierdź.<br>
+          • Typ notatki pojawi się na liście:<br><br>
+          <img src="../images/anki/anki-1.png" alt="Nowy typ notatki na liście">
+          <br>
+        </li>
+        <li>
+          Z zaznaczonym nowym typem notatki (jak na zrzucie ekranu powyżej), kliknij przycisk "Fields" - pojawi się nowe okno:<br>
+          • Tutaj możesz skonfigurować pola dla elementów eksportowanych przez <b>Y'ALL Media Player</b>.<br>
+          • Potrzebujesz osobnego pola na "id" oraz przynajmniej 1 pola z: "subtitle_text", "audio", "screenshot", "video_clip", "notes".<br>
+          • Możesz usunąć domyślne pola "Front" i "Back".<br>
+          • Powinieneś uzyskać efekt podobny do tego:<br><br>
+          <img src="../images/anki/anki-2.png" alt="Lista pól dla typu notatki">
+          <i class="highlight">
+            Tutaj używam wszystkich dostępnych pól, ale Ty nie musisz tego robić. Jeśli masz pewność, że nie będziesz potrzebować np. klipu wideo, możesz pominąć pole "video_clip" itd. Pamiętaj, że pole "id" oraz co najmniej 1 inne, z wymienionych powyżej, są wymagane do poprawnej integracji.
+          </i>
+          <br><br>
+          • Po dodaniu wszystkich potrzebnych pól, naciśnij "Save" aby wyjść z okna dialogowego "Fields" i wrócić do okna dialogowego "Note Types".
+        </li>
+        <li>
+          Teraz <b>ostatni krok</b>, upewnij się, że twój typ notatki jest nadal zaznaczony, i kliknij przycisk "Cards":<br>
+          • Tutaj możesz skonfigurować przód i tył fiszki - które pola gdzie się wyświetlą itp.<br>
+          • Możesz użyć dowolnego HTML i CSS, ale dla uproszczenia stworzymy bardzo podstawowy szablon.<br>
+          • Wszystko zależy od typu karty, jaki chcesz uzyskać. <b>Y'ALL Media Player</b> wspiera eksport wielu typów kart naraz.<br>
+          • Dla uproszczenia załóżmy kartę do ćwiczenia słuchu - "audio" z przodu, "subtitle_text" z tyłu.<br>
+          • Wybierz opcję "Front Template" (powinna być domyślnie zaznaczona) i wklej kod "<code>&#123;&#123;audio&#125;&#125;</code>" w duże pole tekstowe poniżej:<br><br>
+          <img src="../images/anki/anki-3.png" alt="Definiowanie przodu szablonu karty Anki">
+          <br>
+          • Teraz wybierz opcję "Back Template" i wklej poniższy kod w pole tekstowe:
+          <br><br>
+          <div style="background-color: darkgray; color: black;">
+            <code>&#123;&#123;FrontSide&#125;&#125;</code><br>
+            <code>&lt;hr id=answer&gt;</code><br>
+            <code>&#123;&#123;subtitle_text&#125;&#125;</code><br>
+          </div>
+          <br><br>
+          <img src="../images/anki/anki-4.png" alt="Definiowanie tyłu szablonu karty Anki">
+          <br>
+          • Kliknij "Save" aby zapisać i wyjść, zamknij też okno "Note Types".<br>
+          • To najprostszy możliwy szablon - aby dowiedzieć się więcej, sprawdź dokumentację Anki.<br>
+          • Możesz dodać tyle szablonów, ile potrzebujesz - np. osobny ćwiczenia wymowy (tekst z przodu, audio z tyłu).
+        </li>
+        <li>
+          <b class="highlight">Zawsze miej włączone Anki w tle podczas używania <b>Y'ALL Media Player</b>. Aplikacja wykryje Anki automatycznie.</b>
+        </li>
+        <li>
+          W <b>Y'ALL Media Player</b> otwórz ustawienia (skrót: <b class="highlight">O</b>), przejdź do zakładki "Anki integration" i skonfiguruj nowy szablon - powinieneś widzieć swoją talię i typ notatki:
+          <br><br>
+          <img src="../images/anki/anki-5.png" alt="Definiowanie nowego szablonu Anki w &lt;b&gt;Y&#39;ALL Media Player&lt;&#x2F;b&gt;">
+          <br>
+        </li>
+        <li>
+          Wszystko powinno działać. Odtwórz klip z napisami i naciśnij <b class="highlight">E</b> lub kliknij prawym przyciskiem na klip i wybierz "Export to Anki". Pamiętaj o wybraniu szablonu i kliknięciu Export:
+          <br><br>
+          <img src="../images/anki/anki-6.png" alt="Okno eksportu Anki w &lt;b&gt;Y&#39;ALL Media Player&lt;&#x2F;b&gt;">
+        </li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- FOOTER -->
+<footer style="margin-top: 0;">
+  <div class="container footer-inner">
+    <div class="col-left">
+      <p>
+        &copy; <span id="copyright-year">2025</span> <b><span class="highlight">Y'ALL</span> <span class="highlight">M</span>edia <span
+        class="highlight">P</span>layer</b>.
+      </p>
+    </div>
+    <div class="col-right">
+      <span class="footer-break">
+          Autor: <a class="highlight" href="https://kgurniak91.github.io" target="_blank"><b>Krzysztof Gurniak</b></a>.
+        </span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Mobile Menu
+  const menuBtn = document.querySelector('.mobile-menu-btn');
+  const nav = document.querySelector('.main-nav');
+
+  if (menuBtn && nav) {
+    menuBtn.addEventListener('click', () => {
+      nav.classList.toggle('active');
+    });
+
+    // Close menu on link click
+    nav.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', () => {
+        nav.classList.remove('active');
+        menuBtn.querySelector('span').innerHTML = '&#9776;';
+      });
+    });
+  }
+
+  // Dynamic Copyright Year
+  document.addEventListener('DOMContentLoaded', () => {
+    const yearSpan = document.getElementById('copyright-year');
+    if (yearSpan) {
+      const startYear = 2025;
+      const currentYear = new Date().getFullYear();
+      if (currentYear > startYear) {
+        yearSpan.textContent = `${startYear} - ${currentYear}`;
+      }
+    }
+  });
+
+  // Language auto-redirect
+  (function () {
+    const STORAGE_KEY = 'yall_mp_lang_pref';
+    const htmlLang = document.documentElement.lang; // 'en' or 'pl'
+    let storedPref = localStorage.getItem(STORAGE_KEY);
+
+    // Helper to get current filename (index.html, anki.html, etc.)
+    const getPageName = () => {
+      const parts = window.location.pathname.split('/');
+      let lastPart = parts[parts.length - 1];
+      if (lastPart === '' || lastPart === 'pl') {
+        lastPart = 'index.html';
+      }
+      return lastPart;
+    };
+
+    // Handle manual language switch
+    const langLink = document.querySelector('.lang-toggle');
+    if (langLink) {
+      langLink.addEventListener('click', () => {
+        const newLang = (htmlLang === 'en') ? 'pl' : 'en';
+        localStorage.setItem(STORAGE_KEY, newLang);
+      });
+    }
+
+    // If this is a first page visit - check user's browser language
+    if (!storedPref) {
+      const browserLang = navigator.language || navigator.userLanguage;
+      const isBrowserPl = browserLang && browserLang.toLowerCase().startsWith('pl');
+
+      storedPref = isBrowserPl ? 'pl' : 'en';
+      localStorage.setItem(STORAGE_KEY, storedPref);
+    }
+
+    // Compare user preference vs current page language and redirect if needed
+    if (storedPref === 'pl' && htmlLang === 'en') {
+      // User wants PL, currently on EN -> Redirect to PL subdirectory
+      window.location.href = 'pl/' + getPageName();
+    } else if (storedPref === 'en' && htmlLang === 'pl') {
+      // User wants EN, currently on PL -> Redirect to Root
+      window.location.href = '../' + getPageName();
+    }
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<header class="site-header">
+  <div class="container header-inner">
+
+    <div class="logo-area">
+      <div class="logo-text">
+        <a href="index.html" style="text-decoration: none; color: inherit;">
+          <span class="highlight">Y'ALL</span> <span class="highlight">M</span>edia <span class="highlight">P</span>layer
+        </a>
+      </div>
+    </div>
+
+    <button class="mobile-menu-btn" aria-label="Toggle Menu">
+      <span>&#9776;</span>
+    </button>
+
+    <nav class="main-nav">
+      <ul>
+        {{#navigation}}
+          <li><a href="{{{link}}}" {{#target}}target="{{target}}"{{/target}}>{{label}}</a></li>
+        {{/navigation}}
+
+        <!-- Language Switcher -->
+        <li class="lang-item">
+          <a href="{{{lang_switch.link}}}" class="lang-toggle" aria-label="Switch Language"
+             style="text-decoration: none;">
+            {{{lang_switch.label_html}}}
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+</header>
