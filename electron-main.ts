@@ -1029,37 +1029,45 @@ if (!gotTheLock) {
       }
 
       try {
-        // Get the video's aspect ratio from MPV.
-        const videoAspectRatio = await mpvManager.getProperty('video-params/aspect');
-
-        // Fallback if the aspect ratio isn't available yet.
-        if (!videoAspectRatio || videoAspectRatio <= 0) {
-          if (!videoWindow.isVisible()) {
-            safeShowVideoWindow();
-          }
-          return;
+        let videoAspectRatio: number | null = null;
+        try {
+          // Try to get aspect ratio from MPV. This will fail for audio-only files (without any cover art)
+          videoAspectRatio = await mpvManager.getProperty('video-params/aspect');
+        } catch (e) {
+          // Property unavailable, ignore and treat as null (audio-only mode)
         }
 
-        // Perform the aspect ratio calculation.
-        let newWidth = containerRect.width;
-        let newHeight = newWidth / videoAspectRatio;
-
-        if (newHeight > containerRect.height) {
-          newHeight = containerRect.height;
-          newWidth = newHeight * videoAspectRatio;
-        }
-
-        // Calculate the centered position.
+        let finalBounds: Electron.Rectangle;
         const [parentX, parentY] = mainWindow.getPosition();
-        const offsetX = (containerRect.width - newWidth) / 2;
-        const offsetY = (containerRect.height - newHeight) / 2;
 
-        const finalBounds = {
-          x: parentX + Math.round(containerRect.x) + Math.round(offsetX),
-          y: parentY + Math.round(containerRect.y) + Math.round(offsetY),
-          width: Math.round(newWidth),
-          height: Math.round(newHeight),
-        };
+        if (videoAspectRatio && videoAspectRatio > 0) {
+          // Perform the aspect ratio calculation.
+          let newWidth = containerRect.width;
+          let newHeight = newWidth / videoAspectRatio;
+
+          if (newHeight > containerRect.height) {
+            newHeight = containerRect.height;
+            newWidth = newHeight * videoAspectRatio;
+          }
+
+          // Center the video within the container
+          const offsetX = (containerRect.width - newWidth) / 2;
+          const offsetY = (containerRect.height - newHeight) / 2;
+
+          finalBounds = {
+            x: parentX + Math.round(containerRect.x) + Math.round(offsetX),
+            y: parentY + Math.round(containerRect.y) + Math.round(offsetY),
+            width: Math.round(newWidth),
+            height: Math.round(newHeight),
+          };
+        } else {
+          finalBounds = {
+            x: parentX + Math.round(containerRect.x),
+            y: parentY + Math.round(containerRect.y),
+            width: Math.round(containerRect.width),
+            height: Math.round(containerRect.height),
+          };
+        }
 
         // Set the final bounds on the video window.
         videoWindow.setBounds(finalBounds);
@@ -1418,6 +1426,32 @@ async function invokeAnkiConnect(action: string, params = {}) {
   }
 }
 
+async function storeMediaFileInAnkiSafely(
+  filePath: string,
+  destinationField: string,
+  formatFn: (filename: string) => string,
+  finalFields: Record<string, string>
+) {
+  try {
+    // Verify file was in fact created (FFmpeg didn't silently fail to output)
+    await fs.access(filePath);
+
+    // Send to Anki
+    const storedFilename = await invokeAnkiConnect('storeMediaFile', {
+      filename: path.basename(filePath),
+      path: filePath
+    });
+
+    // Update fields if successful
+    if (storedFilename) {
+      finalFields[destinationField] = formatFn(storedFilename);
+    }
+  } catch (err) {
+    console.warn(`[Anki Export] Failed to store media (${path.basename(filePath)}):`, err);
+    // Intentionally swallow the error here so the rest of the card can still be exported
+  }
+}
+
 async function handleAnkiExport(exportRequest: AnkiExportRequest) {
   await ensureFFmpegPaths();
 
@@ -1430,6 +1464,28 @@ async function handleAnkiExport(exportRequest: AnkiExportRequest) {
   const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
   const finalFields: Record<string, string> = {};
   const generatedFiles: string[] = [];
+
+  let hasRealVideoStream: boolean;
+  try {
+    const probeResult = await runFfprobe([
+      '-v', 'quiet',
+      '-print_format', 'json',
+      '-show_streams',
+      mediaPath
+    ]);
+
+    if (probeResult.streams) {
+      // Check for video stream that isn't a 1-frame static image (e.g., album art, audiobook cover etc.)
+      hasRealVideoStream = probeResult.streams.some((s: any) =>
+        s.codec_type === 'video' && s.disposition?.attached_pic !== 1
+      );
+    } else {
+      hasRealVideoStream = false;
+    }
+  } catch (e) {
+    console.warn('Failed to probe media during Anki export', e);
+    hasRealVideoStream = false;
+  }
 
   try {
     for (const mapping of template.fieldMappings) {
@@ -1462,17 +1518,20 @@ async function handleAnkiExport(exportRequest: AnkiExportRequest) {
 
           await runFFmpeg(audioArgs);
 
-          const audioFilename = await invokeAnkiConnect('storeMediaFile', {
-            filename: path.basename(audioPath),
-            path: audioPath
-          });
-          if (!audioFilename) {
-            throw new Error('Failed to store audio file in Anki.');
-          }
-          finalFields[mapping.destination] = `[sound:${audioFilename}]`;
+          await storeMediaFileInAnkiSafely(
+            audioPath,
+            mapping.destination,
+            (audioFilename) => `[sound:${audioFilename}]`,
+            finalFields
+          );
           break;
 
         case 'screenshot':
+          if (!hasRealVideoStream) {
+            console.log('[Anki Export] Skipping screenshot: No real video stream detected.');
+            continue;
+          }
+
           const imagePath = path.join(tempDir, `${uniqueId}.jpg`);
           generatedFiles.push(imagePath);
 
@@ -1486,17 +1545,20 @@ async function handleAnkiExport(exportRequest: AnkiExportRequest) {
 
           await runFFmpeg(imageArgs);
 
-          const imageFilename = await invokeAnkiConnect('storeMediaFile', {
-            filename: path.basename(imagePath),
-            path: imagePath
-          });
-          if (!imageFilename) {
-            throw new Error('Failed to store image file in Anki.');
-          }
-          finalFields[mapping.destination] = `<img src="${imageFilename}">`;
+          await storeMediaFileInAnkiSafely(
+            imagePath,
+            mapping.destination,
+            (imageFilename) => `<img src="${imageFilename}">`,
+            finalFields
+          );
           break;
 
         case 'video':
+          if (!hasRealVideoStream) {
+            console.log('[Anki Export] Skipping video clip: No real video stream detected.');
+            continue;
+          }
+
           const videoPath = path.join(tempDir, `${uniqueId}.webm`);
           generatedFiles.push(videoPath);
 
@@ -1515,16 +1577,12 @@ async function handleAnkiExport(exportRequest: AnkiExportRequest) {
 
           await runFFmpeg(videoArgs);
 
-          const videoFilename = await invokeAnkiConnect('storeMediaFile', {
-            filename: path.basename(videoPath),
-            path: videoPath
-          });
-
-          if (!videoFilename) {
-            throw new Error('Failed to store video file in Anki.');
-          }
-
-          finalFields[mapping.destination] = `<video controls playsinline autoplay src="${videoFilename}"></video>`;
+          await storeMediaFileInAnkiSafely(
+            videoPath,
+            mapping.destination,
+            (videoFilename) => `<video controls playsinline autoplay src="${videoFilename}"></video>`,
+            finalFields
+          );
           break;
 
         case 'notes':

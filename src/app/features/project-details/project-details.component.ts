@@ -56,6 +56,7 @@ import {AssSubtitlesUtils} from '../../../../shared/utils/ass-subtitles.utils';
 import {Project} from '../../model/project.types';
 import {OverlayBadgeModule} from 'primeng/overlaybadge';
 import {FileOpenIntentService} from '../../core/services/file-open-intent/file-open-intent.service';
+import {MediaTrack} from '../../../../shared/types/media.type';
 
 @Component({
   selector: 'app-project-details',
@@ -428,10 +429,13 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
     this.clipsStateService.setSubtitles(subtitles);
 
+    // Map absolute stream index to MPV relative audio track ID
+    const audioTrackId = this.getMpvAudioTrackId(foundProject.audioTracks, foundProject.settings.selectedAudioTrackIndex);
+
     try {
       await window.electronAPI.mpvCreateViewport(
         foundProject.mediaPath,
-        foundProject.settings.selectedAudioTrackIndex,
+        audioTrackId,
         foundProject.subtitleSelection,
         foundProject.subtitleTracks,
         foundProject.settings.useMpvSubtitles,
@@ -1143,5 +1147,16 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
         // Error fallback: Update with empty peaks so timeline stops waiting
         this.appStateService.updateProject(projectId, {audioPeaks: [[0]]});
       });
+  }
+
+  private getMpvAudioTrackId(audioTracks: MediaTrack[], selectedIndex: number | null): number | null {
+    if (selectedIndex === null || !audioTracks) {
+      return null;
+    }
+    const index = audioTracks.findIndex(t => t.index === selectedIndex);
+    if (index !== -1) {
+      return index + 1; // MPV uses 1-based relative audio track IDs
+    }
+    return null;
   }
 }

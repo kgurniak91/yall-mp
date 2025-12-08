@@ -47,7 +47,8 @@ export class MpvManager extends EventEmitter {
       '--sub-visibility=no',
       '--hr-seek=yes',
       '--cache=no',
-      '--ontop=no'
+      '--ontop=no',
+      '--force-window=yes'
     ];
 
     if (audioTrackIndex !== null) {
