@@ -88,7 +88,7 @@
     },
     "feature_anki": {
       "title": "Integracja z Anki",
-      "desc_html": "<p>Widzisz zdanie warte zapamiętania? Naciśnij <b class=\"highlight\">E</b>, aby wyeksportować je do <a class=\"highlight\" href=\"https://apps.ankiweb.net/\" target=\"_blank\">Anki</a> i zapamiętać je na zawsze.</p><p>Odtwarzacz automatycznie zapisuje <b>dźwięk</b>, robi <b>zrzut ekranu</b> lub wycina <b>klip wideo</b>, pobiera <b>tekst</b> napisów wraz z twoimi <b>notatkami</b> i tworzy wysokiej jakości fiszkę bezpośrednio w <a class=\"highlight\" href=\"https://apps.ankiweb.net/\" target=\"_blank\">Anki</a>, korzystając z wtyczki <a class=\"highlight\" href=\"https://ankiweb.net/shared/info/2055492159\" target=\"_blank\">AnkiConnect</a>.</p><p><a href=\"anki.html\" class=\"text-link\">Kliknij tutaj, aby zobaczyć szczegółową instrukcję integracji &rarr;</a></p>"
+      "desc_html": "<p>Widzisz zdanie warte zapamiętania? Naciśnij <b class=\"highlight\">E</b>, aby wyeksportować je do <a class=\"highlight\" href=\"https://apps.ankiweb.net/\" target=\"_blank\">Anki</a> i zapamiętać je na zawsze.</p><p>Odtwarzacz automatycznie zapisuje <b>dźwięk</b>, robi <b>zrzut ekranu</b>, <b>zapętloną animację</b> lub wycina <b>klip wideo</b>, pobiera <b>tekst</b> napisów wraz z twoimi <b>notatkami</b> i tworzy wysokiej jakości fiszkę bezpośrednio w <a class=\"highlight\" href=\"https://apps.ankiweb.net/\" target=\"_blank\">Anki</a>, korzystając z wtyczki <a class=\"highlight\" href=\"https://ankiweb.net/shared/info/2055492159\" target=\"_blank\">AnkiConnect</a>.</p><p><a href=\"anki.html\" class=\"text-link\">Kliknij tutaj, aby zobaczyć szczegółową instrukcję integracji &rarr;</a></p>"
     },
     "feature_presets": {
       "title": "Tryby nauki",
@@ -170,7 +170,7 @@
     "step4_img_alt": "Nowy typ notatki na liście",
     "step5_intro": "Z zaznaczonym nowym typem notatki (jak na zrzucie ekranu powyżej), kliknij przycisk \"Fields\" - pojawi się nowe okno:",
     "step5_list_1": "• Tutaj możesz skonfigurować pola dla elementów eksportowanych przez <b>Y'ALL Media Player</b>.",
-    "step5_list_2": "• Potrzebujesz osobnego pola na \"id\" oraz przynajmniej 1 pola z: \"subtitle_text\", \"audio\", \"screenshot\", \"video_clip\", \"notes\".",
+    "step5_list_2": "• Potrzebujesz osobnego pola na \"id\" oraz przynajmniej 1 pola z: \"subtitle_text\", \"audio\", \"screenshot\", \"video_clip\", \"animation\", \"notes\".",
     "step5_list_3": "• Możesz usunąć domyślne pola \"Front\" i \"Back\".",
     "step5_list_4": "• Powinieneś uzyskać efekt podobny do tego:",
     "step5_img_alt": "Lista pól dla typu notatki",

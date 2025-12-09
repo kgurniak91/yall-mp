@@ -1585,6 +1585,39 @@ async function handleAnkiExport(exportRequest: AnkiExportRequest) {
           );
           break;
 
+        case 'animation':
+          if (!hasRealVideoStream) {
+            console.log('[Anki Export] Skipping animation: No real video stream detected.');
+            continue;
+          }
+
+          const avifPath = path.join(tempDir, `${uniqueId}.avif`);
+          generatedFiles.push(avifPath);
+
+          const avifArgs = [
+            '-ss', subtitleData.startTime.toString(),
+            '-to', subtitleData.endTime.toString(),
+            '-i', mediaPath,
+            '-vf', 'scale=-2:480,fps=15', // Resize to 480p height and reduce framerate to keep the file size small
+            '-c:v', 'libaom-av1',         // AV1 video codec
+            '-crf', '35',                 // Constant Rate Factor for AV1
+            '-b:v', '0',                  // Must be 0 when using CRF
+            '-cpu-used', '8',             // Maximum speed in the range of 0-8 (8 is fastest - crucial for UX as AV1 is slow)
+            '-row-mt', '1',               // Enable row-based multi-threading to utilize all CPU cores
+            '-an',                        // No audio
+            avifPath
+          ];
+
+          await runFFmpeg(avifArgs);
+
+          await storeMediaFileInAnkiSafely(
+            avifPath,
+            mapping.destination,
+            (animationFilename) => `<img src="${animationFilename}">`,
+            finalFields
+          );
+          break;
+
         case 'notes':
           finalFields[mapping.destination] = notes;
           break;

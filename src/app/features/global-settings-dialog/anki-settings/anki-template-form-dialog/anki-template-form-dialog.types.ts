@@ -54,6 +54,12 @@ export const APP_ANKI_FIELDS: AppAnkiFieldSource[] = [
     required: false
   },
   {
+    key: 'animation',
+    label: 'Animation',
+    description: 'A silent, looping animation (AVIF format).',
+    required: false
+  },
+  {
     key: 'notes',
     label: 'Notes',
     description: 'All notes added to this clip either via the lookup in the built-in browser or manually.',

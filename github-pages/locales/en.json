@@ -88,7 +88,7 @@
     },
     "feature_anki": {
       "title": "Anki integration",
-      "desc_html": "<p>Found a sentence worth remembering? Press <b class=\"highlight\">E</b> to export it to <a class=\"highlight\" href=\"https://apps.ankiweb.net/\" target=\"_blank\">Anki</a> and remember it forever.</p><p>The player automatically extracts the <b>audio</b>, captures a <b>screenshot</b> or <b>entire video clip</b>, grabs the <b>text</b> with your <b>notes</b>, and sends a high-quality flashcard directly to <a class=\"highlight\" href=\"https://apps.ankiweb.net/\" target=\"_blank\">Anki</a> via <a class=\"highlight\" href=\"https://ankiweb.net/shared/info/2055492159\" target=\"_blank\">AnkiConnect</a>.</p><p><a href=\"anki.html\" class=\"text-link\">Click here for detailed integration instructions &rarr;</a></p>"
+      "desc_html": "<p>Found a sentence worth remembering? Press <b class=\"highlight\">E</b> to export it to <a class=\"highlight\" href=\"https://apps.ankiweb.net/\" target=\"_blank\">Anki</a> and remember it forever.</p><p>The player automatically extracts the <b>audio</b>, captures a <b>screenshot</b>, <b>looped animation</b> or <b>entire video clip</b>, grabs the <b>text</b> with your <b>notes</b>, and sends a high-quality flashcard directly to <a class=\"highlight\" href=\"https://apps.ankiweb.net/\" target=\"_blank\">Anki</a> via <a class=\"highlight\" href=\"https://ankiweb.net/shared/info/2055492159\" target=\"_blank\">AnkiConnect</a>.</p><p><a href=\"anki.html\" class=\"text-link\">Click here for detailed integration instructions &rarr;</a></p>"
     },
     "feature_presets": {
       "title": "Settings presets",
@@ -170,7 +170,7 @@
     "step4_img_alt": "New note type on the list",
     "step5_intro": "With the new note type highlighted (just like in the screenshot above), click on the \"Fields\" button - new dialog window will appear:",
     "step5_list_1": "• Here you can configure fields for different elements that <b>Y'ALL Media Player</b> can export.",
-    "step5_list_2": "• You need a separate field for \"id\" and at least 1 field out of: \"subtitle_text\", \"audio\", \"screenshot\", \"video_clip\", \"notes\".",
+    "step5_list_2": "• You need a separate field for \"id\" and at least 1 field out of: \"subtitle_text\", \"audio\", \"screenshot\", \"video_clip\", \"animation\", \"notes\".",
     "step5_list_3": "• You can remove the default \"Front\" and \"Back\" fields.",
     "step5_list_4": "• You should end up with something like this:",
     "step5_img_alt": "List of fields for note type",

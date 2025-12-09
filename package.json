@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://github.com/kgurniak91/yall-mp"
   },
-  "version": "0.8.0-beta",
+  "version": "0.8.1-beta",
   "main": "electron-main.js",
   "scripts": {
     "ng": "ng",

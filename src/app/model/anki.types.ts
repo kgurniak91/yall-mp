@@ -1,7 +1,7 @@
 import {SubtitleData} from '../../../shared/types/subtitle.type';
 import {Project} from './project.types';
 
-export type AnkiFieldMappingSource = 'id' | 'text' | 'audio' | 'screenshot' | 'video' | 'notes';
+export type AnkiFieldMappingSource = 'id' | 'text' | 'audio' | 'screenshot' | 'video' | 'notes' | 'animation';
 
 export interface AnkiFieldMapping {
   source: AnkiFieldMappingSource; // App's data fields
