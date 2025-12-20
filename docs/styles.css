@@ -323,10 +323,10 @@ img, video {
 }
 
 .screenshot-caption {
-  font-size: 0.8rem;
+  font-size: 0.8rem !important;
   font-style: italic;
   color: #888;
-  text-align: center;
+  text-align: center !important;
   margin: 0 auto 2rem;
 }
 
@@ -362,7 +362,7 @@ img, video {
 .workflow-row {
   display: flex;
   align-items: center;
-  gap: 4rem;
+  gap: 3rem;
   margin-bottom: 5rem;
 }
 
@@ -381,6 +381,7 @@ img, video {
 
 .workflow-media {
   flex: 1.2;
+  max-width: fit-content;
 }
 
 .workflow-icon {
@@ -417,7 +418,6 @@ img, video {
   width: 100%;
   max-width: 600px;
   margin: 0 auto;
-  aspect-ratio: 3 / 2;
   position: relative;
 }
 
@@ -613,18 +613,18 @@ details:target {
   }
 }
 
-/* ANKI MANUAL */
-.section-anki {
+/* GUIDES */
+.section-guide {
   padding: 2rem 0 1rem;
   background: var(--card-bg);
   border-top: 1px solid var(--border);
 }
 
-.section-anki ul {
+.section-guide ul {
   padding-left: 1.25rem;
 }
 
-.anki-header {
+.guide-content {
   text-align: center;
   margin-bottom: 4rem;
   max-width: 80rem;
@@ -632,13 +632,13 @@ details:target {
   margin-right: auto;
 }
 
-.anki-header h1 {
+.guide-content h1 {
   font-size: 2.5rem;
   line-height: 1.2;
   margin-bottom: 0.5rem;
 }
 
-.anki-header p {
+.guide-content p {
   color: var(--text-main);
   font-size: 1.2rem;
   text-align: left;
@@ -688,6 +688,7 @@ footer a:hover {
 
   .workflow-media {
     width: 100%;
+    max-width: 100%;
   }
 
   .hero-actions {

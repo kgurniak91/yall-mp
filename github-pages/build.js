@@ -22,7 +22,8 @@ const loadPage = (name) => fs.readFileSync(path.join(SRC_DIR, 'pages', `${name}.
 
 const pages = [
   {name: 'index', template: loadPage('index')},
-  {name: 'anki', template: loadPage('anki')}
+  {name: 'anki', template: loadPage('anki')},
+  {name: 'dictionaries', template: loadPage('dictionaries')}
 ];
 
 // Helper to render pages

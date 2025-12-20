@@ -3,7 +3,8 @@
     <p-tab [value]="GlobalSettingsTab.General">General</p-tab>
     <p-tab [value]="GlobalSettingsTab.ProjectDefaults">Project Defaults</p-tab>
     <p-tab [value]="GlobalSettingsTab.Anki">Anki integration</p-tab>
-    <p-tab [value]="GlobalSettingsTab.SubtitlesLookup">Subtitles Lookup</p-tab>
+    <p-tab [value]="GlobalSettingsTab.OnlineLookups">Online Lookups</p-tab>
+    <p-tab [value]="GlobalSettingsTab.OfflineDictionaries">Offline Dictionaries</p-tab>
   </p-tablist>
   <p-tabpanels>
     <p-tabpanel [value]="GlobalSettingsTab.General">
@@ -31,13 +32,16 @@
       </p>
       <app-anki-settings/>
     </p-tabpanel>
-    <p-tabpanel [value]="GlobalSettingsTab.SubtitlesLookup">
+    <p-tabpanel [value]="GlobalSettingsTab.OnlineLookups">
       <p class="mt-0">
         Configure online lookup services for words and phrases selected from subtitles.
         <br>
         Use the placeholder <b>%%SS</b> to represent the selected text in the URL.
       </p>
       <app-subtitles-lookup-settings/>
+    </p-tabpanel>
+    <p-tabpanel [value]="GlobalSettingsTab.OfflineDictionaries">
+      <app-offline-dictionaries-settings/>
     </p-tabpanel>
   </p-tabpanels>
 </p-tabs>

@@ -10,7 +10,7 @@
       <div class="flex gap-3 flex-wrap">
         <div class="flex flex-column flex-1 gap-3">
           <div class="flex align-items-center gap-2">
-            <h2 class="m-0">Y'ALL MP</h2>
+            <h2 class="m-0">Y'ALL Media Player</h2>
             <p-tag [value]="'v' + appVersion()" severity="primary"></p-tag>
           </div>
           <p class="m-0"><b>Y</b>et <b>A</b>nother <b>L</b>anguage <b>L</b>earning <b>M</b>edia <b>P</b>layer</p>
@@ -51,7 +51,7 @@
                   }
                 </div>
               </td>
-              <td>{{ shortcut.description }}</td>
+              <td style="white-space: pre;">{{ shortcut.description }}</td>
             </tr>
           </ng-template>
         </p-table>
@@ -67,7 +67,12 @@
             <p class="m-0 text-600 mb-2">
               Licensed under the <strong>GNU GPLv3</strong>.
               <br>
-              The Windows version bundles unmodified binaries of
+              This application bundles the
+              <a href="#" class="text-primary no-underline font-medium hover:underline"
+                 (click)="onExternalLinkClick('https://github.com/yomidevs/yomitan', $event)">Yomitan</a>
+              browser extension on all platforms for offline dictionaries feature.
+              <br>
+              The Windows version additionally bundles unmodified binaries of
               <a href="#" class="text-primary no-underline font-medium hover:underline"
                  (click)="onExternalLinkClick('https://github.com/shinchiro/mpv-winbuild-cmake/releases', $event)">mpv</a>,
               <a href="#" class="text-primary no-underline font-medium hover:underline"

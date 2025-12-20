@@ -1,0 +1,15 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.webview-container {
+  background: white;
+}
+
+.yomitan-webview {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: flex;
+}

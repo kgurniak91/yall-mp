@@ -6,6 +6,7 @@ import {StorageService} from '../../core/services/storage/storage.service';
 import {merge} from 'lodash-es';
 import {debounceTime, skip} from 'rxjs';
 import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
+import {normalizeLanguageCode} from '../../../../shared/types/yomitan';
 
 const defaults: AppData = {
   projects: [],
@@ -67,6 +68,7 @@ export class AppStateService {
       }
 
       if (mergedData.currentProject) {
+        this.migrateLanguageCodeForProject(mergedData.currentProject);
         mergedData.currentProject.settings = merge({}, DEFAULT_PROJECT_SETTINGS, mergedData.currentProject.settings);
       }
 
@@ -142,6 +144,8 @@ export class AppStateService {
       console.error(`Failed to set current project: Project with ID ${projectId} not found on disk.`);
       return;
     }
+
+    this.migrateLanguageCodeForProject(projectToLoad);
 
     projectToLoad.lastOpenedDate = Date.now();
     const minimalProject = this.toMinimalProject(projectToLoad);
@@ -230,5 +234,17 @@ export class AppStateService {
       subtitleCount: project.subtitles.length,
       lastSubtitleEndTime: project.lastSubtitleEndTime
     };
+  }
+
+  // Language migration from franc-all to Yomitan:
+  private migrateLanguageCodeForProject(project: Project) {
+    const detectedLanguage = normalizeLanguageCode(project.detectedLanguage);
+    const selectedLanguage = normalizeLanguageCode(project.settings.subtitlesLanguage);
+
+    if ((project.detectedLanguage !== detectedLanguage) || (project.settings.subtitlesLanguage !== selectedLanguage)) {
+      console.log(`[Migration] Updating project language from ${project.detectedLanguage}/${project.settings.subtitlesLanguage} to ${detectedLanguage}/${selectedLanguage}`);
+      project.detectedLanguage = detectedLanguage;
+      project.settings.subtitlesLanguage = selectedLanguage;
+    }
   }
 }

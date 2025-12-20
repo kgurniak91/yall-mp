@@ -12,6 +12,9 @@ import {SubtitlesLookupSettingsComponent} from './subtitles-lookup-settings/subt
 import {DynamicDialogConfig} from 'primeng/dynamicdialog';
 import {GlobalSettingsDialogConfig, GlobalSettingsTab} from './global-settings-dialog.types';
 import {AnkiStateService} from '../../state/anki/anki-state.service';
+import {
+  OfflineDictionariesSettingsComponent
+} from './offline-dictionaries-settings/offline-dictionaries-settings.component';
 
 @Component({
   selector: 'app-global-settings-dialog',
@@ -25,7 +28,8 @@ import {AnkiStateService} from '../../state/anki/anki-state.service';
     FormsModule,
     GlobalSettingsComponent,
     AnkiSettingsComponent,
-    SubtitlesLookupSettingsComponent
+    SubtitlesLookupSettingsComponent,
+    OfflineDictionariesSettingsComponent
   ],
   templateUrl: './global-settings-dialog.component.html',
   styleUrl: './global-settings-dialog.component.scss'

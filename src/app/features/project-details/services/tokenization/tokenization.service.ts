@@ -1,86 +1,51 @@
 import {inject, Injectable} from '@angular/core';
-import {
-  loadDefaultJapaneseParser,
-  loadDefaultSimplifiedChineseParser,
-  loadDefaultThaiParser,
-  loadDefaultTraditionalChineseParser,
-  Parser,
-} from 'budoux';
 import {ProjectSettingsStateService} from '../../../../state/project-settings/project-settings-state.service';
 import {SupportedLanguage} from '../../../../model/project.types';
 
-interface WordTokenizer {
-  getWordBoundaries(text: string, offset: number): { start: number; end: number } | null;
-}
-
 @Injectable()
 export class TokenizationService {
-  private readonly tokenizers = new Map<SupportedLanguage, WordTokenizer>();
-  private readonly japaneseParser: Parser;
-  private readonly chineseSimplifiedParser: Parser;
-  private readonly chineseTraditionalParser: Parser;
-  private readonly thaiParser: Parser;
   private readonly projectSettingsStateService = inject(ProjectSettingsStateService);
-
-  constructor() {
-    this.japaneseParser = loadDefaultJapaneseParser();
-    this.chineseSimplifiedParser = loadDefaultSimplifiedChineseParser();
-    this.chineseTraditionalParser = loadDefaultTraditionalChineseParser();
-    this.thaiParser = loadDefaultThaiParser();
-    this.initializeTokenizers();
-  }
+  private segmenters = new Map<string, Intl.Segmenter>();
 
   public getWordBoundaries(text: string, offset: number): { start: number; end: number } | null {
-    if (!text || offset < 0 || offset > text.length) {
+    if (!text || offset < 0 || offset >= text.length) {
       return null;
     }
-    const lang = this.projectSettingsStateService.subtitlesLanguage();
-    const tokenizer = this.tokenizers.get(lang) || this.tokenizers.get('other')!;
-    return tokenizer.getWordBoundaries(text, offset);
+
+    const langCode = this.getIsoCode(this.projectSettingsStateService.subtitlesLanguage());
+
+    let segmenter = this.segmenters.get(langCode);
+    if (!segmenter) {
+      segmenter = new Intl.Segmenter(langCode, {granularity: 'word'});
+      this.segmenters.set(langCode, segmenter);
+    }
+
+    const segments = segmenter.segment(text);
+    const segmentResult = segments.containing(offset);
+
+    if (!segmentResult) {
+      return null;
+    }
+
+    if (!segmentResult.isWordLike) {
+      return null;
+    }
+
+    return {
+      start: segmentResult.index,
+      end: segmentResult.index + segmentResult.segment.length
+    };
   }
 
-  private initializeTokenizers(): void {
-    // Default Regex Tokenizer (for English, Korean, etc.)
-    this.tokenizers.set('other', {
-      getWordBoundaries: (text, offset) => {
-        if (!/\p{L}|\p{N}|'|-/u.test(text[offset])) {
-          return null;
-        }
-        let start = offset;
-        while (start > 0 && /\p{L}|\p{N}|'|-/u.test(text[start - 1])) {
-          start--;
-        }
-        let end = offset;
-        while (end < text.length && /\p{L}|\p{N}|'|-/u.test(text[end])) {
-          end++;
-        }
-        return start === end ? null : {start, end};
-      }
-    });
+  private getIsoCode(supportedLang: SupportedLanguage): string {
+    if (!supportedLang || supportedLang === 'other') {
+      return 'en';
+    }
 
-    // Helper function to create a BudouX tokenizer from a parser instance
-    const createBudouxTokenizer = (parser: Parser): WordTokenizer => ({
-      getWordBoundaries: (text, offset) => {
-        if (!/\p{L}|\p{N}/u.test(text[offset])) {
-          return null;
-        }
-        const segments = parser.parse(text);
-        let currentIndex = 0;
-        for (const segment of segments) {
-          const start = currentIndex;
-          const end = start + segment.length;
-          if (offset >= start && offset < end) {
-            return {start, end};
-          }
-          currentIndex = end;
-        }
-        return null;
-      }
-    });
+    if (supportedLang === 'zh') {
+      return 'zh-CN'; // Preference for Simplified Chinese if generic 'zh'
+    }
 
-    this.tokenizers.set('jpn', createBudouxTokenizer(this.japaneseParser));
-    this.tokenizers.set('cmn', createBudouxTokenizer(this.chineseSimplifiedParser));
-    this.tokenizers.set('zho', createBudouxTokenizer(this.chineseTraditionalParser));
-    this.tokenizers.set('tha', createBudouxTokenizer(this.thaiParser));
+    return supportedLang;
   }
 }

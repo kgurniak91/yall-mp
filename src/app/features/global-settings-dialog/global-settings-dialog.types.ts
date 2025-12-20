@@ -6,5 +6,6 @@ export enum GlobalSettingsTab {
   General = 0,
   ProjectDefaults = 1,
   Anki = 2,
-  SubtitlesLookup = 3,
+  OnlineLookups = 3,
+  OfflineDictionaries = 4,
 }

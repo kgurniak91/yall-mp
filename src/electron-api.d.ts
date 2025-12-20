@@ -109,6 +109,13 @@ export interface IElectronAPI {
   playbackUpdateClips: (clips: VideoClip[]) => void;
   onPlaybackStateUpdate: (callback: (update: PlaybackStateUpdate) => void) => (() => void);
   onRepeatSeekCompleted: (callback: () => void) => (() => void);
+  // --- Yomitan
+  getYomitanExtensionId: () => Promise<string | null>;
+  getYomitanSettingsUrl: () => Promise<string | null>;
+  invokeExtension: (message: any) => Promise<any>;
+  setYomitanLanguageFull: (languageIso: string) => Promise<any>;
+  showContextMenu: (options: { text: string }) => Promise<string | null>;
+  invokeExtensionReadyCheck: () => Promise<boolean>;
 }
 
 declare global {

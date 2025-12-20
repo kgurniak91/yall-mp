@@ -57,6 +57,8 @@ import {Project} from '../../model/project.types';
 import {OverlayBadgeModule} from 'primeng/overlaybadge';
 import {FileOpenIntentService} from '../../core/services/file-open-intent/file-open-intent.service';
 import {MediaTrack} from '../../../../shared/types/media.type';
+import {YomitanService} from '../../core/services/yomitan/yomitan.service';
+import {NoteRequest} from './subtitles-overlay/subtitles-overlay.types';
 
 @Component({
   selector: 'app-project-details',
@@ -92,6 +94,7 @@ import {MediaTrack} from '../../../../shared/types/media.type';
   ]
 })
 export class ProjectDetailsComponent implements OnInit, OnDestroy {
+  protected readonly isYomitanEnabled = signal(false);
   protected readonly subtitlesAtCurrentTime = computed(() => this.clipsStateService.subtitlesAtCurrentTime());
 
   protected readonly trackIndexes = computed(() => {
@@ -262,6 +265,12 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   protected readonly subtitlesMenuItems = signal<MenuItem[]>([]);
   protected readonly timelineMenuItems = signal<MenuItem[]>([]);
   protected readonly isSubtitlesContextMenuOpen = signal(false);
+  protected readonly isTimelineContextMenuOpen = signal(false);
+  protected readonly isAnyContextMenuOpen = computed(() =>
+    this.isSubtitlesContextMenuOpen() || this.isTimelineContextMenuOpen()
+  );
+
+  private readonly subtitlesOverlay = viewChild.required(SubtitlesOverlayComponent);
   private selectedSubtitleTextForMenu = '';
   private wasPlayingBeforeSettingsOpened = false;
   private wasSettingsDrawerOpened = false;
@@ -277,6 +286,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   private readonly subtitlesHighlighterService = inject(SubtitlesHighlighterService);
   private readonly headerCurrentProjectActionBridgeService = inject(HeaderCurrentProjectActionBridgeService);
   private readonly fileOpenIntentService = inject(FileOpenIntentService);
+  private readonly yomitanService = inject(YomitanService);
   private dialogRef: DynamicDialogRef | undefined;
   private isMpvReady = signal(false);
   private isUiReady = signal(false);
@@ -341,6 +351,17 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
         this.timelineContextMenu().hide();
         this.subtitlesContextMenu().hide();
       }
+    });
+
+    effect(() => {
+      const language = this.projectSettingsStateService.subtitlesLanguage();
+      this.globalSettingsStateService.settingsReloadTrigger();
+
+      // Ensure languages are loaded before trying to sync
+      this.yomitanService.ensureLanguagesLoaded().then(() => {
+        // Update Yomitan and re-check for valid dictionaries
+        this.initializeYomitan(language);
+      });
     });
 
     this.cleanupMpvReadyListener = window.electronAPI.onMpvManagerReady(() => {
@@ -565,6 +586,8 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   }
 
   async openAnkiExportDialog(): Promise<void> {
+    this.subtitlesOverlay().clearHighlightAndPopup();
+
     if (!this.ankiStateService.isAnkiExportAvailable()) {
       this.toastService.error('Anki export is not available. FFmpeg could not be found.');
       return;
@@ -622,6 +645,11 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   }
 
   onVideoAreaClick(): void {
+    if (this.isAnyContextMenuOpen()) {
+      this.hideAllContextMenus();
+      return;
+    }
+
     if (this.clickTimeout) {
       clearTimeout(this.clickTimeout);
       this.clickTimeout = null;
@@ -636,6 +664,11 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
   protected onTrackChange(trackIndex: number): void {
     this.clipsStateService.setActiveTrack(trackIndex);
+  }
+
+  protected hideAllContextMenus(): void {
+    this.timelineContextMenu().hide();
+    this.subtitlesContextMenu().hide();
   }
 
   onSubtitlesContextMenu(payload: { event: MouseEvent, text: string }): void {
@@ -685,17 +718,31 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       menuItems.push(menuItem);
     });
 
+    menuItems.push({separator: true});
+
+    if (this.isYomitanEnabled()) {
+      menuItems.push({
+        label: `Search in offline dictionary`,
+        icon: 'fa-solid fa-book',
+        command: () => {
+          this.subtitlesOverlay().showOfflinePopupFor(this.selectedSubtitleTextForMenu, payload.event);
+        }
+      });
+    }
+
     menuItems.push(
-      {separator: true},
       {
         label: 'Copy to Clipboard',
         icon: 'fa-solid fa-copy',
-        command: () => navigator.clipboard.writeText(this.selectedSubtitleTextForMenu)
+        command: () => {
+          navigator.clipboard.writeText(this.selectedSubtitleTextForMenu);
+          this.toastService.success('Copied to clipboard!');
+        }
       },
       {
-        label: 'Configure...',
+        label: 'Configure online lookup services',
         icon: 'fa-solid fa-cog',
-        command: () => this.dialogOrchestrationService.openGlobalSettingsDialog(GlobalSettingsTab.SubtitlesLookup)
+        command: () => this.dialogOrchestrationService.openGlobalSettingsDialog(GlobalSettingsTab.OnlineLookups)
       }
     );
 
@@ -707,12 +754,21 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     this.isSubtitlesContextMenuOpen.set(false);
   }
 
-  onHideTimelineContextMenu(): void {
+  onTimelineContextMenuHide(): void {
+    this.isTimelineContextMenuOpen.set(false);
+    // Re-enable WaveSurfer's auto-scrolling for normal behavior once the menu is closed
+    this.timelineEditor().setAutoScroll(true);
+  }
+
+  onSubtitlePopupShown(): void {
     this.timelineContextMenu().hide();
   }
 
   onTimelineContextMenu(payload: { event: MouseEvent, clipId: string }): void {
     this.subtitlesContextMenu().hide();
+
+    // Ensure any open offline popup is closed when interacting with the timeline
+    this.subtitlesOverlay().clearHighlightAndPopup();
 
     // Disable WaveSurfer's auto-scrolling to prevent the race condition with the menu
     this.timelineEditor().setAutoScroll(false);
@@ -833,6 +889,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
     this.timelineMenuItems.set(items);
     this.timelineContextMenu().show(payload.event);
+    this.isTimelineContextMenuOpen.set(true);
 
     // Reposition menu after it renders to prevent being cut off
     setTimeout(() => {
@@ -854,9 +911,16 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     }, 10);
   }
 
-  onTimelineContextMenuHide(): void {
-    // Re-enable WaveSurfer's auto-scrolling for normal behavior once the menu is closed
-    this.timelineEditor().setAutoScroll(true);
+  onAddNoteRequest(request: NoteRequest) {
+    const currentClip = this.clipsStateService.currentClipForAllTracks();
+    if (currentClip && currentClip.sourceSubtitles[0]) {
+      this.addNoteToProject(
+        currentClip.sourceSubtitles[0].id,
+        request.term,
+        request.text
+      );
+      this.toastService.success('Note added!');
+    }
   }
 
   onDefaultAction(text: string): void {
@@ -909,11 +973,15 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   private settingsDrawerListener = effect(() => {
     const isOpen = this.projectSettingsStateService.isSettingsDrawerOpen();
 
-    if (isOpen && !this.wasSettingsDrawerOpened) {
-      // Drawer is opening (was closed before)
-      this.wasPlayingBeforeSettingsOpened = this.clipsStateService.isPlaying();
-      if (this.wasPlayingBeforeSettingsOpened) {
-        window.electronAPI.playbackPause();
+    if (isOpen) {
+      untracked(() => this.subtitlesOverlay().clearHighlightAndPopup());
+
+      if (!this.wasSettingsDrawerOpened) {
+        // Drawer is opening (was closed before)
+        this.wasPlayingBeforeSettingsOpened = this.clipsStateService.isPlaying();
+        if (this.wasPlayingBeforeSettingsOpened) {
+          window.electronAPI.playbackPause();
+        }
       }
     } else if (!isOpen && this.wasSettingsDrawerOpened) {
       // Drawer is closing
@@ -928,6 +996,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
   private editCurrentSubtitlesListener = effect(() => {
     if (this.videoStateService.editSubtitlesRequest()) {
+      untracked(() => this.subtitlesOverlay().clearHighlightAndPopup());
       const currentClip = this.clipsStateService.currentClipForAllTracks();
       if (!currentClip || !currentClip.hasSubtitle) {
         this.toastService.info('Subtitle editing is not available for gaps.');
@@ -999,6 +1068,13 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       this.openAnkiExportDialog();
       this.videoStateService.clearAnkiExportRequest();
     }
+  });
+
+  private dialogOpenListener = effect(() => {
+    this.dialogOrchestrationService.dialogOpenedTrigger();
+    untracked(() => {
+      this.subtitlesOverlay().clearHighlightAndPopup();
+    });
   });
 
   private startPlaybackSequence(): void {
@@ -1158,5 +1234,40 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       return index + 1; // MPV uses 1-based relative audio track IDs
     }
     return null;
+  }
+
+  private async initializeYomitan(language: string) {
+    try {
+      await this.yomitanService.setLanguage(language);
+
+      if (language === 'other') {
+        this.isYomitanEnabled.set(false);
+        console.log(`[ProjectDetails] Yomitan Disabled (Language: other)`);
+        return;
+      }
+
+      const infoResponse = await this.yomitanService.getDictionaryInfo();
+      const installedDicts = infoResponse?.result || [];
+      const optionsResponse = await this.yomitanService.getOptions();
+      const profileDictionaries = optionsResponse?.result?.dictionaries || [];
+
+      const hasValidDictionary = installedDicts.some((info: any) => {
+        const config = profileDictionaries.find((d: any) => d.name === info.title);
+        if (!config || !config.enabled) return false;
+
+        let dictLang = info.sourceLanguage;
+        if (!dictLang || dictLang === '') {
+          dictLang = 'ja'; // Legacy JMdict fix
+        }
+
+        return dictLang === language;
+      });
+
+      this.isYomitanEnabled.set(hasValidDictionary);
+      console.log(`[ProjectDetails] Yomitan Sync: Language=${language}, Dictionaries=${hasValidDictionary}`);
+    } catch (e) {
+      console.warn('[ProjectDetails] Failed to sync with Yomitan:', e);
+      this.isYomitanEnabled.set(false);
+    }
   }
 }

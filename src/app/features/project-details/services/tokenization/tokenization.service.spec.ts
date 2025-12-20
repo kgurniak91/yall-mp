@@ -32,37 +32,31 @@ describe('TokenizationService', () => {
 
   describe('Language Dispatching', () => {
     it('uses Japanese tokenization logic for Japanese text', () => {
-      mockLanguageSignal.set('jpn');
+      mockLanguageSignal.set('ja');
       const result = service.getWordBoundaries('日本語の形態素解析', 4);
-      expect(result).toEqual({start: 4, end: 9});
+      expect(result).toEqual({start: 4, end: 7});
     });
 
-    it('uses Simplified Chinese tokenization logic for Simplified Chinese text', () => {
-      mockLanguageSignal.set('cmn');
+    it('uses Chinese tokenization logic for Chinese text', () => {
+      mockLanguageSignal.set('zh');
       const result = service.getWordBoundaries('中文分词测试', 3);
-      expect(result).toEqual({start: 0, end: 4});
-    });
-
-    it('uses Traditional Chinese tokenization logic for Traditional Chinese text', () => {
-      mockLanguageSignal.set('zho');
-      const result = service.getWordBoundaries('繁體中文測試', 4);
-      expect(result).toEqual({start: 4, end: 6});
+      expect(result).toEqual({start: 2, end: 4});
     });
 
     it('uses Thai tokenization logic for Thai text', () => {
-      mockLanguageSignal.set('tha');
+      mockLanguageSignal.set('th');
       const result = service.getWordBoundaries('ภาษาไทยง่ายนิดเดียว', 5);
-      expect(result).toEqual({start: 0, end: 7});
+      expect(result).toEqual({start: 4, end: 7});
     });
 
-    it('uses regex tokenization logic for Korean text (as "other")', () => {
-      mockLanguageSignal.set('other');
+    it('uses Korean tokenization logic for Korean text', () => {
+      mockLanguageSignal.set('ko');
       const result = service.getWordBoundaries('한국어를 공부하고 있어요', 5);
       expect(result).toEqual({start: 5, end: 9});
     });
 
-    it('uses regex tokenization logic for English text (as "other")', () => {
-      mockLanguageSignal.set('other');
+    it('uses English tokenization logic for English text', () => {
+      mockLanguageSignal.set('en');
       const result = service.getWordBoundaries('This is a test', 6);
       expect(result).toEqual({start: 5, end: 7});
     });
@@ -70,13 +64,13 @@ describe('TokenizationService', () => {
 
   describe('Japanese Tokenization', () => {
     beforeEach(() => {
-      mockLanguageSignal.set('jpn');
+      mockLanguageSignal.set('ja');
     });
 
     it('finds a word in a Japanese sentence', () => {
       const text = '日本語の形態素解析';
       const result = service.getWordBoundaries(text, 4);
-      expect(result).toEqual({start: 4, end: 9});
+      expect(result).toEqual({start: 4, end: 7});
     });
 
     it('returns null for punctuation', () => {
@@ -86,21 +80,21 @@ describe('TokenizationService', () => {
     });
   });
 
-  describe('Chinese Simplified Tokenization', () => {
+  describe('Chinese Tokenization', () => {
     beforeEach(() => {
-      mockLanguageSignal.set('cmn');
+      mockLanguageSignal.set('zh');
     });
 
     it('finds a word in a simple Chinese sentence', () => {
       const text = '中文分词测试';
       const result = service.getWordBoundaries(text, 3);
-      expect(result).toEqual({start: 0, end: 4});
+      expect(result).toEqual({start: 2, end: 4});
     });
 
     it('handles mixed English and Chinese', () => {
       const text = '我喜欢Apple Watch';
       const result = service.getWordBoundaries(text, 4);
-      expect(result).toEqual({start: 4, end: 14});
+      expect(result).toEqual({start: 3, end: 8});
     });
 
     it('returns null for punctuation', () => {
@@ -110,24 +104,15 @@ describe('TokenizationService', () => {
     });
   });
 
-  describe('Chinese Traditional Tokenization', () => {
-    it('finds a word in a simple traditional chinese sentence', () => {
-      mockLanguageSignal.set('zho');
-      const text = '繁體中文測試';
-      const result = service.getWordBoundaries(text, 4);
-      expect(result).toEqual({start: 4, end: 6});
-    });
-  });
-
   describe('Thai Tokenization', () => {
     beforeEach(() => {
-      mockLanguageSignal.set('tha');
+      mockLanguageSignal.set('th');
     });
 
     it('finds a word in a simple Thai sentence', () => {
       const text = 'ภาษาไทยง่ายนิดเดียว';
       const result = service.getWordBoundaries(text, 5);
-      expect(result).toEqual({start: 0, end: 7});
+      expect(result).toEqual({start: 4, end: 7});
     });
 
     it('correctly segments a more complex sentence', () => {
@@ -137,9 +122,9 @@ describe('TokenizationService', () => {
     });
   });
 
-  describe('Regex Fallback (English, Korean etc.)', () => {
+  describe('English Tokenization', () => {
     beforeEach(() => {
-      mockLanguageSignal.set('other');
+      mockLanguageSignal.set('en');
     });
 
     it('finds a word in an English sentence', () => {
@@ -161,11 +146,23 @@ describe('TokenizationService', () => {
       const result = service.getWordBoundaries(text, offset);
       expect(result).toBeNull();
     });
+  });
+
+  describe('Korean Tokenization', () => {
+    beforeEach(() => {
+      mockLanguageSignal.set('ko');
+    });
+
+    it('finds a word in a Korean sentence', () => {
+      const text = '한국어를 공부하고 있어요';
+      const result = service.getWordBoundaries(text, 5);
+      expect(result).toEqual({start: 5, end: 9});
+    });
 
     it('handles mixed English and Korean', () => {
       const text = '나는 iPhone을 사용해요';
       const result = service.getWordBoundaries(text, 4);
-      expect(result).toEqual({start: 3, end: 10});
+      expect(result).toEqual({start: 3, end: 9});
     });
   });
 });

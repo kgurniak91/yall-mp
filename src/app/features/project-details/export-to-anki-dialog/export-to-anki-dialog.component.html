@@ -135,27 +135,32 @@
                 pTooltip="How to Add"
                 (click)="notesHelpPopover.toggle($event)">
       </p-button>
-      <p-popover #notesHelpPopover [style]="{width: '22.5rem'}">
+      <p-popover #notesHelpPopover [style]="{width: '25rem'}">
         <div class="flex flex-column gap-3 p-2">
-          <h4 class="m-0">How to Add Lookup Notes</h4>
-          <ul class="m-0 pl-3">
-            <li>
-              <b>Click a word</b> (or <b>drag to select a phrase</b>) in the subtitles to open a lookup service (website).
-            </li>
-            <li class="mt-2">
-              Ensure the lookup service (website) is set to use the <b>built-in browser</b> in global settings.
-            </li>
-            <li class="mt-2">
-              Inside the browser, select any text and add it as a note using one of these methods:
-              <ul class="mt-2 pl-3">
-                <li><b>Right-Click</b> &rarr; <b>Add to Notes</b></li>
-                <li>Pressing <b>Ctrl+Shift+S</b></li>
-              </ul>
-            </li>
-          </ul>
-          <small>
+          <h4 class="m-0">How to add Lookup Notes</h4>
+
+          <div class="flex flex-column gap-1">
+            <strong>Method 1: Offline Dictionary</strong>
+            <ul class="m-0 pl-3">
+              <li>Make sure offline dictionary is configured in global settings for currently selected language of the project.</li>
+              <li><b>Hover</b> over a word to open the dictionary popup.</li>
+              <li>Select any text inside the definition.</li>
+              <li><b>Right-Click</b> &rarr; <b>Add to Notes</b> (or Press <b>Ctrl+Shift+S</b>).</li>
+            </ul>
+          </div>
+
+          <div class="flex flex-column gap-1">
+            <strong>Method 2: Online Lookup</strong>
+            <ul class="m-0 pl-3">
+              <li><b>Click</b> a word to open the built-in browser.</li>
+              <li>Select any text on the webpage.</li>
+              <li><b>Right-Click</b> &rarr; <b>Add to Notes</b> (or Press <b>Ctrl+Shift+S</b>).</li>
+            </ul>
+          </div>
+
+          <small class="text-gray-500 line-height-3">
             <i>
-              Note: The new note will be saved under the original word/phrase that was selected from the subtitles.
+              The new note will be saved under the original word/phrase that was selected from the subtitles.
             </i>
           </small>
         </div>

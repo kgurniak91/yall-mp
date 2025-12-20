@@ -20,6 +20,8 @@ import {
 import {PlaybackManager} from './playback-manager';
 import type fontkit from 'fontkit';
 import {SUPPORTED_MEDIA_TYPES, SUPPORTED_SUBTITLE_TYPES} from './src/app/model/video.types';
+import {YomitanManager} from './yomitan-manager';
+import {LEGACY_TO_YOMITAN_ISO_MAP} from './shared/types/yomitan';
 
 interface AvailableFont {
   family: string;
@@ -46,6 +48,7 @@ const USER_AGENT_OPTIONS = {
 
 let playbackManager: PlaybackManager | null = null;
 let mpvManager: MpvManager | null = null;
+let yomitanManager: YomitanManager | null = null;
 let mainWindow: BrowserWindow | null = null;
 let uiWindow: BrowserWindow | null = null;
 let videoWindow: BrowserWindow | null = null;
@@ -263,7 +266,7 @@ function blockDefaultBrowserShortcuts(event: Electron.Event, input: Electron.Inp
   }
 }
 
-function createWindow() {
+async function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
   const workArea = primaryDisplay.workArea;
 
@@ -325,7 +328,8 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.js'),
+      webviewTag: true
     },
   });
 
@@ -533,10 +537,15 @@ function createWindow() {
 
   mainWindow.on('closed', () => {
     mpvManager?.stop();
+    yomitanManager?.destroy();
+
     // Child windows are destroyed automatically when the parent is closed, no need to close them explicitly.
     videoWindow = null;
     uiWindow = null;
     mainWindow = null;
+
+    // Force the entire application to quit - this ensures all processes and windows are terminated.
+    app.quit();
   });
 
   mainWindow.on('ready-to-show', () => {
@@ -626,6 +635,20 @@ if (!gotTheLock) {
   });
 
   app.whenReady().then(async () => {
+    app.on('web-contents-created', (_, contents) => {
+      contents.setWindowOpenHandler(({url}) => {
+        if (url.startsWith('http:') || url.startsWith('https:')) {
+          shell.openExternal(url);
+        }
+        // Deny the creation of a new Electron window
+        return {action: 'deny'};
+      });
+    });
+
+    yomitanManager = new YomitanManager();
+    await yomitanManager.loadExtension();
+    yomitanManager.registerHandlers();
+
     await checkSystemDependencies();
     ensureProjectsDirExists();
     pendingFilesToOpen = getFilesFromArgv(process.argv); // Handle "Open with"
@@ -2289,15 +2312,28 @@ function getFullTextFromSubtitles(subtitles: SubtitleData[]): string {
 async function detectLanguage(text: string): Promise<SupportedLanguage> {
   const {francAll} = await import('franc-all');
 
-  const supportedSpecialCaseLanguages: SupportedLanguage[] = ['jpn', 'cmn', 'zho', 'tha'];
-  const langResults = francAll(text, {minLength: 3, only: supportedSpecialCaseLanguages});
-  const topLang = langResults.length > 0 ? langResults[0][0] : 'und';
+  // Get all results (franc returns [ ['eng', 1.0], ['sco', 0.98], ... ])
+  const langResults = francAll(text, {minLength: 3});
 
-  if (topLang === 'jpn') return 'jpn';
-  if (topLang === 'cmn') return 'cmn';
-  if (topLang === 'zho') return 'zho';
-  if (topLang === 'tha') return 'tha';
+  if (langResults.length === 0) {
+    return 'other';
+  }
 
+  // Check the top 3 candidates against languages supported by Yomitan
+  const checkDepth = Math.min(langResults.length, 3);
+
+  for (let i = 0; i < checkDepth; i++) {
+    const code3 = langResults[i][0];
+    const mappedCode = LEGACY_TO_YOMITAN_ISO_MAP[code3];
+
+    if (mappedCode) {
+      console.log(`[Language Detection] matched candidate #${i + 1}: ${code3} -> ${mappedCode}`);
+      return mappedCode;
+    }
+  }
+
+  // If no candidates in top 3 match a supported language, return 'other'
+  console.log(`[Language Detection] No supported language found in top ${checkDepth}. Top candidate was: ${langResults[0][0]}`);
   return 'other';
 }
 

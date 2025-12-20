@@ -125,4 +125,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('playback:repeat-seek-completed', subscription);
     return () => ipcRenderer.removeListener('playback:repeat-seek-completed', subscription);
   },
+  // --- Yomitan
+  getYomitanExtensionId: () => ipcRenderer.invoke('yomitan:get-extension-id'),
+  getYomitanSettingsUrl: () => ipcRenderer.invoke('yomitan:get-settings-url'),
+  invokeExtension: (message) => ipcRenderer.invoke('yomitan:invoke', message),
+  setYomitanLanguageFull: (iso) => ipcRenderer.invoke('yomitan:set-language-full', iso),
+  showContextMenu: () => ipcRenderer.invoke('yomitan:show-context-menu'),
+  invokeExtensionReadyCheck: () => ipcRenderer.invoke('yomitan:is-ready'),
 });

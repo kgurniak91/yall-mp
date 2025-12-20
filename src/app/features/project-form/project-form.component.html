@@ -28,6 +28,7 @@
             <p-select [options]="audioTrackOptions()"
                       [(ngModel)]="selectedAudioTrackIndex"
                       optionLabel="label"
+                      appendTo="body"
                       optionValue="value"
                       placeholder="Select audio track"
                       styleClass="w-full">
@@ -62,6 +63,7 @@
                           @case (SubtitleOptionType.embedded) {
                             <p-select [options]="subtitleTracks()"
                                       [(ngModel)]="selectedEmbeddedSubtitleTrackIndex"
+                                      appendTo="body"
                                       optionLabel="label"
                                       optionValue="index"
                                       placeholder="Select subtitle track"

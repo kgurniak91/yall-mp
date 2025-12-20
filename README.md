@@ -16,7 +16,10 @@
 **Y'ALL MP** is not just a media player; it is a comprehensive tool designed to bridge the gap between passive listening and active learning.
 It combines high-performance media playback with advanced tools to edit subtitle text and adjust timing, provides instant dictionary lookups, and seamless **Anki** flashcards creation.
 
-![App Screenshot](docs/images/yall-mp-screenshot.png)
+<div align="center">
+  <img src="docs/images/yall-mp-screenshot.png" alt="App Screenshot"/>
+  <p style="margin-top: 0;"><em>Image source: "Dune: Part Two - Official Trailer" (Warner Bros. Pictures)</em></p>
+</div>
 
 Whether you are sentence mining, training listening comprehension, or practicing shadowing, **Y'ALL MP** provides the granular control and automation you need.
 
@@ -58,17 +61,15 @@ As I do not have access to **macOS** hardware, specific layout quirks or pathing
 
 ### 💬 Advanced Subtitles
 *   **Interactive Rendering:** Full support for complex interactive **ASS/SSA** subtitles with proper font attachment loading.
-*   **Smart Tokenization:** Click on any word in subtitles or hold and drag to select entire phrases for dictionary lookup.
-*   **Integrated Lookup:** Instant pop-up dictionary searches via built-in browser integration, with ability to configure own lookup services.
+*   **Offline Dictionaries:** Zero-latency, hover-based dictionary lookups powered by the bundled **[Yomitan](https://github.com/yomidevs/yomitan)** extension.
+*   **Online Lookup:** One-click search via built-in browser integration for deeper context (Google, Brave, Forvo, etc.).
+*   **Smart Tokenization:** Advanced word boundary detection (using standard `Intl.Segmenter` or dictionary-based scanning) allows precise selection of words or phrases.
 *   **Multi-Track Support:** Seamless switching between multiple parallel subtitle and audio tracks.
 
 ### 🧠 Sentence Mining & [Anki](https://apps.ankiweb.net/)
 *   **One-Click Export:** Instantly create Anki cards containing the subtitle text, audio clip, and a video snapshot.
 *   **Multiple Templates Support:** Configure multiple templates to map media data (text, audio, image, video) to your specific Anki note types, then export them all at once.
 *   **Duplicate Prevention:** Automatically tracks export history to show which subtitled clips have already been exported.
-
-### ⌛ Coming soon
-*   **Offline Dictionaries Integration:** Fast, local dictionary lookups without the need of an internet connection.
 
 ---
 
@@ -245,8 +246,8 @@ The output files will be located in the `dist_electron` folder.
 **Subtitles & Text**
 *   **[ASS-Compiler](https://github.com/weizhenye/ass-compiler):** Parses and compiles ASS subtitle formats.
 *   **[ASS.js](https://github.com/weizhenye/ASS):** Renders interactive ASS subtitles on HTML5 canvas.
+*   **[Yomitan](https://github.com/yomidevs/yomitan):** Bundled browser extension for offline dictionary lookups.
 *   **[Wavesurfer.js](https://wavesurfer-js.org/):** Renders the audio waveform timeline.
-*   **[BudouX](https://github.com/google/budoux):** Machine Learning model for proper line breaking and word segmentation (Chinese/Japanese/Thai).
 *   **[Franc](https://github.com/wooorm/franc):** Language detection for selecting the correct tokenizer.
 *   **[Font-Scanner](https://github.com/axosoft/font-scanner):** Locates system fonts to properly render styled subtitles.
 

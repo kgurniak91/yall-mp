@@ -3,7 +3,7 @@ import type {SubtitleData} from '../../../shared/types/subtitle.type';
 import {AnkiSettings} from './anki.types';
 import {MediaTrack} from '../../../shared/types/media.type';
 
-export type SupportedLanguage = 'jpn' | 'cmn' | 'zho' | 'tha' | 'other';
+export type SupportedLanguage = string; // Dynamic value based on Yomitan supported values (can change in future versions)
 
 export type SubtitleSelection =
   | { type: 'none' }

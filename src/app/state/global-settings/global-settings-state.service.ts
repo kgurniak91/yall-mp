@@ -1,4 +1,4 @@
-import {computed, inject, Injectable} from '@angular/core';
+import {computed, inject, Injectable, signal} from '@angular/core';
 import {AppStateService} from '../app/app-state.service';
 import {ProjectSettings, SubtitleLookupBrowserType, SubtitleLookupService} from '../../model/settings.types';
 
@@ -7,6 +7,7 @@ import {ProjectSettings, SubtitleLookupBrowserType, SubtitleLookupService} from 
 })
 export class GlobalSettingsStateService {
   private readonly appStateService = inject(AppStateService);
+  private readonly _settingsReloadTrigger = signal(0);
 
   public readonly boundaryAdjustAmountMs = computed(() => this.appStateService.globalSettings().boundaryAdjustAmountMs);
   public readonly seekAmountSeconds = computed(() => this.appStateService.globalSettings().seekAmountSeconds);
@@ -18,6 +19,11 @@ export class GlobalSettingsStateService {
   public readonly srtBackgroundOpacity = computed(() => this.appStateService.globalSettings().srtBackgroundOpacity);
   public readonly generateAudioPeaks = computed(() => this.appStateService.globalSettings().generateAudioPeaks);
   public readonly srtBackgroundColor = computed(() => `rgba(0, 0, 0, ${this.srtBackgroundOpacity()})`);
+  public readonly settingsReloadTrigger = this._settingsReloadTrigger.asReadonly();
+
+  public notifySettingsChanged(): void {
+    this._settingsReloadTrigger.update(v => v + 1);
+  }
 
   public setBoundaryAdjustAmountMs(value: number): void {
     this.appStateService.updateGlobalSettings({boundaryAdjustAmountMs: value});

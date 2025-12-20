@@ -12,8 +12,10 @@
       <div class="setting-item">
         <p-select id="preset-selector"
                   [options]="settingsPresets()"
+                  styleClass="w-full"
                   optionLabel="name"
                   placeholder="Custom"
+                  appendTo="body"
                   [ngModel]="selectedSettingsPreset()"
                   (ngModelChange)="onSettingsPresetChange($event)">
         </p-select>
@@ -70,7 +72,7 @@
     </div>
   </p-fieldset>
 
-  <p-fieldset legend="Default Subtitles Lookup Action" [toggleable]="false">
+  <p-fieldset legend="Default Online Lookup Action" [toggleable]="false">
     <div class="setting-item-column">
       <div class="flex align-items-center gap-2">
         <p-select [options]="lookupServiceOptions()"
@@ -78,6 +80,7 @@
                   (ngModelChange)="onSettingChange('defaultSubtitleLookupServiceId', $event)"
                   styleClass="w-full"
                   optionLabel="name"
+                  appendTo="body"
                   optionValue="id"></p-select>
         <p-button icon="fa-solid fa-rotate-left"
                   (click)="onSettingChange('defaultSubtitleLookupServiceId', null)"
@@ -94,16 +97,24 @@
   <p-fieldset legend="Subtitles Language Detection" [toggleable]="false">
     <div class="setting-item-column">
       <small class="block">
-        This option changes how words are detected in subtitles when hovering over them with a mouse cursor.
+        This option changes how words are detected in subtitles when hovering over them with a mouse cursor
+        and enables <a href="#" (click)="openOfflineDictSettings($event)">offline dictionary</a> lookups (if configured).
       </small>
       <div class="flex align-items-center gap-2">
         <p-select inputId="sub-lang"
-                  [options]="subtitlesLanguageOptions"
+                  [options]="subtitlesLanguageOptions()"
                   [ngModel]="settings().subtitlesLanguage"
                   (ngModelChange)="onSettingChange('subtitlesLanguage', $event)"
+                  [virtualScroll]="true"
+                  [virtualScrollItemSize]="36"
                   styleClass="w-full"
                   optionLabel="label"
-                  optionValue="value"></p-select>
+                  optionValue="value"
+                  [filter]="true"
+                  filterBy="label"
+                  placeholder="Select language..."
+                  appendTo="body">
+        </p-select>
         <p-button icon="fa-solid fa-rotate-left"
                   (click)="onSettingChange('subtitlesLanguage', detectedLanguage() || 'other')"
                   [disabled]="!detectedLanguage() || settings().subtitlesLanguage === detectedLanguage()"

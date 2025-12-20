@@ -17,3 +17,23 @@
   }
 
 </div>
+
+<!-- Yomitan Popup Overlay -->
+<!-- Using @for with track allows to force complete destruction and recreation of the component
+     whenever the search term changes, ensuring the embedded webview is always fresh and history-cleared. -->
+@for (term of activeTerms(); track term) {
+  <div class="yomitan-popup-wrapper"
+       [style.left.px]="popupPosition()?.left"
+       [style.top.px]="popupPosition()?.top"
+       [style.bottom.px]="popupPosition()?.bottom"
+       [style.max-height.px]="popupPosition()?.maxHeight"
+       (click)="$event.stopPropagation()"
+       (mousedown)="$event.stopPropagation()"
+       (mouseup)="$event.stopPropagation()"
+       (wheel)="$event.stopPropagation()">
+
+    <app-yomitan-popup [searchText]="term"
+                       (close)="clearHighlightAndPopup()"
+                       (addToNotes)="onAddToNotes($event)"/>
+  </div>
+}

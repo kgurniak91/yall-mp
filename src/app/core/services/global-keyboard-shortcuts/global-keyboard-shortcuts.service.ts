@@ -182,13 +182,19 @@ export class GlobalKeyboardShortcutsService implements OnDestroy {
   }
 
   private isAnyMenuOpen(): boolean {
-    const selector = '.p-menu-overlay, .p-contextmenu, .p-connected-overlay, .p-overlay, .p-datepicker';
+    const selector = '.p-menu-overlay, .p-contextmenu, .p-connected-overlay, .p-overlay, .p-datepicker, .yomitan-popup-wrapper';
     const overlays = document.querySelectorAll(selector);
 
     for (let i = 0; i < overlays.length; i++) {
       const el = overlays[i] as HTMLElement;
-      // An element is considered "open" if it is in the DOM, visible, and part of the layout
-      if (el.style.display !== 'none' && el.offsetParent !== null) {
+
+      // An element is considered "open" if it is in the DOM, visible, and part of the layout:
+      const isOpened = (el.offsetParent !== null);
+
+      // offsetParent is null for 'position: fixed' elements (like yomitan popup), causing false negatives:
+      const isPositionFixed = (el.offsetWidth > 0 || el.offsetHeight > 0);
+
+      if (el.style.display !== 'none' && (isOpened || isPositionFixed)) {
         return true;
       }
     }

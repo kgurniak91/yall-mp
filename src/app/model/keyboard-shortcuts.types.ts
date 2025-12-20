@@ -97,7 +97,7 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
     key: 'S',
     shiftKey: true,
     ctrlKey: true,
-    description: 'Add selected text to Anki lookup notes (in built-in browser after clicking on subtitles)',
+    description: 'Add selected text to Anki lookup notes\n(from offline dictionary popup or online lookup in built-in browser)',
     displayKeys: ['Ctrl', 'Shift', 'S'],
     scope: KeyboardShortcutScope.Global,
     type: ActionType.SingleShot,

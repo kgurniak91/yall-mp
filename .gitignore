@@ -52,6 +52,8 @@ mpv-manager.js
 mpv-manager.js.map
 playback-manager.js
 playback-manager.js.map
+yomitan-manager.js
+yomitan-manager.js.map
 /shared/types/*.js
 /shared/types/*.js.map
 /shared/utils/*.js

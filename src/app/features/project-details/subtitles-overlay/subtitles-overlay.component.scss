@@ -65,3 +65,11 @@
     opacity: 0 !important;
   }
 }
+
+.yomitan-popup-wrapper {
+  position: fixed;
+  z-index: 10000; // Ensure it floats above ASS canvas and everything else
+  transform: translateX(-50%); // Center horizontally relative to 'left' coordinate
+  display: flex;
+  flex-direction: column;
+}

@@ -6,12 +6,16 @@
   <div class="video-area" (click)="onVideoAreaClick()">
     <app-video-controller #videoController (ready)="onPlayerReady()"/>
     <app-subtitles-overlay [currentClip]="clipsStateService.currentClipForAllTracks()"
+                           [isYomitanEnabled]="isYomitanEnabled()"
                            [rawAssContent]="scopedAssContent()"
                            [videoWidth]="project()?.videoWidth"
                            [videoHeight]="project()?.videoHeight"
                            [videoContainerElement]="videoController.videoContainerElement()"
-                           [isContextMenuOpen]="isSubtitlesContextMenuOpen()"
+                           [isContextMenuOpen]="isAnyContextMenuOpen()"
+                           (noteRequest)="onAddNoteRequest($event)"
                            (contextMenuRequested)="onSubtitlesContextMenu($event)"
+                           (closeContextMenu)="hideAllContextMenus()"
+                           (popupShown)="onSubtitlePopupShown()"
                            (defaultActionRequested)="onDefaultAction($event)"/>
   </div>
 
@@ -156,7 +160,7 @@
   <div class="timeline-area">
     <app-timeline-editor #timelineEditor
                          (contextMenuRequested)="onTimelineContextMenu($event)"
-                         (hideContextMenuRequested)="onHideTimelineContextMenu()"/>
+                         (hideContextMenuRequested)="onTimelineContextMenuHide()"/>
   </div>
 
   <p-drawer [visible]="projectSettingsStateService.isSettingsDrawerOpen()"

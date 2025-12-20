@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://github.com/kgurniak91/yall-mp"
   },
-  "version": "0.8.1-beta",
+  "version": "0.9.0-beta",
   "main": "electron-main.js",
   "scripts": {
     "ng": "ng",
@@ -43,6 +43,7 @@
       "electron-main.js",
       "mpv-manager.js",
       "playback-manager.js",
+      "yomitan-manager.js",
       "shared/**/*.js",
       "src/app/model/**/*.js",
       "preload.js",
@@ -69,6 +70,13 @@
           "to": "electron-resources/windows",
           "filter": [
             "**/*.exe"
+          ]
+        },
+        {
+          "from": "electron-resources/extensions",
+          "to": "electron-resources/extensions",
+          "filter": [
+            "**/*"
           ]
         }
       ],
@@ -223,7 +231,6 @@
     "@types/node": "^24.0.14",
     "7zip-bin": "^5.2.0",
     "assjs": "^0.1.4",
-    "budoux": "^0.7.0",
     "concurrently": "^9.2.0",
     "electron": "^37.2.1",
     "electron-builder": "^26.0.12",

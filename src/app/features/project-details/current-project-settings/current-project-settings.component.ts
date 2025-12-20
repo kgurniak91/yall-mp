@@ -1,5 +1,4 @@
 import {Component, computed, inject, input, output} from '@angular/core';
-import {MediaTrack} from '../../../../../shared/types/media.type';
 import {BuiltInSettingsPreset, ProjectSettings, SettingsPreset} from '../../../model/settings.types';
 import {Fieldset} from 'primeng/fieldset';
 import {Select} from 'primeng/select';
@@ -18,6 +17,7 @@ import {Message} from 'primeng/message';
 import {DialogOrchestrationService} from '../../../core/services/dialog-orchestration/dialog-orchestration.service';
 import {GlobalSettingsTab} from '../../global-settings-dialog/global-settings-dialog.types';
 import {TagsInputComponent} from '../../../shared/components/tags-input/tags-input.component';
+import {YomitanService} from '../../../core/services/yomitan/yomitan.service';
 
 @Component({
   selector: 'app-current-project-settings',
@@ -48,13 +48,17 @@ export class CurrentProjectSettingsComponent {
   public readonly settingsChange = output<ProjectSettings>();
   public readonly selectedSettingsPresetChange = output<SettingsPreset | null>();
   protected readonly BuiltInSettingsPreset = BuiltInSettingsPreset;
-  protected readonly subtitlesLanguageOptions: { label: string, value: SupportedLanguage }[] = [
-    {label: 'Japanese', value: 'jpn'},
-    {label: 'Chinese (Simplified)', value: 'cmn'},
-    {label: 'Chinese (Traditional)', value: 'zho'},
-    {label: 'Thai', value: 'tha'},
-    {label: 'Other (Space-Delimited)', value: 'other'}
-  ];
+  protected readonly subtitlesLanguageOptions = computed(() => {
+    const fromYomitan = this.yomitanService.supportedLanguages().map(l => ({
+      label: `${l.name} (${l.iso})`,
+      value: l.iso
+    }));
+
+    return [
+      ...fromYomitan,
+      {label: 'Other', value: 'other'}
+    ];
+  });
   protected readonly lookupServiceOptions = computed(() => {
     const globalServices = this.globalSettingsStateService.subtitleLookupServices();
     const options: { name: string, id: string | null }[] = [...globalServices];
@@ -68,10 +72,16 @@ export class CurrentProjectSettingsComponent {
   });
   private readonly globalSettingsStateService = inject(GlobalSettingsStateService);
   private readonly dialogOrchestrationService = inject(DialogOrchestrationService);
+  private readonly yomitanService = inject(YomitanService);
 
   protected openGlobalSettings(event: MouseEvent): void {
     event.preventDefault();
     this.dialogOrchestrationService.openGlobalSettingsDialog(GlobalSettingsTab.ProjectDefaults);
+  }
+
+  protected openOfflineDictSettings(event: MouseEvent): void {
+    event.preventDefault();
+    this.dialogOrchestrationService.openGlobalSettingsDialog(GlobalSettingsTab.OfflineDictionaries);
   }
 
   protected onSettingsPresetChange(preset: SettingsPreset | null): void {

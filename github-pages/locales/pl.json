@@ -4,7 +4,7 @@
   "meta": {
     "title": "Y'ALL Media Player",
     "description": "Darmowy odtwarzacz do nauki języków obcych. Opanuj rozumienie ze słuchu i wymowę, dostosuj napisy, sprawdzaj słowa w słowniku i eksportuj fiszki do Anki.",
-    "keywords": "nauka języków, mpv, anki, immersja, sentence mining, napisy, oś czasu, fiszki, wymowa, rozumienie ze słuchu",
+    "keywords": "nauka języków, mpv, anki, immersja, sentence mining, napisy, oś czasu, fiszki, wymowa, rozumienie ze słuchu, yomitan, słowniki offline",
     "og_type": "website",
     "og_url": "https://yallmp.com/pl/",
     "og_image": "https://yallmp.com/images/yall-mp-screenshot.png",
@@ -18,6 +18,15 @@
     "og_url": "https://yallmp.com/pl/anki.html",
     "og_image": "https://yallmp.com/images/yall-mp-screenshot.png",
     "canonical": "https://yallmp.com/pl/anki.html"
+  },
+  "dictionaries_meta": {
+    "title": "Y'ALL Media Player - Słowniki",
+    "description": "Poradnik krok po kroku jak skonfigurować słowniki w Y'ALL Media Player. Dowiedz się jak uzyskać natychmiastowe definicje słownikowe po najechaniu kursorem na napisy za pomocą wtyczki Yomitan.",
+    "keywords": "nauka języków, mpv, yomitan, immersja, słowniki offline, sentence mining, fiszki, poradnik integracji słowników, anki",
+    "og_type": "article",
+    "og_url": "https://yallmp.com/dictionaries.html",
+    "og_image": "https://yallmp.com/images/yall-mp-screenshot.png",
+    "canonical": "https://yallmp.com/dictionaries.html"
   },
   "navigation": [
     {
@@ -57,10 +66,11 @@
   "workflow": {
     "header": "Od <b class=\"highlight\">pasywnego konsumowania treści</b><br>do <b class=\"highlight\">aktywnej</b>, <b class=\"highlight\">świadomej nauki</b>.",
     "intro": "<b><span class=\"highlight\">Y'ALL</span> <span class=\"highlight\">M</span>edia <span class=\"highlight\">P</span>layer</b> to narzędzie, które łączy w sobie odtwarzanie audio i wideo, zarządzanie napisami, integrację ze słownikami oraz tworzenie fiszek Anki w jeden spójny proces, optymalizując czas przeznaczony na naukę języków obcych:",
-    "step1": "Otwórz dowolny plik z napisami w <b>tym samym</b> języku, którego się uczysz (wbudowanymi lub z pliku zewnętrznego).",
+    "step1": "Otwórz dowolny plik z napisami w <b class=\"highlight\">tym samym</b> języku <i>(np. włoski film z włoskimi napisami)</i>. Napisy mogą być wbudowane lub pochodzić z pliku zewnętrznego.",
     "step2": "Program automatycznie przetworzy napisy i zamieni je w serię <b>klipów</b> na <b>interaktywnej osi czasu</b>, którą możesz dowolnie edytować.",
-    "step3": "<b>Oś czasu</b> rozróżnia fragmenty z napisami (<b>Dialogi</b>) i te bez nich (<b>Przerwy</b>). Możesz skonfigurować różne zachowania - np. prędkość odtwarzania lub auto-pauzę - dla każdego typu osobno.",
+    "step3": "<b>Oś czasu</b> rozróżnia fragmenty z napisami (<b>dialogi</b>) i te bez nich (<b>przerwy</b>). Możesz skonfigurować różne zachowania - np. prędkość odtwarzania lub auto-pauzę - dla każdego typu osobno.",
     "step4": "Wybierz gotowy zestaw ustawień w zależności od celu nauki - np. <b>rozumienie ze słuchu</b> lub <b>ćwiczenie wymowy</b> - albo dostosuj dowolnie wszystkie ustawienia.",
+    "step5": "Najedź kursorem na nieznane słowa, aby sprawdzić ich definicję w słowniku, lub kliknij, aby wyszukać je online.",
     "feature_timeline": {
       "title": "Interaktywna oś czasu",
       "desc": "Większość odtwarzaczy multimedialnych po prostu wyświetla napisy jako statyczny tekst i na tym poprzestaje.<br><b><span class=\"highlight\">Y'ALL</span> <span class=\"highlight\">M</span>edia <span class=\"highlight\">P</span>layer</b> umieszcza napisy na dynamicznej osi czasu i daje ci nad nią pełną kontrolę:",
@@ -74,25 +84,27 @@
     },
     "feature_playback": {
       "title": "Optymalne odtwarzanie",
-      "desc_html": "<p>Nie trać czasu na oglądanie krajobrazów - skup się na dialogach. <b><span class=\"highlight\">Y'ALL</span> <span class=\"highlight\">M</span>edia <span class=\"highlight\">P</span>layer</b> traktuje media jak playlistę dwóch typów klipów: <b>Dialogów</b> oraz <b>Przerw</b> między nimi.</p><p>Zwiększ prędkość <b>Przerw</b>, aby automatycznie przewijać ciszę i szybciej trafiać na <b>Dialogi</b>, które mogą być odtwarzane z normalną prędkością. Możesz też całkowicie pomijać <b>Przerwy</b> i skakać od <b>Dialogu</b> do <b>Dialogu</b>.</p><p>Zmień ~40-minutowy odcinek w ~30 minut skondensowanej sesji nauki języka.</p>"
+      "desc_html": "<p>Nie trać czasu na oglądanie krajobrazów - skup się na dialogach.<br><b><span class=\"highlight\">Y'ALL</span> <span class=\"highlight\">M</span>edia <span class=\"highlight\">P</span>layer</b> traktuje media jak playlistę dwóch typów klipów: <b>dialogów</b> oraz <b>przerw</b> między nimi.</p><p>Zwiększ prędkość <b>przerw</b>, aby automatycznie przewijać ciszę i szybciej trafiać na <b>dialogi</b>, które mogą być odtwarzane z normalną prędkością. Możesz też całkowicie pomijać <b>przerwy</b> i skakać od <b>dialogu</b> do <b>dialogu</b>.</p><p>Zmień ~40-minutowy odcinek w ~30 minut skondensowanej sesji nauki języka.</p>"
     },
     "feature_dict": {
       "title": "Wyszukiwanie w słownikach",
-      "desc": "Przestań przełączać się do przeglądarki (Alt+Tab) i wybijać się z rytmu nauki:",
+      "desc": "Przestań przełączać się do przeglądarki systemowej (Alt+Tab) i wybijać się z rytmu nauki:",
       "list": [
-        "<b class=\"highlight\">Inteligentne zaznaczanie</b>: Najedź kursorem na napisy, aby zobaczyć granice słów. Kliknij na dowolne słowo, aby otworzyć wbudowaną przeglądarkę ze skonfigurowanym słownikiem online.",
-        "<b class=\"highlight\">Precyzyjna kontrola</b>: Przytrzymaj Ctrl, aby zaznaczać konkretne znaki, lub kliknij i przeciągnij myszką, by zaznaczyć całe frazy.",
-        "<b class=\"highlight\">Notatki bez wysiłku</b>: Zaznacz definicję we wbudowanej przeglądarce i zapisz ją bezpośrednio do notatek danego klipu, używając menu kontekstowego (prawy przycisk myszy) lub skrótu klawiszowego (CTRL+SHIFT+S) - bez żmudnego kopiowania i wklejania."
+        "<b class=\"highlight\">Słowniki offline</b>: Najedź kursorem na dowolne słowo, aby natychmiast zobaczyć jego definicję w słowniku offline, obsługiwanym przez wbudowane rozszerzenie <a class=\"highlight\" href=\"https://github.com/yomidevs/yomitan\" target=\"_blank\">Yomitan</a>.",
+        "<b class=\"highlight\">Wyszukiwanie online</b>: Kliknij na dowolne słowo, aby otworzyć wbudowaną przeglądarkę z dowolną stroną www skonfigurowaną w ustawieniach.",
+        "<b class=\"highlight\">Wykrywanie słów</b>: Zaawansowane wykrywanie granic słów pozwala na precyzyjne zaznaczanie fraz, nawet w językach bez spacji, takich jak japoński.",
+        "<b class=\"highlight\">Precyzyjna kontrola</b>: Przytrzymaj CTRL, aby zaznaczać pojedyncze znaki, lub kliknij i przeciągnij myszką, by zaznaczać całe frazy.",
+        "<b class=\"highlight\">Notatki bez wysiłku</b>: Zaznacz definicję słowa we wbudowanej przeglądarce lub w słowniku i zapisz ją bezpośrednio do notatek za pomocą menu kontekstowego (prawy przycisk myszy) lub skrótu klawiszowego (CTRL+SHIFT+S) - bez żmudnego kopiowania i wklejania."
       ],
-      "note": "Aktualnie wspierane są tylko słowniki online, pełne wsparcie dla słowników offline jest planowane w przyszłych wersjach."
+      "note": "<a href=\"dictionaries.html\" class=\"text-link\">Kliknij tutaj, aby zobaczyć instrukcję konfiguracji słowników offline &rarr;</a>"
     },
     "feature_anki": {
       "title": "Integracja z Anki",
-      "desc_html": "<p>Widzisz zdanie warte zapamiętania? Naciśnij <b class=\"highlight\">E</b>, aby wyeksportować je do <a class=\"highlight\" href=\"https://apps.ankiweb.net/\" target=\"_blank\">Anki</a> i zapamiętać je na zawsze.</p><p>Odtwarzacz automatycznie zapisuje <b>dźwięk</b>, robi <b>zrzut ekranu</b>, <b>zapętloną animację</b> lub wycina <b>klip wideo</b>, pobiera <b>tekst</b> napisów wraz z twoimi <b>notatkami</b> i tworzy wysokiej jakości fiszkę bezpośrednio w <a class=\"highlight\" href=\"https://apps.ankiweb.net/\" target=\"_blank\">Anki</a>, korzystając z wtyczki <a class=\"highlight\" href=\"https://ankiweb.net/shared/info/2055492159\" target=\"_blank\">AnkiConnect</a>.</p><p><a href=\"anki.html\" class=\"text-link\">Kliknij tutaj, aby zobaczyć szczegółową instrukcję integracji &rarr;</a></p>"
+      "desc_html": "<p>Widzisz zdanie warte zapamiętania? Naciśnij <b class=\"highlight\">E</b>, aby wyeksportować je do <a class=\"highlight\" href=\"https://apps.ankiweb.net/\" target=\"_blank\">Anki</a> i zapamiętać je na zawsze.</p><p>Odtwarzacz automatycznie zapisuje <b>dźwięk</b>, robi <b>zrzut ekranu</b>, <b>zapętloną animację</b> lub wycina <b>klip wideo</b>, pobiera <b>tekst</b> napisów wraz z twoimi <b>notatkami</b> i tworzy wysokiej jakości fiszkę bezpośrednio w <a class=\"highlight\" href=\"https://apps.ankiweb.net/\" target=\"_blank\">Anki</a>, korzystając z wtyczki <a class=\"highlight\" href=\"https://ankiweb.net/shared/info/2055492159\" target=\"_blank\">AnkiConnect</a>.</p><p><a href=\"anki.html\" class=\"text-link\">Kliknij tutaj, aby zobaczyć instrukcję integracji z Anki &rarr;</a></p>"
     },
     "feature_presets": {
       "title": "Tryby nauki",
-      "desc": "Przełączaj tryby nauki natychmiastowo w zależności od celu:",
+      "desc": "Użyj jednego z trybów nauki, aby uzyskać natychmiastową <b class=\"highlight\">informację zwrotną</b> o postępach. Pomaga to szybko korygować błędy, utrwalać wiedzę i pogłębiać zrozumienie, czyniąc proces nauki aktywnym i znacznie poprawiając jego rezultaty, w zależności od aktualnych celów:",
       "list": [
         "<b class=\"highlight\">Rozumienie ze słuchu</b>: Automatycznie ukrywa napisy i zatrzymuje klip na końcu, pozwalając ci najpierw zweryfikować co zostało powiedziane, zanim odsłonisz napisy.",
         "<b class=\"highlight\">Ćwiczenie wymowy</b>: Zatrzymuje klip na początku, pozwalając ci najpierw przeczytać tekst, zanim ręcznie wznowisz odtwarzanie, by móc porównać swoją wymowę z oryginałem.",
@@ -109,7 +121,7 @@
     "subtitle": "Otwarty kod źródłowy (licencja GPLv3). <b class=\"highlight\">Za Darmo</b>. Bez kont i rejestracji.",
     "win_title": "Windows",
     "win_btn": "Pobierz Instalator (.exe)",
-    "win_info": "Zawiera mpv player, FFmpeg i audiowaveform",
+    "win_info": "Zawiera mpv player, FFmpeg, audiowaveform oraz wtyczkę Yomitan",
     "loading_text": "Szukam nowej wersji...",
     "smart_screen_title": "Widzisz ostrzeżenie \"System Windows ochronił ten komputer\"?",
     "smart_screen_link": "Kliknij tutaj aby rozwiązać ten problem &rarr;",
@@ -137,19 +149,23 @@
     },
     {
       "q": "Jak skonfigurować integrację z Anki?",
-      "a": "<b>Y'ALL Media Player</b> łączy się z Anki przez dodatek AnkiConnect.<br>Możesz tworzyć karty z tekstem, audio, zrzutami ekranu i klipami wideo jednym kliknięciem.<br><a href=\"anki.html\" class=\"text-link\">Kliknij tutaj, aby zobaczyć szczegółową instrukcję integracji &rarr;</a>"
+      "a": "<b>Y'ALL Media Player</b> łączy się z Anki przez dodatek <b>AnkiConnect</b>.<br>Możesz tworzyć karty z tekstem, audio, zrzutami ekranu i klipami wideo jednym kliknięciem.<br><a href=\"anki.html\" class=\"text-link\">Kliknij tutaj, aby zobaczyć instrukcję integracji z Anki &rarr;</a>"
+    },
+    {
+      "q": "Jak skonfigurować słowniki offline?",
+      "a": "<b>Y'ALL Media Player</b> posiada wbudowaną wtyczkę <b>Yomitan</b>.<br>Możesz skonfigurować zainstalowane słowniki, obsługę zaawansowanych języków (takich jak japoński czy chiński) i wiele więcej w głównych ustawieniach aplikacji.<br><a href=\"dictionaries.html\" class=\"text-link\">Kliknij tutaj, aby zobaczyć instrukcję konfiguracji słowników offline &rarr;</a>"
     },
     {
       "q": "Czy to naprawdę jest darmowe?",
-      "a": "Tak. Kod źródłowy jest dostępny na GitHubie na licencji GPLv3."
+      "a": "<b>Tak</b> - kod źródłowy jest dostępny na GitHubie (licencja GPLv3)."
     },
     {
       "q": "Czy aplikacja działa bez dostępu do internetu?",
-      "a": "Odtwarzanie wideo, edycja osi czasu i eksport do Anki działają w pełni offline. Wyszukiwanie w zintegrowanych słownikach wymaga obecnie połączenia z internetem, ale słowniki offline są planowane w przyszłości."
+      "a": "<b>Tak</b> - po inicjalnej konfiguracji i zainstalowaniu słowników offline.<br>Odtwarzanie wideo, edycja osi czasu, eksport do Anki oraz wyszukiwanie w słownikach offline (poprzez wtyczkę Yomitan) działają w pełni bez dostępu do internetu.<br>Wyszukiwanie online wymaga oczywiście połączenia z internetem, ale jest opcjonalne."
     },
     {
       "q": "Czy możliwy jest streaming w aplikacji (np. z Youtube)?",
-      "a": "Nie, przykro mi. Wspierane są tylko pliki lokalne, ponieważ aplikacja musi znać całą zawartość pliku z góry, aby wszystkie funkcje (np. generowanie osi czasu) działały poprawnie. W sieci jest jednak mnóstwo serwisów pozwalających pobierać filmy z napisami z Youtube, więc materiałów do nauki nigdy nie zabraknie!"
+      "a": "<b>Nie</b>, przykro mi. Wspierane są tylko pliki lokalne, ponieważ aplikacja musi znać całą zawartość pliku z góry, aby wszystkie funkcje (np. generowanie osi czasu) działały poprawnie. W sieci jest jednak mnóstwo serwisów pozwalających pobierać filmy z napisami z Youtube, więc materiałów do nauki nigdy nie zabraknie!"
     },
     {
       "q": "Dlaczego odtwarzanie się czasami zacina?",
@@ -193,5 +209,21 @@
     "step8_img_alt": "Definiowanie nowego szablonu Anki w <b>Y'ALL Media Player</b>",
     "step9": "Wszystko powinno działać. Odtwórz klip z napisami i naciśnij <b class=\"highlight\">E</b> lub kliknij prawym przyciskiem na klip i wybierz \"Export to Anki\". Pamiętaj o wybraniu szablonu i kliknięciu Export:",
     "step9_img_alt": "Okno eksportu Anki w <b>Y'ALL Media Player</b>"
+  },
+  "dicts": {
+    "h1": "Konfiguracja <b class=\"highlight\">słowników</b>",
+    "intro": "<b class=\"highlight\">Yomitan</b> to wtyczka do przeglądarki, która pozwala wyświetlać definicje słownikowe po najechaniu kursorem myszy na tekst.",
+    "step1": "Otwórz <b>Y'ALL Media Player</b> i z głównego menu wybierz opcję \"Global settings \" (lub naciśnij skrót klawiszowy <b class=\"highlight\">O</b>).",
+    "step1_img_alt": "Menu główne z widoczną opcją \"Global settings\"",
+    "step2": "Przejdź do zakładki <b class=\"highlight\">Offline Dictionaries</b>.",
+    "step3": "<b class=\"highlight\">Ważne:</b> słowniki konfigurowane są dla <b class=\"highlight\">każdego języka osobno</b>. Pierwszym krokiem jest więc wybór języka, dla którego chcesz dodać słownik, z menu rozwijanego na górze strony:",
+    "step3_img_alt": "Zakładka \"Offline Dictionaries\" z widocznym menu rozwijanym do wyboru języka",
+    "step4": "Gdy język został już wybrany, najłatwiejszym sposobem na dodanie dla niego słownika, jest wybór opcji \"Get recommended dictionaries...\", a następnie kliknięcie na przycisk \"Download\" obok rekomendowanego słownika w oknie dialogowym. Można zainstalować po kilka słowników dla każdego języka (o ile są one dostępne), ponieważ różne słowniki spełniają różne cele (np. istnieje oddzielny słownik pokazujący jak rysować znaki kanji w języku japońskim). Odczekaj kilka minut aż słowniki zakończą się pobierać i importować, następnie możesz zamknąć okno dialogowe głównych ustawień aplikacji.",
+    "step4_img_alt": "Rekomendowane słowniki Yomitan w oknie dialogowym",
+    "step5": "Inna opcja instalacji słowników, dla bardziej zaawansowanych użytkowników, to import słownika z pliku. Takie słowniki można pobrać z różnych źródeł, m. in. ze strony <a class=\"highlight\" href=\"https://yomidevs.github.io/kaikki-to-yomitan/\" target=\"_blank\">projektu Kaikki</a>, a następnie zaimportować je wybierając opcję \"Configure installed and enabled dictionaries...\" i klikając na przycisk \"Import\". Słowniki muszą być w formacie Yomitan lub Yomichan. Starsze typy słowników jak np. EPWING, muszą być najpierw ręcznie przekonwertowane używając <a class=\"highlight\" href=\"https://github.com/yomidevs/yomitan-import\" target=\"_blank\">oficjalnego importera Yomitan</a>.",
+    "step6": "<b class=\"highlight\">Ostatni krok:</b> otwórz jeden z projektów, następnie przejdź do jego ustawień (skrót klawiszowy <b class=\"highlight\">P</b>) - upewnij się, że w sekcji \"Subtitles Language Detection\" jest ustawiony poprawny język, dla którego został wcześniej skonfigurowany słownik. Po wszystkim zamknij panel z ustawieniami projektu.",
+    "step6_img_alt": "Ustawienia aktualnego projektu z widoczną sekcją \"Subtitles Language Detection\"",
+    "step7": "To wszystko! Najedź kursorem na napisy - po chwili powinno pokazać się małe okienko zawierające definicję słownikową podświetlonego wyrazu lub frazy. Aby dowiedzieć się więcej o zaawansowanych ustawieniach konfiguracyjnych wtyczki Yomitan, odwiedź jej <a class=\"highlight\" href=\"https://yomitan.wiki/\" target=\"_blank\">oficjalną stronę</a>.",
+    "step7_img_alt": "Okienko z definicją słownikową, pokazane po najechaniu kursorem myszy na tekst napisów"
   }
 }

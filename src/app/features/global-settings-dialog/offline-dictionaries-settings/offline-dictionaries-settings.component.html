@@ -1,0 +1,48 @@
+<div class="h-full flex flex-column gap-3">
+  <div class="flex align-items-center justify-content-center gap-2">
+    <label for="dict-lang" class="font-bold">Configure offline dictionaries for:</label>
+    <p-select id="dict-lang"
+              [options]="languages()"
+              [ngModel]="selectedLanguage()"
+              (ngModelChange)="onLanguageChange($event)"
+              optionLabel="name"
+              optionValue="iso"
+              [filter]="true"
+              filterBy="name"
+              [disabled]="isLoading()"
+              class="w-20rem"
+              appendTo="body"
+              [virtualScroll]="true"
+              [virtualScrollItemSize]="36"
+              placeholder="Select language..."></p-select>
+
+    @if (isSyncing()) {
+      <div class="flex align-items-center gap-2 text-sm text-gray-500">
+        <i class="fa-solid fa-circle-notch fa-spin"></i>
+        <span>Applying language settings...</span>
+      </div>
+    }
+  </div>
+
+  <div class="webview-container border-1 surface-border border-round overflow-hidden relative flex-grow-1">
+
+    @if (isLoading()) {
+      <div class="absolute top-0 left-0 w-full h-full flex align-items-center justify-content-center surface-ground z-1">
+        <app-spinner></app-spinner>
+      </div>
+    }
+
+    @if (settingsUrl(); as url) {
+      <webview #wv
+               [src]="url"
+               class="yomitan-webview"
+               webpreferences="contextIsolation=true"
+               (dom-ready)="onWebviewDomReady()">
+      </webview>
+    } @else {
+      <div class="flex align-items-center justify-content-center h-full">
+        <p class="text-red-500">Yomitan extension is not loaded.</p>
+      </div>
+    }
+  </div>
+</div>

@@ -4,7 +4,7 @@
   "meta": {
     "title": "Y'ALL Media Player",
     "description": "Free media player for language learning. Master listening comprehension and pronunciation, adjust subtitles, look up words, and export flashcards to Anki.",
-    "keywords": "language learning, mpv, anki, immersion, sentence mining, subtitles, timeline, flashcards, pronunciation, listening comprehension",
+    "keywords": "language learning, mpv, anki, immersion, sentence mining, subtitles, timeline, flashcards, pronunciation, listening comprehension, yomitan, offline dictionary",
     "og_type": "website",
     "og_url": "https://yallmp.com/",
     "og_image": "https://yallmp.com/images/yall-mp-screenshot.png",
@@ -18,6 +18,15 @@
     "og_url": "https://yallmp.com/anki.html",
     "og_image": "https://yallmp.com/images/yall-mp-screenshot.png",
     "canonical": "https://yallmp.com/anki.html"
+  },
+  "dictionaries_meta": {
+    "title": "Y'ALL Media Player - Offline Dictionaries",
+    "description": "Step-by-step tutorial on configuring offline dictionaries in Y'ALL Media Player. Learn how to get instant dictionary definitions on subtitles hover via Yomitan browser extension.",
+    "keywords": "language learning, mpv, yomitan, immersion, offline dictionary guide, sentence mining, flashcards, anki",
+    "og_type": "article",
+    "og_url": "https://yallmp.com/dictionaries.html",
+    "og_image": "https://yallmp.com/images/yall-mp-screenshot.png",
+    "canonical": "https://yallmp.com/dictionaries.html"
   },
   "navigation": [
     {
@@ -57,10 +66,11 @@
   "workflow": {
     "header": "From <b class=\"highlight\">passive media consumption</b><br>to <b class=\"highlight\">active</b>, <b class=\"highlight\">deliberate practice</b>.",
     "intro": "<b><span class=\"highlight\">Y'ALL</span> <span class=\"highlight\">M</span>edia <span class=\"highlight\">P</span>layer</b> is a specialized tool designed for immersion learning. It seamlessly integrates video playback, subtitle management, dictionary lookups, and Anki flashcard creation into a single workflow, optimizing the time spent learning native content:",
-    "step1": "Open any media file with subtitles in the <b>same</b> target language (either embedded or from external file).",
+    "step1": "Open any media file with subtitles in <b class=\"highlight\">the same</b> target language <i>(e.g., Italian movie with Italian subtitles)</i>. Subtitles can be either embedded or from an external file.",
     "step2": "The player automatically parses the subtitles and transforms them into a series of <b>clips</b>, presented on an <b>interactive timeline</b>, that you can edit on the fly.",
     "step3": "The timeline distinguishes between segments with dialogue (<b>subtitled clips</b>) and those without (<b>gaps</b>). You can configure different behaviors - such as playback speed or auto-pausing - for each type separately.",
     "step4": "Select a configuration preset based on your current goal - e.g., <b>listening comprehension</b> or <b>pronunciation</b> - or customize every setting to fit your personal workflow.",
+    "step5": "Hover over unknown words to check their definition instantly via offline dictionaries, or click to search online for context.",
     "feature_timeline": {
       "title": "Interactive timeline",
       "desc": "Most media players just render static text on top of a video and call it a day.<br><b><span class=\"highlight\">Y'ALL</span> <span class=\"highlight\">M</span>edia <span class=\"highlight\">P</span>layer</b> gives you full control over its dynamic, interactive timeline:",
@@ -74,25 +84,27 @@
     },
     "feature_playback": {
       "title": "Optimized playback",
-      "desc_html": "<p>Don't waste your time watching scenery - focus on the dialogue. <b><span class=\"highlight\">Y'ALL</span> <span class=\"highlight\">M</span>edia <span class=\"highlight\">P</span>layer</b> treats media as a consecutive playlist of two distinct clip types: <b>Subtitled Clips</b> and <b>Gaps</b> between them.</p><p>Increase the <b>Gaps</b> speed to fast-forward the silence automatically and get faster to <b>Subtitled Clips</b> which can be played at normal speed. You can also skip the <b>Gaps</b> altogether and just jump to the nearest <b>Subtitled Clip</b>.</p><p>Transform a ~40-minute episode into ~30 minutes of pure, high-density input.</p>"
+      "desc_html": "<p>Don't waste your time watching scenery - focus on the dialogue.<br><b><span class=\"highlight\">Y'ALL</span> <span class=\"highlight\">M</span>edia <span class=\"highlight\">P</span>layer</b> treats media as a consecutive playlist of two distinct clip types: <b>Subtitled Clips</b> and <b>Gaps</b> between them.</p><p>Increase the <b>Gaps</b> speed to fast-forward the silence automatically and get faster to <b>Subtitled Clips</b> which can be played at normal speed. You can also skip the <b>Gaps</b> altogether and just jump to the nearest <b>Subtitled Clip</b>.</p><p>Transform a ~40-minute episode into ~30 minutes of pure, high-density input.</p>"
     },
     "feature_dict": {
       "title": "Instant dictionary lookups",
       "desc": "Stop Alt-Tabbing to a web browser and breaking your immersion:",
       "list": [
-        "<b class=\"highlight\">Smart selection</b>: Hover over subtitles to see intelligent word boundaries. Click any word to instantly open the Built-in Browser to your preferred preconfigured website.",
-        "<b class=\"highlight\">Precision control</b>: Hold Ctrl to select specific characters or click-and-drag to select entire phrases.",
-        "<b class=\"highlight\">Zero-friction notes</b>: Highlight a definition in the built-in browser and save it directly to your card notes via the right-click menu or a keyboard shortcut (CTRL+SHIFT+S) - no tedious copy-pasting required."
+        "<b class=\"highlight\">Zero-latency popups</b>: Hover over any word to instantly see its definition in the offline dictionary powered by bundled <a class=\"highlight\" href=\"https://github.com/yomidevs/yomitan\" target=\"_blank\">Yomitan</a> extension.",
+        "<b class=\"highlight\">Online lookup</b>: Click on any word to instantly open the built-in browser with your preferred preconfigured website.",
+        "<b class=\"highlight\">Smart tokenization</b>: Advanced word boundary detection allows precise selection of words or phrases, even for languages without spaces like Japanese.",
+        "<b class=\"highlight\">Precise control</b>: Hold CTRL to select specific characters or click-and-drag to select entire phrases.",
+        "<b class=\"highlight\">Zero-friction notes</b>: Highlight a word definition in the built-in browser or offline popup and save it directly to your card notes via the right-click context menu or a keyboard shortcut (CTRL+SHIFT+S) - no tedious copy-pasting required."
       ],
-      "note": "Currently only online dictionary lookups are available. Full support for offline dictionaries is scheduled for future versions."
+      "note": "<a href=\"dictionaries.html\" class=\"text-link\">Click here for detailed offline dictionary setup guide &rarr;</a>"
     },
     "feature_anki": {
       "title": "Anki integration",
-      "desc_html": "<p>Found a sentence worth remembering? Press <b class=\"highlight\">E</b> to export it to <a class=\"highlight\" href=\"https://apps.ankiweb.net/\" target=\"_blank\">Anki</a> and remember it forever.</p><p>The player automatically extracts the <b>audio</b>, captures a <b>screenshot</b>, <b>looped animation</b> or <b>entire video clip</b>, grabs the <b>text</b> with your <b>notes</b>, and sends a high-quality flashcard directly to <a class=\"highlight\" href=\"https://apps.ankiweb.net/\" target=\"_blank\">Anki</a> via <a class=\"highlight\" href=\"https://ankiweb.net/shared/info/2055492159\" target=\"_blank\">AnkiConnect</a>.</p><p><a href=\"anki.html\" class=\"text-link\">Click here for detailed integration instructions &rarr;</a></p>"
+      "desc_html": "<p>Found a sentence worth remembering? Press <b class=\"highlight\">E</b> to export it to <a class=\"highlight\" href=\"https://apps.ankiweb.net/\" target=\"_blank\">Anki</a> and remember it forever.</p><p>The player automatically extracts the <b>audio</b>, captures a <b>screenshot</b>, <b>looped animation</b> or <b>entire video clip</b>, grabs the <b>text</b> with your <b>notes</b>, and sends a high-quality flashcard directly to <a class=\"highlight\" href=\"https://apps.ankiweb.net/\" target=\"_blank\">Anki</a> via <a class=\"highlight\" href=\"https://ankiweb.net/shared/info/2055492159\" target=\"_blank\">AnkiConnect</a>.</p><p><a href=\"anki.html\" class=\"text-link\">Click here for detailed Anki integration instructions &rarr;</a></p>"
     },
     "feature_presets": {
       "title": "Settings presets",
-      "desc": "Switch learning modes instantly based on your current goals:",
+      "desc": "Use one of the learning modes for <b class=\"highlight\">immediate feedback</b>, which helps quickly correct mistakes, reinforce learning, and deepen understanding, making learning active and improving outcomes significantly, based on your current goals:",
       "list": [
         "<b class=\"highlight\">Listening practice</b>: Auto-hides subtitles until you toggle them, then auto-pauses the clip at the end, allowing you to verify first what you heard, before revealing the subtitles.",
         "<b class=\"highlight\">Speaking practice</b>: Auto-pauses at the start of a clip, letting you read the text before resuming the clip and comparing your pronunciation with the native audio.",
@@ -109,7 +121,7 @@
     "subtitle": "Open Source (GPLv3). <b class=\"highlight\">Free</b>. No Account Required.",
     "win_title": "Windows",
     "win_btn": "Download Installer (.exe)",
-    "win_info": "Includes mpv player, FFmpeg & audiowaveform",
+    "win_info": "Includes mpv player, FFmpeg, audiowaveform and Yomitan extension",
     "loading_text": "Loading latest version...",
     "smart_screen_title": "Are you seeing the \"Windows protected your PC\" warning?",
     "smart_screen_link": "Click here for the solution &rarr;",
@@ -137,19 +149,23 @@
     },
     {
       "q": "How do I set up Anki integration?",
-      "a": "<b>Y'ALL Media Player</b> connects seamlessly with Anki via the AnkiConnect add-on.<br>You can create cards with text, audio, screenshots, and video clips in one click.<br><a href=\"anki.html\" class=\"text-link\">Click here for detailed integration instructions &rarr;</a>"
+      "a": "<b>Y'ALL Media Player</b> connects seamlessly with Anki via the <b>AnkiConnect</b> add-on.<br>You can create cards with text, audio, screenshots, and video clips in one click.<br><a href=\"anki.html\" class=\"text-link\">Click here for detailed Anki integration instructions &rarr;</a>"
+    },
+    {
+      "q": "How do I configure offline dictionaries?",
+      "a": "<b>Y'ALL Media Player</b> comes with the <b>Yomitan</b> browser extension bundled in.<br>You can configure installed dictionaries, handle complex languages (like Japanese or Chinese), etc. in the global settings.<br><a href=\"dictionaries.html\" class=\"text-link\">Click here for detailed dictionary setup guide &rarr;</a>"
     },
     {
       "q": "Is it really free?",
-      "a": "Yes. The source code is available on GitHub under the GPLv3 license."
+      "a": "<b>Yes</b> - the source code is available on GitHub under the GPLv3 license."
     },
     {
       "q": "Does it work offline?",
-      "a": "Video playback, timeline editing, and Anki export work fully offline. Dictionary lookups currently require an internet connection, but offline dictionaries are planned for future updates."
+      "a": "<b>Yes</b> - after initial configuration and installation of offline dictionaries.<br>Video playback, timeline editing, Anki export, and dictionary lookups (via Yomitan) work fully offline.<br>Online lookups naturally require an internet connection, but they are optional."
     },
     {
       "q": "Is streaming from platforms like Youtube supported?",
-      "a": "No, sorry. Only local files are supported, because their entire content needs to be known upfront for all the features to work properly. There are many services online which let your download videos with subtitles from Youtube etc., so you should never run out of the content to watch!"
+      "a": "<b>No</b>, sorry. Only local files are supported, because their entire content needs to be known upfront for all the features to work properly. There are many services online which let your download videos with subtitles from Youtube etc., so you should never run out of the content to watch!"
     },
     {
       "q": "Why is the playback stuttering sometimes?",
@@ -193,5 +209,21 @@
     "step8_img_alt": "Defining new Anki card template in <b>Y'ALL Media Player</b>",
     "step9": "Everything should work now. Play some subtitled clip and either press <b class=\"highlight\">E</b> keyboard shortcut or right click the clip on the timeline and select \"Export to Anki\". Remember to select the card template(s) you want to use and press Export:",
     "step9_img_alt": "Anki export dialog in <b>Y'ALL Media Player</b>"
+  },
+  "dicts": {
+    "h1": "<b class=\"highlight\">Dictionaries</b> configuration",
+    "intro": "<b class=\"highlight\">Yomitan</b> is a browser extension that provides dictionary definitions in popup window when hovering over text.",
+    "step1": "Open <b>Y'ALL Media Player</b> and go to main menu -> \"Global settings \" (or press <b class=\"highlight\">O</b> keyboard shortcut).",
+    "step1_img_alt": "Main menu with \"Global settings\" option",
+    "step2": "Go to the <b class=\"highlight\">Offline Dictionaries</b> tab.",
+    "step3": "<b class=\"highlight\">Important:</b> offline dictionaries are configured <b class=\"highlight\">separately for each language</b>. First, select your target language from the dropdown at the top of the page:",
+    "step3_img_alt": "\"Offline Dictionaries\" tab with language selection dropdown",
+    "step4": "Once you select a language, the easiest way to add a dictionary for it is to click \"Get recommended dictionaries...\" and then \"Download\" next to one of the recommended dictionaries in the dialog window. You can install multiple dictionaries for a single language (if available), because some of them serve different purposes (e.g., there's a separate dictionary for kanji stroke order in Japanese). Wait several minutes for the selected dictionary to finish downloading and importing, then close the global settings dialog window.",
+    "step4_img_alt": "Recommended Yomitan dictionaries dialog",
+    "step5": "Alternatively, advanced users can also download dictionaries from sources like the <a class=\"highlight\" href=\"https://yomidevs.github.io/kaikki-to-yomitan/\" target=\"_blank\">Kaikki project</a> and import them from a file using the \"Configure installed and enabled dictionaries...\" -> \"Import\" buttons. Dictionaries must be in Yomitan or Yomichan format. Legacy formats like EPWING etc. must first be converted using the <a class=\"highlight\" href=\"https://github.com/yomidevs/yomitan-import\" target=\"_blank\">official Yomitan importer</a>.",
+    "step6": "<b class=\"highlight\">Final step:</b> open a project, go to the project settings (keyboard shortcut <b class=\"highlight\">P</b>) and ensure the correct language is set in the \"Subtitles Language Detection\" section. This connects your project to the dictionaries you've configured for that language. After that you can close the project specific settings panel.",
+    "step6_img_alt": "Current project settings with \"Subtitles Language Detection\" section",
+    "step7": "That's it! You should now be able to hover over text in subtitles and see a popup with dictionary definition in it. For more information regarding advanced Yomitan configuration, visit the <a class=\"highlight\" href=\"https://yomitan.wiki/\" target=\"_blank\">official Yomitan webpage</a>.",
+    "step7_img_alt": "Offline dictionary popup on subtitles hover"
   }
 }

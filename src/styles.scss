@@ -194,3 +194,17 @@ textarea {
 a.blue-link {
   color: #2563EB;
 }
+
+app-global-settings-dialog p-tabs {
+  height: 100%;
+
+  p-tablist {
+    min-height: fit-content
+  }
+
+  p-tabpanels {
+    flex: 1;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+}

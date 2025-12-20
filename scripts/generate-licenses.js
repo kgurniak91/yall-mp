@@ -89,6 +89,14 @@ SOFTWARE.`
     publisher: "FFmpeg Team",
     notice: "This application bundles binaries of FFmpeg and FFprobe (ffmpeg.org) licensed under the GPLv3.",
     licenseText: "This software uses code of FFmpeg licensed under the LGPLv2.1 and its source can be downloaded here: https://ffmpeg.org"
+  },
+  {
+    name: "yomitan",
+    licenses: "GPLv3",
+    repository: "https://github.com/yomidevs/yomitan",
+    publisher: "yomidevs",
+    notice: "This application bundles the Yomitan browser extension. The extension has been adapted to function within the Electron environment.",
+    licenseText: "Distributed under the GPLv3.\nSource code available at: https://github.com/yomidevs/yomitan"
   }
 ];
 
