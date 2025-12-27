@@ -117,6 +117,7 @@ export class PlaybackManager extends EventEmitter {
       this.mpvManager.sendCommand(['seek', clip.startTime, 'absolute']);
       this.mpvManager.setProperty('pause', false);
       this.setPlayerState(PlayerState.Playing, true);
+      this.refreshLuaAutoPause();
     }
   }
 
@@ -145,6 +146,7 @@ export class PlaybackManager extends EventEmitter {
     if (clip && this.settings) {
       const speed = clip.hasSubtitle ? this.settings.subtitledClipSpeed : this.settings.gapSpeed;
       this.mpvManager.setProperty('speed', speed);
+      this.refreshLuaAutoPause();
     }
 
     // Handle anti-flicker hide for subtitles if moving to a new clip
@@ -185,18 +187,24 @@ export class PlaybackManager extends EventEmitter {
   }
 
   public updateClips(newClips: VideoClip[]): void {
+    const oldClip = this.clips[this.currentClipIndex];
+    const oldStartTime = oldClip?.startTime;
+    const oldEndTime = oldClip?.endTime;
     const oldClipIndex = this.currentClipIndex;
+
     this.clips = newClips;
 
-    let newClipIndex;
-
+    let newClipIndex: number;
     if (this.playerState === PlayerState.AutoPausedAtEnd) {
-      newClipIndex = this.clips.findIndex(c => c.endTime === this.currentTime);
-      if (newClipIndex === -1) {
-        // Fallback if not exactly on a clip boundary anymore
-        newClipIndex = this.clips.findIndex(c => this.currentTime >= c.startTime && this.currentTime < c.endTime);
-      }
+      newClipIndex = this.clips.findIndex(c => Math.abs(c.endTime - this.currentTime) < 0.02);
+    } else if (this.playerState === PlayerState.AutoPausedAtStart) {
+      newClipIndex = this.clips.findIndex(c => Math.abs(c.startTime - this.currentTime) < 0.02);
     } else {
+      newClipIndex = this.clips.findIndex(c => this.currentTime >= c.startTime && this.currentTime < c.endTime);
+    }
+
+    if (newClipIndex === -1) {
+      // Fallback if not exactly on a clip boundary anymore
       newClipIndex = this.clips.findIndex(c => this.currentTime >= c.startTime && this.currentTime < c.endTime);
     }
 
@@ -207,11 +215,28 @@ export class PlaybackManager extends EventEmitter {
       return;
     }
 
-    const indexChanged = newClipIndex !== oldClipIndex;
+    const indexChanged = (newClipIndex !== oldClipIndex);
     this.currentClipIndex = newClipIndex;
 
-    if (indexChanged) {
+    // Notify Lua script if index of clip changed OR boundaries of current clip changed
+    const newClip = this.clips[this.currentClipIndex];
+    const boundaryChanged = (newClip.startTime !== oldStartTime) || (newClip.endTime !== oldEndTime);
+
+    if (indexChanged || boundaryChanged) {
       this.applyClipTransitionSettings();
+    }
+
+    // If user edited current clip boundaries when auto-paused, verify if playhead is still within boundaries and act accordingly
+    if (this.playerState === PlayerState.AutoPausedAtEnd || this.playerState === PlayerState.AutoPausedAtStart) {
+      const clip = this.clips[this.currentClipIndex];
+      if (clip) {
+        const isStillAtEnd = Math.abs(this.currentTime - (clip.endTime - 0.01)) < 0.02;
+        const isStillAtStart = Math.abs(this.currentTime - (clip.startTime + 0.01)) < 0.02;
+
+        if (!isStillAtEnd && !isStillAtStart) {
+          this.setPlayerState(PlayerState.PausedByUser);
+        }
+      }
     }
 
     // Always notify the UI after a clip update, because the clip list or state might need syncing.
@@ -219,18 +244,30 @@ export class PlaybackManager extends EventEmitter {
   }
 
   private handleMpvEvent(status: any): void {
+    if (status.event === 'auto-pause-fired') {
+      // Manually snap the playhead to the end of the clip for visual accuracy
+      const currentClip = this.clips[this.currentClipIndex];
+      if (currentClip) {
+        this.currentTime = currentClip.endTime - 0.01;
+      }
+
+      this.setPlayerState(PlayerState.AutoPausedAtEnd);
+      this.notifyUI();
+      return;
+    }
+
+    if (status.event === 'clip-ended-naturally') {
+      this.playClipAtIndex(this.currentClipIndex + 1);
+      return;
+    }
+
     if (status.event === 'property-change' && status.name === 'time-pos' && status.data !== undefined) {
       if (this.playerState === PlayerState.Seeking) {
         return;
       }
 
       this.currentTime = status.data;
-      const currentClip = this.clips[this.currentClipIndex];
-      if (this.playerState === PlayerState.Playing && currentClip && this.currentTime >= currentClip.endTime - 0.05) {
-        this.handleClipEnd();
-      } else {
-        this.notifyUI();
-      }
+      this.notifyUI();
     } else if (status.event === 'seek') {
       if (this.isAwaitingRepeatSeek) {
         this.isAwaitingRepeatSeek = false;
@@ -256,23 +293,6 @@ export class PlaybackManager extends EventEmitter {
       }
     } else if (status.event === 'end-file') {
       this.setPlayerState(PlayerState.Idle);
-    }
-  }
-
-  private handleClipEnd(): void {
-    const finishedClip = this.clips[this.currentClipIndex];
-    if (!finishedClip) {
-      return;
-    }
-
-    if (finishedClip.hasSubtitle && this.settings?.autoPauseAtEnd) {
-      const pauseTime = (finishedClip.endTime - 0.01);
-      this.currentTime = pauseTime;
-      this.setPlayerState(PlayerState.AutoPausedAtEnd);
-      this.mpvManager.setProperty('pause', true);
-      this.mpvManager.sendCommand(['seek', pauseTime, 'absolute+exact']);
-    } else {
-      this.playClipAtIndex(this.currentClipIndex + 1);
     }
   }
 
@@ -311,7 +331,18 @@ export class PlaybackManager extends EventEmitter {
 
     const speed = clip.hasSubtitle ? this.settings.subtitledClipSpeed : this.settings.gapSpeed;
     this.mpvManager.setProperty('speed', speed);
+
+    this.refreshLuaAutoPause();
     this.applySubtitleVisibilityForClip();
+  }
+
+  private refreshLuaAutoPause(): void {
+    const clip = this.clips[this.currentClipIndex];
+    if (!clip || !this.settings) {
+      return;
+    }
+    const shouldPauseAtEnd = Boolean(clip.hasSubtitle && this.settings.autoPauseAtEnd);
+    this.mpvManager.setLuaAutoPause(clip.endTime, shouldPauseAtEnd);
   }
 
   private applySubtitleVisibilityForClip(): void {

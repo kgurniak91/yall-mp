@@ -7,8 +7,6 @@ import {MediaTrack} from './shared/types/media.type';
 import {execSync} from 'child_process';
 import * as fs from 'fs';
 
-const TIME_UPDATE_FPS = 60;
-
 export class MpvManager extends EventEmitter {
   public mediaPath: string = '';
   private mpv: Mpv | null = null;
@@ -29,12 +27,16 @@ export class MpvManager extends EventEmitter {
 
     const options = {
       binary: this.getMpvExecutablePath(),
-      time_update: (1 / TIME_UPDATE_FPS),
+      time_update: 0.1, // 10Hz
       // verbose: true
     };
 
+    const basePath = app.isPackaged ? process.resourcesPath : app.getAppPath();
+    const scriptPath = path.join(basePath, 'mpv', 'yall_auto_pause.lua');
+
     const args = [
       `--wid=${this.win.getNativeWindowHandle().readInt32LE(0)}`,
+      `--script=${scriptPath}`,
       '--no-config',
       '--vo=gpu,xv,x11',
       '--no-osc',
@@ -76,6 +78,10 @@ export class MpvManager extends EventEmitter {
       await this.mpv.start();
       console.log('[MpvManager] MPV process started successfully.');
 
+      // Shared properties from custom Lua script:
+      this.mpv.observeProperty('user-data/auto-pause-fired');
+      this.mpv.observeProperty('user-data/clip-ended-naturally');
+
       await this.mpv.load(mediaPath, 'replace');
       console.log(`[MpvManager] Loaded media: ${mediaPath}`);
 
@@ -105,14 +111,23 @@ export class MpvManager extends EventEmitter {
   }
 
   private setupEventListeners(): void {
-    if (!this.mpv) return;
+    if (!this.mpv) {
+      return;
+    }
 
     this.mpv.on('status', (status: StatusObject) => {
-      this.emit('status', {
-        event: 'property-change',
-        name: status.property,
-        data: status.value,
-      });
+      const prop = status.property as any;
+      if (prop === 'user-data/auto-pause-fired') {
+        this.emit('status', {event: 'auto-pause-fired'});
+      } else if (prop === 'user-data/clip-ended-naturally') {
+        this.emit('status', {event: 'clip-ended-naturally'});
+      } else {
+        this.emit('status', {
+          event: 'property-change',
+          name: status.property,
+          data: status.value,
+        });
+      }
     });
 
     this.mpv.on('timeposition', (time: number) => {
@@ -209,6 +224,10 @@ export class MpvManager extends EventEmitter {
       return Promise.reject(new Error('MPV is not running.'));
     }
     return this.mpv.hideSubtitles();
+  }
+
+  public setLuaAutoPause(endTime: number, enabled: boolean): void {
+    this.mpv?.command('script-message', ['set-auto-pause', endTime.toString(), enabled.toString()]);
   }
 
   private getMpvExecutablePath(): string {

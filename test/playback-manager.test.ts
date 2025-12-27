@@ -12,6 +12,7 @@ const mockMpvManager = {
   sendCommand: vi.fn(),
   showSubtitles: vi.fn(),
   hideSubtitles: vi.fn(),
+  setLuaAutoPause: vi.fn()
 };
 
 const mockUiWindow = {
@@ -68,9 +69,20 @@ describe('PlaybackManager', () => {
 
   const simulateMpvEvent = (manager: PlaybackManager, event: any) => (manager as any).handleMpvEvent(event);
   const simulateSeekComplete = (manager: PlaybackManager) => simulateMpvEvent(manager, {event: 'seek'});
+
   const simulateEndOfClip = (manager: PlaybackManager, time: number) => {
-    (manager as any).currentTime = time - 0.05;
-    (manager as any).handleClipEnd();
+    (manager as any).currentTime = time;
+
+    const index = (manager as any).currentClipIndex;
+    const clip = (manager as any).clips[index];
+    const settings = (manager as any).settings;
+    const shouldAutoPause = clip && clip.hasSubtitle && settings?.autoPauseAtEnd;
+
+    if (shouldAutoPause) {
+      simulateMpvEvent(manager, {event: 'auto-pause-fired'});
+    } else {
+      simulateMpvEvent(manager, {event: 'clip-ended-naturally'});
+    }
   };
 
   afterEach(() => {
@@ -229,7 +241,6 @@ describe('PlaybackManager', () => {
         vi.clearAllMocks();
 
         simulateEndOfClip(playbackManager, 20);
-        expect(mockMpvManager.sendCommand).toHaveBeenCalledWith(['seek', 19.99, 'absolute+exact']);
         expect(getLastStateUpdate()).toEqual(expect.objectContaining({
           playerState: PlayerState.AutoPausedAtEnd,
           currentClipIndex: 1
@@ -275,7 +286,6 @@ describe('PlaybackManager', () => {
         vi.clearAllMocks();
 
         simulateEndOfClip(playbackManager, 20);
-        expect(mockMpvManager.sendCommand).toHaveBeenCalledWith(['seek', 19.99, 'absolute+exact']);
         expect(getLastStateUpdate()).toEqual(expect.objectContaining({
           playerState: PlayerState.AutoPausedAtEnd,
           currentClipIndex: 1
@@ -375,10 +385,11 @@ describe('PlaybackManager', () => {
     it('should rewind to the start and play the clip if auto-paused at the end of the clip', () => {
       // ARRANGE: Set up a manager that auto-pauses at the end.
       playbackManager = setupManager({autoPauseAtEnd: true});
+
       // Go to the end of sub-1 (ends at 20s) and simulate the auto-pause.
       (playbackManager as any).currentClipIndex = 1; // Manually set clip to sub-1
-      (playbackManager as any).currentTime = 20 - 0.05;
-      (playbackManager as any).handleClipEnd(); // Trigger the AutoPausedAtEnd state
+      simulateEndOfClip(playbackManager, 20);
+
       expect(getLastStateUpdate()?.playerState).toBe(PlayerState.AutoPausedAtEnd);
       vi.clearAllMocks();
 
