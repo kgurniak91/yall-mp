@@ -6,6 +6,7 @@ import {
   ElementRef,
   inject,
   input,
+  NgZone,
   OnDestroy,
   output,
   signal,
@@ -99,6 +100,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   private readonly tokenizationService = inject(TokenizationService);
   private readonly yomitanService = inject(YomitanService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly ngZone = inject(NgZone);
   private readonly isInitialized = signal(false);
   private readonly isScaleApplied = signal(false);
   private assInstance: ASS | null = null;
@@ -125,6 +127,8 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   private lastMouseEvent: MouseEvent | null = null;
   private lastLogicalHit: { node: Node, offset: number, ctrlKey: boolean } | null = null;
   private readonly HEADER_SAFE_ZONE = 50;
+  private rafId: number | null = null; // Track the animation frame
+  private hoverTimeout: any = null;
 
   constructor() {
     effect(() => {
@@ -351,13 +355,16 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       const handleKeyChange = (event: KeyboardEvent) => this.handleKeyChange(event);
       const handleGlobalMouseDown = (event: MouseEvent) => this.handleGlobalMouseDown(event, container);
 
-      container.addEventListener('mousedown', handleMouseDown);
-      document.addEventListener('mousedown', handleGlobalMouseDown);
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.addEventListener('contextmenu', handleContextMenu);
-      document.addEventListener('keydown', handleKeyChange);
-      document.addEventListener('keyup', handleKeyChange);
+      // Listeners run outside Angular zone to prevent change detection cycles on every mouse movement
+      this.ngZone.runOutsideAngular(() => {
+        container.addEventListener('mousedown', handleMouseDown);
+        document.addEventListener('mousedown', handleGlobalMouseDown);
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        document.addEventListener('contextmenu', handleContextMenu);
+        document.addEventListener('keydown', handleKeyChange);
+        document.addEventListener('keyup', handleKeyChange);
+      });
 
       this.mutationObserver?.disconnect();
       this.mutationObserver = new MutationObserver(() => {
@@ -699,8 +706,27 @@ export class SubtitlesOverlayComponent implements OnDestroy {
 
   private getHitTextNodeAndOffset(event: MouseEvent): { node: Node, offset: number } | null {
     const target = event.target as HTMLElement | null;
-    if (target?.tagName === 'WEBVIEW' || target?.closest('app-yomitan-popup')) {
+
+    // Check if target exists before checking properties (synthetic events have null target)
+    if (target && (target.tagName === 'WEBVIEW' || target.closest('app-yomitan-popup'))) {
       return null;
+    }
+
+    const container = this.subtitleContainer()?.nativeElement;
+    if (!container) {
+      return null;
+    }
+
+    // OPTIMIZATION: If the mouse target is NOT inside the subtitle element, return null immediately
+    if (target) {
+      if (target === container) {
+        return null;
+      }
+
+      const isSubtitleElement = target.closest('.srt-container, .ASS-dialogue');
+      if (!isSubtitleElement) {
+        return null;
+      }
     }
 
     // Direct hit test using browser API (handles z-index/stacking correctly)
@@ -710,10 +736,9 @@ export class SubtitlesOverlayComponent implements OnDestroy {
     }
 
     let node = range.startContainer;
-    const container = this.subtitleContainer()?.nativeElement;
 
-    // Validate the node
-    if (!container || !container.contains(node) || node.nodeType !== Node.TEXT_NODE) {
+    // Validate that the found node is actually inside the container
+    if (!container.contains(node) || node.nodeType !== Node.TEXT_NODE) {
       return null;
     }
 
@@ -947,13 +972,66 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   private handleMouseMove(event: MouseEvent, isImmediate: boolean = false): void {
     this.lastMouseEvent = event;
 
+    // Immediate mode (e.g., for CTRL key updates) - bypasses throttling
+    if (isImmediate) {
+      this.clearPendingTimers();
+      this.processMouseMove(event, true);
+      return;
+    }
+
+    // Selection mode (click and drag)
+    if (this.isSelecting()) {
+      if (this.hoverTimeout) {
+        clearTimeout(this.hoverTimeout);
+      }
+
+      if (this.rafId === null) {
+        this.rafId = requestAnimationFrame(() => {
+          this.rafId = null;
+          this.processMouseMove(event, false);
+        });
+      }
+
+      return;
+    }
+
+    // Normal hover
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+    }
+
+    if (this.hoverTimeout) {
+      clearTimeout(this.hoverTimeout);
+    }
+
+    this.hoverTimeout = setTimeout(() => {
+      this.hoverTimeout = null;
+      this.processMouseMove(event, false);
+    }, 50);
+  }
+
+  private clearPendingTimers() {
+    if (this.rafId !== null) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
+
+    if (this.hoverTimeout) {
+      clearTimeout(this.hoverTimeout);
+      this.hoverTimeout = null;
+    }
+  }
+
+  private processMouseMove(event: MouseEvent, isImmediate: boolean): void {
     if (this.isSelecting()) {
       event.preventDefault();
       const wordInfo = this.getWordInfoFromEvent(event);
       if (wordInfo) {
         if (wordInfo.node !== this.selectionFocus?.node || wordInfo.start !== this.selectionFocus?.start) {
-          this.selectionFocus = wordInfo;
-          this.updateSelectionHighlight();
+          this.ngZone.run(() => {
+            this.selectionFocus = wordInfo;
+            this.updateSelectionHighlight();
+          });
         }
       }
     } else {
@@ -975,17 +1053,19 @@ export class SubtitlesOverlayComponent implements OnDestroy {
 
       this.lastLogicalHit = hitInfo ? {...hitInfo, ctrlKey: isCtrl} : null;
 
-      if (hitInfo) {
-        this.hoverSubject.next({
-          event,
-          textNode: hitInfo.node,
-          offset: hitInfo.offset,
-          isImmediate
-        });
-      } else {
-        // Emit null to allow debouncer to cancel pending "real" lookups if user moved to empty space
-        this.hoverSubject.next(null);
-      }
+      this.ngZone.run(() => {
+        if (hitInfo) {
+          this.hoverSubject.next({
+            event,
+            textNode: hitInfo.node,
+            offset: hitInfo.offset,
+            isImmediate
+          });
+        } else {
+          // Emit null to allow debouncer to cancel pending "real" lookups if user moved to empty space
+          this.hoverSubject.next(null);
+        }
+      });
     }
   }
 
