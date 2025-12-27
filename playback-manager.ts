@@ -351,16 +351,14 @@ export class PlaybackManager extends EventEmitter {
       return;
     }
 
-    if (this.userOverriddenClipId === clip.id) {
-      return;
-    }
-
-    if (clip.hasSubtitle) {
-      const behavior = this.settings.subtitleBehavior;
-      if (behavior === SubtitleBehavior.ForceShow) {
-        this.subtitlesVisible = true;
-      } else if (behavior === SubtitleBehavior.ForceHide) {
-        this.subtitlesVisible = false;
+    if (this.userOverriddenClipId !== clip.id) {
+      if (clip.hasSubtitle) {
+        const behavior = this.settings.subtitleBehavior;
+        if (behavior === SubtitleBehavior.ForceShow) {
+          this.subtitlesVisible = true;
+        } else if (behavior === SubtitleBehavior.ForceHide) {
+          this.subtitlesVisible = false;
+        }
       }
     }
 

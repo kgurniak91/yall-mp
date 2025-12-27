@@ -752,6 +752,59 @@ describe('PlaybackManager', () => {
         expect(mockMpvManager.showSubtitles).toHaveBeenCalledOnce();
         expect(getLastStateUpdate()?.subtitlesVisible).toBe(true);
       });
+
+      it('should hide MPV subtitles when switching to ASS.js renderer even if user manually toggled subtitles visibility', () => {
+        // Start in ASS.js mode
+        playbackManager = setupManager({useMpvSubtitles: false, subtitlesVisible: true});
+
+        // Switch to MPV mode
+        const mpvSettings = {...(playbackManager as any).settings, useMpvSubtitles: true};
+        playbackManager.updateSettings(mpvSettings);
+
+        // Manually toggle subtitles OFF and then back ON
+        playbackManager.toggleSubtitles();
+        playbackManager.toggleSubtitles();
+
+        expect((playbackManager as any).subtitlesVisible).toBe(true);
+        vi.clearAllMocks();
+
+        // Switch back to ASS.js mode
+        const assSettings = {...(playbackManager as any).settings, useMpvSubtitles: false};
+        playbackManager.updateSettings(assSettings);
+
+        // MPV subtitles must be hidden because player is in ASS.js renderer mode
+        expect(mockMpvManager.hideSubtitles).toHaveBeenCalled();
+      });
+
+      it('should show MPV subtitles when switching to MPV renderer if subtitles are enabled, even after manual subtitles toggle', () => {
+        // Start in ASS.js mode
+        playbackManager = setupManager({useMpvSubtitles: false, subtitlesVisible: true});
+
+        // Switch to MPV mode
+        let settings = {...(playbackManager as any).settings, useMpvSubtitles: true};
+        playbackManager.updateSettings(settings);
+
+        // Hide subtitles manually
+        playbackManager.toggleSubtitles();
+        expect((playbackManager as any).subtitlesVisible).toBe(false);
+
+        // Switch to ASS.js mode
+        settings = {...(playbackManager as any).settings, useMpvSubtitles: false};
+        playbackManager.updateSettings(settings);
+
+        // Show subtitles manually
+        playbackManager.toggleSubtitles();
+        expect((playbackManager as any).subtitlesVisible).toBe(true);
+
+        vi.clearAllMocks();
+
+        // Switch back to MPV mode
+        settings = {...(playbackManager as any).settings, useMpvSubtitles: true};
+        playbackManager.updateSettings(settings);
+
+        // MPV subtitles should be visible
+        expect(mockMpvManager.showSubtitles).toHaveBeenCalled();
+      });
     });
 
     describe('Anti-Flicker on Seek (MPV)', () => {
