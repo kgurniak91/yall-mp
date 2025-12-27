@@ -3,8 +3,9 @@ import {
   Component,
   effect,
   ElementRef,
-  inject, input,
-  OnDestroy, OnInit,
+  inject,
+  OnDestroy,
+  OnInit,
   output,
   signal,
   untracked,
@@ -342,19 +343,64 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   private drawRegions(clips: VideoClip[]) {
-    if (!this.wsRegions) return;
+    if (!this.wsRegions) {
+      return;
+    }
 
-    this.wsRegions.clearRegions();
+    // Index existing regions for O(1) lookup
+    const existingRegions = this.wsRegions.getRegions();
+    const regionMap = new Map<string, Region>();
+    existingRegions.forEach((r: Region) => regionMap.set(r.id, r));
+
+    const processedIds = new Set<string>();
 
     clips.forEach(clip => {
-      this.wsRegions?.addRegion({
-        id: clip.id,
-        start: clip.startTime,
-        end: clip.endTime,
-        color: clip.hasSubtitle ? this.inactiveSubtitleBg : this.gapBg,
-        drag: false,
-        resize: clip.hasSubtitle
-      });
+      processedIds.add(clip.id);
+      const existingRegion = regionMap.get(clip.id);
+      const targetColor = clip.hasSubtitle ? this.inactiveSubtitleBg : this.gapBg;
+
+      if (existingRegion) {
+        // Update existing region (if it needs update) instead of recreating it
+        const optionsToUpdate: any = {};
+        let needsUpdate = false;
+
+        if (Math.abs(existingRegion.start - clip.startTime) > 0.001) {
+          optionsToUpdate.start = clip.startTime;
+          needsUpdate = true;
+        }
+
+        if (Math.abs(existingRegion.end - clip.endTime) > 0.001) {
+          optionsToUpdate.end = clip.endTime;
+          needsUpdate = true;
+        }
+
+        if (existingRegion.color !== targetColor) {
+          optionsToUpdate.color = targetColor;
+          optionsToUpdate.resize = clip.hasSubtitle;
+          needsUpdate = true;
+        }
+
+        if (needsUpdate) {
+          existingRegion.setOptions(optionsToUpdate);
+        }
+      } else {
+        // Create NEW region (only happens on load or split)
+        this.wsRegions?.addRegion({
+          id: clip.id,
+          start: clip.startTime,
+          end: clip.endTime,
+          color: targetColor,
+          drag: false,
+          resize: clip.hasSubtitle
+        });
+      }
+    });
+
+    // Remove stale regions (deleted or merged)
+    regionMap.forEach((region, id) => {
+      if (!processedIds.has(id)) {
+        region.remove();
+      }
     });
   }
 }
