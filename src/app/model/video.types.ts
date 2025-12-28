@@ -65,18 +65,14 @@ export enum SeekDirection {
   Next = 'Next',
 }
 
-export enum VideoPlayerAction {
-  Play = 'Play',
-  Pause = 'Pause'
-}
-
 export enum PlayerState {
   Idle = 'Idle',
   Playing = 'Playing',
   PausedByUser = 'PausedByUser',
   AutoPausedAtStart = 'AutoPausedAtStart',
   AutoPausedAtEnd = 'AutoPausedAtEnd',
-  Seeking = 'Seeking'
+  Seeking = 'Seeking',
+  Ended = 'Ended'
 }
 
 const SUPPORTED_VIDEO_TYPES = [

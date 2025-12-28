@@ -84,9 +84,15 @@ export class ClipsStateService implements OnDestroy {
     effect(() => {
       const trackClips = this.clips();
       const currentTime = this.videoStateService.currentTime();
+      const playerState = this.playerState();
 
       if (trackClips.length === 0) {
         this._activeTrackClipIndex.set(-1);
+        return;
+      }
+
+      if (playerState === PlayerState.Ended) {
+        this._activeTrackClipIndex.set(trackClips.length - 1);
         return;
       }
 

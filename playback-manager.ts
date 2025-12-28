@@ -20,6 +20,7 @@ export class PlaybackManager extends EventEmitter {
   private currentClipIndex = -1;
   private playerState: PlayerState = PlayerState.Idle;
   private currentTime = 0;
+  private duration = 0;
   private preSeekState: PlayerState = PlayerState.Idle;
   private userOverriddenClipId: string | null = null;
   private subtitlesVisible: boolean = true;
@@ -195,7 +196,9 @@ export class PlaybackManager extends EventEmitter {
     this.clips = newClips;
 
     let newClipIndex: number;
-    if (this.playerState === PlayerState.AutoPausedAtEnd) {
+    if (this.playerState === PlayerState.Ended) {
+      newClipIndex = (this.clips.length - 1); // If media file ended, always stay on the last clip
+    } else if (this.playerState === PlayerState.AutoPausedAtEnd) {
       newClipIndex = this.clips.findIndex(c => Math.abs(c.endTime - this.currentTime) < 0.02);
     } else if (this.playerState === PlayerState.AutoPausedAtStart) {
       newClipIndex = this.clips.findIndex(c => Math.abs(c.startTime - this.currentTime) < 0.02);
@@ -204,8 +207,13 @@ export class PlaybackManager extends EventEmitter {
     }
 
     if (newClipIndex === -1) {
-      // Fallback if not exactly on a clip boundary anymore
-      newClipIndex = this.clips.findIndex(c => this.currentTime >= c.startTime && this.currentTime < c.endTime);
+      if (Math.abs(this.currentTime - this.duration) < 0.01) {
+        // If the playback is almost exactly at the end of file, default to the last clip
+        newClipIndex = (this.clips.length - 1);
+      } else {
+        // Fallback if not exactly on a clip boundary anymore
+        newClipIndex = this.clips.findIndex(c => this.currentTime >= c.startTime && this.currentTime < c.endTime);
+      }
     }
 
     if (newClipIndex === -1) {
@@ -261,14 +269,40 @@ export class PlaybackManager extends EventEmitter {
       return;
     }
 
-    if (status.event === 'property-change' && status.name === 'time-pos' && status.data !== undefined) {
-      if (this.playerState === PlayerState.Seeking) {
+    if (status.event === 'property-change') {
+      // Track duration
+      if (status.name === 'duration') {
+        this.duration = status.data;
+      }
+
+      // Handle end of file
+      if (status.name === 'eof-reached' && status.data === true) {
+        console.log('[PlaybackManager] End of file reached.');
+        this.currentTime = this.duration;
+        this.setPlayerState(PlayerState.Ended);
+        this.mpvManager.setProperty('pause', true);
         return;
       }
 
-      this.currentTime = status.data;
-      this.notifyUI();
-    } else if (status.event === 'seek') {
+      // Handle external pause (e.g. buffering, OS event, EOF side-effects)
+      if (status.name === 'pause' && status.data === true) {
+        if (this.playerState === PlayerState.Playing) {
+          this.setPlayerState(PlayerState.PausedByUser);
+        }
+      }
+
+      // Handle time updates
+      if (status.name === 'time-pos' && status.data !== undefined) {
+        if (this.playerState === PlayerState.Seeking) {
+          return;
+        }
+
+        this.currentTime = status.data;
+        this.notifyUI();
+      }
+    }
+
+    if (status.event === 'seek') {
       if (this.isAwaitingRepeatSeek) {
         this.isAwaitingRepeatSeek = false;
         this.emit('repeat-seek-completed');
@@ -292,13 +326,14 @@ export class PlaybackManager extends EventEmitter {
         );
       }
     } else if (status.event === 'end-file') {
+      // This must stay as Idle, not Ended, because it happens when mpv unloads the file completely during teardown:
       this.setPlayerState(PlayerState.Idle);
     }
   }
 
   private playClipAtIndex(index: number): void {
     if (index >= this.clips.length) {
-      this.setPlayerState(PlayerState.Idle);
+      this.setPlayerState(PlayerState.Ended);
       return;
     }
 

@@ -82,6 +82,9 @@ export class MpvManager extends EventEmitter {
       this.mpv.observeProperty('user-data/auto-pause-fired');
       this.mpv.observeProperty('user-data/clip-ended-naturally');
 
+      // Observe EOF state to handle end of file cleanly
+      this.mpv.observeProperty('eof-reached');
+
       await this.mpv.load(mediaPath, 'replace');
       console.log(`[MpvManager] Loaded media: ${mediaPath}`);
 
