@@ -94,6 +94,7 @@ export interface IElectronAPI {
   getAppData: () => Promise<AppData | null>;
   getProjectById: (projectId: string) => Promise<Project | null>;
   saveProject: (project: Project) => Promise<void>;
+  updateProjectFields: (projectId: string, fields: Partial<Project>) => Promise<void>;
   deleteProjectFile: (projectId: string) => Promise<void>;
   saveCoreConfig: (config: CoreConfig) => Promise<void>;
   // --- Playback

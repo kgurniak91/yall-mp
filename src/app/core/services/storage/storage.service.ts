@@ -19,6 +19,12 @@ export class StorageService {
     });
   }
 
+  updateProjectFields(projectId: string, fields: Partial<Project>): void {
+    window.electronAPI.updateProjectFields(projectId, fields).catch(err => {
+      console.error(`Failed to update project fields for ${projectId}`, err);
+    });
+  }
+
   deleteProjectFile(projectId: string): void {
     window.electronAPI.deleteProjectFile(projectId).catch(err => {
       console.error(`Failed to delete project file ${projectId} through Electron API`, err);

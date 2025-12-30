@@ -24,7 +24,7 @@ export class ProjectSettingsStateService {
     const project = this.appStateService.currentProject();
     if (project) {
       const newSettings = {...(project.settings ?? DEFAULT_PROJECT_SETTINGS), ...projectSettings};
-      this.appStateService.updateProject(project.id, {settings: newSettings});
+      this.appStateService.updatePartialProject(project.id, {settings: newSettings});
     }
   }
 
@@ -32,7 +32,7 @@ export class ProjectSettingsStateService {
     const project = this.appStateService.currentProject();
     if (project) {
       const newSettings = {...this.settings(), subtitlesVisible: isVisible};
-      this.appStateService.updateProject(project.id, {settings: newSettings});
+      this.appStateService.updatePartialProject(project.id, {settings: newSettings});
     }
   }
 

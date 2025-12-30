@@ -671,7 +671,17 @@ if (!gotTheLock) {
       try {
         const projectPath = path.join(PROJECTS_DIR, `${projectId}.json`);
         const projectFile = await fs.readFile(projectPath, 'utf-8');
-        return JSON.parse(projectFile);
+        const project = JSON.parse(projectFile);
+
+        try {
+          const peaksPath = path.join(PROJECTS_DIR, `${projectId}.peaks.json`);
+          const peaksFile = await fs.readFile(peaksPath, 'utf-8');
+          project.audioPeaks = JSON.parse(peaksFile);
+        } catch (e) {
+          // Legacy support - if no separate audio peaks file, assume they are embedded in the main project file
+        }
+
+        return project;
       } catch (e) {
         console.error(`Could not load project file for ID ${projectId}.`, e);
         return null;
@@ -688,12 +698,51 @@ if (!gotTheLock) {
       processSaveQueue();
     });
 
+    ipcMain.handle('project:update-fields', async (_, projectId: string, fields: Partial<Project>) => {
+      try {
+        const projectPath = path.join(PROJECTS_DIR, `${projectId}.json`);
+
+        // Read existing file
+        let currentData: Project;
+        if (projectsToSave.has(projectId)) {
+          currentData = projectsToSave.get(projectId)!;
+        } else {
+          const fileContent = await fs.readFile(projectPath, 'utf-8');
+          currentData = JSON.parse(fileContent);
+        }
+
+        // Patch fields
+        const updatedData = {...currentData, ...fields};
+
+        // Ensure audioPeaks are NEVER saved into the main file via partial update
+        if ('audioPeaks' in updatedData) {
+          delete updatedData.audioPeaks;
+        }
+
+        // Queue for saving
+        projectsToSave.set(projectId, updatedData);
+        processSaveQueue();
+      } catch (e) {
+        console.error('Failed to patch project fields', e);
+      }
+    });
+
     ipcMain.handle('project:delete-file', async (_, projectId: string) => {
       const projectPath = path.join(PROJECTS_DIR, `${projectId}.json`);
       try {
         await fs.unlink(projectPath);
       } catch (error) {
         console.error(`Failed to delete project file for ${projectId}:`, error);
+      }
+
+      const peaksPath = path.join(PROJECTS_DIR, `${projectId}.peaks.json`);
+      try {
+        await fs.unlink(peaksPath);
+      } catch (error: any) {
+        // Ignore if the file doesn't exist (ENOENT), report other errors
+        if (error.code !== 'ENOENT') {
+          console.error(`Failed to delete peaks file for ${projectId}:`, error);
+        }
       }
     });
 
@@ -1924,6 +1973,15 @@ async function readAppData(): Promise<AppData | null> {
         const projectPath = path.join(PROJECTS_DIR, `${coreConfig.lastOpenedProjectId}.json`);
         const projectFile = await fs.readFile(projectPath, 'utf-8');
         currentProject = JSON.parse(projectFile);
+
+        try {
+          const peaksPath = path.join(PROJECTS_DIR, `${coreConfig.lastOpenedProjectId}.peaks.json`);
+          const peaksFile = await fs.readFile(peaksPath, 'utf-8');
+          currentProject!.audioPeaks = JSON.parse(peaksFile);
+        } catch (e) {
+          // No peaks file found (legacy project)
+        }
+
       } catch (e) {
         console.warn(`Could not load last opened project file for ID ${coreConfig.lastOpenedProjectId}. It may have been deleted.`);
       }
@@ -1968,7 +2026,25 @@ async function processSaveQueue() {
     if (projectsToSave.size > 0) {
       const [[projectId, projectData]] = projectsToSave; // Destructure 1st entry from map of projects
       const projectPath = path.join(PROJECTS_DIR, `${projectId}.json`);
+
+      // Extract peaks
+      let peaksToWrite: number[][] | undefined = undefined;
+      const projectAny = projectData as any; // Cast to allow attribute deletion
+
+      if (projectAny.audioPeaks) {
+        peaksToWrite = projectAny.audioPeaks;
+        delete projectAny.audioPeaks;
+      }
+
+      // Save project data without peaks
       await fs.writeFile(projectPath, JSON.stringify(projectData, null, 2), 'utf-8');
+
+      // Save peaks if present
+      if (peaksToWrite) {
+        const peaksPath = path.join(PROJECTS_DIR, `${projectId}.peaks.json`);
+        await fs.writeFile(peaksPath, JSON.stringify(peaksToWrite), 'utf-8');
+      }
+
       projectsToSave.delete(projectId);
     }
   } catch (error) {
@@ -2395,8 +2471,8 @@ async function generateAudioPeaks(projectId: string, mediaPath: string, audioTra
       '--input-format', 'wav',
       '-i', '-',
       '--output-format', 'json',
-      '--pixels-per-second', '100',
-      '--bits', '16'
+      '--pixels-per-second', '20',
+      '--bits', '8'
     ];
 
     const ffmpegProcess = spawn(ffmpegPath, ffmpegArgs);
@@ -2431,7 +2507,7 @@ async function generateAudioPeaks(projectId: string, mediaPath: string, audioTra
       reject(err);
     });
 
-    audiowaveformProcess.on('close', (code) => {
+    audiowaveformProcess.on('close', async (code) => {
       killProcesses();
 
       if (code === 0) {
@@ -2445,11 +2521,15 @@ async function generateAudioPeaks(projectId: string, mediaPath: string, audioTra
         try {
           const waveformData = JSON.parse(jsonData);
           const rawPeaks = waveformData.data;
-          const scale = waveformData.bits === 16 ? 32768 : 128; // Output is 8-bit, so scale will be 128
+          const scale = waveformData.bits === 8 ? 128 : 32768; // Output is 8-bit, so scale will be 128
           const normalizedPeaks: number[] = rawPeaks.map((p: number) => p / scale);
 
           const peaks = [normalizedPeaks];
           console.log(`[Peaks] Successfully generated and normalized ${normalizedPeaks.length} data points.`);
+
+          const peaksPath = path.join(PROJECTS_DIR, `${projectId}.peaks.json`);
+          await fs.writeFile(peaksPath, JSON.stringify(peaks), 'utf-8');
+
           resolve(peaks);
         } catch (e) {
           console.error('[Peaks] Failed to parse JSON from audiowaveform output.', e);

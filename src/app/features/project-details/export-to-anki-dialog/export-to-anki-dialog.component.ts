@@ -405,7 +405,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
         delete newProjectNotes[clipId];
       }
 
-      this.appStateService.updateProject(project.id, {notes: newProjectNotes});
+      this.appStateService.updatePartialProject(project.id, {notes: newProjectNotes});
 
       // Update the baseline to the newly saved state for future comparisons
       this.initialNotes = cloneDeep(finalNotes);
@@ -418,7 +418,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
 
     // Only update if there's a change
     if (!isEqual(project.selectedAnkiTemplateIds, selectedIds)) {
-      this.appStateService.updateProject(project.id, {selectedAnkiTemplateIds: selectedIds});
+      this.appStateService.updatePartialProject(project.id, {selectedAnkiTemplateIds: selectedIds});
     }
   }
 
@@ -427,7 +427,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
     const lastSuspendState = this.suspendCard();
 
     if (project.lastAnkiSuspendState !== lastSuspendState) {
-      this.appStateService.updateProject(project.id, {
+      this.appStateService.updatePartialProject(project.id, {
         lastAnkiSuspendState: lastSuspendState
       });
     }

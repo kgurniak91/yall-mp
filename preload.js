@@ -102,6 +102,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getAppData: () => ipcRenderer.invoke('app:get-data'),
   getProjectById: (projectId) => ipcRenderer.invoke('project:get-by-id', projectId),
   saveProject: (project) => ipcRenderer.invoke('project:save', project),
+  updateProjectFields: (projectId, fields) => ipcRenderer.invoke('project:update-fields', projectId, fields),
   deleteProjectFile: (projectId) => ipcRenderer.invoke('project:delete-file', projectId),
   saveCoreConfig: (config) => ipcRenderer.invoke('core-config:save', config),
   // --- Playback

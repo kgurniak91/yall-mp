@@ -319,7 +319,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       const project = untracked(this.project);
 
       if (project && duration > 0 && project.duration !== duration) {
-        this.appStateService.updateProject(project.id, {duration: duration});
+        this.appStateService.updatePartialProject(project.id, {duration: duration});
       }
     });
 
@@ -426,7 +426,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
             break;
         }
 
-        this.appStateService.updateProject(projectId, {
+        this.appStateService.updatePartialProject(projectId, {
           rawAssContent: subtitleResult.rawAssContent,
           styles: subtitleResult.styles,
           subtitles: subtitleResult.subtitles,
@@ -640,7 +640,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   onAnkiTagsChange(ankiTags: string[]) {
     const project = this.project();
     if (project) {
-      this.appStateService.updateProject(project.id, {ankiTags});
+      this.appStateService.updatePartialProject(project.id, {ankiTags});
     }
   }
 
@@ -1185,7 +1185,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     // Add the new note text to the array
     selectionArray.push(text);
 
-    this.appStateService.updateProject(project.id, {notes: newProjectNotes});
+    this.appStateService.updatePartialProject(project.id, {notes: newProjectNotes});
   }
 
   private generateAudioPeaksInBackground(projectId: string, mediaPath: string): void {
@@ -1205,11 +1205,11 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
         if (audioPeaks) {
           // Success: Update store. Timeline component effect will pick this up and render.
-          this.appStateService.updateProject(projectId, {audioPeaks});
+          this.appStateService.updateEntireProject(projectId, {audioPeaks});
         } else {
           console.warn('[ProjectDetails] Failed to generate timeline waveform (result was null). Fallback to empty waveform.');
           // Fallback: Update with empty peaks so timeline stops waiting and renders empty waveform
-          this.appStateService.updateProject(projectId, {audioPeaks: [[0]]});
+          this.appStateService.updateEntireProject(projectId, {audioPeaks: [[0]]});
         }
       })
       .catch(e => {
@@ -1221,7 +1221,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
         }
 
         // Error fallback: Update with empty peaks so timeline stops waiting
-        this.appStateService.updateProject(projectId, {audioPeaks: [[0]]});
+        this.appStateService.updateEntireProject(projectId, {audioPeaks: [[0]]});
       });
   }
 

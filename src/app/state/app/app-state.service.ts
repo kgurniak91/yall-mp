@@ -102,7 +102,7 @@ export class AppStateService {
     });
   }
 
-  public updateProject(projectId: string, updates: Partial<Project>): void {
+  public updateEntireProject(projectId: string, updates: Partial<Project>): void {
     if (updates.subtitles) {
       updates.lastSubtitleEndTime = updates.subtitles.length > 0
         ? Math.max(...updates.subtitles.map(s => s.endTime))
@@ -132,6 +132,32 @@ export class AppStateService {
         currentProject: updatedProject
       };
     });
+  }
+
+  public updatePartialProject(projectId: string, fields: Partial<Project>): void {
+    if (fields.subtitles) {
+      fields.lastSubtitleEndTime = fields.subtitles.length > 0
+        ? Math.max(...fields.subtitles.map(s => s.endTime))
+        : 0;
+    }
+
+    this._appData.update(currentData => {
+      if (currentData.currentProject?.id !== projectId) {
+        return currentData;
+      }
+
+      const updatedProject = {
+        ...currentData.currentProject,
+        ...fields
+      };
+
+      return {
+        ...currentData,
+        currentProject: updatedProject
+      };
+    });
+
+    this.storageService.updateProjectFields(projectId, fields);
   }
 
   public async setCurrentProject(projectId: string): Promise<void> {

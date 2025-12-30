@@ -39,6 +39,7 @@ export class MpvManager extends EventEmitter {
       `--script=${scriptPath}`,
       '--no-config',
       '--vo=gpu,xv,x11',
+      '--hwdec=auto',
       '--no-osc',
       '--no-osd-bar',
       '--no-border',
@@ -47,7 +48,8 @@ export class MpvManager extends EventEmitter {
       '--idle=yes',
       '--pause',
       '--sub-visibility=no',
-      '--hr-seek=yes',
+      '--hr-seek=default',
+      '--hr-seek-framedrop=yes',
       '--cache=no',
       '--ontop=no',
       '--force-window=yes'

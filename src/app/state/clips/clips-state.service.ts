@@ -153,7 +153,7 @@ export class ClipsStateService implements OnDestroy {
       updates.rawAssContent = originalRawAssContent;
     }
 
-    this.appStateService.updateProject(this._projectId!, updates);
+    this.appStateService.updatePartialProject(this._projectId!, updates);
     this._subtitles.set(originalSubtitles);
 
     // Re-sync active clip after undo
@@ -267,7 +267,7 @@ export class ClipsStateService implements OnDestroy {
       );
     }
 
-    this.appStateService.updateProject(this._projectId!, updates);
+    this.appStateService.updatePartialProject(this._projectId!, updates);
     this._subtitles.set(finalSubtitles);
     this.synchronizeStateAfterSplit(clipToSplit, splitPoint, currentTime);
   }
@@ -291,7 +291,7 @@ export class ClipsStateService implements OnDestroy {
       updates.rawAssContent = originalRawAssContent;
     }
 
-    this.appStateService.updateProject(this._projectId!, updates);
+    this.appStateService.updatePartialProject(this._projectId!, updates);
     this._subtitles.set(restoredSubtitles);
 
     // Re-sync active clip after undo:
@@ -355,7 +355,7 @@ export class ClipsStateService implements OnDestroy {
       updates.subtitles = newSubtitles;
     }
 
-    this.appStateService.updateProject(this._projectId!, updates);
+    this.appStateService.updatePartialProject(this._projectId!, updates);
     this._subtitles.set(newSubtitles);
 
     const newClipsArray = this.clipsForAllTracks();
@@ -417,7 +417,7 @@ export class ClipsStateService implements OnDestroy {
       updates.rawAssContent = this.assEditService.mergeDialogueLines(project.rawAssContent, firstClip, secondClip);
     }
 
-    this.appStateService.updateProject(this._projectId!, updates);
+    this.appStateService.updatePartialProject(this._projectId!, updates);
     this._subtitles.set(newSubtitles);
 
     const newClipsArray = this.clipsForAllTracks();
@@ -471,7 +471,7 @@ export class ClipsStateService implements OnDestroy {
       }
     }
 
-    this.appStateService.updateProject(this._projectId!, updates);
+    this.appStateService.updatePartialProject(this._projectId!, updates);
     this._subtitles.set(restoredSubtitles);
   }
 
@@ -560,7 +560,7 @@ export class ClipsStateService implements OnDestroy {
       updates.rawAssContent = this.assEditService.createNewDialogueLine(project.rawAssContent, subtitle);
     }
 
-    this.appStateService.updateProject(this._projectId!, updates);
+    this.appStateService.updatePartialProject(this._projectId!, updates);
     this._subtitles.set(newSubtitles);
   }
 
@@ -594,7 +594,7 @@ export class ClipsStateService implements OnDestroy {
       updates.rawAssContent = this.assEditService.removeDialogueLines(project.rawAssContent, clipToDelete);
     }
 
-    this.appStateService.updateProject(this._projectId!, updates);
+    this.appStateService.updatePartialProject(this._projectId!, updates);
     this._subtitles.set(newSubtitles);
 
     const newClipsArray = this.clipsForAllTracks();
@@ -668,7 +668,7 @@ export class ClipsStateService implements OnDestroy {
         }
       }
 
-      this.appStateService.updateProject(projectId, {
+      this.appStateService.updatePartialProject(projectId, {
         subtitles: newSubtitles,
         rawAssContent: newRawAssContent
       });
@@ -681,7 +681,7 @@ export class ClipsStateService implements OnDestroy {
         const subIndex = newSubtitles.findIndex(s => s.id === sourceSub.id);
         if (subIndex !== -1) {
           (newSubtitles[subIndex] as SrtSubtitleData).text = newContent.text;
-          this.appStateService.updateProject(projectId, {subtitles: newSubtitles});
+          this.appStateService.updatePartialProject(projectId, {subtitles: newSubtitles});
           this._subtitles.set(newSubtitles);
         }
       }
@@ -731,7 +731,7 @@ export class ClipsStateService implements OnDestroy {
       }
     }
 
-    this.appStateService.updateProject(project.id, updates);
+    this.appStateService.updatePartialProject(project.id, updates);
     this._subtitles.set(newSubtitles);
   }
 

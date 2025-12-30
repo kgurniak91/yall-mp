@@ -66,7 +66,7 @@ describe('ClipsStateService', () => {
     projectState = {id: 'proj-1', subtitles: []};
     (appStateService.getProjectById as jasmine.Spy).and.callFake(() => Promise.resolve(projectState));
     (appStateService as any).currentProject = () => projectState;
-    (appStateService.updateProject as jasmine.Spy).and.callFake((id, updates) => {
+    (appStateService.updatePartialProject as jasmine.Spy).and.callFake((id, updates) => {
       if (id === 'proj-1') {
         projectState = {...projectState, ...updates};
         if (updates.subtitles) {
@@ -160,7 +160,7 @@ describe('ClipsStateService', () => {
         'Dialogue: 0,0:00:59.58,0:00:59.62,Sign-Default,,0,0,0,,English Lesson',     // unchanged
       ].join('\r\n');
 
-      const updateCallArgs = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1];
+      const updateCallArgs = (appStateService.updatePartialProject as jasmine.Spy).calls.mostRecent().args[1];
       expect(updateCallArgs.rawAssContent).toEqual(expectedNewRawContent);
     });
 
@@ -232,7 +232,7 @@ Dialogue: 0:00:10.00,0:00:15.00,StyleB,Text B
       service.updateClipText('proj-1', mergedClip.id, newContent);
 
       // ASSERT
-      const updatedSubtitles = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].subtitles;
+      const updatedSubtitles = (appStateService.updatePartialProject as jasmine.Spy).calls.mostRecent().args[1].subtitles;
       const subA = updatedSubtitles.find((s: SubtitleData) => s.id === 'sub-a')!;
       const subB = updatedSubtitles.find((s: SubtitleData) => s.id === 'sub-b')!;
 
@@ -290,7 +290,7 @@ Dialogue: 0:00:15.00,0:00:25.00,Style-B,Text B
       commandHistoryService.execute(command);
 
       // ASSERT
-      const updateCallArgs = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1];
+      const updateCallArgs = (appStateService.updatePartialProject as jasmine.Spy).calls.mostRecent().args[1];
       const finalRawContent = updateCallArgs.rawAssContent as string;
 
       expect(finalRawContent).withContext('Raw ASS content for Text A should be unchanged').toContain('Dialogue: 0:00:10.00,0:00:20.00,Style-A,Text A');
@@ -342,7 +342,7 @@ Dialogue: 0:00:25.58,0:00:29.96,Sign-Default,{\\bord0}Not Edible
       commandHistoryService.execute(command);
 
       // ASSERT
-      const updatedRawContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent as string;
+      const updatedRawContent = (appStateService.updatePartialProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent as string;
 
       expect(updatedRawContent).withContext('First line should be updated').toContain('Dialogue: 0:00:25.58,0:00:29.96,Sign-Default,{\\bord6}Not Edible2');
       expect(updatedRawContent).withContext('Second line should also be updated').toContain('Dialogue: 0:00:25.58,0:00:29.96,Sign-Default,{\\bord0}Not Edible2');
@@ -394,7 +394,7 @@ Dialogue: 0:00:53.48,0:00:57.14,Default,,{\\i1}Atashi'll oshieru{\\i0} you real 
       service.updateClipText('proj-1', clipBeforeEdit.id, newContent);
 
       // ASSERT
-      const updatedSubtitles = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].subtitles as AssSubtitleData[];
+      const updatedSubtitles = (appStateService.updatePartialProject as jasmine.Spy).calls.mostRecent().args[1].subtitles as AssSubtitleData[];
       const updatedSub = updatedSubtitles.find(s => s.id === 'sub-1')!;
       const updatedFragments = updatedSub.parts[0].fragments!;
 
@@ -457,7 +457,7 @@ Dialogue: 0:01:01.00,0:01:02.00,Default,Animating Text
       commandHistoryService.execute(command);
 
       // ASSERT
-      const updatedRawContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent as string;
+      const updatedRawContent = (appStateService.updatePartialProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent as string;
       expect(updatedRawContent).toContain('Dialogue: 0:01:00.00,0:01:01.00,Default,Animating Text EDITED');
       expect(updatedRawContent).toContain('Dialogue: 0:01:01.00,0:01:02.00,Default,Animating Text EDITED');
     });
@@ -516,7 +516,7 @@ Dialogue: 0,0:08:27.90,0:08:28.28,RomajiED,,0,0,0,,ki
       commandHistoryService.execute(command);
 
       // ASSERT
-      const updatedRawContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent as string;
+      const updatedRawContent = (appStateService.updatePartialProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent as string;
       const newDialogueLine = 'Dialogue: 0,0:08:27.90,0:08:33.54,TLED,,0,0,0,,{\\fad(100,100)}EDITED English Translation';
 
       expect(updatedRawContent).withContext('The new dialogue line should be added').toContain(newDialogueLine);
@@ -1133,7 +1133,7 @@ Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,Clip B
       service.updateClipTimesFromTimeline(initialClip.id, 4, 9); // New times: 4s to 9s
 
       // --- ASSERT 1: Verify First Edit ---
-      const firstUpdateArgs = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1];
+      const firstUpdateArgs = (appStateService.updatePartialProject as jasmine.Spy).calls.mostRecent().args[1];
       const expectedFirstRawContent = [
         '[Events]',
         'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',
@@ -1148,7 +1148,7 @@ Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,Clip B
       service.updateClipTimesFromTimeline(clipAfterFirstEdit.id, 3, 8); // New times: 3s to 8s
 
       // --- ASSERT 2: Verify Second Edit ---
-      const secondUpdateArgs = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1];
+      const secondUpdateArgs = (appStateService.updatePartialProject as jasmine.Spy).calls.mostRecent().args[1];
       const expectedSecondRawContent = [
         '[Events]',
         'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',
@@ -1194,7 +1194,7 @@ Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,Clip B
       service.updateClipTimesFromTimeline(animatedClip.id, 50, 70);
 
       // ASSERT:
-      const updateCall = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1];
+      const updateCall = (appStateService.updatePartialProject as jasmine.Spy).calls.mostRecent().args[1];
       const newRawContent = updateCall.rawAssContent;
       const updatedSubtitles = updateCall.subtitles as AssSubtitleData[];
       const updatedFrame1 = updatedSubtitles.find(s => s.id === 'ass-1')!;
@@ -1233,7 +1233,7 @@ ${initialLine}
       service.updateClipTimesFromTimeline(clipToResize.id, 10, 12);
 
       // ASSERT 1: The raw content should be updated
-      const updatedRawContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
+      const updatedRawContent = (appStateService.updatePartialProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
       const expectedUpdatedLine = 'Dialogue: 0,0:00:10.00,0:00:12.00,Default,,0,0,0,,Hello';
       expect(updatedRawContent).toContain(expectedUpdatedLine);
       expect(updatedRawContent).not.toContain(initialLine);
@@ -1242,7 +1242,7 @@ ${initialLine}
       commandHistoryService.undo();
 
       // ASSERT 2: The raw content should be restored
-      const restoredRawContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
+      const restoredRawContent = (appStateService.updatePartialProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
       expect(restoredRawContent).toEqual(originalRawContent);
       expect(restoredRawContent).toContain(initialLine);
     });
@@ -1582,12 +1582,12 @@ Dialogue: 0,0:00:15.00,0:00:20.00,Top,,0,0,0,,Subtitle B Top
 
       commandHistoryService.execute(createCommand);
       expect(service.clips().filter(c => c.hasSubtitle).length).toBe(3);
-      let updatedContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
+      let updatedContent = (appStateService.updatePartialProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
       expect(updatedContent).toContain('New');
 
       commandHistoryService.undo();
       expect(service.clips().filter(c => c.hasSubtitle).length).toBe(2);
-      updatedContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
+      updatedContent = (appStateService.updatePartialProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
       expect(updatedContent).not.toContain('New');
 
       commandHistoryService.redo();
@@ -1607,14 +1607,14 @@ Dialogue: 0,0:00:15.00,0:00:20.00,Top,,0,0,0,,Subtitle B Top
       commandHistoryService.execute(command);
       // After deleting ass-3, ass-1 and ass-2 remain, which still form 2 distinct subtitled clips
       expect(service.clipsForAllTracks().filter(c => c.hasSubtitle).length).toBe(2);
-      let updatedContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
+      let updatedContent = (appStateService.updatePartialProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
       expect(updatedContent).not.toContain('Subtitle B Top');
       expect(updatedContent).toContain('Subtitle B'); // Ensure other track's sub is untouched
 
       commandHistoryService.undo();
       // After undo, all 3 original subtitles exist again, forming 2 merged clips
       expect(service.clipsForAllTracks().filter(c => c.hasSubtitle).length).toBe(2);
-      updatedContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
+      updatedContent = (appStateService.updatePartialProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
       expect(updatedContent).toContain('Subtitle B Top');
 
       commandHistoryService.redo();
@@ -1687,7 +1687,7 @@ Dialogue: 0,0:00:12.00,0:00:14.00,Default,,0,0,0,,Animated Text
       expect(subtitledClips[1].startTime).toBeCloseTo(11.5 + MIN_GAP_DURATION);
       expect(subtitledClips[1].endTime).toBeCloseTo(14);
 
-      let updatedContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
+      let updatedContent = (appStateService.updatePartialProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
       expect(updatedContent.split('Dialogue:').length - 1).withContext('ASS should have 3 lines after split').toBe(3);
 
       // UNDO
@@ -1695,7 +1695,7 @@ Dialogue: 0,0:00:12.00,0:00:14.00,Default,,0,0,0,,Animated Text
 
       // ASSERT AFTER UNDO
       expect(service.clips().filter(c => c.hasSubtitle).length).withContext('Should be 1 clip after undo').toBe(1);
-      updatedContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
+      updatedContent = (appStateService.updatePartialProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
       expect(updatedContent.split('Dialogue:').length - 1).withContext('ASS should have 2 lines after undo').toBe(2);
 
       // REDO
@@ -1703,7 +1703,7 @@ Dialogue: 0,0:00:12.00,0:00:14.00,Default,,0,0,0,,Animated Text
 
       // ASSERT AFTER REDO
       expect(service.clips().filter(c => c.hasSubtitle).length).withContext('Should be 2 subtitled clips after redo').toBe(2);
-      updatedContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
+      updatedContent = (appStateService.updatePartialProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
       expect(updatedContent.split('Dialogue:').length - 1).withContext('ASS should have 3 lines after redo').toBe(3);
     });
 
@@ -1803,7 +1803,7 @@ Dialogue: 10,0:00:26.77,0:00:29.34,Default,,0,0,0,,Strike!
       expect(subtitledClips[0].parts.some(p => p.text === 'Not Edible')).toBe(true);
       expect(subtitledClips[0].parts.some(p => p.text === 'Strike!')).toBe(false);
 
-      const updatedRawContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
+      const updatedRawContent = (appStateService.updatePartialProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
       expect(updatedRawContent).not.toContain('Strike!');
       expect(updatedRawContent).toContain('Not Edible');
       expect(updatedRawContent.split('Dialogue:').length - 1).withContext('Only "Not Edible" dialogue lines should remain').toBe(2);
@@ -1816,7 +1816,7 @@ Dialogue: 10,0:00:26.77,0:00:29.34,Default,,0,0,0,,Strike!
       const clipsAfterUndo = service.clipsForAllTracks();
       expect(clipsAfterUndo.filter(c => c.hasSubtitle).length).withContext('Post-undo: should have 3 subtitled clips again').toBe(3);
 
-      const finalRawContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
+      const finalRawContent = (appStateService.updatePartialProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
       expect(finalRawContent).toContain('Strike!');
       expect(finalRawContent.split('Dialogue:').length - 1).toBe(3);
     });
@@ -1920,14 +1920,14 @@ Dialogue: 0:01:01.00,0:01:02.00,Default,Animating Text
       commandHistoryService.execute(command);
 
       // Sanity check
-      let updatedRawContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
+      let updatedRawContent = (appStateService.updatePartialProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
       expect(updatedRawContent).toContain('Animating Text EDITED');
 
       // ACT 2: Undo
       commandHistoryService.undo();
 
       // ASSERT
-      const restoredRawContent = (appStateService.updateProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
+      const restoredRawContent = (appStateService.updatePartialProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
       const normalize = (str: string) => str.trim().replace(/\r\n/g, '\n');
       expect(normalize(restoredRawContent)).toEqual(normalize(originalRawContent));
     });

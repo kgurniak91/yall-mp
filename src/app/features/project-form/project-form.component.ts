@@ -346,7 +346,7 @@ export class ProjectFormComponent implements OnInit {
       updates.audioPeaks = undefined; // Force regeneration of audio waveform
     }
 
-    this.appStateService.updateProject(projectId, updates);
+    this.appStateService.updatePartialProject(projectId, updates);
     this.toastService.success('Project updated successfully');
     this.router.navigate(['/project', projectId]);
   }

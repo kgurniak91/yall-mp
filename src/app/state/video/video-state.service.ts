@@ -1,7 +1,7 @@
 import {computed, DestroyRef, inject, Injectable, Injector, OnDestroy, Signal, signal} from '@angular/core';
 import {PlayerState, SeekType} from '../../model/video.types';
 import {AppStateService} from '../app/app-state.service';
-import {auditTime, filter, from, map, of} from 'rxjs';
+import {auditTime, debounceTime, filter, from, map, of, Subject} from 'rxjs';
 import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
 import {switchMap} from 'rxjs/operators';
 
@@ -30,6 +30,7 @@ export class VideoStateService implements OnDestroy {
   private readonly _nextMediaPath = signal<string | null>(null);
   private readonly _prevMediaPath = signal<string | null>(null);
   private readonly _isVideoWindowVisible = signal(false);
+  private readonly saveTimeSubject = new Subject<number>();
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly appStateService = inject(AppStateService);
@@ -108,6 +109,16 @@ export class VideoStateService implements OnDestroy {
       this._nextMediaPath.set(next);
       this._prevMediaPath.set(prev);
     });
+
+    // Handle high-frequency saves (e.g., during seeking or playback updates)
+    this.saveTimeSubject.pipe(
+      debounceTime(1000),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe((time) => {
+      if (this._projectId && this.duration() > 0) {
+        this.appStateService.updatePartialProject(this._projectId, {lastPlaybackTime: time});
+      }
+    });
   }
 
   ngOnDestroy(): void {
@@ -137,11 +148,11 @@ export class VideoStateService implements OnDestroy {
   }
 
   public async performCleanup(): Promise<void> {
-    if (this.isDestroyed) {
+    if (this.isDestroyed || !this._projectId) {
       return;
     }
 
-    this.saveCurrentPlaybackTime(this._currentTime());
+    this.appStateService.updatePartialProject(this._projectId, {lastPlaybackTime: this._currentTime()});
     this.isDestroyed = true;
   }
 
@@ -294,7 +305,7 @@ export class VideoStateService implements OnDestroy {
 
   public saveCurrentPlaybackTime(time: number): void {
     if (this._projectId && this.duration() > 0 && time != null && isFinite(time)) {
-      this.appStateService.updateProject(this._projectId, {lastPlaybackTime: time});
+      this.saveTimeSubject.next(time);
     }
   }
 
