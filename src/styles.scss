@@ -208,3 +208,8 @@ app-global-settings-dialog p-tabs {
     padding-right: 0 !important;
   }
 }
+
+.instant-anki-export-hidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}

@@ -1,4 +1,4 @@
-import {Component, computed, inject, OnDestroy, OnInit, signal} from '@angular/core';
+import {Component, computed, ElementRef, inject, OnDestroy, OnInit, signal} from '@angular/core';
 import {
   AnkiCardTemplate,
   AnkiConnectStatus,
@@ -138,6 +138,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
   private readonly dialogOrchestrationService = inject(DialogOrchestrationService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly dialogService = inject(DialogService);
+  private readonly elementRef = inject(ElementRef);
   private initialNotes: ProjectClipNotes | undefined;
 
   constructor() {
@@ -188,6 +189,13 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
     this.manualNote.set(projectNotes?.manualNote || '');
     this.hint.set(projectNotes?.hint || '');
     this.buildNotesView(projectNotes?.lookupNotes);
+
+    if (this.data.instantExport) {
+      this.toastService.info('Attempting instant export to Anki...');
+      setTimeout(() => {
+        this.onExport();
+      });
+    }
   }
 
   ngOnDestroy() {
@@ -289,6 +297,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
     if (this.ankiService.status() !== AnkiConnectStatus.connected) {
       this.toastService.error('Failed to connect. Is Anki open?');
       this.isExporting.set(false);
+      this.revealDialog();
       return;
     }
 
@@ -296,6 +305,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
     if (templates.length === 0) {
       this.toastService.warn('Please select at least one template to export.');
       this.isExporting.set(false);
+      this.revealDialog();
       return;
     }
 
@@ -304,6 +314,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
     if (!this.finalTextPreview().trim()) {
       this.toastService.warn('Please select at least one subtitle part to export.');
       this.isExporting.set(false);
+      this.revealDialog();
       return;
     }
 
@@ -367,6 +378,8 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
 
     if (successCount > 0) {
       this.ref.close(true);
+    } else {
+      this.revealDialog();
     }
   }
 
@@ -438,6 +451,17 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
       this.appStateService.updatePartialProject(project.id, {
         lastAnkiSuspendState: lastSuspendState
       });
+    }
+  }
+
+  private revealDialog(): void {
+    if (!this.data.instantExport) {
+      return;
+    }
+
+    const dialogWrapper = this.elementRef.nativeElement.closest('.p-dialog');
+    if (dialogWrapper) {
+      dialogWrapper.classList.remove('instant-anki-export-hidden');
     }
   }
 }

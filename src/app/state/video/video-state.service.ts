@@ -17,7 +17,7 @@ export class VideoStateService implements OnDestroy {
   private readonly _repeatRequest = signal<number | null>(null);
   private readonly _forceContinueRequest = signal<number | null>(null);
   private readonly _editSubtitlesRequest = signal<number | null>(null);
-  private readonly _ankiExportRequest = signal<number | null>(null);
+  private readonly _ankiExportRequest = signal<{ timestamp: number, instant: boolean } | null>(null);
   private readonly _forceResizeRequest = signal<number | null>(null);
   private readonly _isPaused = signal(true);
   private readonly _isVideoLoading = signal(true);
@@ -208,8 +208,8 @@ export class VideoStateService implements OnDestroy {
     this._editSubtitlesRequest.set(Date.now());
   }
 
-  public requestAnkiExport(): void {
-    this._ankiExportRequest.set(Date.now());
+  public requestAnkiExport(instant: boolean): void {
+    this._ankiExportRequest.set({timestamp: Date.now(), instant});
   }
 
   public requestForceResize(): void {

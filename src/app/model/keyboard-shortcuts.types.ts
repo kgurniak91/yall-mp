@@ -321,6 +321,16 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
     type: ActionType.SingleShot,
     group: KeyboardShortcutGroup.Subtitles
   },
+  {
+    action: KeyboardAction.ForceExportToAnki,
+    key: 'e',
+    ctrlKey: true,
+    description: 'Instant export to Anki (attempts to skip "Export to Anki" dialog if valid)',
+    displayKeys: ['Ctrl', 'E'],
+    scope: KeyboardShortcutScope.Project,
+    type: ActionType.SingleShot,
+    group: KeyboardShortcutGroup.Subtitles
+  },
   // --- Project Scope - Application
   {
     action: KeyboardAction.ToggleSettings,

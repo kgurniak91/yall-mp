@@ -36,20 +36,40 @@
   </p-fieldset>
 
   <p-fieldset legend="Default Export Options" [toggleable]="false">
-    <div class="setting-item">
-      <div class="flex align-items-center">
-        <p-checkbox [ngModel]="globalSettingsStateService.ankiSuspendNewCardsByDefault()"
-                    (ngModelChange)="onSuspendByDefaultChange($event)"
-                    [binary]="true"
-                    inputId="suspend-by-default"/>
-        <label for="suspend-by-default" class="ml-2">Suspend new cards by default</label>
+    <div class="flex flex-column gap-4">
+      <div class="flex flex-column">
+        <div class="setting-item">
+          <div class="flex align-items-center">
+            <p-checkbox [ngModel]="globalSettingsStateService.ankiSuspendNewCardsByDefault()"
+                        (ngModelChange)="onSuspendByDefaultChange($event)"
+                        [binary]="true"
+                        inputId="suspend-by-default"/>
+            <label for="suspend-by-default" class="ml-2">Suspend new cards by default</label>
+          </div>
+        </div>
+        <small class="block mt-2">
+          Sets the initial state of the "Create card as suspended" checkbox for new projects.
+          <br>
+          You can always change it later in the "Export to Anki" dialog window.
+        </small>
+      </div>
+      <div class="flex flex-column">
+        <div class="setting-item">
+          <div class="flex align-items-center">
+            <p-checkbox [ngModel]="globalSettingsStateService.ankiInstantExport()"
+                        (ngModelChange)="globalSettingsStateService.setAnkiInstantExport($event)"
+                        [binary]="true"
+                        inputId="instant-export"/>
+            <label for="instant-export" class="ml-2">Instant Export (1-click)</label>
+          </div>
+        </div>
+        <small class="block mt-2">
+          If enabled, pressing <b>E</b> will attempt to export immediately, bypassing the "Export to Anki" dialog, using the last used settings without waiting for confirmation.
+          <br>
+          You can always use <b>Ctrl+E</b> to force instant export regardless of this setting.
+        </small>
       </div>
     </div>
-    <small class="block mt-2">
-      Sets the initial state of the "Create card as suspended" checkbox for new projects.
-      <br>
-      You can always change it later in the "Export to Anki" dialog window.
-    </small>
   </p-fieldset>
 
   <p-fieldset legend="Card templates" [toggleable]="false">

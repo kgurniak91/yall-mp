@@ -118,7 +118,11 @@ export class ProjectActionService {
         this.clipsStateService.createNewSubtitledClipAtCurrentTime();
         break;
       case KeyboardAction.ExportToAnki:
-        this.videoStateService.requestAnkiExport();
+        const isInstant = this.globalSettingsStateService.ankiInstantExport();
+        this.videoStateService.requestAnkiExport(isInstant);
+        break;
+      case KeyboardAction.ForceExportToAnki:
+        this.videoStateService.requestAnkiExport(true);
         break;
       case KeyboardAction.ZoomIn:
         this.videoStateService.requestZoomIn();

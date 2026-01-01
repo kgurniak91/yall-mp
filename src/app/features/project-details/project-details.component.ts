@@ -585,7 +585,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
-  async openAnkiExportDialog(): Promise<void> {
+  async openAnkiExportDialog(instantExport: boolean): Promise<void> {
     this.subtitlesOverlay().clearHighlightAndPopup();
 
     if (!this.ankiStateService.isAnkiExportAvailable()) {
@@ -611,7 +611,8 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     const data: ExportToAnkiDialogData = {
       subtitleData: subtitleForExport,
       project: this.project()!,
-      exportTime: this.videoStateService.currentTime()
+      exportTime: this.videoStateService.currentTime(),
+      instantExport
     };
 
     this.dialogService.open(ExportToAnkiDialogComponent, {
@@ -621,6 +622,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       modal: true,
       closable: true,
       closeOnEscape: false,
+      styleClass: instantExport ? 'instant-anki-export-hidden' : undefined,
       data
     });
   }
@@ -864,7 +866,10 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
           label: 'Export to Anki',
           icon: 'fa-solid fa-e',
           disabled: !this.ankiStateService.isAnkiExportAvailable(),
-          command: () => this.openAnkiExportDialog()
+          command: () => {
+            const isInstant = this.globalSettingsStateService.ankiInstantExport();
+            this.openAnkiExportDialog(isInstant);
+          }
         },
         {
           label: 'Split clip',
@@ -1064,8 +1069,9 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   });
 
   private requestAnkiExportListener = effect(() => {
-    if (this.videoStateService.ankiExportRequest()) {
-      this.openAnkiExportDialog();
+    const request = this.videoStateService.ankiExportRequest();
+    if (request) {
+      this.openAnkiExportDialog(request.instant);
       this.videoStateService.clearAnkiExportRequest();
     }
   });

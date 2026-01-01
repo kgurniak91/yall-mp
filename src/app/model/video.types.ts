@@ -34,6 +34,7 @@ export enum KeyboardAction {
   DeleteClip = 'DeleteClip',
   CreateClip = 'CreateClip',
   ExportToAnki = 'ExportToAnki',
+  ForceExportToAnki = 'ForceExportToAnki',
   ZoomIn = 'ZoomIn',
   ZoomOut = 'ZoomOut',
   OpenHelpDialog = 'OpenHelpDialog',

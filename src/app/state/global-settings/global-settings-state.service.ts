@@ -15,6 +15,7 @@ export class GlobalSettingsStateService {
   public readonly subtitleLookupServices = computed(() => this.appStateService.globalSettings().subtitleLookupServices);
   public readonly subtitleLookupBrowserType = computed(() => this.appStateService.globalSettings().subtitleLookupBrowserType);
   public readonly ankiSuspendNewCardsByDefault = computed(() => this.appStateService.globalSettings().ankiSuspendNewCardsByDefault);
+  public readonly ankiInstantExport = computed(() => this.appStateService.globalSettings().ankiInstantExport);
   public readonly srtFontSizePx = computed(() => this.appStateService.globalSettings().srtFontSizePx);
   public readonly srtBackgroundOpacity = computed(() => this.appStateService.globalSettings().srtBackgroundOpacity);
   public readonly generateAudioPeaks = computed(() => this.appStateService.globalSettings().generateAudioPeaks);
@@ -59,6 +60,10 @@ export class GlobalSettingsStateService {
 
   public setAnkiSuspendNewCardsByDefault(value: boolean): void {
     this.appStateService.updateGlobalSettings({ankiSuspendNewCardsByDefault: value});
+  }
+
+  public setAnkiInstantExport(value: boolean): void {
+    this.appStateService.updateGlobalSettings({ankiInstantExport: value});
   }
 
   public setGenerateAudioPeaks(value: boolean): void {

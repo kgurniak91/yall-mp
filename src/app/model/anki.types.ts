@@ -54,4 +54,5 @@ export interface ExportToAnkiDialogData {
   project: Project;
   subtitleData: SubtitleData;
   exportTime: number;
+  instantExport: boolean;
 }
