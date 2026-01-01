@@ -15,6 +15,7 @@ export type LookupNotes = Record<string, string[]>;
 export interface ProjectClipNotes {
   lookupNotes?: LookupNotes;
   manualNote?: string;
+  hint?: string;
 }
 
 export interface MinimalProject {

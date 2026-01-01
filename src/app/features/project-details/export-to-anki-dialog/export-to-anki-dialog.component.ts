@@ -75,6 +75,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
   protected readonly data: ExportToAnkiDialogData;
   protected readonly cardSpecificTags = signal<string[]>([]);
   protected readonly selectedTemplates = signal<AnkiCardTemplate[]>([]);
+  protected readonly hint = signal<string>('');
   protected readonly manualNote = signal<string>('');
   protected readonly isExporting = signal(false);
   protected readonly selectedSubtitleParts = signal<SubtitlePart[]>([]);
@@ -85,6 +86,10 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
     } else {
       return this.selectedSubtitleParts().map(p => p.text).join('\n');
     }
+  });
+  protected readonly finalTextPreviewHtml = computed(() => {
+    const text = this.finalTextPreview();
+    return text.replace(/\n/g, '<br>');
   });
   protected readonly lookupNotesView = signal<SelectionGroupView[]>([]);
   protected readonly formattedAnkiNotes = computed(() => {
@@ -181,6 +186,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
     const projectNotes = this.data.project.notes?.[this.data.subtitleData.id];
     this.initialNotes = cloneDeep(projectNotes);
     this.manualNote.set(projectNotes?.manualNote || '');
+    this.hint.set(projectNotes?.hint || '');
     this.buildNotesView(projectNotes?.lookupNotes);
   }
 
@@ -334,6 +340,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
         subtitleData: subtitleForExport,
         mediaPath: project.mediaPath,
         exportTime,
+        hint: this.hint(),
         notes: this.formattedAnkiNotes(),
         tags: finalTags,
         suspend: this.suspendCard()
@@ -393,13 +400,14 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
 
     const finalNotes: ProjectClipNotes = {
       lookupNotes: finalLookupNotes,
-      manualNote: this.manualNote()
+      manualNote: this.manualNote(),
+      hint: this.hint()
     };
 
     if (!isEqual(this.initialNotes, finalNotes)) {
       const newProjectNotes = cloneDeep(project.notes ?? {});
 
-      if (Object.keys(finalNotes.lookupNotes ?? {}).length > 0 || finalNotes.manualNote) {
+      if (Object.keys(finalNotes.lookupNotes ?? {}).length > 0 || finalNotes.manualNote || finalNotes.hint) {
         newProjectNotes[clipId] = finalNotes;
       } else {
         delete newProjectNotes[clipId];

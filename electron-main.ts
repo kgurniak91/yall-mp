@@ -1531,7 +1531,7 @@ async function handleAnkiExport(exportRequest: AnkiExportRequest) {
     return {cardId: null, error: 'FFmpeg is not available, cannot export media.'};
   }
 
-  const {template, subtitleData, mediaPath, exportTime, notes, tags, suspend} = exportRequest;
+  const {template, subtitleData, mediaPath, exportTime, hint, notes, tags, suspend} = exportRequest;
   const tempDir = os.tmpdir();
   const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
   const finalFields: Record<string, string> = {};
@@ -1692,6 +1692,10 @@ async function handleAnkiExport(exportRequest: AnkiExportRequest) {
 
         case 'notes':
           finalFields[mapping.destination] = notes;
+          break;
+
+        case 'hint':
+          finalFields[mapping.destination] = hint || '';
           break;
       }
     }

@@ -1,7 +1,7 @@
 import {SubtitleData} from '../../../shared/types/subtitle.type';
 import {Project} from './project.types';
 
-export type AnkiFieldMappingSource = 'id' | 'text' | 'audio' | 'screenshot' | 'video' | 'notes' | 'animation';
+export type AnkiFieldMappingSource = 'id' | 'text' | 'audio' | 'screenshot' | 'video' | 'notes' | 'animation' | 'hint';
 
 export interface AnkiFieldMapping {
   source: AnkiFieldMappingSource; // App's data fields
@@ -45,6 +45,7 @@ export interface AnkiExportRequest {
   mediaPath: string;
   exportTime: number;
   notes: string;
+  hint: string;
   tags: string[];
   suspend: boolean;
 }

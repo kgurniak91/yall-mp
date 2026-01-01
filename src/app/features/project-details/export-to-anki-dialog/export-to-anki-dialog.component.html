@@ -35,7 +35,7 @@
   } @else {
     <div class="flex flex-column gap-2">
       <label>Subtitle Text</label>
-      <span class="subtitle-full-text">{{ finalTextPreview() }}</span>
+      <span class="subtitle-full-text" [innerHTML]="finalTextPreviewHtml()"></span>
     </div>
   }
 
@@ -111,6 +111,17 @@
     <div class="text-sm mt-2">
       <a href="#" (click)="openGlobalSettings($event)">Add or edit templates in global settings</a>.
     </div>
+  </div>
+
+  <div class="flex flex-column gap-2">
+    <label for="hint-context">Hint</label>
+    <textarea id="hint-context"
+              pInputTextarea
+              [(ngModel)]="hint"
+              [autoResize]="false"
+              rows="2"
+              placeholder="Optional context (e.g., &quot;Character talking about a car...&quot;)"
+              maxlength="1000"></textarea>
   </div>
 
   <div class="flex flex-column gap-2">

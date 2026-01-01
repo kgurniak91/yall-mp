@@ -59,7 +59,7 @@
       @if (form.get('fieldMappings')?.invalid && form.get('fieldMappings')?.touched) {
         <p-message severity="error" icon="fa-regular fa-circle-xmark">
           <p class="m-0">
-            The <b>ID</b> field and at least one other field (e.g., <b>Text</b>, <b>Audio</b>) must be mapped.
+            The <b>ID</b> field and at least one content field other than <b>Notes</b> and <b>Hint</b> (e.g., <b>Subtitle Text</b>, <b>Audio</b>, <b>Video</b>) must be mapped.
           </p>
         </p-message>
       }
