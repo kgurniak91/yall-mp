@@ -30,14 +30,14 @@ import {TagsInputComponent} from '../../../shared/components/tags-input/tags-inp
 import {Tooltip} from 'primeng/tooltip';
 import {Accordion, AccordionContent, AccordionHeader, AccordionPanel} from "primeng/accordion";
 import {ConfirmationService} from 'primeng/api';
-import {EditNoteDialogComponent} from './edit-note-dialog/edit-note-dialog.component';
-import {EditNoteDialogConfig} from './edit-note-dialog/edit-note-dialog.types';
 import {
   disableFocusInParentDialog,
   scheduleRestoreFocus
 } from '../../../shared/utils/disable-focus-in-parent-dialog/disable-focus-in-parent-dialog';
 import {Tag} from 'primeng/tag';
 import {DecimalPipe} from '@angular/common';
+import {NoteFormDialogData, NoteFormResult} from '../note-form-dialog/note-form-dialog.types';
+import {NoteFormDialogComponent} from '../note-form-dialog/note-form-dialog.component';
 
 interface NoteViewItem {
   text: string;
@@ -76,7 +76,6 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
   protected readonly cardSpecificTags = signal<string[]>([]);
   protected readonly selectedTemplates = signal<AnkiCardTemplate[]>([]);
   protected readonly hint = signal<string>('');
-  protected readonly manualNote = signal<string>('');
   protected readonly isExporting = signal(false);
   protected readonly selectedSubtitleParts = signal<SubtitlePart[]>([]);
   protected readonly activeNoteAccordionIndices = signal<number[]>([]);
@@ -97,8 +96,16 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
 
     // Process Lookup Notes
     for (const group of this.lookupNotesView()) {
-      const escapedSelection = escape(group.selection);
-      let groupHtml = `<b>"${escapedSelection}"</b>:<br><ul>`;
+      const selection = group.selection;
+      let groupHtml = '';
+
+      if (selection) {
+        const escapedSelection = escape(selection);
+        groupHtml = `<b>"${escapedSelection}"</b>:<br><ul>`;
+      } else {
+        groupHtml = `<b>General notes</b>:<br><ul>`;
+      }
+
       for (const note of group.notes) {
         let formattedNote = escape(note.text).trim().replace(/\n/g, '<br>');
         if (!formattedNote) {
@@ -110,16 +117,15 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
       finalParts.push(groupHtml);
     }
 
-    // Process Manual Note
-    const manualNoteText = this.manualNote().trim();
-    if (manualNoteText) {
+    // Preserve legacy manual note if it exists in data but not in UI
+    const legacyManualNote = this.initialNotes?.manualNote?.trim();
+    if (legacyManualNote) {
       let manualNoteHtml = '<b>Manual notes</b>:<br><ul>';
-      let formattedManualNote = escape(manualNoteText).replace(/\n/g, '<br>');
+      let formattedManualNote = escape(legacyManualNote).replace(/\n/g, '<br>');
       if (!formattedManualNote) {
         formattedManualNote = '&nbsp;';
       }
-      manualNoteHtml += `<li>${formattedManualNote}<br></li>`;
-      manualNoteHtml += '</ul>';
+      manualNoteHtml += `<li>${formattedManualNote}<br></li></ul>`;
       finalParts.push(manualNoteHtml);
     }
 
@@ -186,7 +192,6 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
 
     const projectNotes = this.data.project.notes?.[this.data.subtitleData.id];
     this.initialNotes = cloneDeep(projectNotes);
-    this.manualNote.set(projectNotes?.manualNote || '');
     this.hint.set(projectNotes?.hint || '');
     this.buildNotesView(projectNotes?.lookupNotes);
 
@@ -216,41 +221,12 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
     };
   }
 
-  onEditNote(note: NoteViewItem): void {
-    const restoreFocusability = disableFocusInParentDialog();
+  onAddManualNote(): void {
+    this.openNoteDialog('create', '', '', true);
+  }
 
-    const data: EditNoteDialogConfig = {
-      noteText: note.text
-    };
-
-    const dialogRef = this.dialogService.open(EditNoteDialogComponent, {
-      header: 'Edit Lookup Note',
-      modal: true,
-      width: 'clamp(20rem, 95vw, 30rem)',
-      closeOnEscape: false,
-      data: data
-    });
-
-    dialogRef.onClose.subscribe((newText: string | undefined) => {
-      scheduleRestoreFocus(restoreFocusability);
-
-      // Check for undefined in case the dialog was closed without saving
-      if ((typeof newText === 'string') && newText !== note.text) {
-        this.lookupNotesView.update(currentView => {
-          return currentView.map(group => {
-            const noteIndex = group.notes.findIndex(n => n.originalIndex === note.originalIndex);
-            if (noteIndex > -1) {
-              const newNotes = [...group.notes];
-              newNotes[noteIndex] = {...newNotes[noteIndex], text: newText};
-              return {...group, notes: newNotes};
-            }
-            return group;
-          });
-        });
-        this.saveNotesIfChanged();
-        this.toastService.success('Note updated.');
-      }
-    });
+  onEditNote(term: string, note: NoteViewItem): void {
+    this.openNoteDialog('edit', term, note.text, true, note.originalIndex);
   }
 
   formatNoteText(text: string): string {
@@ -394,7 +370,88 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
       notes: noteList.map((text, index) => ({text, originalIndex: index}))
     }));
 
-    this.lookupNotesView.set(view);
+    this.lookupNotesView.set(this.sortGroups(view));
+  }
+
+  private openNoteDialog(
+    mode: 'create' | 'edit',
+    term: string,
+    noteText: string,
+    isTermEditable: boolean,
+    originalIndex?: number
+  ): void {
+    const restoreFocusability = disableFocusInParentDialog();
+
+    const data: NoteFormDialogData = {
+      mode,
+      term,
+      noteText,
+      isTermEditable
+    };
+
+    const dialogRef = this.dialogService.open(NoteFormDialogComponent, {
+      header: mode === 'create' ? 'Add note' : 'Edit note',
+      modal: true,
+      width: 'clamp(20rem, 95vw, 35rem)',
+      closeOnEscape: false,
+      data: data
+    });
+
+    dialogRef.onClose.subscribe((result: NoteFormResult | undefined) => {
+      scheduleRestoreFocus(restoreFocusability);
+
+      if (!result) {
+        return;
+      }
+
+      this.lookupNotesView.update(currentView => {
+        const newView = cloneDeep(currentView);
+
+        if (mode === 'edit' && originalIndex !== undefined) {
+          // Find old group
+          const oldGroupIndex = newView.findIndex(g => g.selection === term);
+          if (oldGroupIndex > -1) {
+            // Remove from old group
+            newView[oldGroupIndex].notes = newView[oldGroupIndex].notes.filter(n => n.originalIndex !== originalIndex);
+            if (newView[oldGroupIndex].notes.length === 0) {
+              newView.splice(oldGroupIndex, 1);
+            }
+          }
+        }
+
+        // Add to new group (either existing or new)
+        let targetGroup = newView.find(g => g.selection === result.term);
+        if (!targetGroup) {
+          targetGroup = {selection: result.term, notes: []};
+          newView.push(targetGroup);
+        }
+
+        // Use a temporary index for the UI; save logic will re-index everything
+        const newNoteIndex = targetGroup.notes.length > 0
+          ? Math.max(...targetGroup.notes.map(n => n.originalIndex)) + 1
+          : 0;
+
+        targetGroup.notes.push({text: result.noteText, originalIndex: newNoteIndex});
+
+        return this.sortGroups(newView);
+      });
+
+      this.saveNotesIfChanged();
+      this.toastService.success(mode === 'create' ? 'Note added.' : 'Note updated.');
+    });
+  }
+
+  private sortGroups(groups: SelectionGroupView[]): SelectionGroupView[] {
+    return groups.sort((a, b) => {
+      // Empty selection string means "General notes" - always on top
+      if (!a.selection) {
+        return -1;
+      }
+      if (!b.selection) {
+        return 1;
+      }
+      return a.selection.localeCompare(b.selection);
+    });
   }
 
   private saveNotesIfChanged(): void {
@@ -413,7 +470,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
 
     const finalNotes: ProjectClipNotes = {
       lookupNotes: finalLookupNotes,
-      manualNote: this.manualNote(),
+      manualNote: this.initialNotes?.manualNote,
       hint: this.hint()
     };
 

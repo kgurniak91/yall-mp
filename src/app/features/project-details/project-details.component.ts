@@ -59,6 +59,12 @@ import {FileOpenIntentService} from '../../core/services/file-open-intent/file-o
 import {MediaTrack} from '../../../../shared/types/media.type';
 import {YomitanService} from '../../core/services/yomitan/yomitan.service';
 import {NoteRequest} from './subtitles-overlay/subtitles-overlay.types';
+import {
+  disableFocusInParentDialog,
+  scheduleRestoreFocus
+} from '../../shared/utils/disable-focus-in-parent-dialog/disable-focus-in-parent-dialog';
+import {NoteFormDialogData, NoteFormResult} from './note-form-dialog/note-form-dialog.types';
+import {NoteFormDialogComponent} from './note-form-dialog/note-form-dialog.component';
 
 @Component({
   selector: 'app-project-details',
@@ -722,6 +728,12 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
     menuItems.push({separator: true});
 
+    menuItems.push({
+      label: 'Add manual note',
+      icon: 'fa-solid fa-note-sticky',
+      command: () => this.openNoteDialog(payload.text, '', false)
+    });
+
     if (this.isYomitanEnabled()) {
       menuItems.push({
         label: `Search in offline dictionary`,
@@ -734,7 +746,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
     menuItems.push(
       {
-        label: 'Copy to Clipboard',
+        label: 'Copy to clipboard',
         icon: 'fa-solid fa-copy',
         command: () => {
           navigator.clipboard.writeText(this.selectedSubtitleTextForMenu);
@@ -1275,5 +1287,39 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       console.warn('[ProjectDetails] Failed to sync with Yomitan:', e);
       this.isYomitanEnabled.set(false);
     }
+  }
+
+  private openNoteDialog(term: string, noteText: string = '', isTermEditable: boolean = true): void {
+    const restoreFocusability = disableFocusInParentDialog();
+
+    const data: NoteFormDialogData = {
+      mode: 'create',
+      term,
+      noteText,
+      isTermEditable
+    };
+
+    this.dialogRef = this.dialogService.open(NoteFormDialogComponent, {
+      header: isTermEditable ? 'Add manual note' : 'Add note to highlighted text',
+      width: 'clamp(20rem, 95vw, 35rem)',
+      modal: true,
+      closeOnEscape: false,
+      data
+    });
+
+    this.dialogRef.onClose.pipe(take(1)).subscribe((result: NoteFormResult | undefined) => {
+      scheduleRestoreFocus(restoreFocusability);
+      if (result) {
+        const currentClip = this.clipsStateService.currentClipForAllTracks();
+        const subtitleId = currentClip?.sourceSubtitles[0]?.id;
+
+        if (subtitleId) {
+          this.addNoteToProject(subtitleId, result.term, result.noteText);
+          this.toastService.success('Note added');
+        } else {
+          this.toastService.error('Could not determine context for note.');
+        }
+      }
+    });
   }
 }

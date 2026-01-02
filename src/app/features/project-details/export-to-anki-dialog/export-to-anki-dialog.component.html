@@ -125,33 +125,38 @@
   </div>
 
   <div class="flex flex-column gap-2">
-    <label for="manual-note">Manual Note</label>
-    <textarea id="manual-note"
-              pInputTextarea
-              [(ngModel)]="manualNote"
-              [autoResize]="false"
-              rows="5"
-              placeholder="Add a personal note for this clip..."
-              maxlength="5000"></textarea>
-  </div>
-
-  <div class="flex flex-column gap-2">
     <div class="flex align-items-center gap-2">
-      <label>Lookup Notes</label>
+      <label>Notes</label>
+      <p-button icon="fa-solid fa-plus"
+                [text]="true"
+                size="small"
+                rounded="true"
+                severity="primary"
+                pTooltip="Add manual note"
+                (onClick)="onAddManualNote()">
+      </p-button>
       <p-button icon="fa-solid fa-circle-question"
                 [text]="true"
                 size="small"
                 rounded="true"
                 severity="secondary"
-                pTooltip="How to Add"
+                pTooltip="How to add notes"
                 (click)="notesHelpPopover.toggle($event)">
       </p-button>
       <p-popover #notesHelpPopover [style]="{width: '25rem'}">
         <div class="flex flex-column gap-3 p-2">
-          <h4 class="m-0">How to add Lookup Notes</h4>
+          <h4 class="m-0">How to add notes</h4>
 
           <div class="flex flex-column gap-1">
-            <strong>Method 1: Offline Dictionary</strong>
+            <strong>Method 1: Manual Notes</strong>
+            <ul class="m-0 pl-3">
+              <li><b>Right-click</b> any word or highlight a phrase in the subtitles and choose <b>Add manual note</b> from the context menu.</li>
+              <li>Click the <b>+</b> button in this dialog to add a note for any custom term manually.</li>
+            </ul>
+          </div>
+
+          <div class="flex flex-column gap-1">
+            <strong>Method 2: Offline Dictionary</strong>
             <ul class="m-0 pl-3">
               <li>Make sure offline dictionary is configured in global settings for currently selected language of the project.</li>
               <li><b>Hover</b> over a word to open the dictionary popup.</li>
@@ -161,7 +166,7 @@
           </div>
 
           <div class="flex flex-column gap-1">
-            <strong>Method 2: Online Lookup</strong>
+            <strong>Method 3: Online Lookup</strong>
             <ul class="m-0 pl-3">
               <li><b>Click</b> a word to open the built-in browser.</li>
               <li>Select any text on the webpage.</li>
@@ -184,7 +189,11 @@
           <p-accordion-panel [value]="i">
             <p-accordion-header>
               <p class="m-0 p-0">
-                &quot;<span class="subtitles-font">{{ selectionGroup.selection }}</span>&quot;
+                @if (selectionGroup.selection) {
+                  &quot;<span class="subtitles-font">{{ selectionGroup.selection }}</span>&quot;
+                } @else {
+                  <span class="font-bold">General notes</span>
+                }
                 ({{ selectionGroup.notes.length }} notes)
               </p>
             </p-accordion-header>
@@ -198,7 +207,7 @@
                                 severity="info"
                                 [text]="true"
                                 pTooltip="Edit Note"
-                                (onClick)="onEditNote(note)"></p-button>
+                                (onClick)="onEditNote(selectionGroup.selection, note)"></p-button>
                       <p-button icon="fa-solid fa-trash"
                                 severity="danger"
                                 [text]="true"
@@ -216,7 +225,7 @@
         }
       </p-accordion>
     } @else {
-      <div class="text-gray-500 p-4 text-center notes-placeholder">No lookup notes for this clip.</div>
+      <div class="text-gray-500 p-4 text-center notes-placeholder">No notes for this clip.</div>
     }
   </div>
 
