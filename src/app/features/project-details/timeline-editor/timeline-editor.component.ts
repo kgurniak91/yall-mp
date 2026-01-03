@@ -4,7 +4,6 @@ import {
   effect,
   ElementRef,
   inject,
-  NgZone,
   OnDestroy,
   OnInit,
   output,
@@ -20,7 +19,6 @@ import {ClipsStateService} from '../../../state/clips/clips-state.service';
 import {SpinnerComponent} from '../../../shared/components/spinner/spinner.component';
 import {AppStateService} from '../../../state/app/app-state.service';
 import {GlobalSettingsStateService} from '../../../state/global-settings/global-settings-state.service';
-import {ProjectSettingsStateService} from '../../../state/project-settings/project-settings-state.service';
 
 const INITIAL_ZOOM = 80;
 const MIN_ZOOM = 20;
@@ -41,12 +39,10 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
   protected readonly timelineContainer = viewChild.required<ElementRef<HTMLDivElement>>('timeline');
   protected readonly videoStateService = inject(VideoStateService);
   private readonly globalSettingsStateService = inject(GlobalSettingsStateService);
-  private readonly projectSettingsStateService = inject(ProjectSettingsStateService);
   private readonly isWaveSurferReady = signal(false);
   private readonly clipsStateService = inject(ClipsStateService);
   private readonly appStateService = inject(AppStateService);
   private readonly elementRef = inject(ElementRef);
-  private readonly ngZone = inject(NgZone);
   private wavesurfer: WaveSurfer | undefined;
   private wsRegions: RegionsPlugin | undefined;
   private readonly currentZoom = signal<number>(INITIAL_ZOOM);
@@ -56,10 +52,6 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
   private inactiveSubtitleBg!: string;
   private gapBg!: string;
   private mustIgnoreNextScroll = false;
-  private rafId: number | null = null;
-  private lastRafTime: number = 0;
-  private visualTime: number = 0;
-  private isPlayingCache: boolean = false;
 
   constructor() {
     effect(() => {
@@ -90,9 +82,6 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   ngOnDestroy(): void {
-    if (this.rafId !== null) {
-      cancelAnimationFrame(this.rafId);
-    }
     this.wavesurfer?.un('scroll', this.handleWaveSurferScroll);
     this.wavesurfer?.un('ready', this.handleWaveSurferReady);
     this.wsRegions?.un('region-updated', this.handleRegionUpdated);
@@ -202,24 +191,8 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
       return;
     }
 
-    // Register dependencies
     const currentTime = this.videoStateService.currentTime();
-    const isPaused = this.videoStateService.isPaused();
-    this.isPlayingCache = !isPaused;
-
-    // If paused, always snap exactly to the current time
-    if (isPaused) {
-      this.visualTime = currentTime;
-      this.wavesurfer.setTime(currentTime);
-      return;
-    }
-
-    // If playing, animate smooth playback indicator that approximates current time.
-    // Only force sync if the time difference between "fake" animation and real current time becomes too large.
-    if (Math.abs(this.visualTime - currentTime) > 0.2) {
-      this.visualTime = currentTime;
-      this.wavesurfer.setTime(currentTime);
-    }
+    this.wavesurfer.setTime(currentTime);
   });
 
   private initializeWaveSurfer(audioPeaks: number[][] | undefined, duration: number, container: HTMLElement) {
@@ -245,12 +218,6 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
 
     // Manually trigger ready state since 'ready' event doesn't fire with pre-decoded peaks
     this.handleWaveSurferReady();
-
-    // Animate "fake" smooth playback indicator that approximates current time
-    this.ngZone.runOutsideAngular(() => {
-      this.lastRafTime = performance.now();
-      this.animatePlaybackIndicator();
-    });
   }
 
   private setupWsRegionsEventListeners() {
@@ -321,14 +288,19 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
   private performSeekFromMouseEvent(region: Region, e: MouseEvent): void {
     e.stopPropagation();
     const wrapper = this.wavesurfer?.getWrapper();
+    let targetTime = region.start;
+
     if (wrapper) {
       const bbox = wrapper.getBoundingClientRect();
       const progress = (e.clientX - bbox.left) / bbox.width;
-      const time = progress * (this.wavesurfer?.getDuration() || 0);
-      this.videoStateService.seekAbsolute(time);
-    } else {
-      this.videoStateService.seekAbsolute(region.start);
+      targetTime = progress * (this.wavesurfer?.getDuration() || 0);
     }
+
+    // Update visual indicator IMMEDIATELY for responsiveness
+    this.wavesurfer?.setTime(targetTime);
+
+    // Tell backend to seek
+    this.videoStateService.seekAbsolute(targetTime);
   }
 
   private handleWaveSurferScroll = () => {
@@ -428,63 +400,4 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
       }
     });
   }
-
-  private animatePlaybackIndicator = () => {
-    this.rafId = requestAnimationFrame(this.animatePlaybackIndicator);
-
-    const now = performance.now();
-    const deltaTimeSeconds = (now - this.lastRafTime) / 1000;
-    this.lastRafTime = now;
-
-    if (!this.wavesurfer || !this.isPlayingCache) {
-      return;
-    }
-
-    const duration = this.videoStateService.duration();
-    const settings = this.projectSettingsStateService.settings();
-    const clips = this.clipsStateService.clips();
-
-    const currentLogicClipIndex = this.clipsStateService.activeTrackClipIndex();
-    const currentClip = clips[currentLogicClipIndex];
-
-    let currentSpeed = 1.0;
-    let clampTime = duration;
-
-    if (currentClip) {
-      currentSpeed = currentClip.hasSubtitle ? settings.subtitledClipSpeed : settings.gapSpeed;
-
-      // Never visually animate past the current clip's end until the current clip index actually updates
-      clampTime = currentClip.endTime;
-
-      // If auto-pause is enabled, do not interpolate past the pause point
-      if (currentClip.hasSubtitle && settings.autoPauseAtEnd) {
-        clampTime = currentClip.endTime - 0.01;
-      }
-    }
-
-    // Advance time
-    let newTime = this.visualTime + (deltaTimeSeconds * currentSpeed);
-
-    // Apply strict clamp
-    if (newTime >= clampTime) {
-      newTime = clampTime;
-      // Do not update the playback indicator until one of the following scenarios happen:
-      // 1. Lua fires 'clip-ended-naturally'
-      // 2. 'currentClipIndex' changes
-      // 3. This logic picks up the NEW 'currentClip' and releases the clamp
-    }
-
-    // Safety: If the actual time on the mpv side has moved significantly past current clamp,
-    // it means the "pause" didn't happen (e.g. continuous play transition without auto-pause), so the clamp should be released.
-    const ipcTime = this.videoStateService.currentTime();
-    if (ipcTime > (clampTime + 0.05)) {
-      // mpv is ahead -> trust it to avoid getting stuck
-      if (newTime < ipcTime) {
-        newTime = ipcTime;
-      }
-    }
-
-    this.visualTime = newTime;
-    this.wavesurfer.setTime(this.visualTime);
-  };
 }

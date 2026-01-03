@@ -7,6 +7,8 @@ import {MediaTrack} from './shared/types/media.type';
 import {execSync} from 'child_process';
 import * as fs from 'fs';
 
+const TIME_UPDATE_FPS = 30;
+
 export class MpvManager extends EventEmitter {
   public mediaPath: string = '';
   private mpv: Mpv | null = null;
@@ -27,7 +29,7 @@ export class MpvManager extends EventEmitter {
 
     const options = {
       binary: this.getMpvExecutablePath(),
-      time_update: 0.1, // 10Hz
+      time_update: (1 / TIME_UPDATE_FPS),
       // verbose: true
     };
 
@@ -82,7 +84,6 @@ export class MpvManager extends EventEmitter {
 
       // Shared properties from custom Lua script:
       this.mpv.observeProperty('user-data/auto-pause-fired');
-      this.mpv.observeProperty('user-data/clip-ended-naturally');
 
       // Observe EOF state to handle end of file cleanly
       this.mpv.observeProperty('eof-reached');
@@ -124,8 +125,6 @@ export class MpvManager extends EventEmitter {
       const prop = status.property as any;
       if (prop === 'user-data/auto-pause-fired') {
         this.emit('status', {event: 'auto-pause-fired'});
-      } else if (prop === 'user-data/clip-ended-naturally') {
-        this.emit('status', {event: 'clip-ended-naturally'});
       } else {
         this.emit('status', {
           event: 'property-change',
@@ -231,8 +230,8 @@ export class MpvManager extends EventEmitter {
     return this.mpv.hideSubtitles();
   }
 
-  public setLuaAutoPause(endTime: number, enabled: boolean): void {
-    this.mpv?.command('script-message', ['set-auto-pause', endTime.toString(), enabled.toString()]);
+  public setLuaAutoPause(endTime: number): void {
+    this.mpv?.command('script-message', ['set-auto-pause', endTime.toString()]);
   }
 
   private getMpvExecutablePath(): string {

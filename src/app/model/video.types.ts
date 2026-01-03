@@ -73,6 +73,7 @@ export enum PlayerState {
   AutoPausedAtStart = 'AutoPausedAtStart',
   AutoPausedAtEnd = 'AutoPausedAtEnd',
   Seeking = 'Seeking',
+  Transitioning = 'Transitioning',
   Ended = 'Ended'
 }
 

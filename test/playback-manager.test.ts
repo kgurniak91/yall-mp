@@ -78,10 +78,12 @@ describe('PlaybackManager', () => {
     const settings = (manager as any).settings;
     const shouldAutoPause = clip && clip.hasSubtitle && settings?.autoPauseAtEnd;
 
-    if (shouldAutoPause) {
-      simulateMpvEvent(manager, {event: 'auto-pause-fired'});
-    } else {
-      simulateMpvEvent(manager, {event: 'clip-ended-naturally'});
+    simulateMpvEvent(manager, {event: 'auto-pause-fired'});
+
+    // If auto-pause is disabled, the manager will trigger a seek to the next clip.
+    // Simulate completion of that seek to reach the final expected state.
+    if (!shouldAutoPause) {
+      simulateSeekComplete(manager);
     }
   };
 
@@ -352,6 +354,7 @@ describe('PlaybackManager', () => {
 
       // ACT: Call the repeat method
       playbackManager.repeat();
+      simulateSeekComplete(playbackManager);
 
       // ASSERT:
       // It should seek to the beginning of the current clip (sub-1 starts at 10s).
@@ -372,6 +375,7 @@ describe('PlaybackManager', () => {
 
       // ACT: Call the repeat method
       playbackManager.repeat();
+      simulateSeekComplete(playbackManager);
 
       // ASSERT:
       // It should seek to the beginning of the current clip.
@@ -395,6 +399,7 @@ describe('PlaybackManager', () => {
 
       // ACT: Call the repeat method
       playbackManager.repeat();
+      simulateSeekComplete(playbackManager);
 
       // ASSERT:
       // It should seek to the beginning of the current clip (sub-1 starts at 10s).
@@ -888,6 +893,99 @@ describe('PlaybackManager', () => {
         // ASSERT: The ForceShow behavior should override the manual setting and show them
         expect(mockMpvManager.showSubtitles).toHaveBeenCalledOnce();
         expect(getLastStateUpdate()?.subtitlesVisible).toBe(true);
+      });
+    });
+
+    describe('Transitioning State', () => {
+      beforeEach(() => {
+        playbackManager = setupManager();
+      });
+
+      it('enters Transitioning state during seek and resumes correctly if previously playing', () => {
+        // Start playing
+        playbackManager.play();
+        vi.clearAllMocks();
+
+        // Initiate seek
+        playbackManager.seek(15);
+
+        // Verify immediate transition state
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.Transitioning);
+        expect(mockMpvManager.setProperty).toHaveBeenCalledWith('pause', true);
+
+        // Complete seek
+        simulateSeekComplete(playbackManager);
+
+        // Verify resolution
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.Playing);
+        expect(mockMpvManager.setProperty).toHaveBeenCalledWith('pause', false);
+      });
+
+      it('enters Transitioning state during seek and stays paused if previously paused', () => {
+        // Ensure paused
+        playbackManager.pause();
+        vi.clearAllMocks();
+
+        // Initiate seek
+        playbackManager.seek(15);
+
+        // Verify immediate transition state
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.Transitioning);
+        expect(mockMpvManager.setProperty).toHaveBeenCalledWith('pause', true);
+
+        // Complete seek
+        simulateSeekComplete(playbackManager);
+
+        // Verify resolution
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.PausedByUser);
+        expect(mockMpvManager.setProperty).toHaveBeenCalledWith('pause', true);
+      });
+
+      it('enters Transitioning state during repeat and resumes correctly', () => {
+        // Start playing
+        playbackManager.play();
+        vi.clearAllMocks();
+
+        // Initiate repeat
+        playbackManager.repeat();
+
+        // Verify immediate transition state
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.Transitioning);
+        expect(mockMpvManager.setProperty).toHaveBeenCalledWith('pause', true);
+
+        // Complete seek (repeat triggers a seek)
+        simulateSeekComplete(playbackManager);
+
+        // Verify resolution
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.Playing);
+        expect(mockMpvManager.setProperty).toHaveBeenCalledWith('pause', false);
+      });
+
+      it('enters Transitioning state when moving to next clip (continuous play)', () => {
+        // Setup continuous play
+        playbackManager = setupManager({autoPauseAtEnd: false});
+        playbackManager.seek(5); // In gap-1 (0-10)
+        simulateSeekComplete(playbackManager);
+        playbackManager.play();
+        vi.clearAllMocks();
+
+        // Simulate end of current clip manually to check intermediate state.
+        // Auto-pause-fired is triggered, which calls playClipAtIndex, which sets state to Transitioning.
+        // Manually set current time to end so logic picks it up.
+        (playbackManager as any).currentTime = 10;
+        simulateMpvEvent(playbackManager, {event: 'auto-pause-fired'});
+
+        // NOW the player should be in Transitioning state waiting for the seek to complete
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.Transitioning);
+        expect(mockMpvManager.setProperty).toHaveBeenCalledWith('pause', true);
+
+        // Complete the seek that was triggered by playClipAtIndex
+        simulateSeekComplete(playbackManager);
+
+        // Should be playing next clip
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.Playing);
+        expect(mockMpvManager.setProperty).toHaveBeenCalledWith('pause', false);
+        expect((playbackManager as any).currentClipIndex).toBe(1);
       });
     });
   });

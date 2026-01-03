@@ -28,6 +28,7 @@ export class PlaybackManager extends EventEmitter {
   private mpvSubtitlesHiddenDueToRenderer = false;
   private isProjectLoaded = false;
   private isAwaitingRepeatSeek = false;
+  private nextPlayerState: PlayerState | null = null;
 
   constructor(
     private mpvManager: MpvManager,
@@ -115,9 +116,10 @@ export class PlaybackManager extends EventEmitter {
     const clip = this.clips[this.currentClipIndex];
     if (clip) {
       this.isAwaitingRepeatSeek = true;
+      this.setPlayerState(PlayerState.Transitioning);
+      this.nextPlayerState = PlayerState.Playing;
+      this.mpvManager.setProperty('pause', true);
       this.mpvManager.sendCommand(['seek', clip.startTime, 'absolute']);
-      this.mpvManager.setProperty('pause', false);
-      this.setPlayerState(PlayerState.Playing, true);
       this.refreshLuaAutoPause();
     }
   }
@@ -158,8 +160,10 @@ export class PlaybackManager extends EventEmitter {
       }
     }
 
-    this.preSeekState = (this.playerState === PlayerState.Seeking) ? this.preSeekState : this.playerState;
-    this.setPlayerState(PlayerState.Seeking);
+    if (this.playerState !== PlayerState.Transitioning) {
+      this.preSeekState = this.playerState;
+    }
+    this.setPlayerState(PlayerState.Transitioning);
     this.mpvManager.setProperty('pause', true);
 
     this.notifyUI();
@@ -259,13 +263,12 @@ export class PlaybackManager extends EventEmitter {
         this.currentTime = currentClip.endTime - 0.01;
       }
 
-      this.setPlayerState(PlayerState.AutoPausedAtEnd);
-      this.notifyUI();
-      return;
-    }
-
-    if (status.event === 'clip-ended-naturally') {
-      this.playClipAtIndex(this.currentClipIndex + 1);
+      if (this.settings?.autoPauseAtEnd && currentClip?.hasSubtitle) {
+        this.setPlayerState(PlayerState.AutoPausedAtEnd);
+        this.notifyUI();
+      } else {
+        this.playClipAtIndex(this.currentClipIndex + 1);
+      }
       return;
     }
 
@@ -293,7 +296,7 @@ export class PlaybackManager extends EventEmitter {
 
       // Handle time updates
       if (status.name === 'time-pos' && status.data !== undefined) {
-        if (this.playerState === PlayerState.Seeking) {
+        if (this.playerState === PlayerState.Seeking || this.playerState === PlayerState.Transitioning) {
           return;
         }
 
@@ -308,22 +311,31 @@ export class PlaybackManager extends EventEmitter {
         this.emit('repeat-seek-completed');
       }
 
-      if (this.playerState === PlayerState.Seeking) {
-        const shouldResume = this.preSeekState === PlayerState.Playing;
-        const isInitialSeek = this.preSeekState === PlayerState.Idle;
+      if (this.playerState === PlayerState.Seeking || this.playerState === PlayerState.Transitioning) {
+        let shouldResume: boolean;
+        let newState: PlayerState;
 
-        // Apply final subtitle visibility state now that the seek is complete.
-        if (!this.isSeekingWithinSameClip || isInitialSeek) {
-          this.applySubtitleVisibilityForClip();
+        if (this.nextPlayerState) {
+          // Transition driven by logic (e.g. playClipAtIndex)
+          newState = this.nextPlayerState;
+          shouldResume = (newState === PlayerState.Playing);
+          this.nextPlayerState = null;
+        } else {
+          // Manual seek
+          shouldResume = this.preSeekState === PlayerState.Playing;
+          const isInitialSeek = this.preSeekState === PlayerState.Idle;
+
+          // Apply final subtitle visibility state now that the seek is complete
+          if (!this.isSeekingWithinSameClip || isInitialSeek) {
+            this.applySubtitleVisibilityForClip();
+          }
+
+          this.isSeekingWithinSameClip = false;
+          newState = shouldResume ? PlayerState.Playing : PlayerState.PausedByUser;
         }
 
-        this.isSeekingWithinSameClip = false;
-
         this.mpvManager.setProperty('pause', !shouldResume);
-        this.setPlayerState(
-          shouldResume ? PlayerState.Playing : PlayerState.PausedByUser,
-          true
-        );
+        this.setPlayerState(newState, true);
       }
     } else if (status.event === 'end-file') {
       // This must stay as Idle, not Ended, because it happens when mpv unloads the file completely during teardown:
@@ -337,6 +349,9 @@ export class PlaybackManager extends EventEmitter {
       return;
     }
 
+    this.setPlayerState(PlayerState.Transitioning);
+    this.mpvManager.setProperty('pause', true);
+
     this.currentClipIndex = index;
     this.userOverriddenClipId = null;
     this.applyClipTransitionSettings();
@@ -346,15 +361,15 @@ export class PlaybackManager extends EventEmitter {
 
     // Determine the precise target time, nudging it slightly if auto-pausing at the start to make sure it's still within clip bounds:
     const targetTime = shouldAutoPauseAtStart ? (clipToPlay.startTime + 0.01) : clipToPlay.startTime;
+    this.currentTime = targetTime;
+    this.notifyUI();
+
     this.mpvManager.sendCommand(['seek', targetTime, 'absolute']);
 
     if (shouldAutoPauseAtStart) {
-      this.currentTime = targetTime;
-      this.mpvManager.setProperty('pause', true);
-      this.setPlayerState(PlayerState.AutoPausedAtStart);
+      this.nextPlayerState = PlayerState.AutoPausedAtStart;
     } else {
-      this.mpvManager.setProperty('pause', false);
-      this.setPlayerState(PlayerState.Playing, true);
+      this.nextPlayerState = PlayerState.Playing;
     }
   }
 
@@ -376,8 +391,8 @@ export class PlaybackManager extends EventEmitter {
     if (!clip || !this.settings) {
       return;
     }
-    const shouldPauseAtEnd = Boolean(clip.hasSubtitle && this.settings.autoPauseAtEnd);
-    this.mpvManager.setLuaAutoPause(clip.endTime, shouldPauseAtEnd);
+
+    this.mpvManager.setLuaAutoPause(clip.endTime);
   }
 
   private applySubtitleVisibilityForClip(): void {
