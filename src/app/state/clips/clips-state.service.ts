@@ -38,7 +38,6 @@ export class ClipsStateService implements OnDestroy {
   private readonly _subtitles = signal<SubtitleData[]>([]);
   private readonly _activeTrack = signal(0);
   private readonly _masterClipIndex = signal(0); // Track master clip index, works across flattened and merged collection of video clips
-  private readonly _activeTrackClipIndex = signal(0); // Clip index on currently active track
   private readonly _playerState = signal<PlayerState>(PlayerState.Idle);
   private adjustDebounceTimer: any;
   private _projectId: string | null = null;
@@ -47,7 +46,43 @@ export class ClipsStateService implements OnDestroy {
 
   public readonly activeTrack = this._activeTrack.asReadonly();
   public readonly masterClipIndex = this._masterClipIndex.asReadonly();
-  public readonly activeTrackClipIndex = this._activeTrackClipIndex.asReadonly();
+  public readonly activeTrackClipIndex = computed(() => {
+    const masterClipIndex = this._masterClipIndex();
+    const allClips = this.clipsForAllTracks();
+    const trackClips = this.clips();
+
+    if (masterClipIndex < 0 || masterClipIndex >= allClips.length || trackClips.length === 0) {
+      return -1;
+    }
+
+    const masterClip = allClips[masterClipIndex];
+    if (!masterClip) {
+      return -1;
+    }
+
+    // Find clip on current track that contains the start time of the master clip
+    const targetTime = masterClip.startTime + 0.0001;
+
+    let low = 0;
+    let high = trackClips.length - 1;
+
+    while (low <= high) {
+      const mid = (low + high) >>> 1; // Bitwise shift is slightly faster than Math.floor
+      const clip = trackClips[mid];
+
+      if (targetTime >= clip.startTime && targetTime < clip.endTime) {
+        return mid;
+      }
+
+      if (targetTime < clip.startTime) {
+        high = mid - 1;
+      } else {
+        low = mid + 1;
+      }
+    }
+
+    return -1;
+  });
   public readonly playerState = this._playerState.asReadonly();
   public readonly isPlaying = computed(() => this.playerState() === PlayerState.Playing);
   public readonly clipsForAllTracks: Signal<VideoClip[]> = computed(() => this.generateClips(this._subtitles()));
@@ -81,25 +116,6 @@ export class ClipsStateService implements OnDestroy {
   });
 
   constructor() {
-    effect(() => {
-      const trackClips = this.clips();
-      const currentTime = this.videoStateService.currentTime();
-      const playerState = this.playerState();
-
-      if (trackClips.length === 0) {
-        this._activeTrackClipIndex.set(-1);
-        return;
-      }
-
-      if (playerState === PlayerState.Ended) {
-        this._activeTrackClipIndex.set(trackClips.length - 1);
-        return;
-      }
-
-      const newActiveIndex = trackClips.findIndex(c => currentTime >= c.startTime && currentTime < c.endTime);
-      this._activeTrackClipIndex.set(newActiveIndex);
-    });
-
     effect(() => {
       const currentClips = this.clipsForAllTracks();
       if (currentClips.length > 0) {

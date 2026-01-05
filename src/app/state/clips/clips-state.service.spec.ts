@@ -604,6 +604,7 @@ Dialogue: 0,0:08:27.90,0:08:28.28,RomajiED,,0,0,0,,ki
 
       // Select 'Subtitle A' by setting the time within it and flushing effects
       currentTimeSignal.set(7);
+      service.setCurrentClipByIndex(1); // 'srt-1' (5s-10s) is index 1
       spectator.flushEffects();
 
       // Ensure the correct clip is selected before proceeding
@@ -955,12 +956,14 @@ Dialogue: 0,0:08:27.90,0:08:28.28,RomajiED,,0,0,0,,ki
       // The clips will be: gap(0-10), sub(10-20), gap(20-end)
       // Select the subtitled clip by setting the current time within it and flushing effects
       currentTimeSignal.set(15);
+      service.setCurrentClipByIndex(1);
       spectator.flushEffects();
     }));
 
     it('should snap playhead to new start time if adjustment moves the boundary past the playhead', fakeAsync(() => {
       // ARRANGE: Playhead is at 10.01s. Default 50ms adjustment will move start boundary to 10.05s, past the playhead.
       currentTimeSignal.set(10.01);
+      service.setCurrentClipByIndex(1);
       spectator.flushEffects();
 
       // ACT: Adjust start boundary to the right by 50ms.
@@ -975,6 +978,7 @@ Dialogue: 0,0:08:27.90,0:08:28.28,RomajiED,,0,0,0,,ki
     it('should snap playhead when paused exactly at the start and the start boundary is moved right', fakeAsync(() => {
       // ARRANGE: Playhead is exactly at the start time, 10.0s.
       currentTimeSignal.set(10.0);
+      service.setCurrentClipByIndex(1);
       spectator.flushEffects();
 
       // ACT: Adjust start boundary to the right by 50ms, moving it to 10.05s.
@@ -989,6 +993,7 @@ Dialogue: 0,0:08:27.90,0:08:28.28,RomajiED,,0,0,0,,ki
     it('should snap playhead to new end time if adjustment moves the boundary before the playhead', fakeAsync(() => {
       // ARRANGE: Playhead is at 19.99s. Default 50ms adjustment will move end boundary to 19.95s, before the playhead.
       currentTimeSignal.set(19.99);
+      service.setCurrentClipByIndex(1);
       spectator.flushEffects();
 
       // ACT: Adjust end boundary to the left by 50ms.
@@ -1003,6 +1008,7 @@ Dialogue: 0,0:08:27.90,0:08:28.28,RomajiED,,0,0,0,,ki
     it('should NOT snap playhead if it remains within the new boundaries after adjustment', fakeAsync(() => {
       // ARRANGE: Playhead is at 15s. The 50ms adjustment will not move a boundary past it.
       currentTimeSignal.set(15);
+      service.setCurrentClipByIndex(1);
       spectator.flushEffects();
 
       // ACT: Adjust end boundary to the right (expanding the clip).
@@ -1017,6 +1023,7 @@ Dialogue: 0,0:08:27.90,0:08:28.28,RomajiED,,0,0,0,,ki
       // ARRANGE: To simulate being "at the end" of the clip, set the time just inside its boundary.
       // This ensures the correct clip is selected because the selection logic is `currentTime < endTime`.
       currentTimeSignal.set(19.999);
+      service.setCurrentClipByIndex(1);
       spectator.flushEffects();
 
       // ACT: Adjust end boundary to the left by 50ms, moving it to 19.95s.
@@ -1353,6 +1360,8 @@ ${initialLine}
       ];
       service.setSubtitles(shortSubtitle);
       currentTimeSignal.set(5.5);
+      // Timeline: Gap 0-5 (idx 0), Sub 5-6 (idx 1), Gap 6-end (idx 2)
+      service.setCurrentClipByIndex(1);
 
       // Force all pending signal effects to run synchronously. This updates the clips array
       // and the activeTrackClipIndex, ensuring `currentClip()` is correct.
@@ -1930,6 +1939,141 @@ Dialogue: 0:01:01.00,0:01:02.00,Default,Animating Text
       const restoredRawContent = (appStateService.updatePartialProject as jasmine.Spy).calls.mostRecent().args[1].rawAssContent;
       const normalize = (str: string) => str.trim().replace(/\r\n/g, '\n');
       expect(normalize(restoredRawContent)).toEqual(normalize(originalRawContent));
+    });
+  });
+
+  describe('Active Clip Synchronization', () => {
+    it('should NOT update active clip index based on currentTime updates alone', () => {
+      // ARRANGE: Gap (0-10), Sub (10-20)
+      const subs: SrtSubtitleData[] = [{type: 'srt', id: 's1', startTime: 10, endTime: 20, text: 'A', track: 0}];
+      service.setSubtitles(subs);
+
+      // Simulate backend being at Gap
+      const callback = (window.electronAPI.onPlaybackStateUpdate as jasmine.Spy).calls.mostRecent().args[0];
+      callback({
+        playerState: 'Idle',
+        currentClipIndex: 0, // In the gap
+        currentTime: 0,
+        isPaused: true,
+        subtitlesVisible: true
+      });
+
+      expect(service.activeTrackClipIndex()).toBe(0);
+
+      // ACT: Simulate video time progressing into the second clip (15s) BUT the backend hasn't sent a clip index update yet (e.g. lagging)
+      currentTimeSignal.set(15);
+      spectator.flushEffects();
+
+      // ASSERT: Shouldn't guess anymore what active index is - should stay at 0 until the backend explicitly says otherwise
+      expect(service.activeTrackClipIndex()).withContext('Should wait for backend confirmation').toBe(0);
+    });
+
+    it('should correctly map Master Index to Active Track Index using binary search', () => {
+      // ARRANGE
+      const subs: SrtSubtitleData[] = [
+        {type: 'srt', id: 's1', startTime: 10, endTime: 20, text: 'A', track: 0},
+        {type: 'srt', id: 's2', startTime: 30, endTime: 40, text: 'B', track: 0}
+      ];
+      service.setSubtitles(subs);
+      // Track 0 timeline: [0-10 (Gap), 10-20 (Sub A), 20-30 (Gap), 30-40 (Sub B), 40-... (Gap)]
+
+      const callback = (window.electronAPI.onPlaybackStateUpdate as jasmine.Spy).calls.mostRecent().args[0];
+
+      // ACT 1: Backend says current clip is at master index 3 (Sub B)
+      callback({
+        playerState: 'Playing',
+        currentClipIndex: 3,
+        currentTime: 35,
+        isPaused: false,
+        subtitlesVisible: true
+      });
+      spectator.flushEffects();
+
+      // ASSERT 1
+      expect(service.activeTrackClipIndex()).toBe(3);
+
+      // ACT 2: Backend says current clip is at master index 0 (first Gap)
+      callback({playerState: 'Playing', currentClipIndex: 0, currentTime: 5, isPaused: false, subtitlesVisible: true});
+      spectator.flushEffects();
+
+      // ASSERT 2
+      expect(service.activeTrackClipIndex()).toBe(0);
+    });
+
+    it('should handle multi-track segmentation where Master Timeline is more granular than Active Track', () => {
+      // ARRANGE
+      // Track 0: Subtitle A [0 - 10]
+      // Track 1: Subtitle B [5 - 15]
+      //
+      // Master Timeline (merged):
+      // 0. [0-5]   (Sub A)
+      // 1. [5-10]  (Sub A + Sub B)
+      // 2. [10-15] (Sub B)
+      //
+      // Active Track 0 Timeline:
+      // 0. [0-10]  (Sub A)
+      // 1. [10-15] (Gap)
+
+      const subs: SrtSubtitleData[] = [
+        {type: 'srt', id: 's1', startTime: 0, endTime: 10, text: 'A', track: 0},
+        {type: 'srt', id: 's2', startTime: 5, endTime: 15, text: 'B', track: 1}
+      ];
+      service.setSubtitles(subs);
+      service.setActiveTrack(0);
+
+      const callback = (window.electronAPI.onPlaybackStateUpdate as jasmine.Spy).calls.mostRecent().args[0];
+
+      // ACT 1: Backend is playing Master Clip 1 (5-10s)
+      // This corresponds to the middle of the Clip on Track 0 (0-10s)
+      callback({
+        playerState: 'Playing',
+        currentClipIndex: 1, // Time 5-10
+        currentTime: 6,
+        isPaused: false,
+        subtitlesVisible: true
+      });
+      spectator.flushEffects();
+
+      // ASSERT 1: Should map to Track 0 Clip Index 0
+      expect(service.activeTrackClipIndex()).withContext('Master index 1 (5-10s) should map to Track 0 index 0 (0-10s)').toBe(0);
+
+      // ACT 2: Backend is playing Master Clip 2 (10-15s)
+      // This corresponds to the Gap on Track 0 (10-15s)
+      callback({
+        playerState: 'Playing',
+        currentClipIndex: 2, // Time 10-15
+        currentTime: 11,
+        isPaused: false,
+        subtitlesVisible: true
+      });
+      spectator.flushEffects();
+
+      // ASSERT 2: Should map to Track 0 Clip Index 1 (the Gap)
+      expect(service.activeTrackClipIndex()).withContext('Master index 2 (10-15s) should map to Track 0 index 1 (Gap)').toBe(1);
+    });
+
+    it('should correctly handle exact boundary conditions', () => {
+      // ARRANGE
+      // Clip A: 10-20
+      const subs: SrtSubtitleData[] = [{type: 'srt', id: 's1', startTime: 10, endTime: 20, text: 'A', track: 0}];
+      service.setSubtitles(subs);
+      // Track 0: [0-10 (Gap), 10-20 (Sub), 20-... (Gap)]
+
+      const callback = (window.electronAPI.onPlaybackStateUpdate as jasmine.Spy).calls.mostRecent().args[0];
+
+      // ACT: Backend says active clip is at Master Index 1 (10-20s)
+      // The start time is exactly 10.0
+      callback({
+        playerState: 'Playing',
+        currentClipIndex: 1,
+        currentTime: 10.0,
+        isPaused: false,
+        subtitlesVisible: true
+      });
+      spectator.flushEffects();
+
+      // ASSERT: The binary search must handle 'time === clip.startTime' correctly (inclusive start)
+      expect(service.activeTrackClipIndex()).toBe(1);
     });
   });
 });

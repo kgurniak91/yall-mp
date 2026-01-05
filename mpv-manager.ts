@@ -7,7 +7,7 @@ import {MediaTrack} from './shared/types/media.type';
 import {execSync} from 'child_process';
 import * as fs from 'fs';
 
-const TIME_UPDATE_FPS = 30;
+const TIME_UPDATE_FPS = 10;
 
 export class MpvManager extends EventEmitter {
   public mediaPath: string = '';
