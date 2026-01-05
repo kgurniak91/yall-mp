@@ -53,7 +53,12 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   private readonly dialogService = inject(DialogService);
 
   protected readonly shouldBeHidden = computed(() => {
-    if (this.videoStateService.playerState() === PlayerState.Seeking) {
+    if (this.videoStateService.isUserSeeking()) {
+      return true;
+    }
+
+    const playerState = this.videoStateService.playerState();
+    if ((playerState === PlayerState.Seeking) || (playerState === PlayerState.Transitioning)) {
       return true;
     }
 

@@ -30,6 +30,7 @@ export class VideoStateService implements OnDestroy {
   private readonly _nextMediaPath = signal<string | null>(null);
   private readonly _prevMediaPath = signal<string | null>(null);
   private readonly _isVideoWindowVisible = signal(false);
+  private readonly _isUserSeeking = signal(false);
   private readonly saveTimeSubject = new Subject<number>();
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
@@ -66,6 +67,7 @@ export class VideoStateService implements OnDestroy {
   public readonly nextMediaPath = this._nextMediaPath.asReadonly();
   public readonly prevMediaPath = this._prevMediaPath.asReadonly();
   public readonly isVideoWindowVisible = this._isVideoWindowVisible.asReadonly();
+  public readonly isUserSeeking = this._isUserSeeking.asReadonly();
 
   constructor() {
     this.cleanupMpvListener = window.electronAPI.onMpvEvent((status) => {
@@ -79,6 +81,10 @@ export class VideoStateService implements OnDestroy {
       this._isPaused.set(update.isPaused);
       this._subtitlesVisible.set(update.subtitlesVisible);
       this._playerState.set(update.playerState);
+
+      if (update.playerState !== PlayerState.Seeking && update.playerState !== PlayerState.Transitioning) {
+        this._isUserSeeking.set(false);
+      }
     });
 
     this.cleanupRepeatSeekListener = window.electronAPI.onRepeatSeekCompleted(() => {
@@ -229,11 +235,13 @@ export class VideoStateService implements OnDestroy {
     const duration = this.duration();
     targetTime = Math.max(0, Math.min(targetTime, duration - 0.01));
 
+    this._isUserSeeking.set(true);
     this._seekRequest.set({time, type: SeekType.Relative});
     this.saveCurrentPlaybackTime(targetTime);
   }
 
   public seekAbsolute(time: number): void {
+    this._isUserSeeking.set(true);
     this._seekRequest.set({time, type: SeekType.Absolute});
     this.saveCurrentPlaybackTime(time);
   }
