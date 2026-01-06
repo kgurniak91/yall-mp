@@ -115,11 +115,22 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
     if (!this.wavesurfer) return;
     const newZoom = Math.max(this.currentZoom() / ZOOM_FACTOR, MIN_ZOOM);
     this.updateZoom(newZoom);
+    this.forceWavesurferRedraw();
+  }
 
-    // After zooming out, perform a tiny scroll nudge to force WaveSurfer to re-render all regions
+  private forceWavesurferRedraw() {
+    if (!this.wavesurfer) {
+      return;
+    }
+
+    // Perform a tiny scroll nudge to force Wavesurfer to re-render all regions
     const currentTime = this.videoStateService.currentTime();
     this.wavesurfer.setScrollTime(currentTime + 0.1);
     this.wavesurfer.setScrollTime(currentTime);
+
+    setTimeout(() => {
+      this.syncHighlight();
+    }, 50);
   }
 
   private updateZoom(newZoom: number): void {
@@ -164,6 +175,8 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
       if (clipsSignature !== this.lastDrawnClipsSignature) {
         this.drawRegions(clips);
         this.lastDrawnClipsSignature = clipsSignature;
+        // Force redraw whenever clips change (e.g., track switch)
+        this.forceWavesurferRedraw();
       }
 
       // Once the first set of regions is drawn, hide the loader

@@ -28,7 +28,7 @@ import {ClipContent, UpdateClipTextCommand} from '../../model/commands/update-cl
 import {take} from 'rxjs';
 import {ToastService} from '../../shared/services/toast/toast.service';
 import type {DialogSubtitlePart, SubtitleData} from '../../../../shared/types/subtitle.type';
-import {DropdownModule} from 'primeng/dropdown';
+import {Dropdown, DropdownModule} from 'primeng/dropdown';
 import {FormsModule} from '@angular/forms';
 import {AnkiStateService} from '../../state/anki/anki-state.service';
 import {ExportToAnkiDialogComponent} from './export-to-anki-dialog/export-to-anki-dialog.component';
@@ -268,6 +268,8 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   protected readonly subtitlesContextMenu = viewChild.required<ContextMenu>('subtitlesContextMenu');
   protected readonly timelineContextMenu = viewChild.required<ContextMenu>('timelineContextMenu');
   protected readonly timelineEditor = viewChild.required<TimelineEditorComponent>('timelineEditor');
+  protected readonly tracksDropdown = viewChild<Dropdown>('tracksDropdown');
+  protected readonly isTrackTooltipDisabled = signal(false);
   protected readonly subtitlesMenuItems = signal<MenuItem[]>([]);
   protected readonly timelineMenuItems = signal<MenuItem[]>([]);
   protected readonly isSubtitlesContextMenuOpen = signal(false);
@@ -672,6 +674,15 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
   protected onTrackChange(trackIndex: number): void {
     this.clipsStateService.setActiveTrack(trackIndex);
+    this.isTrackTooltipDisabled.set(true);
+
+    setTimeout(() => {
+      const dropdownNativeEl = this.tracksDropdown()?.el?.nativeElement;
+      if (dropdownNativeEl?.contains(document.activeElement)) {
+        (document.activeElement as HTMLElement).blur();
+        this.isTrackTooltipDisabled.set(false);
+      }
+    });
   }
 
   protected hideAllContextMenus(): void {

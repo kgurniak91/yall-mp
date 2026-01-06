@@ -102,10 +102,13 @@
         <p-overlaybadge badgeSize="small"
                         severity="info"
                         [pTooltip]="trackDropdownTooltip()"
+                        [tooltipDisabled]="isTrackTooltipDisabled()"
                         tooltipStyleClass="tooltip-one-line"
                         [badgeDisabled]="!hasParallelClipsAtCurrentTime()">
-          <p-dropdown [options]="trackOptions()"
+          <p-dropdown #tracksDropdown
+                      [options]="trackOptions()"
                       [ngModel]="clipsStateService.activeTrack()"
+                      [tabindex]="-1"
                       (onChange)="onTrackChange($event.value)"
                       class="tracks-dropdown"
                       optionLabel="label"
