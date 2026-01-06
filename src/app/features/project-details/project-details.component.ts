@@ -844,23 +844,23 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
         const subtitleId = clip.sourceSubtitles[0]?.id;
         const clipNotes = project.notes?.[subtitleId];
 
-        // Lookup Notes Info
-        let lookupNotesCount = 0;
-        if (clipNotes?.lookupNotes) {
-          lookupNotesCount = Object.values(clipNotes.lookupNotes).reduce((acc, notes) => acc + notes.length, 0);
-        }
-        items.push({
-          label: `${lookupNotesCount} lookup note(s)`,
-          icon: 'fa-solid fa-clipboard-list',
-          disabled: true,
-          styleClass: 'opacity-70'
-        });
+        // Calculate total notes (lookup notes + legacy manual note)
+        let totalNotesCount = 0;
 
-        // Manual Note Info
-        const hasManualNote = (clipNotes?.manualNote?.trim()?.length || 0) > 0;
+        if (clipNotes?.lookupNotes) {
+          totalNotesCount += Object.values(clipNotes.lookupNotes).reduce((acc, notes) => acc + notes.length, 0);
+        }
+
+        // Include legacy manual note in the total count if present
+        if (clipNotes?.manualNote?.trim()) {
+          totalNotesCount++;
+        }
+
+        const notesText = (totalNotesCount === 1) ? 'note' : 'notes';
+
         items.push({
-          label: hasManualNote ? 'Manual note present' : 'No manual note',
-          icon: hasManualNote ? 'fa-solid fa-check text-green-500' : 'fa-solid fa-xmark',
+          label: `${totalNotesCount} ${notesText}`,
+          icon: 'fa-solid fa-clipboard-list',
           disabled: true,
           styleClass: 'opacity-70'
         });
