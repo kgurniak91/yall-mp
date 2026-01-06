@@ -39,6 +39,7 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
   protected readonly isMaximized = signal(false);
   protected readonly isFullScreen = signal(false);
   protected readonly isMenuOpen = signal(false);
+  protected readonly currentUrl = signal<string>('');
   protected readonly currentProject = computed(() => this.computeCurrentProject());
   protected readonly mediaFileName = computed(() => this.currentProject()?.mediaFileName || 'Loading media...');
   protected readonly subtitleFileName = computed(() => this.currentProject()?.subtitleFileName || 'Loading subtitles...');
@@ -69,7 +70,8 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.router.events.pipe(
       filter((event): event is NavigationEnd => event instanceof NavigationEnd)
-    ).subscribe(() => {
+    ).subscribe((event: NavigationEnd) => {
+      this.currentUrl.set(event.urlAfterRedirects || event.url);
       let route = this.router.routerState.root;
       while (route.firstChild) {
         route = route.firstChild;
@@ -145,19 +147,24 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private computeMenuItems(): MenuItem[] {
     const project = this.currentProject();
+    const url = this.currentUrl();
+    const menu: MenuItem[] = [];
 
-    const menu: MenuItem[] = [
-      {
+    if (!url.includes('/project/new')) {
+      menu.push({
         label: 'Create new project',
         icon: 'fa-solid fa-plus',
         command: () => this.router.navigate(['/project/new'])
-      },
-      {
+      });
+    }
+
+    if (url !== '/projects') {
+      menu.push({
         label: 'List of projects',
         icon: 'fa-solid fa-list',
         command: () => this.router.navigate(['/projects'])
-      }
-    ];
+      });
+    }
 
     if (project) {
       menu.splice(1, 0, {
