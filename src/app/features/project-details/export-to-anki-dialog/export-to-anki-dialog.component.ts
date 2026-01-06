@@ -35,7 +35,7 @@ import {
   scheduleRestoreFocus
 } from '../../../shared/utils/disable-focus-in-parent-dialog/disable-focus-in-parent-dialog';
 import {Tag} from 'primeng/tag';
-import {DecimalPipe, I18nPluralPipe} from '@angular/common';
+import {I18nPluralPipe} from '@angular/common';
 import {NoteFormDialogData, NoteFormResult} from '../note-form-dialog/note-form-dialog.types';
 import {NoteFormDialogComponent} from '../note-form-dialog/note-form-dialog.component';
 
@@ -66,7 +66,6 @@ interface SelectionGroupView {
     AccordionHeader,
     AccordionContent,
     Tag,
-    DecimalPipe,
     I18nPluralPipe
   ],
   templateUrl: './export-to-anki-dialog.component.html',
@@ -133,7 +132,6 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
     return finalParts.join('');
   });
   protected assSubtitleData: AssSubtitleData | null = null;
-  protected clipDuration!: number;
   protected isAlreadyExported!: boolean;
   protected readonly exportTags = signal<string[]>([]);
   protected readonly ankiService = inject(AnkiStateService);
@@ -153,7 +151,6 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.clipDuration = this.data.subtitleData.endTime - this.data.subtitleData.startTime;
     const history = this.data.project.ankiExportHistory || [];
     this.isAlreadyExported = history.includes(this.data.subtitleData.id);
 
@@ -211,7 +208,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
   }
 
   onAddNoteToGroup(term: string): void {
-    this.openNoteDialog('create', term, '', true);
+    this.openNoteDialog('create', term, '', false);
   }
 
   getGroupedTagsForTemplate(template: AnkiCardTemplate): { global: string[], project: string[], template: string[] } {

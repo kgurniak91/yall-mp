@@ -624,12 +624,21 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     };
 
     this.dialogService.open(ExportToAnkiDialogComponent, {
-      header: 'Export to Anki',
       width: 'clamp(20rem, 95vw, 45rem)',
+      style: {
+        'max-height': '90vh'
+      },
+      contentStyle: {
+        'padding': '0',
+        'display': 'flex',
+        'flex-direction': 'column',
+        'overflow': 'hidden'
+      },
       focusOnShow: false,
       modal: true,
-      closable: true,
+      closable: false,
       closeOnEscape: false,
+      showHeader: false,
       styleClass: instantExport ? 'instant-anki-export-hidden' : undefined,
       data
     });

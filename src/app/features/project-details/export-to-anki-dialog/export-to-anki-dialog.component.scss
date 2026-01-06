@@ -1,3 +1,22 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.interaction-blocker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 100; // Above the footer
+  cursor: progress;
+}
+
 .subtitles-font {
   font-family: var(--app-font-subtitles), sans-serif;
 }

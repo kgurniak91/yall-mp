@@ -1,265 +1,267 @@
-<div class="flex flex-column gap-4">
-  <div class="flex flex-column gap-2">
-    <label>Clip duration</label>
-    <span>{{ clipDuration | number:'1.2-2' }} seconds</span>
-  </div>
+@if (isExporting()) {
+  <div class="interaction-blocker" title="Please wait for the export to finish..."></div>
+}
 
-  <div class="flex flex-column gap-2">
-    <label>Anki Export Status</label>
-    <div>
-      @if (isAlreadyExported) {
-        <p-tag severity="success" value="Exported"/>
-      } @else {
-        <p-tag severity="info" value="Not exported yet"/>
-      }
-    </div>
-  </div>
-
-  @if (assSubtitleData && assSubtitleData.parts && assSubtitleData.parts.length > 1) {
-    <div class="flex flex-column gap-2">
-      <label>Select subtitle parts to include:</label>
-      <div class="flex flex-column gap-2">
-        @for (part of assSubtitleData.parts; track $index) {
-          @let checkboxId = ('part-' + $index);
-          <div class="flex align-items-center">
-            <p-checkbox [(ngModel)]="selectedSubtitleParts"
-                        [value]="part"
-                        [inputId]="checkboxId"/>
-            <label [for]="checkboxId" class="ml-2 subtitles-font word-break">
-              {{ part.text }}
-            </label>
-          </div>
-        }
-      </div>
-    </div>
-  } @else {
-    <div class="flex flex-column gap-2">
-      <label>Subtitle Text</label>
-      <span class="subtitle-full-text" [innerHTML]="finalTextPreviewHtml()"></span>
-    </div>
-  }
-
-  <div class="flex flex-column gap-2">
-    <label for="template-select">Export using template(s):</label>
-    <div class="flex flex-column gap-2">
-      @for (template of ankiService.ankiCardTemplates(); track template.id) {
-        <div class="flex align-items-center">
-          <p-checkbox [value]="template"
-                      [inputId]="template.id"
-                      [(ngModel)]="selectedTemplates"></p-checkbox>
-          <label [for]="template.id" class="ml-2 word-break">{{ template.name }}</label>
-          <p-button icon="fa-solid fa-tags"
-                    [text]="true"
-                    size="small"
-                    rounded="true"
-                    severity="secondary"
-                    pTooltip="View combined Anki tags"
-                    tooltipPosition="right"
-                    (click)="tagsPopover.toggle($event)"/>
-          <p-popover #tagsPopover [style]="{width: '22.5rem'}">
-            <div class="flex flex-column gap-2 p-2">
-              <h4 class="m-0">Combined Anki tags for this template</h4>
-              @let groupedTags = getGroupedTagsForTemplate(template);
-
-              <div class="flex flex-column gap-2">
-                <small>Global</small>
-                <div class="flex flex-wrap gap-2">
-                  @for (tag of groupedTags.global; track tag) {
-                    <p-chip [label]="tag"/>
-                  } @empty {
-                    <small class="text-gray-500">No global Anki tags defined.</small>
-                  }
-                </div>
-              </div>
-
-              <div class="flex flex-column gap-2">
-                <small>Project</small>
-                <div class="flex flex-wrap gap-2">
-                  @for (tag of groupedTags.project; track tag) {
-                    <p-chip [label]="tag"/>
-                  } @empty {
-                    <small class="text-gray-500">No project Anki tags defined.</small>
-                  }
-                </div>
-              </div>
-
-              <div class="flex flex-column gap-2">
-                <small>Template</small>
-                <div class="flex flex-wrap gap-2">
-                  @for (tag of groupedTags.template; track tag) {
-                    <p-chip [label]="tag"/>
-                  } @empty {
-                    <small class="text-gray-500">No template-specific Anki tags defined.</small>
-                  }
-                </div>
-              </div>
-
-              <p-divider/>
-
-              <small class="text-gray-500">
-                Card-specific tags entered at the bottom of export form will also be included.
-              </small>
-            </div>
-          </p-popover>
-        </div>
-      } @empty {
-        <span class="text-gray-500">
-          No valid Anki templates found.
-        </span>
-      }
-    </div>
-    <div class="text-sm mt-2">
-      <a href="#" (click)="openGlobalSettings($event)">Add or edit templates in global settings</a>.
-    </div>
-  </div>
-
-  <div class="flex flex-column gap-2">
-    <label for="hint-context">Hint</label>
-    <textarea id="hint-context"
-              pInputTextarea
-              [(ngModel)]="hint"
-              [autoResize]="false"
-              rows="2"
-              placeholder="Optional context (e.g., &quot;Character talking about a car...&quot;)"
-              maxlength="1000"></textarea>
-  </div>
-
-  <div class="flex flex-column gap-2">
-    <div class="flex align-items-center gap-2">
-      <label>Notes</label>
-      <p-button icon="fa-solid fa-plus"
-                [text]="true"
-                size="small"
-                rounded="true"
-                severity="primary"
-                pTooltip="Add manual note"
-                (onClick)="onAddManualNote()">
-      </p-button>
-      <p-button icon="fa-solid fa-circle-question"
-                [text]="true"
-                size="small"
-                rounded="true"
-                severity="secondary"
-                pTooltip="How to add notes"
-                (click)="notesHelpPopover.toggle($event)">
-      </p-button>
-      <p-popover #notesHelpPopover [style]="{width: '25rem'}">
-        <div class="flex flex-column gap-3 p-2">
-          <h4 class="m-0">How to add notes</h4>
-
-          <div class="flex flex-column gap-1">
-            <strong>Method 1: Manual Notes</strong>
-            <ul class="m-0 pl-3">
-              <li><b>Right-click</b> any word or highlight a phrase in the subtitles and choose <b>Add manual note</b> from the context menu.</li>
-              <li>Click the <b>+</b> button in this dialog to add a note for any custom term manually.</li>
-            </ul>
-          </div>
-
-          <div class="flex flex-column gap-1">
-            <strong>Method 2: Offline Dictionary</strong>
-            <ul class="m-0 pl-3">
-              <li>Make sure offline dictionary is configured in global settings for currently selected language of the project.</li>
-              <li><b>Hover</b> over a word to open the dictionary popup.</li>
-              <li>Select any text inside the definition.</li>
-              <li><b>Right-Click</b> &rarr; <b>Add to Notes</b> (or Press <b>Ctrl+Shift+S</b>).</li>
-            </ul>
-          </div>
-
-          <div class="flex flex-column gap-1">
-            <strong>Method 3: Online Lookup</strong>
-            <ul class="m-0 pl-3">
-              <li><b>Click</b> a word to open the built-in browser.</li>
-              <li>Select any text on the webpage.</li>
-              <li><b>Right-Click</b> &rarr; <b>Add to Notes</b> (or Press <b>Ctrl+Shift+S</b>).</li>
-            </ul>
-          </div>
-
-          <small class="text-gray-500 line-height-3">
-            <i>
-              The new note will be saved under the original word/phrase that was selected from the subtitles.
-            </i>
-          </small>
-        </div>
-      </p-popover>
-    </div>
-
-    @if (lookupNotesView().length > 0) {
-      <p-accordion [multiple]="true" [(value)]="activeNoteAccordionIndices">
-        @for (selectionGroup of lookupNotesView(); track selectionGroup.selection; let i = $index) {
-          <p-accordion-panel [value]="i">
-            <p-accordion-header>
-              <p class="m-0 p-0">
-                @if (selectionGroup.selection) {
-                  &quot;<span class="subtitles-font">{{ selectionGroup.selection }}</span>&quot;
-                } @else {
-                  <span class="font-bold">General notes</span>
-                }
-                @let notesCount = selectionGroup.notes.length;
-                ({{ notesCount }} {{ notesCount | i18nPlural: {'=1': 'note', 'other': 'notes'} }})
-              </p>
-            </p-accordion-header>
-            <p-accordion-content>
-              @if (activeNoteAccordionIndices().includes(i)) {
-                <div class="notes-list-container">
-                  @for (note of selectionGroup.notes; track note.originalIndex) {
-                    <div class="note-item flex align-items-center gap-2 py-3 pl-3">
-                      <div class="note-text flex-1" [innerHTML]="formatNoteText(note.text)"></div>
-                      <p-button icon="fa-solid fa-pencil"
-                                severity="info"
-                                [text]="true"
-                                pTooltip="Edit Note"
-                                (onClick)="onEditNote(selectionGroup.selection, note)"></p-button>
-                      <p-button icon="fa-solid fa-trash"
-                                severity="danger"
-                                [text]="true"
-                                pTooltip="Delete Note"
-                                (onClick)="onDeleteNote(selectionGroup.selection, note.originalIndex)"></p-button>
-                    </div>
-                    <p-divider class="my-0"></p-divider>
-                  }
-
-                  <div class="flex justify-content-end p-2">
-                    <p-button label="Add another note"
-                              icon="fa-solid fa-plus"
-                              size="small"
-                              [text]="true"
-                              severity="primary"
-                              (onClick)="onAddNoteToGroup(selectionGroup.selection)">
-                    </p-button>
-                  </div>
-                </div>
-              }
-            </p-accordion-content>
-          </p-accordion-panel>
-        }
-      </p-accordion>
+<div class="p-dialog-header p-4">
+  <span class="p-dialog-title">Export to Anki</span>
+  <div class="p-dialog-header-actions">
+    @if (isAlreadyExported) {
+      <p-tag severity="success" value="Exported"/>
     } @else {
-      <div class="text-gray-500 p-4 text-center notes-placeholder">No notes for this clip.</div>
+      <p-tag severity="info" value="Not exported yet"/>
     }
   </div>
+</div>
 
-  <div class="flex flex-column gap-2">
-    <label for="anki-tags">Card-Specific Tags</label>
-    <app-tags-input [ngModel]="cardSpecificTags()"
-                    (ngModelChange)="cardSpecificTags.set($event)"></app-tags-input>
+<div class="flex-1 overflow-y-auto p-4 pt-0">
+  <div class="flex flex-column gap-4">
+    @if (assSubtitleData && assSubtitleData.parts && assSubtitleData.parts.length > 1) {
+      <div class="flex flex-column gap-2">
+        <label>Select subtitle parts to include:</label>
+        <div class="flex flex-column gap-2">
+          @for (part of assSubtitleData.parts; track $index) {
+            @let checkboxId = ('part-' + $index);
+            <div class="flex align-items-center">
+              <p-checkbox [(ngModel)]="selectedSubtitleParts"
+                          [value]="part"
+                          [inputId]="checkboxId"/>
+              <label [for]="checkboxId" class="ml-2 subtitles-font word-break">
+                {{ part.text }}
+              </label>
+            </div>
+          }
+        </div>
+      </div>
+    } @else {
+      <div class="flex flex-column gap-2">
+        <label>Subtitle Text</label>
+        <span class="subtitle-full-text" [innerHTML]="finalTextPreviewHtml()"></span>
+      </div>
+    }
+
+    <div class="flex flex-column gap-2">
+      <label for="template-select">Export using template(s):</label>
+      <div class="flex flex-column gap-2">
+        @for (template of ankiService.ankiCardTemplates(); track template.id) {
+          <div class="flex align-items-center">
+            <p-checkbox [value]="template"
+                        [inputId]="template.id"
+                        [(ngModel)]="selectedTemplates"></p-checkbox>
+            <label [for]="template.id" class="ml-2 word-break">{{ template.name }}</label>
+            <p-button icon="fa-solid fa-tags"
+                      [text]="true"
+                      size="small"
+                      rounded="true"
+                      severity="secondary"
+                      pTooltip="View combined Anki tags"
+                      tooltipPosition="right"
+                      (click)="tagsPopover.toggle($event)"/>
+            <p-popover #tagsPopover [style]="{width: '22.5rem'}">
+              <div class="flex flex-column gap-2 p-2">
+                <h4 class="m-0">Combined Anki tags for this template</h4>
+                @let groupedTags = getGroupedTagsForTemplate(template);
+
+                <div class="flex flex-column gap-2">
+                  <small>Global</small>
+                  <div class="flex flex-wrap gap-2">
+                    @for (tag of groupedTags.global; track tag) {
+                      <p-chip [label]="tag"/>
+                    } @empty {
+                      <small class="text-gray-500">No global Anki tags defined.</small>
+                    }
+                  </div>
+                </div>
+
+                <div class="flex flex-column gap-2">
+                  <small>Project</small>
+                  <div class="flex flex-wrap gap-2">
+                    @for (tag of groupedTags.project; track tag) {
+                      <p-chip [label]="tag"/>
+                    } @empty {
+                      <small class="text-gray-500">No project Anki tags defined.</small>
+                    }
+                  </div>
+                </div>
+
+                <div class="flex flex-column gap-2">
+                  <small>Template</small>
+                  <div class="flex flex-wrap gap-2">
+                    @for (tag of groupedTags.template; track tag) {
+                      <p-chip [label]="tag"/>
+                    } @empty {
+                      <small class="text-gray-500">No template-specific Anki tags defined.</small>
+                    }
+                  </div>
+                </div>
+
+                <p-divider/>
+
+                <small class="text-gray-500">
+                  Card-specific tags entered at the bottom of export form will also be included.
+                </small>
+              </div>
+            </p-popover>
+          </div>
+        } @empty {
+          <span class="text-gray-500">
+            No valid Anki templates found.
+          </span>
+        }
+      </div>
+      <div class="text-sm mt-2">
+        <a href="#" (click)="openGlobalSettings($event)">Add or edit templates in global settings</a>.
+      </div>
+    </div>
+
+    <div class="flex flex-column gap-2">
+      <label for="hint-context">Hint</label>
+      <textarea id="hint-context"
+                pInputTextarea
+                [(ngModel)]="hint"
+                [autoResize]="false"
+                rows="2"
+                placeholder="Optional context (e.g., &quot;Character talking about a car...&quot;)"
+                maxlength="1000"></textarea>
+    </div>
+
+    <div class="flex flex-column gap-2">
+      <div class="flex align-items-center gap-2">
+        <label>Notes</label>
+        <p-button icon="fa-solid fa-plus"
+                  [text]="true"
+                  size="small"
+                  rounded="true"
+                  severity="primary"
+                  pTooltip="Add manual note"
+                  (onClick)="onAddManualNote()">
+        </p-button>
+        <p-button icon="fa-solid fa-circle-question"
+                  [text]="true"
+                  size="small"
+                  rounded="true"
+                  severity="secondary"
+                  pTooltip="How to add notes"
+                  (click)="notesHelpPopover.toggle($event)">
+        </p-button>
+        <p-popover #notesHelpPopover [style]="{width: '25rem'}">
+          <div class="flex flex-column gap-3 p-2">
+            <h4 class="m-0">How to add notes</h4>
+
+            <div class="flex flex-column gap-1">
+              <strong>Method 1: Manual Notes</strong>
+              <ul class="m-0 pl-3">
+                <li><b>Right-click</b> any word or highlight a phrase in the subtitles and choose <b>Add manual note</b> from the context menu.</li>
+                <li>Click the <b>+</b> button in this dialog to add a note for any custom term manually.</li>
+              </ul>
+            </div>
+
+            <div class="flex flex-column gap-1">
+              <strong>Method 2: Offline Dictionary</strong>
+              <ul class="m-0 pl-3">
+                <li>Make sure offline dictionary is configured in global settings for currently selected language of the project.</li>
+                <li><b>Hover</b> over a word to open the dictionary popup.</li>
+                <li>Select any text inside the definition.</li>
+                <li><b>Right-Click</b> &rarr; <b>Add to Notes</b> (or Press <b>Ctrl+Shift+S</b>).</li>
+              </ul>
+            </div>
+
+            <div class="flex flex-column gap-1">
+              <strong>Method 3: Online Lookup</strong>
+              <ul class="m-0 pl-3">
+                <li><b>Click</b> a word to open the built-in browser.</li>
+                <li>Select any text on the webpage.</li>
+                <li><b>Right-Click</b> &rarr; <b>Add to Notes</b> (or Press <b>Ctrl+Shift+S</b>).</li>
+              </ul>
+            </div>
+
+            <small class="text-gray-500 line-height-3">
+              <i>
+                The new note will be saved under the original word/phrase that was selected from the subtitles.
+              </i>
+            </small>
+          </div>
+        </p-popover>
+      </div>
+
+      @if (lookupNotesView().length > 0) {
+        <p-accordion [multiple]="true" [(value)]="activeNoteAccordionIndices">
+          @for (selectionGroup of lookupNotesView(); track selectionGroup.selection; let i = $index) {
+            <p-accordion-panel [value]="i">
+              <p-accordion-header>
+                <p class="m-0 p-0">
+                  @if (selectionGroup.selection) {
+                    &quot;<span class="subtitles-font">{{ selectionGroup.selection }}</span>&quot;
+                  } @else {
+                    <span class="font-bold">General notes</span>
+                  }
+                  @let notesCount = selectionGroup.notes.length;
+                  ({{ notesCount }} {{ notesCount | i18nPlural: {'=1': 'note', 'other': 'notes'} }})
+                </p>
+              </p-accordion-header>
+              <p-accordion-content>
+                @if (activeNoteAccordionIndices().includes(i)) {
+                  <div class="notes-list-container">
+                    @for (note of selectionGroup.notes; track note.originalIndex) {
+                      <div class="note-item flex align-items-center gap-2 py-3 pl-3">
+                        <div class="note-text flex-1" [innerHTML]="formatNoteText(note.text)"></div>
+                        <p-button icon="fa-solid fa-pencil"
+                                  severity="info"
+                                  [text]="true"
+                                  pTooltip="Edit Note"
+                                  (onClick)="onEditNote(selectionGroup.selection, note)"></p-button>
+                        <p-button icon="fa-solid fa-trash"
+                                  severity="danger"
+                                  [text]="true"
+                                  pTooltip="Delete Note"
+                                  (onClick)="onDeleteNote(selectionGroup.selection, note.originalIndex)"></p-button>
+                      </div>
+                      <p-divider class="my-0"></p-divider>
+                    }
+
+                    <div class="flex justify-content-end p-2">
+                      <p-button label="Add another note"
+                                icon="fa-solid fa-plus"
+                                size="small"
+                                [text]="true"
+                                severity="primary"
+                                (onClick)="onAddNoteToGroup(selectionGroup.selection)">
+                      </p-button>
+                    </div>
+                  </div>
+                }
+              </p-accordion-content>
+            </p-accordion-panel>
+          }
+        </p-accordion>
+      } @else {
+        <div class="text-gray-500 p-4 text-center notes-placeholder">No notes for this clip.</div>
+      }
+    </div>
+
+    <div class="flex flex-column gap-2">
+      <label for="anki-tags">Card-Specific Tags</label>
+      <app-tags-input [ngModel]="cardSpecificTags()"
+                      (ngModelChange)="cardSpecificTags.set($event)"></app-tags-input>
+    </div>
+
+    <div class="flex align-items-center">
+      <p-checkbox [(ngModel)]="suspendCard" [binary]="true" inputId="suspend-checkbox"></p-checkbox>
+      <label for="suspend-checkbox" class="ml-2">Create card as initially suspended</label>
+    </div>
   </div>
+</div>
 
-  <div class="flex align-items-center">
-    <p-checkbox [(ngModel)]="suspendCard" [binary]="true" inputId="suspend-checkbox"></p-checkbox>
-    <label for="suspend-checkbox" class="ml-2">Create card as initially suspended</label>
-  </div>
+<div class="flex align-items-center justify-content-end gap-2 p-3 mt-auto border-top-1 surface-border flex-shrink-0 bg-white z-1">
+  <p-button label="Close"
+            icon="fa-solid fa-xmark"
+            severity="secondary"
+            [disabled]="isExporting()"
+            (click)="onClose()"></p-button>
 
-  <div class="flex align-items-center justify-content-end gap-2">
-    <p-button label="Close"
-              icon="fa-solid fa-xmark"
-              severity="secondary"
-              (click)="onClose()"></p-button>
-
-    <p-button label="Export"
-              icon="fa-solid fa-upload"
-              [loading]="isExporting()"
-              (click)="onExport()"
-              data-primary-action>
-    </p-button>
-  </div>
+  <p-button label="Export"
+            icon="fa-solid fa-upload"
+            [loading]="isExporting()"
+            (click)="onExport()"
+            data-primary-action>
+  </p-button>
 </div>
