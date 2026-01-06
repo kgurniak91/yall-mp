@@ -1395,6 +1395,25 @@ async function handleFileOpen(options: Electron.OpenDialogOptions) {
   return [];
 }
 
+function cleanSrtText(text: string): string {
+  if (!text) {
+    return '';
+  }
+
+  return text
+    // Remove ASS/SSA style override tags (e.g. {\an8}, {\pos(20,50)}, {\c&HFFFFFF&})
+    .replace(/\{[^}]+}/g, '')
+    // Replace literal ASS newlines (\N, \n) with HTML breaks
+    .replace(/\\N/gi, '<br>')
+    .replace(/\n/g, '<br>')
+    // Clean up WebVTT-style voice tags <v Name> or <c.class>
+    .replace(/<[vc][^>]*>/g, '')
+    .replace(/<\/[vc]>/g, '')
+    // Remove control codes like left-to-right marks if present
+    .replace(/[\u200E\u200F]/g, '')
+    .trim();
+}
+
 async function handleSubtitleParse(projectId: string, filePath: string): Promise<ParsedSubtitlesData> {
   const {parseResponse} = await import('media-captions');
   const {compile, parse} = await import('ass-compiler');
@@ -1439,7 +1458,7 @@ async function handleSubtitleParse(projectId: string, filePath: string): Promise
         id: cue.id,
         startTime: cue.startTime,
         endTime: cue.endTime,
-        text: cue.text,
+        text: cleanSrtText(cue.text),
         track: 0
       }));
       const processedSubtitles = preprocessSubtitles(subtitles);
@@ -1908,7 +1927,7 @@ async function handleExtractSubtitleTrack(projectId: string, mediaPath: string, 
               id: cue.id,
               startTime: cue.startTime,
               endTime: cue.endTime,
-              text: cue.text,
+              text: cleanSrtText(cue.text),
               track: 0
             }));
             const processedSubtitles = preprocessSubtitles(subtitles);
