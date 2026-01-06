@@ -71,6 +71,10 @@ export class YomitanPopupComponent implements OnInit, OnDestroy {
         overflow-y: auto;
       }
       #content-body { padding: 10px !important; }
+      summary, span.tag, span[data-sc-content="tag"] {
+        user-select: none !important;
+        cursor: pointer;
+      }
     `);
 
     wv.executeJavaScript(`
@@ -87,9 +91,42 @@ export class YomitanPopupComponent implements OnInit, OnDestroy {
        document.addEventListener('keydown', (e) => {
         if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 's') {
           e.preventDefault();
-          const selection = window.getSelection().toString();
-          if (selection) {
-             console.log('YALL_SHORTCUT_ADD_NOTE:' + selection);
+
+          const selection = window.getSelection();
+          let text = '';
+
+          if (selection.rangeCount > 0) {
+             const range = selection.getRangeAt(0);
+             const fragment = range.cloneContents();
+
+             // Create a temporary container to manipulate the selection
+             const div = document.createElement('div');
+             div.appendChild(fragment);
+
+             // Remove specific summary header elements (e.g., "3 examples", "Etymology")
+             div.querySelectorAll('summary').forEach(el => el.remove());
+
+             // Remove tags (e.g., "adj", "US", dictionary names)
+             div.querySelectorAll('span.tag').forEach(el => el.remove());
+             div.querySelectorAll('span[data-sc-content="tag"]').forEach(el => el.remove());
+
+             // Attach the temporary container to the DOM offscreen for a moment to ensure correct newlines for block elements (like <li> or <p>)
+             div.style.position = 'fixed';
+             div.style.left = '-9999px';
+             div.style.top = '0';
+             div.style.opacity = '0';
+             div.style.pointerEvents = 'none';
+             div.style.whiteSpace = 'pre-wrap';
+             div.tabIndex = -1;
+             document.body.appendChild(div);
+
+             text = div.innerText;
+
+             document.body.removeChild(div);
+          }
+
+          if (text) {
+             console.log('YALL_SHORTCUT_ADD_NOTE:' + text);
           }
         }
       });
