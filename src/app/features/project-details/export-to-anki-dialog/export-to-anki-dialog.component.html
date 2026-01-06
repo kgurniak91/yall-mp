@@ -194,13 +194,14 @@
                 } @else {
                   <span class="font-bold">General notes</span>
                 }
-                ({{ selectionGroup.notes.length }} notes)
+                @let notesCount = selectionGroup.notes.length;
+                ({{ notesCount }} {{ notesCount | i18nPlural: {'=1': 'note', 'other': 'notes'} }})
               </p>
             </p-accordion-header>
             <p-accordion-content>
               @if (activeNoteAccordionIndices().includes(i)) {
                 <div class="notes-list-container">
-                  @for (note of selectionGroup.notes; track note.originalIndex; let isLast = $last) {
+                  @for (note of selectionGroup.notes; track note.originalIndex) {
                     <div class="note-item flex align-items-center gap-2 py-3 pl-3">
                       <div class="note-text flex-1" [innerHTML]="formatNoteText(note.text)"></div>
                       <p-button icon="fa-solid fa-pencil"
@@ -214,10 +215,18 @@
                                 pTooltip="Delete Note"
                                 (onClick)="onDeleteNote(selectionGroup.selection, note.originalIndex)"></p-button>
                     </div>
-                    @if (!isLast) {
-                      <p-divider class="my-0"></p-divider>
-                    }
+                    <p-divider class="my-0"></p-divider>
                   }
+
+                  <div class="flex justify-content-end p-2">
+                    <p-button label="Add another note"
+                              icon="fa-solid fa-plus"
+                              size="small"
+                              [text]="true"
+                              severity="primary"
+                              (onClick)="onAddNoteToGroup(selectionGroup.selection)">
+                    </p-button>
+                  </div>
                 </div>
               }
             </p-accordion-content>

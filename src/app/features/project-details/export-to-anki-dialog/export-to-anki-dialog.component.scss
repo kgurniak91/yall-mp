@@ -25,7 +25,13 @@
     padding: 0 !important;
   }
 
-  p-accordion-header .p-iconwrapper {
-    transform: rotate(180deg); // fix for https://github.com/primefaces/primeng/issues/18444
+  p-accordion-header {
+    &:not(:hover) {
+      background-color: var(--p-slate-50) !important;
+    }
+
+    .p-iconwrapper {
+      transform: rotate(180deg); // fix for https://github.com/primefaces/primeng/issues/18444
+    }
   }
 }

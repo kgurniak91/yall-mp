@@ -35,7 +35,7 @@ import {
   scheduleRestoreFocus
 } from '../../../shared/utils/disable-focus-in-parent-dialog/disable-focus-in-parent-dialog';
 import {Tag} from 'primeng/tag';
-import {DecimalPipe} from '@angular/common';
+import {DecimalPipe, I18nPluralPipe} from '@angular/common';
 import {NoteFormDialogData, NoteFormResult} from '../note-form-dialog/note-form-dialog.types';
 import {NoteFormDialogComponent} from '../note-form-dialog/note-form-dialog.component';
 
@@ -66,7 +66,8 @@ interface SelectionGroupView {
     AccordionHeader,
     AccordionContent,
     Tag,
-    DecimalPipe
+    DecimalPipe,
+    I18nPluralPipe
   ],
   templateUrl: './export-to-anki-dialog.component.html',
   styleUrl: './export-to-anki-dialog.component.scss'
@@ -207,6 +208,10 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
     this.saveNotesIfChanged();
     this.saveSelectedTemplates();
     this.savePostExportActions();
+  }
+
+  onAddNoteToGroup(term: string): void {
+    this.openNoteDialog('create', term, '', true);
   }
 
   getGroupedTagsForTemplate(template: AnkiCardTemplate): { global: string[], project: string[], template: string[] } {
