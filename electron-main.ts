@@ -836,34 +836,19 @@ if (!gotTheLock) {
       const FOOTER_HEIGHT = 40; // 2.5rem
       const LOOKUP_PARTITION = 'in-memory:lookup_session';
 
-      // Create the window and view ONCE, then detach/reattach the view on subsequent loads:
-      if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
-        subtitlesLookupWindow.setBounds({
-          x: lookupX,
-          y: lookupY,
-          width: lookupWidth,
-          height: lookupHeight
-        });
-        subtitlesLookupWindow.show();
-        subtitlesLookupWindow.focus();
-
-        // Detach the view to hide old content and reveal the host window
-        if (subtitlesLookupView && subtitlesLookupWindow.contentView.children.includes(subtitlesLookupView)) {
-          subtitlesLookupWindow.contentView.removeChildView(subtitlesLookupView);
+      // Destroy any existing view to ensure fresh state (no history leakage)
+      if (subtitlesLookupView) {
+        if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
+          if (subtitlesLookupWindow.contentView.children.includes(subtitlesLookupView)) {
+            subtitlesLookupWindow.contentView.removeChildView(subtitlesLookupView);
+          }
         }
+        (subtitlesLookupView.webContents as any).destroy();
+        subtitlesLookupView = null;
+      }
 
-        // Now that the view is detached, the spinner in the host window will be visible
-        subtitlesLookupWindow.webContents.send('view:loading-state-change', true);
-
-        if (subtitlesLookupView) {
-          // Load the new URL into the existing, but detached, view.
-          await subtitlesLookupView.webContents.loadURL(url, USER_AGENT_OPTIONS).catch(err => {
-            if (err.code !== 'ERR_ABORTED') {
-              console.error('Subsequent lookup URL load failed:', err);
-            }
-          });
-        }
-      } else {
+      // Window setup - create or reuse
+      if (!subtitlesLookupWindow || subtitlesLookupWindow.isDestroyed()) {
         subtitlesLookupWindow = new BrowserWindow({
           x: lookupX,
           y: lookupY,
@@ -875,76 +860,131 @@ if (!gotTheLock) {
           title: 'Subtitles Lookup',
           backgroundColor: '#ffffff',
           webPreferences: {
-            preload: path.join(__dirname, 'subtitles-lookup-host-preload.js'),
+            preload: path.join(__dirname, 'subtitles-lookup-host-preload.js')
           }
         });
 
         await subtitlesLookupWindow.loadFile(path.join(__dirname, './dist/yall-mp/browser/subtitles-lookup-host.html'));
-        subtitlesLookupWindow.show();
-        subtitlesLookupWindow.focus();
 
-        subtitlesLookupWindow.on('hide', () => {
+        const handleClose = () => {
+          if (subtitlesLookupView) {
+            if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
+              if (subtitlesLookupWindow.contentView.children.includes(subtitlesLookupView)) {
+                subtitlesLookupWindow.contentView.removeChildView(subtitlesLookupView);
+              }
+            }
+            subtitlesLookupView = null;
+          }
           if (uiWindow && !uiWindow.isDestroyed()) {
             uiWindow.focus();
           }
-        });
-
-        subtitlesLookupWindow.on('close', (event) => {
-          event.preventDefault();
-          subtitlesLookupWindow?.hide();
-        });
-
-        const view = new WebContentsView({
-          webPreferences: {
-            preload: path.join(__dirname, 'subtitles-lookup-preload.js'),
-            devTools: !app.isPackaged,
-            partition: LOOKUP_PARTITION
-          }
-        });
-        subtitlesLookupView = view;
-
-        const updateViewBounds = () => {
-          if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
-            const [width, height] = subtitlesLookupWindow.getSize();
-            view.setBounds({
-              x: 0,
-              y: TITLE_BAR_HEIGHT,
-              width: width,
-              height: height - TITLE_BAR_HEIGHT - FOOTER_HEIGHT
-            });
-          }
         };
-        updateViewBounds();
-        subtitlesLookupWindow.on('resize', updateViewBounds);
 
-        view.webContents.on('did-finish-load', () => {
-          if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
-            subtitlesLookupWindow.webContents.send('view:loading-state-change', false);
-            // Re-attach the view now that it has new content:
+        subtitlesLookupWindow.on('hide', handleClose);
+
+        subtitlesLookupWindow.on('close', (e) => {
+          e.preventDefault();
+          subtitlesLookupWindow?.hide();
+          handleClose();
+        });
+      } else {
+        // Update bounds if reusing existing window
+        subtitlesLookupWindow.setBounds({x: lookupX, y: lookupY, width: lookupWidth, height: lookupHeight});
+      }
+
+      // Show spinner and text immediately
+      subtitlesLookupWindow.webContents.send('lookup:nav-state-change', {canGoBack: false, canGoForward: false});
+      subtitlesLookupWindow.webContents.send('lookup:loading-message', `Searching "${originalSelection}"...`);
+      subtitlesLookupWindow.webContents.send('view:loading-state-change', true);
+      subtitlesLookupWindow.show();
+      subtitlesLookupWindow.focus();
+
+      // Always create new view
+      const view = new WebContentsView({
+        webPreferences: {
+          preload: path.join(__dirname, 'subtitles-lookup-preload.js'),
+          devTools: !app.isPackaged,
+          partition: LOOKUP_PARTITION
+        }
+      });
+      subtitlesLookupView = view;
+
+      const updateNavState = () => {
+        if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed() && subtitlesLookupView) {
+          subtitlesLookupWindow.webContents.send('lookup:nav-state-change', {
+            canGoBack: subtitlesLookupView.webContents.canGoBack(),
+            canGoForward: subtitlesLookupView.webContents.canGoForward()
+          });
+        }
+      };
+
+      view.webContents.on('did-navigate', updateNavState);
+      view.webContents.on('did-navigate-in-page', updateNavState);
+
+      view.webContents.on('did-finish-load', () => {
+        if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
+          subtitlesLookupWindow.webContents.send('view:loading-state-change', false);
+          updateNavState();
+
+          // Attach view only after load finishes to prevent white flash
+          if (subtitlesLookupView === view) {
             if (!subtitlesLookupWindow.contentView.children.includes(view)) {
               subtitlesLookupWindow.contentView.addChildView(view);
             }
           }
-        });
+        }
+      });
 
-        view.webContents.on('did-fail-load', (_, errorCode, errorDescription) => {
-          console.error(`Lookup view failed to load: ${errorDescription} (Code: ${errorCode})`);
+      view.webContents.on('did-fail-load', (_, errorCode, errorDescription) => {
+        if (errorCode !== -3) { // Ignore ABORTED
+          console.error(`Lookup view failed: ${errorDescription}`);
           if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
             subtitlesLookupWindow.webContents.send('view:loading-state-change', false);
           }
-        });
+        }
+      });
 
-        // The spinner is showing by default on the host. Now load the initial URL:
-        await view.webContents.loadURL(url, USER_AGENT_OPTIONS).catch(err => {
-          if (err.code !== 'ERR_ABORTED') {
-            console.error('Initial lookup URL load failed:', err);
-          }
-        });
+      const updateViewBounds = () => {
+        if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed() && subtitlesLookupView) {
+          const [w, h] = subtitlesLookupWindow.getSize();
+          subtitlesLookupView.setBounds({
+            x: 0,
+            y: TITLE_BAR_HEIGHT,
+            width: w,
+            height: h - TITLE_BAR_HEIGHT - FOOTER_HEIGHT
+          });
+        }
+      };
+
+      subtitlesLookupWindow.removeAllListeners('resize');
+      subtitlesLookupWindow.on('resize', updateViewBounds);
+
+      updateViewBounds();
+
+      view.webContents.loadURL(url, USER_AGENT_OPTIONS).catch(err => {
+        if (err.code !== 'ERR_ABORTED') {
+          console.error(`Initial lookup for URL ${url} failed:`, err);
+        }
+      });
+    });
+
+    ipcMain.on('lookup:go-back', () => {
+      if (subtitlesLookupView && subtitlesLookupView.webContents.canGoBack()) {
+        subtitlesLookupView.webContents.goBack();
+      }
+    });
+
+    ipcMain.on('lookup:go-forward', () => {
+      if (subtitlesLookupView && subtitlesLookupView.webContents.canGoForward()) {
+        subtitlesLookupView.webContents.goForward();
       }
     });
 
     ipcMain.on('lookup:close-window', () => {
       subtitlesLookupWindow?.hide();
+      if (subtitlesLookupWindow) {
+        subtitlesLookupWindow.emit('hide');
+      }
     });
 
     ipcMain.on('lookup:show-context-menu', (_, selectedText) => {

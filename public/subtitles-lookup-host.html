@@ -199,30 +199,81 @@
     #help-text {
       margin: 0;
     }
+
+    #nav-controls {
+      display: flex;
+      align-items: center;
+      margin-left: 0.5rem;
+      -webkit-app-region: no-drag;
+    }
+
+    .nav-btn {
+      background: transparent;
+      border: none;
+      color: #ceced1;
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 0.25rem;
+      margin-right: 0.25rem;
+      opacity: 0.5;
+      transition: opacity 0.2s;
+    }
+
+    .nav-btn:hover:not(:disabled) {
+      color: #ffffff;
+      opacity: 1;
+    }
+
+    .nav-btn:disabled {
+      cursor: default;
+      opacity: 0.2;
+    }
+
+    #loading-message {
+      margin-top: 1rem;
+      color: #666;
+      font-size: 0.9rem;
+      font-weight: bold;
+    }
+
+    #spinner-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
   </style>
 </head>
 <body>
 <div id="title-bar">
   <span id="title">Subtitles Lookup</span>
+  <div id="nav-controls" class="hidden">
+    <button id="back-btn" class="nav-btn" title="Back" disabled>&#9664;</button>
+    <button id="forward-btn" class="nav-btn" title="Forward" disabled>&#9654;</button>
+  </div>
   <div id="title-bar-drag-region"></div>
   <button id="close-btn" title="Close">&times;</button>
 </div>
 
 <div id="main-content">
   <div id="spinner-container">
-    <div class="lds-spinner">
-      <div></div>
-      <div></div>
-      <div></div>
-      <div></div>
-      <div></div>
-      <div></div>
-      <div></div>
-      <div></div>
-      <div></div>
-      <div></div>
-      <div></div>
-      <div></div>
+    <div id="spinner-content">
+      <div class="lds-spinner">
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+      </div>
+      <div id="loading-message">
+        Loading...
+      </div>
     </div>
   </div>
 </div>
@@ -260,6 +311,38 @@
   // Listen for toast events from the main process
   window.electronAPI.onLookupShowToast((message) => {
     showToast(message);
+  });
+
+  // Update Loading Message
+  window.electronAPI.onLoadingMessageUpdate((message) => {
+    const el = document.getElementById('loading-message');
+    if (el) {
+      el.textContent = message || 'Loading...';
+    }
+  });
+
+  // Listen for navigation state changes
+  window.electronAPI.onNavigationStateChange((state) => {
+    const navControls = document.getElementById('nav-controls');
+    const backBtn = document.getElementById('back-btn');
+    const fwdBtn = document.getElementById('forward-btn');
+
+    if (state.canGoBack || state.canGoForward) {
+      navControls.classList.remove('hidden');
+      backBtn.disabled = !state.canGoBack;
+      fwdBtn.disabled = !state.canGoForward;
+    } else {
+      navControls.classList.add('hidden');
+    }
+  });
+
+  // Wire up navigation buttons
+  document.getElementById('back-btn').addEventListener('click', () => {
+    window.electronAPI.lookupGoBack();
+  });
+
+  document.getElementById('forward-btn').addEventListener('click', () => {
+    window.electronAPI.lookupGoForward();
   });
 
   // Listen for events from the main process to show/hide the spinner

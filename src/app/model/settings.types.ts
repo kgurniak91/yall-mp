@@ -98,8 +98,8 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
     },
     {
       id: 'deepl-es',
-      name: 'DeepL (American to Spanish translation)',
-      urlTemplate: 'www.deepl.com/en/translator#en-us/es/%%SS',
+      name: 'DeepL (English to Spanish translation)',
+      urlTemplate: 'https://www.deepl.com/translator#en/es/%%SS',
       isDefault: false,
       browserType: null
     }
