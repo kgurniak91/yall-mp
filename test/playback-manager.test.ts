@@ -1,6 +1,6 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {PlaybackManager, PlaybackStateUpdate} from '../playback-manager';
-import {PlayerState, VideoClip} from '../src/app/model/video.types';
+import {LightweightVideoClip, PlayerState, VideoClip} from '../src/app/model/video.types';
 import {MpvManager} from '../mpv-manager';
 import type {BrowserWindow} from 'electron';
 import {DEFAULT_PROJECT_SETTINGS, ProjectSettings, SubtitleBehavior} from '../src/app/model/settings.types';
@@ -22,28 +22,12 @@ const mockUiWindow = {
   },
 };
 
-const mockClips = [
-  {id: 'gap-1', startTime: 0, endTime: 10, hasSubtitle: false, duration: 10, parts: [], sourceSubtitles: []},
-  {
-    id: 'sub-1',
-    startTime: 10,
-    endTime: 20,
-    hasSubtitle: true,
-    duration: 10,
-    parts: [],
-    sourceSubtitles: [{id: 's1', type: 'srt', text: 'A', startTime: 10, endTime: 20}]
-  },
-  {id: 'gap-2', startTime: 20, endTime: 30, hasSubtitle: false, duration: 10, parts: [], sourceSubtitles: []},
-  {
-    id: 'sub-15',
-    startTime: 30,
-    endTime: 40,
-    hasSubtitle: true,
-    duration: 10,
-    parts: [],
-    sourceSubtitles: [{id: 's2', type: 'srt', text: 'B', startTime: 30, endTime: 40}]
-  }
-] as VideoClip[];
+const mockClips: LightweightVideoClip[] = [
+  {id: 'gap-1', startTime: 0, endTime: 10, hasSubtitle: false},
+  {id: 'sub-1', startTime: 10, endTime: 20, hasSubtitle: true},
+  {id: 'gap-2', startTime: 20, endTime: 30, hasSubtitle: false},
+  {id: 'sub-15', startTime: 30, endTime: 40, hasSubtitle: true}
+];
 
 const getLastStateUpdate = (): PlaybackStateUpdate | undefined => {
   const calls = mockUiWindow.webContents.send.mock.calls;

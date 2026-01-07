@@ -1,6 +1,6 @@
 import {computed, effect, inject, Injectable, OnDestroy, Signal, signal} from '@angular/core';
 import {VideoStateService} from '../video/video-state.service';
-import {PlayerState, SeekDirection, VideoClip} from '../../model/video.types';
+import {mapVideoClipToLightweight, PlayerState, SeekDirection, VideoClip} from '../../model/video.types';
 import {CommandHistoryStateService} from '../command-history/command-history-state.service';
 import {UpdateClipTimesCommand} from '../../model/commands/update-clip-times.command';
 import {ToastService} from '../../shared/services/toast/toast.service';
@@ -119,7 +119,8 @@ export class ClipsStateService implements OnDestroy {
     effect(() => {
       const currentClips = this.clipsForAllTracks();
       if (currentClips.length > 0) {
-        window.electronAPI.playbackUpdateClips(currentClips);
+        const lightweightClips = currentClips.map((clip: VideoClip) => mapVideoClipToLightweight(clip));
+        window.electronAPI.playbackUpdateClips(lightweightClips);
       }
     });
 

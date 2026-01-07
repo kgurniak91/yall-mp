@@ -1,6 +1,5 @@
 import {MpvManager} from './mpv-manager';
-import type {VideoClip} from './src/app/model/video.types';
-import {PlayerState} from './src/app/model/video.types';
+import {LightweightVideoClip, PlayerState} from './src/app/model/video.types';
 import type {ProjectSettings} from './src/app/model/settings.types';
 import {SubtitleBehavior} from './src/app/model/settings.types';
 import {BrowserWindow} from 'electron';
@@ -15,7 +14,7 @@ export interface PlaybackStateUpdate {
 }
 
 export class PlaybackManager extends EventEmitter {
-  private clips: VideoClip[] = [];
+  private clips: LightweightVideoClip[] = [];
   private settings: ProjectSettings | null = null;
   private currentClipIndex = -1;
   private playerState: PlayerState = PlayerState.Idle;
@@ -47,7 +46,7 @@ export class PlaybackManager extends EventEmitter {
     }
   }
 
-  public loadProject(clips: VideoClip[], settings: ProjectSettings, lastPlaybackTime: number): void {
+  public loadProject(clips: LightweightVideoClip[], settings: ProjectSettings, lastPlaybackTime: number): void {
     this.isProjectLoaded = true;
     this.clips = clips;
     this.settings = settings;
@@ -191,7 +190,7 @@ export class PlaybackManager extends EventEmitter {
     }
   }
 
-  public updateClips(newClips: VideoClip[]): void {
+  public updateClips(newClips: LightweightVideoClip[]): void {
     const oldClip = this.clips[this.currentClipIndex];
     const oldStartTime = oldClip?.startTime;
     const oldEndTime = oldClip?.endTime;

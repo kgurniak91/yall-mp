@@ -1,6 +1,6 @@
 import {AnkiExportRequest} from './app/model/anki.types';
 import {AppData, CoreConfig, Project, SubtitleSelection, SupportedLanguage} from './app/model/project.types';
-import {VideoClip} from './app/model/video.types';
+import {LightweightVideoClip} from './app/model/video.types';
 import {ProjectSettings} from './app/model/settings.types';
 import {SubtitleData} from '../shared/types/subtitle.type';
 import {MediaMetadata, MediaTrack} from '../shared/types/media.type';
@@ -105,9 +105,9 @@ export interface IElectronAPI {
   playbackRepeat: () => void;
   playbackForceContinue: () => void;
   playbackSeek: (time: number) => void;
-  playbackLoadProject: (clips: VideoClip[], settings: ProjectSettings, lastPlaybackTime: number) => Promise<void>;
+  playbackLoadProject: (clips: LightweightVideoClip[], settings: ProjectSettings, lastPlaybackTime: number) => Promise<void>;
   playbackUpdateSettings: (settings: ProjectSettings) => void;
-  playbackUpdateClips: (clips: VideoClip[]) => void;
+  playbackUpdateClips: (clips: LightweightVideoClip[]) => void;
   onPlaybackStateUpdate: (callback: (update: PlaybackStateUpdate) => void) => (() => void);
   onRepeatSeekCompleted: (callback: () => void) => (() => void);
   // --- Yomitan

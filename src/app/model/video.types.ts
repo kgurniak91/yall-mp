@@ -1,14 +1,26 @@
 import {SubtitleData, SubtitlePart} from '../../../shared/types/subtitle.type';
 
-export interface VideoClip {
+export interface LightweightVideoClip {
   id: string;
   startTime: number;
   endTime: number;
+  hasSubtitle: boolean;
+}
+
+export interface VideoClip extends LightweightVideoClip {
   duration: number;
   text?: string;
-  hasSubtitle: boolean;
   parts: SubtitlePart[]; // array of all merged parts for simple text rendering
   sourceSubtitles: SubtitleData[]; // The original, un-merged subtitles this clip contains
+}
+
+export function mapVideoClipToLightweight(clip: VideoClip): LightweightVideoClip {
+  return {
+    id: clip.id,
+    startTime: clip.startTime,
+    endTime: clip.endTime,
+    hasSubtitle: clip.hasSubtitle
+  };
 }
 
 export enum KeyboardAction {

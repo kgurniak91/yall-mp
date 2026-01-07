@@ -8,7 +8,7 @@ import {Drawer} from 'primeng/drawer';
 import {
   ProjectKeyboardShortcutsService
 } from './services/project-keyboard-shortcuts/project-keyboard-shortcuts.service';
-import {KeyboardAction, VideoClip} from '../../model/video.types';
+import {KeyboardAction, mapVideoClipToLightweight, VideoClip} from '../../model/video.types';
 import {ClipsStateService} from '../../state/clips/clips-state.service';
 import {Popover} from 'primeng/popover';
 import {ActivatedRoute, Router} from '@angular/router';
@@ -349,7 +349,8 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       if (this.isUiReady() && this.isMpvReady() && allClips.length > 0 && !this.hasFiredStartupSequence && project) {
         this.hasFiredStartupSequence = true;
         const settings = this.projectSettingsStateService.settings();
-        window.electronAPI.playbackLoadProject(allClips, settings, project.lastPlaybackTime);
+        const lightweightClips = allClips.map((clip: VideoClip) => mapVideoClipToLightweight(clip));
+        window.electronAPI.playbackLoadProject(lightweightClips, settings, project.lastPlaybackTime);
         this.startPlaybackSequence();
       }
     });
