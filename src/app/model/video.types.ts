@@ -30,7 +30,7 @@ export enum KeyboardAction {
   PreviousSubtitledClip = 'PreviousSubtitledClip',
   NextSubtitledClip = 'NextSubtitledClip',
   RepeatCurrentClip = 'RepeatCurrentClip',
-  ForceContinue = 'ForceContinue',
+  DownArrow = 'DownArrow',
   TogglePlayPause = 'TogglePlayPause',
   NextMediaFile = 'NextMediaFile',
   PreviousMediaFile = 'PreviousMediaFile',

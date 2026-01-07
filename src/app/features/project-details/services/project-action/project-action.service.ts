@@ -78,8 +78,12 @@ export class ProjectActionService {
       case KeyboardAction.RepeatCurrentClip:
         this.videoStateService.repeatCurrentClip();
         break;
-      case KeyboardAction.ForceContinue:
-        this.videoStateService.forceContinue();
+      case KeyboardAction.DownArrow:
+        if (this.videoStateService.subtitlesVisible()) {
+          this.videoStateService.forceContinue();
+        } else {
+          this.videoStateService.toggleSubtitlesVisible();
+        }
         break;
       case KeyboardAction.TogglePlayPause:
         this.videoStateService.togglePlayPause();

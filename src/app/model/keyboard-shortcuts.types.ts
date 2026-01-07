@@ -171,19 +171,19 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
     group: KeyboardShortcutGroup.Playback
   },
   {
-    action: KeyboardAction.ForceContinue,
+    action: KeyboardAction.DownArrow,
     key: 'ArrowDown',
-    description: 'Force continue playback from auto-pause',
+    description: 'Reveal subtitles or force continue playback',
     displayKeys: ['↓'],
     scope: KeyboardShortcutScope.Project,
     type: ActionType.SingleShot,
     group: KeyboardShortcutGroup.Playback
   },
   {
-    action: KeyboardAction.ForceContinue,
+    action: KeyboardAction.DownArrow,
     key: 'ArrowDown',
     ctrlKey: true,
-    description: 'Force continue playback from auto-pause (alternative)',
+    description: 'Reveal subtitles or force continue playback (alternative)',
     displayKeys: ['Ctrl', '↓'],
     scope: KeyboardShortcutScope.Project,
     type: ActionType.SingleShot,
