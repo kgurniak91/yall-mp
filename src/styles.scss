@@ -213,3 +213,7 @@ app-global-settings-dialog p-tabs {
   opacity: 0 !important;
   pointer-events: none !important;
 }
+
+.p-confirmdialog .p-dialog-content .p-confirmdialog-message {
+  word-break: break-all;
+}
