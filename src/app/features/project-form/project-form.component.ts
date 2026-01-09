@@ -179,11 +179,12 @@ export class ProjectFormComponent implements OnInit {
     this.isProcessingMedia.set(true);
 
     const mediaProcessing$ = from(window.electronAPI.getMediaMetadata(path));
+    const companionSubtitle$ = from(window.electronAPI.findCompanionSubtitle(path));
     const timer$ = timer(500); // Show spinner for at least 500ms to avoid GUI flickering
 
     try {
-      const [metadata] = await firstValueFrom(
-        forkJoin([mediaProcessing$, timer$]).pipe(
+      const [metadata, companionPath] = await firstValueFrom(
+        forkJoin([mediaProcessing$, companionSubtitle$, timer$]).pipe(
           finalize(() => this.isProcessingMedia.set(false))
         )
       );
@@ -198,7 +199,11 @@ export class ProjectFormComponent implements OnInit {
         this.selectedAudioTrackIndex.set(metadata.audioTracks[0].index);
       }
 
-      if (metadata.subtitleTracks.length > 0) {
+      if (companionPath) {
+        this.selectedSubtitleOption.set('external');
+        this.onSubtitleFilePathChange(companionPath);
+        this.existingSubtitleFileName.set(this.getBaseName(companionPath));
+      } else if (metadata.subtitleTracks.length > 0) {
         this.selectedSubtitleOption.set('embedded');
         this.selectedEmbeddedSubtitleTrackIndex.set(null);
       } else {
