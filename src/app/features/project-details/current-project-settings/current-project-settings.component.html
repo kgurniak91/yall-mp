@@ -127,10 +127,25 @@
                   styleClass="p-button-secondary"/>
       </div>
       <small class="block">
-        If you want to change the language of the subtitles, you need to go to the main menu and select "Edit current project".
+        If you want to change the language of the subtitles, you need to
+        <a [routerLink]="['/project/edit', projectId()]">edit current project</a>.
       </small>
     </div>
   </p-fieldset>
+
+  @if (audioTracks().length > 1) {
+    <p-fieldset legend="Audio Track" [toggleable]="false">
+      <div class="setting-item-column">
+        <div class="p-3 border-1 surface-border border-round surface-ground">
+          <span class="font-medium">{{ selectedAudioTrackLabel() }}</span>
+        </div>
+        <small class="block">
+          If you want to change the audio track, you need to
+          <a [routerLink]="['/project/edit', projectId()]">edit current project</a>.
+        </small>
+      </div>
+    </p-fieldset>
+  }
 
   @if (isAssProject()) {
     <p-fieldset legend="Subtitles Renderer" [toggleable]="false">

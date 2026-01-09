@@ -18,6 +18,8 @@ import {DialogOrchestrationService} from '../../../core/services/dialog-orchestr
 import {GlobalSettingsTab} from '../../global-settings-dialog/global-settings-dialog.types';
 import {TagsInputComponent} from '../../../shared/components/tags-input/tags-input.component';
 import {YomitanService} from '../../../core/services/yomitan/yomitan.service';
+import {RouterLink} from '@angular/router';
+import {MediaTrack} from '../../../../../shared/types/media.type';
 
 @Component({
   selector: 'app-current-project-settings',
@@ -32,7 +34,8 @@ import {YomitanService} from '../../../core/services/yomitan/yomitan.service';
     RadioButton,
     Divider,
     Message,
-    TagsInputComponent
+    TagsInputComponent,
+    RouterLink
   ],
   templateUrl: './current-project-settings.component.html',
   styleUrl: './current-project-settings.component.scss'
@@ -44,6 +47,8 @@ export class CurrentProjectSettingsComponent {
   public readonly selectedSettingsPreset = input.required<SettingsPreset | null>();
   public readonly detectedLanguage = input<SupportedLanguage>();
   public readonly ankiTags = input<string[]>();
+  public readonly audioTracks = input<MediaTrack[]>([]);
+  public readonly projectId = input.required<string>();
   public readonly ankiTagsChange = output<string[]>();
   public readonly settingsChange = output<ProjectSettings>();
   public readonly selectedSettingsPresetChange = output<SettingsPreset | null>();
@@ -69,6 +74,15 @@ export class CurrentProjectSettingsComponent {
     }
 
     return options;
+  });
+  protected readonly selectedAudioTrackLabel = computed(() => {
+    const selectedIndex = this.settings().selectedAudioTrackIndex;
+    const track = this.audioTracks().find(t => t.index === selectedIndex);
+
+    if (track) {
+      return track.label || `Track ${track.index}`;
+    }
+    return `Track ${selectedIndex ?? 'Unknown'}`;
   });
   private readonly globalSettingsStateService = inject(GlobalSettingsStateService);
   private readonly dialogOrchestrationService = inject(DialogOrchestrationService);

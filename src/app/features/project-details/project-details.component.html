@@ -178,6 +178,8 @@
                                     [selectedSettingsPreset]="selectedSettingsPreset()"
                                     [detectedLanguage]="project()?.detectedLanguage"
                                     [ankiTags]="project()?.ankiTags || []"
+                                    [audioTracks]="project()?.audioTracks || []"
+                                    [projectId]="project()!.id"
                                     (settingsChange)="projectSettingsStateService.setSettings($event)"
                                     (selectedSettingsPresetChange)="onSettingsPresetChange($event)"
                                     (ankiTagsChange)="onAnkiTagsChange($event)"/>
