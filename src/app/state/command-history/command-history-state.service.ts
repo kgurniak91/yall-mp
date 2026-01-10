@@ -63,6 +63,18 @@ export class CommandHistoryStateService {
     this.processQueue();
   }
 
+  public cancelLastUndo(): void {
+    const redoStack = this.redoStack();
+    if (redoStack.length === 0) {
+      return;
+    }
+
+    // Move the command that was just moved to redo stack back to the undo stack
+    const command = redoStack[0];
+    this.redoStack.set(redoStack.slice(1));
+    this.undoStack.update(undo => [...undo, command]);
+  }
+
   private processQueue(): void {
     if (this.isProcessing) {
       return; // A command is already running, wait for it to finish

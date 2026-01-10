@@ -18,10 +18,11 @@ import {CreateSubtitledClipCommand} from '../../model/commands/create-subtitled-
 import {GlobalSettingsStateService} from '../global-settings/global-settings-state.service';
 import {ClipContent} from '../../model/commands/update-clip-text.command';
 import {AssEditService} from '../../features/project-details/services/ass-edit/ass-edit.service';
-import {Project} from '../../model/project.types';
+import {Project, ProjectClipNotes} from '../../model/project.types';
 import {cloneDeep, isEqual} from 'lodash-es';
 import {v4 as uuidv4} from 'uuid';
 import {AssSubtitlesUtils} from '../../../../shared/utils/ass-subtitles.utils';
+import {ConfirmationService} from 'primeng/api';
 
 export const ADJUST_DEBOUNCE_MS = 50;
 export const MIN_GAP_DURATION = 0.1;
@@ -35,6 +36,7 @@ export class ClipsStateService implements OnDestroy {
   private readonly appStateService = inject(AppStateService);
   private readonly toastService = inject(ToastService);
   private readonly assEditService = inject(AssEditService);
+  private readonly confirmationService = inject(ConfirmationService);
   private readonly _subtitles = signal<SubtitleData[]>([]);
   private readonly _activeTrack = signal(0);
   private readonly _masterClipIndex = signal(0); // Track master clip index, works across flattened and merged collection of video clips
@@ -211,11 +213,35 @@ export class ClipsStateService implements OnDestroy {
     this.commandHistoryStateService.execute(command);
   }
 
-  public splitSubtitledClip(clipId: string, onSplitCallback?: (originalSubtitles: SubtitleData[], createdAndModifiedIds: string[]) => void): void {
+  public splitSubtitledClip(
+    clipId: string,
+    onSplitCallback?: (
+      originalSubtitles: SubtitleData[],
+      createdAndModifiedIds: string[],
+      originalNotes: Record<string, ProjectClipNotes>
+    ) => void
+  ): void {
     const clipToSplit = this.clips().find(c => c.id === clipId);
-    if (!clipToSplit) return;
+    const project = this.appStateService.currentProject();
+
+    if (!clipToSplit || !project) {
+      return;
+    }
 
     const currentTime = this.videoStateService.currentTime();
+    const currentProjectNotes = project.notes || {};
+    const sourceIds = clipToSplit.sourceSubtitles.map(s => s.id);
+
+    // Capture notes snapshot for undo operation
+    const originalNotesForUndo: Record<string, ProjectClipNotes> = {};
+    sourceIds.forEach(id => {
+      if (currentProjectNotes[id]) {
+        originalNotesForUndo[id] = cloneDeep(currentProjectNotes[id]);
+      }
+    });
+
+    // Generate aggregated notes for the new right-hand clip
+    const aggregatedNotes = this.getAggregatedClipNotes(sourceIds, currentProjectNotes);
 
     let splitPoint = currentTime;
     if (splitPoint <= clipToSplit.startTime || splitPoint >= clipToSplit.endTime) {
@@ -262,7 +288,7 @@ export class ClipsStateService implements OnDestroy {
       }
     }
 
-    onSplitCallback?.(originalSubtitlesForUndo, createdAndModifiedIds);
+    onSplitCallback?.(originalSubtitlesForUndo, createdAndModifiedIds, originalNotesForUndo);
 
     let finalSubtitles = this._subtitles()
       .filter(s => !subtitlesToRemove.has(s.id))
@@ -271,8 +297,6 @@ export class ClipsStateService implements OnDestroy {
 
     finalSubtitles.sort((a, b) => a.startTime - b.startTime);
 
-    const project = this.appStateService.currentProject();
-    if (!project) return;
     const updates: Partial<Project> = {subtitles: finalSubtitles};
 
     if (project.rawAssContent) {
@@ -284,43 +308,94 @@ export class ClipsStateService implements OnDestroy {
       );
     }
 
+    // Add notes to the new (right) clip
+    const hasNotesToCopy = Object.keys(aggregatedNotes.lookupNotes || {}).length > 0 || aggregatedNotes.manualNote || aggregatedNotes.hint;
+
+    if (hasNotesToCopy && subtitlesToCreate.length > 0) {
+      const rightClipRepresentativeId = subtitlesToCreate[0].id;
+      const newProjectNotes = cloneDeep(currentProjectNotes);
+
+      newProjectNotes[rightClipRepresentativeId] = cloneDeep(aggregatedNotes);
+      updates.notes = newProjectNotes;
+    }
+
     this.appStateService.updatePartialProject(this._projectId!, updates);
     this._subtitles.set(finalSubtitles);
     this.synchronizeStateAfterSplit(clipToSplit, splitPoint, currentTime);
   }
 
-  public unsplitClip(originalSubtitles: SubtitleData[], createdAndModifiedIds: string[], originalRawAssContent?: string): void {
+  public unsplitClip(
+    originalSubtitles: SubtitleData[],
+    createdAndModifiedIds: string[],
+    originalRawAssContent?: string,
+    originalNotes?: Record<string, ProjectClipNotes>
+  ): void {
     const project = this.appStateService.currentProject();
     if (!project) {
       return;
     }
 
-    const idsToRemove = new Set(createdAndModifiedIds);
+    const performUnsplit = () => {
+      const idsToRemove = new Set(createdAndModifiedIds);
 
-    const restoredSubtitles = this._subtitles()
-      .filter(s => !idsToRemove.has(s.id))
-      .concat(originalSubtitles)
-      .sort((a, b) => a.startTime - b.startTime);
+      const restoredSubtitles = this._subtitles()
+        .filter(s => !idsToRemove.has(s.id))
+        .concat(originalSubtitles)
+        .sort((a, b) => a.startTime - b.startTime);
 
-    const updates: Partial<Project> = {subtitles: restoredSubtitles};
+      const updates: Partial<Project> = {subtitles: restoredSubtitles};
 
-    if (originalRawAssContent !== undefined) {
-      updates.rawAssContent = originalRawAssContent;
+      if (originalRawAssContent !== undefined) {
+        updates.rawAssContent = originalRawAssContent;
+      }
+
+      // Restore notes
+      const newProjectNotes = cloneDeep(project.notes || {});
+      createdAndModifiedIds.forEach(id => delete newProjectNotes[id]);
+
+      if (originalNotes) {
+        Object.entries(originalNotes).forEach(([id, note]) => {
+          newProjectNotes[id] = note;
+        });
+      }
+      updates.notes = newProjectNotes;
+
+      this.appStateService.updatePartialProject(this._projectId!, updates);
+      this._subtitles.set(restoredSubtitles);
+
+      // Re-sync active clip after undo:
+      const currentTime = this.videoStateService.currentTime();
+      const newClipsArray = this.clipsForAllTracks();
+      const newCorrectIndex = newClipsArray.findIndex(c =>
+        currentTime >= c.startTime && currentTime < c.endTime
+      );
+
+      if (newCorrectIndex !== -1) {
+        this.setCurrentClipByIndex(newCorrectIndex);
+      }
+    };
+
+    // Check for note discrepancies
+    if (project.notes && createdAndModifiedIds.length >= 2) {
+      const leftIds = createdAndModifiedIds.filter(id => originalSubtitles.some(orig => orig.id === id));
+      const rightIds = createdAndModifiedIds.filter(id => !leftIds.includes(id));
+
+      const leftAggregated = this.getAggregatedClipNotes(leftIds, project.notes);
+      const rightAggregated = this.getAggregatedClipNotes(rightIds, project.notes);
+
+      if (!isEqual(leftAggregated, rightAggregated)) {
+        this.confirmationService.confirm({
+          header: 'Notes Mismatch',
+          message: 'The notes in the clips you are merging differ. Any changes made to the notes after splitting will be lost. Continue?',
+          icon: 'fa-solid fa-triangle-exclamation',
+          accept: () => performUnsplit(),
+          reject: () => this.commandHistoryStateService.cancelLastUndo()
+        });
+        return;
+      }
     }
 
-    this.appStateService.updatePartialProject(this._projectId!, updates);
-    this._subtitles.set(restoredSubtitles);
-
-    // Re-sync active clip after undo:
-    const currentTime = this.videoStateService.currentTime();
-    const newClipsArray = this.clipsForAllTracks();
-    const newCorrectIndex = newClipsArray.findIndex(c =>
-      currentTime >= c.startTime && currentTime < c.endTime
-    );
-
-    if (newCorrectIndex !== -1) {
-      this.setCurrentClipByIndex(newCorrectIndex);
-    }
+    performUnsplit();
   }
 
   public deleteCurrentClip(): void {
@@ -1241,5 +1316,50 @@ export class ClipsStateService implements OnDestroy {
         this.lastMinDurationToastTime = now;
       }
     }
+  }
+
+  private getAggregatedClipNotes(subtitleIds: string[], allProjectNotes: Record<string, ProjectClipNotes>): ProjectClipNotes {
+    const aggregated: ProjectClipNotes = {lookupNotes: {}, manualNote: '', hint: ''};
+
+    for (const id of subtitleIds) {
+      const notes = allProjectNotes[id];
+      if (!notes) continue;
+
+      // Merge manual note (first non-empty wins)
+      if (!aggregated.manualNote && notes.manualNote) {
+        aggregated.manualNote = notes.manualNote;
+      }
+
+      // Merge hint (first non-empty wins)
+      if (!aggregated.hint && notes.hint) {
+        aggregated.hint = notes.hint;
+      }
+
+      // Merge notes
+      if (notes.lookupNotes) {
+        for (const [term, definitions] of Object.entries(notes.lookupNotes)) {
+          if (!aggregated.lookupNotes![term]) {
+            aggregated.lookupNotes![term] = [];
+          }
+          // Combine and deduplicate
+          const currentSet = new Set(aggregated.lookupNotes![term]);
+          for (const def of definitions) {
+            if (!currentSet.has(def)) {
+              aggregated.lookupNotes![term].push(def);
+              currentSet.add(def);
+            }
+          }
+        }
+      }
+    }
+
+    // Sort lookup note arrays to ensure deterministic deep equality checks
+    if (aggregated.lookupNotes) {
+      for (const key in aggregated.lookupNotes) {
+        aggregated.lookupNotes[key].sort();
+      }
+    }
+
+    return aggregated;
   }
 }

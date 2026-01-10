@@ -18,6 +18,8 @@ import {MergeSubtitledClipsCommand} from '../../model/commands/merge-subtitled-c
 import {SplitSubtitledClipCommand} from '../../model/commands/split-subtitled-clip.command';
 import {cloneDeep} from 'lodash-es';
 import {ClipContent, UpdateClipTextCommand} from '../../model/commands/update-clip-text.command';
+import {ConfirmationService} from 'primeng/api';
+import {ProjectClipNotes} from '../../model/project.types';
 
 describe('ClipsStateService', () => {
   const currentTimeSignal = signal(0);
@@ -33,6 +35,7 @@ describe('ClipsStateService', () => {
     })
     .mock(AppStateService)
     .mock(ToastService)
+    .mock(ConfirmationService)
     .provide(AssEditService)
     .provide(CommandHistoryStateService)
     .build();
@@ -2074,6 +2077,146 @@ Dialogue: 0:01:01.00,0:01:02.00,Default,Animating Text
 
       // ASSERT: The binary search must handle 'time === clip.startTime' correctly (inclusive start)
       expect(service.activeTrackClipIndex()).toBe(1);
+    });
+  });
+
+  describe('Split with notes', () => {
+    it('copies notes to the new right-hand clip when splitting', () => {
+      // ARRANGE
+      const initialSubtitles: SrtSubtitleData[] = [
+        {type: 'srt', id: 'srt-1', startTime: 5, endTime: 10, text: 'Subtitle A', track: 0}
+      ];
+      service.setSubtitles(initialSubtitles);
+      projectState.subtitles = initialSubtitles;
+
+      const clipId = 'subtitle-5'; // 5s-10s clip generated from 'srt-1'
+      const originalNotes: ProjectClipNotes = {
+        lookupNotes: {'test': ['note 1']},
+        manualNote: 'manual',
+        hint: 'hint'
+      };
+
+      projectState.notes = {'srt-1': originalNotes};
+
+      videoStateService.setCurrentTime(7.5);
+
+      const command = new SplitSubtitledClipCommand(service, clipId, undefined);
+
+      // ACT
+      commandHistoryService.execute(command);
+
+      // ASSERT
+      const updateSpy = appStateService.updatePartialProject as jasmine.Spy;
+      expect(updateSpy).toHaveBeenCalled();
+
+      const updateArgs = updateSpy.calls.mostRecent().args[1];
+      const newSubtitles = updateArgs.subtitles as SrtSubtitleData[];
+      const newNotes = updateArgs.notes as Record<string, ProjectClipNotes>;
+
+      const rightPart = newSubtitles.find(s => s.startTime > 7.5 && s.text === 'Subtitle A');
+      const rightId = rightPart!.id;
+
+      expect(newNotes['srt-1']).toEqual(originalNotes);
+      expect(newNotes[rightId]).toEqual(originalNotes);
+      expect(newNotes[rightId]).not.toBe(originalNotes);
+    });
+
+    it('warns user on undo if notes have diverged after split', () => {
+      // ARRANGE
+      const initialSubtitles: SrtSubtitleData[] = [
+        {type: 'srt', id: 'srt-1', startTime: 5, endTime: 10, text: 'Subtitle A', track: 0}
+      ];
+      service.setSubtitles(initialSubtitles);
+      projectState.subtitles = initialSubtitles;
+
+      const clipId = 'subtitle-5';
+      const originalNotes: ProjectClipNotes = {manualNote: 'Original'};
+      projectState.notes = {'srt-1': originalNotes};
+      videoStateService.setCurrentTime(7.5);
+
+      // Execute split
+      const command = new SplitSubtitledClipCommand(service, clipId, undefined);
+      commandHistoryService.execute(command);
+
+      // Identify the right clip id
+      const updateSpy = appStateService.updatePartialProject as jasmine.Spy;
+      const updateArgs = updateSpy.calls.mostRecent().args[1];
+      const newSubtitles = updateArgs.subtitles as SrtSubtitleData[];
+      const rightPart = newSubtitles.find(s => s.startTime > 7.5 && s.text === 'Subtitle A')!;
+      const rightId = rightPart.id;
+
+      // Update project state to simulate time passing and state update
+      projectState.subtitles = newSubtitles;
+      projectState.notes = updateArgs.notes;
+
+      // Modify note on the right clip to simulate user edit
+      projectState.notes[rightId] = {manualNote: 'Modified'};
+
+      const confirmationService = spectator.inject(ConfirmationService);
+
+      // ACT
+      commandHistoryService.undo();
+
+      // ASSERT: Confirmation dialog should appear
+      expect(confirmationService.confirm).toHaveBeenCalled();
+
+      // Confirm undo
+      const confirmArgs = (confirmationService.confirm as unknown as jasmine.Spy).calls.mostRecent().args[0];
+      confirmArgs.accept();
+
+      // Verify restore happened
+      const undoUpdateArgs = updateSpy.calls.mostRecent().args[1];
+      expect(undoUpdateArgs.notes['srt-1']).toEqual(originalNotes);
+      expect(undoUpdateArgs.notes[rightId]).toBeUndefined();
+    });
+
+    it('restores command to undo stack if user cancels unsplit confirmation dialog', () => {
+      // ARRANGE
+      const initialSubtitles: SrtSubtitleData[] = [
+        {type: 'srt', id: 'srt-1', startTime: 5, endTime: 10, text: 'Subtitle A', track: 0}
+      ];
+      service.setSubtitles(initialSubtitles);
+      projectState.subtitles = initialSubtitles;
+
+      const clipId = 'subtitle-5';
+      const originalNotes: ProjectClipNotes = {manualNote: 'Original'};
+      projectState.notes = {'srt-1': originalNotes};
+      videoStateService.setCurrentTime(7.5);
+
+      // Execute split
+      const command = new SplitSubtitledClipCommand(service, clipId, undefined);
+      commandHistoryService.execute(command);
+
+      // Simulate note divergence to trigger the confirmation dialog
+      const updateArgs = (appStateService.updatePartialProject as jasmine.Spy).calls.mostRecent().args[1];
+      const newSubtitles = updateArgs.subtitles as SrtSubtitleData[];
+      const rightPart = newSubtitles.find(s => s.startTime > 7.5 && s.text === 'Subtitle A')!;
+      const rightId = rightPart.id;
+
+      projectState.subtitles = newSubtitles;
+      projectState.notes = updateArgs.notes;
+      projectState.notes[rightId] = {manualNote: 'Modified'};
+
+      const confirmationService = spectator.inject(ConfirmationService);
+
+      // Undo
+      commandHistoryService.undo();
+
+      expect(confirmationService.confirm).toHaveBeenCalled();
+      // At this point, the command has moved from Undo Stack to Redo Stack
+      expect(commandHistoryService.canUndo()).toBe(false);
+      expect(commandHistoryService.canRedo()).toBe(true);
+
+      // Cancel the confirmation dialog
+      const confirmArgs = (confirmationService.confirm as unknown as jasmine.Spy).calls.mostRecent().args[0];
+      confirmArgs.reject();
+
+      // ASSERT: The command should be back on the Undo stack, ready to be undone again
+      expect(commandHistoryService.canUndo()).toBe(true);
+      expect(commandHistoryService.canRedo()).toBe(false);
+
+      // Also verify no actual state restoration happened (notes should still be modified)
+      expect(projectState.notes[rightId].manualNote).toBe('Modified');
     });
   });
 });

@@ -1,11 +1,13 @@
 import {Command} from './commands.types';
 import {ClipsStateService} from '../../state/clips/clips-state.service';
 import {SubtitleData} from '../../../../shared/types/subtitle.type';
+import {ProjectClipNotes} from '../project.types';
 
 export class SplitSubtitledClipCommand implements Command {
   private originalSubtitles: SubtitleData[] | undefined;
   private newSubtitleIds: string[] | undefined;
   private originalRawAssContent: string | undefined;
+  private originalNotes: Record<string, ProjectClipNotes> | undefined;
 
   constructor(
     private clipsStateService: ClipsStateService,
@@ -18,9 +20,10 @@ export class SplitSubtitledClipCommand implements Command {
   execute(): void {
     this.clipsStateService.splitSubtitledClip(
       this.clipIdToSplit,
-      (originalSubtitles, newlyCreatedSubtitleIds) => {
+      (originalSubtitles, newlyCreatedSubtitleIds, originalNotes) => {
         this.originalSubtitles = originalSubtitles;
         this.newSubtitleIds = newlyCreatedSubtitleIds;
+        this.originalNotes = originalNotes;
       }
     );
   }
@@ -34,7 +37,8 @@ export class SplitSubtitledClipCommand implements Command {
     this.clipsStateService.unsplitClip(
       this.originalSubtitles,
       this.newSubtitleIds,
-      this.originalRawAssContent
+      this.originalRawAssContent,
+      this.originalNotes
     );
   }
 }
