@@ -1196,14 +1196,11 @@ export class ClipsStateService implements OnDestroy {
     targetClip.startTime = finalStartTime;
     targetClip.endTime = finalEndTime;
 
+    // Recalculate duration for all touched clips to be safe
     updatedClips.forEach(c => c.duration = c.endTime - c.startTime);
-    // Remove zero-duration clips and round all values at the very end
-    return updatedClips.filter(c => c.duration > 0.001).map(c => ({
-      ...c,
-      startTime: AssSubtitlesUtils.roundToAssPrecision(c.startTime),
-      endTime: AssSubtitlesUtils.roundToAssPrecision(c.endTime),
-      duration: AssSubtitlesUtils.roundToAssPrecision(c.endTime - c.startTime)
-    }));
+
+    // Remove zero-duration clips
+    return updatedClips.filter(c => c.duration > 0.001);
   }
 
   private calculateNewSubtitlesForUpdate(clipId: string, newStartTime: number, newEndTime: number): SubtitleData[] | null {
@@ -1236,12 +1233,21 @@ export class ClipsStateService implements OnDestroy {
             const newDuration = updatedClip.duration;
             const startRatio = (originalSourceSub.startTime - originalClip.startTime) / oldDuration;
             const endRatio = (originalSourceSub.endTime - originalClip.startTime) / oldDuration;
-            updatedSub.startTime = updatedClip.startTime + (startRatio * newDuration);
-            updatedSub.endTime = updatedClip.startTime + (endRatio * newDuration);
+
+            // Calculate new times
+            const calcStart = updatedClip.startTime + (startRatio * newDuration);
+            const calcEnd = updatedClip.startTime + (endRatio * newDuration);
+
+            // Apply rounding only for modified subtitles
+            updatedSub.startTime = AssSubtitlesUtils.roundToAssPrecision(calcStart);
+            updatedSub.endTime = AssSubtitlesUtils.roundToAssPrecision(calcEnd);
+
+            // Ensures rounding never pushes the subtitle outside its logical container
+            updatedSub.startTime = Math.max(updatedSub.startTime, AssSubtitlesUtils.roundToAssPrecision(updatedClip.startTime));
+            updatedSub.endTime = Math.min(updatedSub.endTime, AssSubtitlesUtils.roundToAssPrecision(updatedClip.endTime));
           } else {
-            // If original clip had no duration, just clamp the sub to the new clip times
-            updatedSub.startTime = updatedClip.startTime;
-            updatedSub.endTime = updatedClip.endTime;
+            updatedSub.startTime = AssSubtitlesUtils.roundToAssPrecision(updatedClip.startTime);
+            updatedSub.endTime = AssSubtitlesUtils.roundToAssPrecision(updatedClip.endTime);
           }
 
           changedSubtitles.set(updatedSub.id, {original: originalSourceSub, updated: updatedSub});
@@ -1252,11 +1258,7 @@ export class ClipsStateService implements OnDestroy {
     return originalSubtitles.map(sub => {
       const change = changedSubtitles.get(sub.id);
       return change ? change.updated : sub;
-    }).map(s => ({
-      ...s,
-      startTime: AssSubtitlesUtils.roundToAssPrecision(s.startTime),
-      endTime: AssSubtitlesUtils.roundToAssPrecision(s.endTime),
-    }));
+    });
   }
 
   private areVideoClipsEqual(clipA?: VideoClip, clipB?: VideoClip): boolean {

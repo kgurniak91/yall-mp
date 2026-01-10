@@ -2219,4 +2219,37 @@ Dialogue: 0:01:01.00,0:01:02.00,Default,Animating Text
       expect(projectState.notes[rightId].manualNote).toBe('Modified');
     });
   });
+
+  describe('Precision and Overlap Regression Tests', () => {
+    it('should NOT round or drift untouched clips when modifying another clip', () => {
+      // ARRANGE
+      const initialSubtitles: SrtSubtitleData[] = [
+        {type: 'srt', id: '191', startTime: 686.208, endTime: 687.541, text: "I was there.", track: 0},
+        {type: 'srt', id: '192', startTime: 688.625, endTime: 691.832, text: "Clip 2", track: 0},
+        {type: 'srt', id: '193', startTime: 691.833, endTime: 694.665, text: "Clip 3", track: 0}
+      ];
+      service.setSubtitles(initialSubtitles);
+
+      const clip2 = service.clips().find(c => c.sourceSubtitles.some(s => s.id === '192'))!;
+
+      // ACT: Modify end time slightly to the right
+      service.updateClipTimesFromTimeline(clip2.id, clip2.startTime, 691.93);
+
+      // ASSERT
+      const updateArgs = (appStateService.updatePartialProject as jasmine.Spy).calls.mostRecent().args[1];
+      const updatedSubtitles = updateArgs.subtitles as SrtSubtitleData[];
+
+      const sub1 = updatedSubtitles.find(s => s.id === '191')!;
+      const sub3 = updatedSubtitles.find(s => s.id === '193')!;
+
+      // Check Drift: Clip 1 (untouched) should correspond exactly to input, NOT rounded to .21
+      expect(sub1.startTime).toBe(686.208);
+      expect(sub1.endTime).toBe(687.541);
+
+      // Clip 3 should have been pushed to exactly 691.93 or slightly more
+      const sub2 = updatedSubtitles.find(s => s.id === '192')!;
+      expect(sub3.startTime).toBeGreaterThanOrEqual(sub2.endTime);
+      expect(sub3.startTime).toBe(sub2.endTime);
+    });
+  });
 });
