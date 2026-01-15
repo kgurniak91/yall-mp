@@ -970,6 +970,54 @@ Dialogue: 1,0:00:20.00,0:00:25.00,Default,,0,0,0,,Shadow Text
       }
       expect(result.split('Dialogue:').length - 1).toBe(4);
     });
+
+    it('ensures split animated clips are edited independently when data is correctly trimmed', () => {
+      // ARRANGE: A raw ASS file with one long line (1s to 5s)
+      const originalLine = 'Dialogue: 0,0:00:01.00,0:00:05.00,Default,,0,0,0,,Animation';
+      const rawAssContent = assFileTemplate(originalLine);
+      const part = {text: 'Animation', style: 'Default'};
+      const frame1: AssSubtitleData = {type: 'ass', id: 'f1', startTime: 1, endTime: 5, track: 0, parts: [part]};
+
+      // ACT 1: Split at 3.0s
+      const splitPoint = 3.0;
+
+      // Simulate ClipsStateService trimming the metadata
+      const leftFrame = {...frame1, endTime: splitPoint};
+      const rightFrame = {...frame1, startTime: splitPoint + 0.1}; // 3.1s
+
+      // Physically split the lines in the file
+      const contentAfterSplit = service.splitDialogueLines(
+        rawAssContent,
+        [frame1],
+        splitPoint,
+        [rightFrame]
+      );
+
+      // ACT 2: Edit the LEFT clip only
+      const leftClip: VideoClip = {
+        id: 'c-left',
+        startTime: 1,
+        endTime: 3,
+        duration: 2,
+        hasSubtitle: true,
+        parts: [part],
+        sourceSubtitles: [leftFrame]
+      };
+
+      const editContent: ClipContent = {
+        parts: [{text: 'LeftOnly', style: 'Default', fragments: [{text: 'LeftOnly', isTag: false}]}]
+      };
+
+      const finalContent = service.modifyAssText(leftClip, editContent, contentAfterSplit);
+
+      // ASSERT
+      const expectedLeft = 'Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,LeftOnly';
+      const expectedRight = 'Dialogue: 0,0:00:03.10,0:00:05.00,Default,,0,0,0,,Animation';
+
+      expect(finalContent).toContain(expectedLeft);
+      expect(finalContent).toContain(expectedRight);
+      expect(finalContent).not.toContain('0:00:03.10,Default,,0,0,0,,LeftOnly');
+    });
   });
 
   describe('unsplitDialogueLines', () => {

@@ -64,7 +64,8 @@ export class AssEditService {
     const textIdx = formatSpec.get('Text')!;
 
     const removalSignatures = new Set<string>();
-    for (const sourceSub of clipToRemove.sourceSubtitles as AssSubtitleData[]) {
+    const allLeafSubtitles = (clipToRemove.sourceSubtitles as AssSubtitleData[]).flatMap(s => this.getLeafSubtitles(s));
+    for (const sourceSub of allLeafSubtitles) {
       for (const part of sourceSub.parts) {
         const signature = `${AssSubtitlesUtils.formatTime(sourceSub.startTime)},${AssSubtitlesUtils.formatTime(sourceSub.endTime)},${part.style},${part.text}`;
         removalSignatures.add(signature);
@@ -311,9 +312,10 @@ export class AssEditService {
     const startIdx = formatSpec.get('Start')!;
     const endIdx = formatSpec.get('End')!;
     const originalDialogueLineIndexes = new Set<number>();
+    const allLeafSubtitles = originalSourceSubtitles.flatMap(s => this.getLeafSubtitles(s));
 
     // First, find all unique line indexes that belong to the original subtitles:
-    for (const sourceSub of originalSourceSubtitles) {
+    for (const sourceSub of allLeafSubtitles) {
       for (const part of sourceSub.parts) {
         let searchStartIndex = 0;
         while (searchStartIndex < dialogueLines.length) {
@@ -464,4 +466,10 @@ export class AssEditService {
     return -1;
   }
 
+  private getLeafSubtitles(sub: AssSubtitleData): AssSubtitleData[] {
+    if (sub.sourceDialogues && sub.sourceDialogues.length > 0) {
+      return sub.sourceDialogues.flatMap(s => this.getLeafSubtitles(s));
+    }
+    return [sub];
+  }
 }

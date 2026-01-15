@@ -263,27 +263,33 @@ export class ClipsStateService implements OnDestroy {
       if (sub.startTime >= splitPoint) {
         const newId = uuidv4();
         createdAndModifiedIds.push(newId);
-        const newSub = {
-          ...cloneDeep(sub),
-          id: newId,
-          startTime: Math.max(sub.startTime, splitPoint + MIN_GAP_DURATION)
-        };
-        subtitlesToCreate.push(newSub);
-        if (newSub.type === 'ass') {
-          newSecondHalvesForAss.push(newSub);
+
+        const newSub = this.trimSubtitleToBoundaries(sub, splitPoint + MIN_GAP_DURATION, sub.endTime);
+        if (newSub) {
+          newSub.id = newId;
+          subtitlesToCreate.push(newSub);
+          if (newSub.type === 'ass') {
+            newSecondHalvesForAss.push(newSub as AssSubtitleData);
+          }
         }
         subtitlesToRemove.add(sub.id);
       } else if (sub.startTime < splitPoint && sub.endTime > splitPoint) {
         createdAndModifiedIds.push(sub.id);
-        const firstHalf = {...cloneDeep(sub), endTime: splitPoint};
-        subtitlesToUpdate.set(firstHalf.id, firstHalf);
+
+        const firstHalf = this.trimSubtitleToBoundaries(sub, sub.startTime, splitPoint);
+        if (firstHalf) {
+          subtitlesToUpdate.set(firstHalf.id, firstHalf);
+        }
 
         const newId = uuidv4();
         createdAndModifiedIds.push(newId);
-        const secondHalf = {...cloneDeep(sub), id: newId, startTime: splitPoint + MIN_GAP_DURATION};
-        subtitlesToCreate.push(secondHalf);
-        if (secondHalf.type === 'ass') {
-          newSecondHalvesForAss.push(secondHalf);
+        const secondHalf = this.trimSubtitleToBoundaries(sub, splitPoint + MIN_GAP_DURATION, sub.endTime);
+        if (secondHalf) {
+          secondHalf.id = newId;
+          subtitlesToCreate.push(secondHalf);
+          if (secondHalf.type === 'ass') {
+            newSecondHalvesForAss.push(secondHalf as AssSubtitleData);
+          }
         }
       }
     }
@@ -1363,5 +1369,25 @@ export class ClipsStateService implements OnDestroy {
     }
 
     return aggregated;
+  }
+
+  private trimSubtitleToBoundaries(sub: SubtitleData, start: number, end: number): SubtitleData | null {
+    // If the subtitle is completely outside the new boundaries, it's dead
+    if (sub.endTime <= start || sub.startTime >= end) {
+      return null;
+    }
+
+    const trimmed = cloneDeep(sub);
+    trimmed.startTime = Math.max(trimmed.startTime, start);
+    trimmed.endTime = Math.min(trimmed.endTime, end);
+
+    // If it's ASS and has nested dialogues, trim those too
+    if (trimmed.type === 'ass' && trimmed.sourceDialogues) {
+      trimmed.sourceDialogues = trimmed.sourceDialogues
+        .map(s => this.trimSubtitleToBoundaries(s, start, end))
+        .filter((s): s is AssSubtitleData => s !== null);
+    }
+
+    return trimmed;
   }
 }
