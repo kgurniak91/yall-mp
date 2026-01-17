@@ -25,7 +25,7 @@ import {AssSubtitlesUtils} from '../../../../shared/utils/ass-subtitles.utils';
 import {ConfirmationService} from 'primeng/api';
 
 export const ADJUST_DEBOUNCE_MS = 50;
-export const MIN_GAP_DURATION = 0.1;
+export const MIN_GAP_DURATION = 0;
 export const MIN_SUBTITLE_DURATION = 0.5;
 export const MIN_REQUIRED_SPACE_FOR_NEW_CLIP = MIN_SUBTITLE_DURATION + (2 * MIN_GAP_DURATION);
 export const MIN_REQUIRED_CLIP_DURATION_FOR_SPLIT = (MIN_SUBTITLE_DURATION * 2) + MIN_GAP_DURATION;

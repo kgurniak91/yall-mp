@@ -1071,7 +1071,9 @@ Dialogue: 1,0:00:20.00,0:00:25.00,Default,,0,0,0,,Shadow Text
 
       expect(finalContent).toContain(expectedLeft);
       expect(finalContent).toContain(expectedRight);
-      expect(finalContent).not.toContain(`${expectedStartRight},Default,,0,0,0,,LeftOnly`);
+      expect(finalContent).not.toContain(`${expectedStartRight},0:00:05.00,Default,,0,0,0,,LeftOnly`);
+      const occurrencesOfLeftOnly = finalContent.split('LeftOnly').length - 1;
+      expect(occurrencesOfLeftOnly).toBe(1);
     });
   });
 

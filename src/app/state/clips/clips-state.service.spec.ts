@@ -1412,12 +1412,14 @@ ${initialLine}
     });
 
     it('doesn\'t split a clip that is too short to produce two valid clips and a gap', fakeAsync(() => {
-      // ARRANGE: Create a clip that is 1.0s long, which is less than the required 1.1s.
+      // ARRANGE: Create a clip that is shorter than required for splitting
+      const startTime = 5;
+      const endTime = startTime + MIN_REQUIRED_CLIP_DURATION_FOR_SPLIT - 0.1;
       const shortSubtitle: SrtSubtitleData[] = [
-        {type: 'srt', id: 'srt-short', startTime: 5, endTime: 6, text: 'Short clip', track: 0}
+        {type: 'srt', id: 'srt-short', startTime, endTime, text: 'Short clip', track: 0}
       ];
       service.setSubtitles(shortSubtitle);
-      currentTimeSignal.set(5.5);
+      currentTimeSignal.set(startTime + ((endTime - startTime) / 2));
       // Timeline: Gap 0-5 (idx 0), Sub 5-6 (idx 1), Gap 6-end (idx 2)
       service.setCurrentClipByIndex(1);
 
@@ -1518,12 +1520,16 @@ ${initialLine}
       // ASSERT
       const clipsAfterSecondSplit = service.clips();
       const subtitledClips2 = clipsAfterSecondSplit.filter(c => c.hasSubtitle);
-      expect(subtitledClips2.length).withContext('After 2nd split').toBe(4);
+      expect(subtitledClips2.length).withContext('After 2nd split, should have 4 subtitled clips').toBe(4);
+      // 0-5(gap), 5-6(sub), 6-10(sub), 10-15(gap), 15-19(sub), 19-20(sub), 20-end(gap)
+      expect(clipsAfterSecondSplit.length).withContext('After 2nd split, should have 7 total clips').toBe(7);
 
-      const firstGapStartTime = 19.0;
-      const firstGapEndTime = firstGapStartTime + MIN_GAP_DURATION;
-      const firstGap = clipsAfterSecondSplit.find(c => c.startTime === firstGapStartTime && c.endTime === firstGapEndTime);
-      expect(firstGap).withContext('Gap from first split should still exist').toBeDefined();
+      // Verify that the two clips from the first split are still there and adjacent at 19.0
+      const split1Left = clipsAfterSecondSplit.find(c => c.endTime === 19.0 && c.hasSubtitle);
+      const split1Right = clipsAfterSecondSplit.find(c => c.startTime === 19.0 && c.hasSubtitle);
+
+      expect(split1Left).withContext('Left side of first split should still exist').toBeDefined();
+      expect(split1Right).withContext('Right side of first split should still exist').toBeDefined();
     });
 
     it('sets the first new clip as active and nudges the playhead back safely when splitting in the middle', fakeAsync(() => {
@@ -1762,8 +1768,8 @@ Dialogue: 0,0:00:12.00,0:00:14.00,Default,,0,0,0,,Animated Text
       const clipsAfterSplit = service.clips();
       const subtitledClips = clipsAfterSplit.filter(c => c.hasSubtitle);
       expect(subtitledClips.length).withContext('Should have 2 subtitled clips after split').toBe(2);
-      // The timeline should be: [gap, sub, gap, sub, gap]
-      expect(clipsAfterSplit.length).withContext('Should be 5 total clips (gap, sub, gap, sub, gap)').toBe(5);
+      // The timeline should be: [gap, sub, sub, gap]
+      expect(clipsAfterSplit.length).withContext('Should be 5 total clips (gap, sub, sub, gap)').toBe(4);
 
       expect(subtitledClips[0].startTime).toBe(10);
       expect(subtitledClips[0].endTime).toBeCloseTo(11.5);
@@ -1801,10 +1807,11 @@ Dialogue: 0,0:00:12.00,0:00:14.00,Default,,0,0,0,,Animated Text
       let clipsAfterFirstSplit = service.clips();
       const subtitledClips1 = clipsAfterFirstSplit.filter(c => c.hasSubtitle);
       expect(subtitledClips1.length).withContext('After 1st split, should have 3 subtitled clips').toBe(3);
-      expect(clipsAfterFirstSplit.length).withContext('After 1st split, should have 7 total clips').toBe(7);
+      // 0-5(gap), 5-10(sub), 10-15(gap), 15-19(sub), 19-20(sub), 20-end(gap)
+      expect(clipsAfterFirstSplit.length).withContext('After 1st split, should have 6 total clips').toBe(6);
 
       // ARRANGE 2: Now, split the first part of the previously split clip.
-      // The original 'subtitle-15' (15s-20s) became two clips: (15s - 19s) and (19.1s - 20s).
+      // The original 'subtitle-15' (15s-20s) became two clips: (15s - 19s) and (19s - 20s).
       // Target the first one by setting the time to 16s:
       videoStateService.setCurrentTime(16.0);
       // Find the new clip dynamically as its ID has changed:
@@ -1819,19 +1826,20 @@ Dialogue: 0,0:00:12.00,0:00:14.00,Default,,0,0,0,,Animated Text
       const clipsAfterSecondSplit = service.clips();
       const subtitledClips2 = clipsAfterSecondSplit.filter(c => c.hasSubtitle);
       expect(subtitledClips2.length).withContext('After 2nd split, should have 4 subtitled clips').toBe(4);
-      expect(clipsAfterSecondSplit.length).withContext('After 2nd split, should have 9 total clips').toBe(9);
+      // 0-5(gap), 5-6(sub), 6-10(sub), 10-15(gap), 15-19(sub), 19-20(sub), 20-end(gap)
+      expect(clipsAfterSecondSplit.length).withContext('After 2nd split, should have 9 total clips').toBe(7);
 
-      // Crucially, verify that the gap from the *first* split still exists and wasn't corrupted:
-      const firstGapStartTime = 19.0;
-      const firstGapEndTime = firstGapStartTime + MIN_GAP_DURATION;
-      const firstGap = clipsAfterSecondSplit.find(c => c.startTime === firstGapStartTime && c.endTime === firstGapEndTime);
-      expect(firstGap).withContext('Gap from first split should still exist').toBeDefined();
+      // Verify clips adjacency at first split boundary (19.0)
+      const sub15PartA = clipsAfterSecondSplit.find(c => c.endTime === 19.0 && c.hasSubtitle);
+      const sub15PartB = clipsAfterSecondSplit.find(c => c.startTime === 19.0 && c.hasSubtitle);
+      expect(sub15PartA).toBeDefined();
+      expect(sub15PartB).toBeDefined();
 
-      // And verify the new gap from the second split also exists:
-      const secondGapStartTime = 16.0;
-      const secondGapEndTime = secondGapStartTime + MIN_GAP_DURATION;
-      const secondGap = clipsAfterSecondSplit.find(c => c.startTime === secondGapStartTime && c.endTime === secondGapEndTime);
-      expect(secondGap).withContext('Gap from second split should exist').toBeDefined();
+      // Check second split boundary (16.0)
+      const sub5PartA = clipsAfterSecondSplit.find(c => c.endTime === 16.0 && c.hasSubtitle);
+      const sub5PartB = clipsAfterSecondSplit.find(c => c.startTime === 16.0 && c.hasSubtitle);
+      expect(sub5PartA).toBeDefined();
+      expect(sub5PartB).toBeDefined();
     });
   });
 
@@ -2188,7 +2196,7 @@ Dialogue: 0:01:01.00,0:01:02.00,Default,Animating Text
       const newSubtitles = updateArgs.subtitles as SrtSubtitleData[];
       const newNotes = updateArgs.notes as Record<string, ProjectClipNotes>;
 
-      const rightPart = newSubtitles.find(s => s.startTime > 7.5 && s.text === 'Subtitle A');
+      const rightPart = newSubtitles.find(s => s.startTime >= 7.5 && s.text === 'Subtitle A');
       const rightId = rightPart!.id;
 
       expect(newNotes['srt-1']).toEqual(originalNotes);
@@ -2217,7 +2225,7 @@ Dialogue: 0:01:01.00,0:01:02.00,Default,Animating Text
       const updateSpy = appStateService.updatePartialProject as jasmine.Spy;
       const updateArgs = updateSpy.calls.mostRecent().args[1];
       const newSubtitles = updateArgs.subtitles as SrtSubtitleData[];
-      const rightPart = newSubtitles.find(s => s.startTime > 7.5 && s.text === 'Subtitle A')!;
+      const rightPart = newSubtitles.find(s => s.startTime >= 7.5 && s.text === 'Subtitle A')!;
       const rightId = rightPart.id;
 
       // Update project state to simulate time passing and state update
@@ -2265,7 +2273,7 @@ Dialogue: 0:01:01.00,0:01:02.00,Default,Animating Text
       // Simulate note divergence to trigger the confirmation dialog
       const updateArgs = (appStateService.updatePartialProject as jasmine.Spy).calls.mostRecent().args[1];
       const newSubtitles = updateArgs.subtitles as SrtSubtitleData[];
-      const rightPart = newSubtitles.find(s => s.startTime > 7.5 && s.text === 'Subtitle A')!;
+      const rightPart = newSubtitles.find(s => s.startTime >= 7.5 && s.text === 'Subtitle A')!;
       const rightId = rightPart.id;
 
       projectState.subtitles = newSubtitles;
