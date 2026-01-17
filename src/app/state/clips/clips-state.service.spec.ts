@@ -1468,7 +1468,7 @@ ${initialLine}
       expect(firstGap).withContext('Gap from first split should still exist').toBeDefined();
     });
 
-    it('sets the first new clip as active and nudges the playhead back when splitting in the middle', fakeAsync(() => {
+    it('sets the first new clip as active and nudges the playhead back safely when splitting in the middle', fakeAsync(() => {
       // ARRANGE: Split the 5-10s clip at 7.5s
       videoStateService.setCurrentTime(7.5);
       const clipToSplit = service.clips().find(c => c.id === 'subtitle-5')!;
@@ -1480,15 +1480,23 @@ ${initialLine}
 
       // ASSERT
       const newClips = service.clipsForAllTracks();
-      const firstPart = newClips.find(c => c.startTime === 5 && c.endTime === 7.5)!;
+      const firstPart = newClips.find(c => Math.abs(c.endTime - 7.5) < 0.001)!;
       const indexOfFirstPart = newClips.indexOf(firstPart);
 
       expect(service.masterClipIndex()).withContext('The first part of the split clip should be active').toBe(indexOfFirstPart);
-      expect(videoStateService.seekAbsolute).toHaveBeenCalledWith(7.5 - 0.01);
+
+      // Verify seek was called to move BEHIND the split point
+      // Expectation: 7.5 - 0.05 = 7.45
+      expect(videoStateService.seekAbsolute).toHaveBeenCalled();
+      const seekArg = (videoStateService.seekAbsolute as jasmine.Spy).calls.mostRecent().args[0];
+
+      expect(seekArg).toBeLessThanOrEqual(7.450001); // Float safety
+      expect(seekArg).toBeGreaterThan(7.4); // Sanity check it didn't rewind too far
     }));
 
-    it('sets the second new clip as active and preserves playhead position when splitting near the end', fakeAsync(() => {
-      // ARRANGE: Split the 15-20s clip at 19.8s. The split point will be clamped to 19.4s.
+    it('sets the second new clip as active and preserves playhead position when splitting near the end (clamped)', fakeAsync(() => {
+      // ARRANGE: Split the 15-20s clip at 19.8s. The split point will be clamped to ~19.4s.
+      // Since the user cursor (19.8) is past the split point (19.4), assume they want to focus the new right clip.
       videoStateService.setCurrentTime(19.8);
       const clipToSplit = service.clips().find(c => c.id === 'subtitle-15')!;
       const command = new SplitSubtitledClipCommand(service, clipToSplit.id, projectState.rawAssContent);
@@ -1500,15 +1508,18 @@ ${initialLine}
       // ASSERT
       const newClips = service.clipsForAllTracks();
       const clampedSplitPoint = 20 - MIN_SUBTITLE_DURATION - MIN_GAP_DURATION; // 19.4
-      const secondPart = newClips.find(c => c.startTime === clampedSplitPoint + MIN_GAP_DURATION)!;
+
+      const secondPart = newClips.find(c => Math.abs(c.startTime - (clampedSplitPoint + MIN_GAP_DURATION)) < 0.001)!;
       const indexOfSecondPart = newClips.indexOf(secondPart);
 
       expect(service.masterClipIndex()).withContext('The second part of the split clip should be active').toBe(indexOfSecondPart);
+      // Should NOT seek, because the user is already at 19.8, which is inside the new right clip (19.5 - 20.0)
       expect(videoStateService.seekAbsolute).not.toHaveBeenCalled();
     }));
 
-    it('sets the first new clip as active and preserves playhead position when splitting near the beginning', fakeAsync(() => {
+    it('sets the first new clip as active and preserves playhead position when splitting near the beginning (clamped)', fakeAsync(() => {
       // ARRANGE: Split the 15-20s clip at 15.2s. The split point will be clamped to 15.5s.
+      // Since the user cursor (15.2) is before the split point (15.5), assume they want to focus the new left clip.
       videoStateService.setCurrentTime(15.2);
       const clipToSplit = service.clips().find(c => c.id === 'subtitle-15')!;
       const command = new SplitSubtitledClipCommand(service, clipToSplit.id, projectState.rawAssContent);
@@ -1520,10 +1531,12 @@ ${initialLine}
       // ASSERT
       const newClips = service.clipsForAllTracks();
       const clampedSplitPoint = 15 + MIN_SUBTITLE_DURATION; // 15.5
-      const firstPart = newClips.find(c => c.startTime === 15 && c.endTime === clampedSplitPoint)!;
+
+      const firstPart = newClips.find(c => Math.abs(c.endTime - clampedSplitPoint) < 0.001)!;
       const indexOfFirstPart = newClips.indexOf(firstPart);
 
       expect(service.masterClipIndex()).withContext('The first part of the split clip should be active').toBe(indexOfFirstPart);
+      // Should NOT seek, because the user is at 15.2, which is safely inside the new left clip (15.0 - 15.5)
       expect(videoStateService.seekAbsolute).not.toHaveBeenCalled();
     }));
 

@@ -1283,23 +1283,29 @@ export class ClipsStateService implements OnDestroy {
   };
 
   private synchronizeStateAfterSplit(originalClip: VideoClip, splitPoint: number, currentTime: number): void {
+    const EPSILON = 0.001; // Tolerance for floating point comparisons
     const newClipsArray = this.clipsForAllTracks();
     let newActiveClip: VideoClip | undefined;
+
+    const findLeftPart = () => newClipsArray.find(c => Math.abs(c.endTime - splitPoint) < EPSILON);
+    const findRightPart = () => newClipsArray.find(c => Math.abs(c.startTime - (splitPoint + MIN_GAP_DURATION)) < EPSILON);
 
     if (currentTime < (originalClip.startTime + MIN_SUBTITLE_DURATION - 0.01)) {
       // Case 1: Split was clamped near the START of the original clip.
       // User intended to split early, so keep focus on the first part and don't move the playhead.
-      newActiveClip = newClipsArray.find(c => c.endTime === splitPoint);
+      newActiveClip = findLeftPart();
     } else if (currentTime > (originalClip.endTime - MIN_SUBTITLE_DURATION)) {
       // Case 2: Split was clamped near the END of the original clip.
       // User intended to split late, so switch focus to the second part and don't move the playhead.
-      newActiveClip = newClipsArray.find(c => c.startTime === splitPoint + MIN_GAP_DURATION);
+      newActiveClip = findRightPart();
     } else {
       // Case 3: Normal split in the middle.
       // Focus on the first part and nudge the playhead to its end for a smooth workflow.
-      newActiveClip = newClipsArray.find(c => c.endTime === splitPoint);
+      newActiveClip = findLeftPart();
       if (newActiveClip) {
-        this.videoStateService.seekAbsolute(splitPoint - 0.01);
+        // Move playhead 50ms before the end of the new clip to stay within its bounds (at 24fps frame is ~41ms).
+        const safeSeekTime = Math.max(newActiveClip.startTime, newActiveClip.endTime - 0.05);
+        this.videoStateService.seekAbsolute(safeSeekTime);
       }
     }
 
