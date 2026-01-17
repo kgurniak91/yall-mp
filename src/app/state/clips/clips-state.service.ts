@@ -27,6 +27,8 @@ import {ConfirmationService} from 'primeng/api';
 export const ADJUST_DEBOUNCE_MS = 50;
 export const MIN_GAP_DURATION = 0.1;
 export const MIN_SUBTITLE_DURATION = 0.5;
+export const MIN_REQUIRED_SPACE_FOR_NEW_CLIP = MIN_SUBTITLE_DURATION + (2 * MIN_GAP_DURATION);
+export const MIN_REQUIRED_CLIP_DURATION_FOR_SPLIT = (MIN_SUBTITLE_DURATION * 2) + MIN_GAP_DURATION;
 
 @Injectable()
 export class ClipsStateService implements OnDestroy {
@@ -200,11 +202,8 @@ export class ClipsStateService implements OnDestroy {
       return;
     }
 
-    // A valid split requires space for two minimum-length subtitle clips and one minimum-length gap:
-    const minimumRequiredDuration = (MIN_SUBTITLE_DURATION * 2) + MIN_GAP_DURATION;
-
-    if (currentClip.duration < minimumRequiredDuration) {
-      this.toastService.warn(`Selected clip is too short to split. Minimum required duration is ${minimumRequiredDuration.toFixed(1)}s.`);
+    if (currentClip.duration < MIN_REQUIRED_CLIP_DURATION_FOR_SPLIT) {
+      this.toastService.warn(`Selected clip is too short to split. Minimum required duration is ${MIN_REQUIRED_CLIP_DURATION_FOR_SPLIT.toFixed(1)}s.`);
       return;
     }
 
@@ -592,10 +591,8 @@ export class ClipsStateService implements OnDestroy {
       return;
     }
 
-    // The gap must be large enough for the new subtitle and its surrounding gaps.
-    const minimumRequiredSpace = MIN_SUBTITLE_DURATION + (2 * MIN_GAP_DURATION);
-    if (currentClip.duration < minimumRequiredSpace) {
-      this.toastService.warn(`This gap is too small to add a new subtitle. Minimum space required: ${minimumRequiredSpace.toFixed(2)}s`);
+    if (currentClip.duration < MIN_REQUIRED_SPACE_FOR_NEW_CLIP) {
+      this.toastService.warn(`This gap is too small to add a new subtitle. Minimum space required: ${MIN_REQUIRED_SPACE_FOR_NEW_CLIP.toFixed(1)}s`);
       return;
     }
 

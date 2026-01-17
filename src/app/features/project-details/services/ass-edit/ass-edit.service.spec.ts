@@ -3,6 +3,8 @@ import {VideoClip} from '../../../../model/video.types';
 import {ClipContent} from '../../../../model/commands/update-clip-text.command';
 import {createServiceFactory, SpectatorService} from '@ngneat/spectator';
 import {AssSubtitleData, SubtitlePart} from '../../../../../../shared/types/subtitle.type';
+import {MIN_GAP_DURATION} from '../../../../state/clips/clips-state.service';
+import {AssSubtitlesUtils} from '../../../../../../shared/utils/ass-subtitles.utils';
 
 const assFileTemplate = (dialogueLines: string) => `
 [Script Info]
@@ -956,7 +958,7 @@ Dialogue: 0,0:00:08.00,0:00:10.00,Top,,0,0,0,,Part 2
       };
 
       const newSecondPartSubs: AssSubtitleData[] = [{
-        type: 'ass', id: 'sub-2', startTime: splitPoint + 0.1, endTime: 15, track: 0, parts: [{
+        type: 'ass', id: 'sub-2', startTime: splitPoint + MIN_GAP_DURATION, endTime: 15, track: 0, parts: [{
           text: 'This is a test',
           style: 'Default'
         }]
@@ -964,8 +966,11 @@ Dialogue: 0,0:00:08.00,0:00:10.00,Top,,0,0,0,,Part 2
 
       const result = service.splitDialogueLines(rawAssContent, clipToSplit.sourceSubtitles as AssSubtitleData[], splitPoint, newSecondPartSubs);
 
-      const expectedLine1 = 'Dialogue: 0,0:00:10.00,0:00:12.50,Default,,0,0,0,,This is a test';
-      const expectedLine2 = 'Dialogue: 0,0:00:12.60,0:00:15.00,Default,,0,0,0,,This is a test';
+      const expectedEnd1 = AssSubtitlesUtils.formatTime(splitPoint); // 12.50
+      const expectedStart2 = AssSubtitlesUtils.formatTime(splitPoint + MIN_GAP_DURATION);
+
+      const expectedLine1 = `Dialogue: 0,0:00:10.00,${expectedEnd1},Default,,0,0,0,,This is a test`;
+      const expectedLine2 = `Dialogue: 0,${expectedStart2},0:00:15.00,Default,,0,0,0,,This is a test`;
 
       expect(result).toContain(expectedLine1);
       expect(result).toContain(expectedLine2);
@@ -994,7 +999,7 @@ Dialogue: 1,0:00:20.00,0:00:25.00,Default,,0,0,0,,Shadow Text
       const newSecondPartSubs: AssSubtitleData[] = [{
         type: 'ass',
         id: 'sub-2',
-        startTime: splitPoint + 0.1,
+        startTime: splitPoint + MIN_GAP_DURATION,
         endTime: 25,
         track: 0,
         parts: [{text: 'Shadow Text', style: 'Default'}]
@@ -1002,11 +1007,14 @@ Dialogue: 1,0:00:20.00,0:00:25.00,Default,,0,0,0,,Shadow Text
 
       const result = service.splitDialogueLines(rawAssContent, clipToSplit.sourceSubtitles as AssSubtitleData[], splitPoint, newSecondPartSubs);
 
+      const expectedEnd1 = AssSubtitlesUtils.formatTime(splitPoint);
+      const expectedStart2 = AssSubtitlesUtils.formatTime(splitPoint + MIN_GAP_DURATION);
+
       const expectedLines = [
-        'Dialogue: 0,0:00:20.00,0:00:22.00,Default,,0,0,0,,Shadow Text',
-        'Dialogue: 1,0:00:20.00,0:00:22.00,Default,,0,0,0,,Shadow Text',
-        'Dialogue: 0,0:00:22.10,0:00:25.00,Default,,0,0,0,,Shadow Text',
-        'Dialogue: 1,0:00:22.10,0:00:25.00,Default,,0,0,0,,Shadow Text',
+        `Dialogue: 0,0:00:20.00,${expectedEnd1},Default,,0,0,0,,Shadow Text`,
+        `Dialogue: 1,0:00:20.00,${expectedEnd1},Default,,0,0,0,,Shadow Text`,
+        `Dialogue: 0,${expectedStart2},0:00:25.00,Default,,0,0,0,,Shadow Text`,
+        `Dialogue: 1,${expectedStart2},0:00:25.00,Default,,0,0,0,,Shadow Text`,
       ];
 
       for (const line of expectedLines) {
@@ -1027,7 +1035,7 @@ Dialogue: 1,0:00:20.00,0:00:25.00,Default,,0,0,0,,Shadow Text
 
       // Simulate ClipsStateService trimming the metadata
       const leftFrame = {...frame1, endTime: splitPoint};
-      const rightFrame = {...frame1, startTime: splitPoint + 0.1}; // 3.1s
+      const rightFrame = {...frame1, startTime: splitPoint + MIN_GAP_DURATION};
 
       // Physically split the lines in the file
       const contentAfterSplit = service.splitDialogueLines(
@@ -1055,20 +1063,25 @@ Dialogue: 1,0:00:20.00,0:00:25.00,Default,,0,0,0,,Shadow Text
       const finalContent = service.modifyAssText(leftClip, editContent, contentAfterSplit);
 
       // ASSERT
-      const expectedLeft = 'Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,LeftOnly';
-      const expectedRight = 'Dialogue: 0,0:00:03.10,0:00:05.00,Default,,0,0,0,,Animation';
+      const expectedEndLeft = AssSubtitlesUtils.formatTime(3.0);
+      const expectedStartRight = AssSubtitlesUtils.formatTime(3.0 + MIN_GAP_DURATION);
+
+      const expectedLeft = `Dialogue: 0,0:00:01.00,${expectedEndLeft},Default,,0,0,0,,LeftOnly`;
+      const expectedRight = `Dialogue: 0,${expectedStartRight},0:00:05.00,Default,,0,0,0,,Animation`;
 
       expect(finalContent).toContain(expectedLeft);
       expect(finalContent).toContain(expectedRight);
-      expect(finalContent).not.toContain('0:00:03.10,Default,,0,0,0,,LeftOnly');
+      expect(finalContent).not.toContain(`${expectedStartRight},Default,,0,0,0,,LeftOnly`);
     });
   });
 
   describe('unsplitDialogueLines', () => {
     it('re-merges a simple split clip', () => {
+      const splitTime = 12.5;
+      const gapStart = AssSubtitlesUtils.formatTime(splitTime + MIN_GAP_DURATION);
       const dialogueLines = `
 Dialogue: 0,0:00:10.00,0:00:12.50,Default,,0,0,0,,This is a test
-Dialogue: 0,0:00:12.60,0:00:15.00,Default,,0,0,0,,This is a test
+Dialogue: 0,${gapStart},0:00:15.00,Default,,0,0,0,,This is a test
       `.trim();
       const rawAssContent = assFileTemplate(dialogueLines);
 
@@ -1083,7 +1096,7 @@ Dialogue: 0,0:00:12.60,0:00:15.00,Default,,0,0,0,,This is a test
       const subtitlesToRemove: AssSubtitleData[] = [{
         type: 'ass',
         id: 'sub-2',
-        startTime: 12.6,
+        startTime: 12.5 + MIN_GAP_DURATION,
         endTime: 15,
         track: 0,
         parts: [{text: 'This is a test', style: 'Default'}]

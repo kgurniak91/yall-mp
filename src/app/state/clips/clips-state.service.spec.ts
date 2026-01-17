@@ -3,7 +3,13 @@ import {signal} from '@angular/core';
 import {MockBuilder} from 'ng-mocks';
 import {AssSubtitleData, SrtSubtitleData, SubtitleData, SubtitlePart} from '../../../../shared/types/subtitle.type';
 import {VideoClip} from '../../model/video.types';
-import {ADJUST_DEBOUNCE_MS, ClipsStateService, MIN_GAP_DURATION, MIN_SUBTITLE_DURATION} from './clips-state.service';
+import {
+  ADJUST_DEBOUNCE_MS,
+  ClipsStateService,
+  MIN_GAP_DURATION,
+  MIN_REQUIRED_CLIP_DURATION_FOR_SPLIT,
+  MIN_SUBTITLE_DURATION
+} from './clips-state.service';
 import {VideoStateService} from '../video/video-state.service';
 import {CommandHistoryStateService} from '../command-history/command-history-state.service';
 import {AppStateService} from '../app/app-state.service';
@@ -795,16 +801,14 @@ Dialogue: 0,0:08:27.90,0:08:28.28,RomajiED,,0,0,0,,ki
 
       let clips = service.clips();
       let modifiedClip = clips[1];
-      // A subtitled clip's min duration is 0.5s
-      expect(modifiedClip.endTime).toBeCloseTo(modifiedClip.startTime + 0.5);
+      expect(modifiedClip.endTime).toBeCloseTo(modifiedClip.startTime + MIN_SUBTITLE_DURATION);
 
       // ACT 2: Try to move start time past end time
       service.updateClipTimesFromTimeline(subtitleClip.id, 11, 10);
 
       clips = service.clips();
       modifiedClip = clips[1];
-      // A subtitled clip's min duration is 0.5s
-      expect(modifiedClip.startTime).toBeCloseTo(modifiedClip.endTime - 0.5);
+      expect(modifiedClip.startTime).toBeCloseTo(modifiedClip.endTime - MIN_SUBTITLE_DURATION);
     });
 
     it('preserves a large gap when a clip is resized slightly into it', () => {
@@ -845,20 +849,21 @@ Dialogue: 0,0:08:27.90,0:08:28.28,RomajiED,,0,0,0,,ki
       // Clips are: gap(0-10), sub A(10-15), gap(15-end)
       const gapClip = service.clips()[0];
 
-      // ACT: Stretch the gap far enough that it would normally shrink the subtitle
-      // clip to less than its minimum duration (0.5s).
-      service.updateClipTimesFromTimeline(gapClip.id, 0, 14.8);
+      // ACT: Stretch the gap far enough that it would normally shrink the subtitled clip to less than its minimum duration
+      const invalidBoundaryPosition = 15 - (MIN_SUBTITLE_DURATION / 2);
+      service.updateClipTimesFromTimeline(gapClip.id, 0, invalidBoundaryPosition);
 
       // ASSERT: The subtitle clip should be clamped to its minimum duration.
       const clips = service.clips();
       const updatedGap = clips[0];
       const updatedSub = clips[1];
 
+      const expectedStartTime = 15 - MIN_SUBTITLE_DURATION;
       // The subtitle's start time should be clamped to endTime - MIN_SUBTITLE_DURATION:
-      expect(updatedSub.startTime).toBe(14.5);
+      expect(updatedSub.startTime).toBe(expectedStartTime);
       expect(updatedSub.endTime).toBe(15);
       // The gap should have been prevented from stretching further.
-      expect(updatedGap.endTime).toBe(14.5);
+      expect(updatedGap.endTime).toBe(expectedStartTime);
     });
 
     it('preserves the correct anchor when shrinking a subtitled clip below its minimum duration', () => {
@@ -877,7 +882,7 @@ Dialogue: 0,0:08:27.90,0:08:28.28,RomajiED,,0,0,0,,ki
       let clips = service.clips();
       let updatedSub = clips.find(c => c.hasSubtitle)!;
       expect(updatedSub.startTime).withContext('Start anchor should be preserved').toBe(10);
-      expect(updatedSub.endTime).withContext('End time should be adjusted').toBe(10.5); // 10 + 0.5
+      expect(updatedSub.endTime).withContext('End time should be adjusted').toBe(10 + MIN_SUBTITLE_DURATION);
 
       // --- ACT 2: Shrink from the LEFT edge ---
       // Reset state for the second part of the test
@@ -888,7 +893,7 @@ Dialogue: 0,0:08:27.90,0:08:28.28,RomajiED,,0,0,0,,ki
       // --- ASSERT 2: The END time should be the anchor ---
       clips = service.clips();
       updatedSub = clips.find(c => c.hasSubtitle)!;
-      expect(updatedSub.startTime).withContext('Start time should be adjusted').toBe(14.5); // 15 - 0.5
+      expect(updatedSub.startTime).withContext('Start time should be adjusted').toBe(15 - MIN_SUBTITLE_DURATION);
       expect(updatedSub.endTime).withContext('End anchor should be preserved').toBe(15);
     });
 
@@ -901,22 +906,24 @@ Dialogue: 0,0:08:27.90,0:08:28.28,RomajiED,,0,0,0,,ki
       const subtitleClip = service.clips().find(c => c.hasSubtitle)!;
 
       // --- ACT 1: Shrink from the RIGHT edge (standard) ---
-      service.updateClipTimesFromTimeline(subtitleClip.id, 10, 10.2);
+      const attemptedEndTime1 = 10 + (MIN_SUBTITLE_DURATION / 2);
+      service.updateClipTimesFromTimeline(subtitleClip.id, 10, attemptedEndTime1);
 
       // --- ASSERT 1: The START time should be the anchor ---
       let clips = service.clips();
       let updatedSub = clips.find(c => c.hasSubtitle)!;
       expect(updatedSub.startTime).withContext('Shrink Right: Start anchor should be preserved').toBe(10);
-      expect(updatedSub.endTime).withContext('Shrink Right: End time should be adjusted').toBe(10.5);
+      expect(updatedSub.endTime).withContext('Shrink Right: End time should be adjusted').toBeCloseTo(10 + MIN_SUBTITLE_DURATION);
 
       // --- ACT 2: Shrink from the LEFT edge (standard) ---
       service.setSubtitles(initialSubs); // Reset state
-      service.updateClipTimesFromTimeline(subtitleClip.id, 14.8, 15);
+      const attemptedStartTime2 = 15 - (MIN_SUBTITLE_DURATION / 2);
+      service.updateClipTimesFromTimeline(subtitleClip.id, attemptedStartTime2, 15);
 
       // --- ASSERT 2: The END time should be the anchor ---
       clips = service.clips();
       updatedSub = clips.find(c => c.hasSubtitle)!;
-      expect(updatedSub.startTime).withContext('Shrink Left: Start time should be adjusted').toBe(14.5);
+      expect(updatedSub.startTime).withContext('Shrink Left: Start time should be adjusted').toBeCloseTo(15 - MIN_SUBTITLE_DURATION);
       expect(updatedSub.endTime).withContext('Shrink Left: End anchor should be preserved').toBe(15);
 
       // --- ACT 3: Shrink from the RIGHT edge and INVERT ---
@@ -929,7 +936,7 @@ Dialogue: 0,0:08:27.90,0:08:28.28,RomajiED,,0,0,0,,ki
       clips = service.clips();
       updatedSub = clips.find(c => c.hasSubtitle)!;
       expect(updatedSub.startTime).withContext('Invert Right: Start anchor should be preserved').toBe(10);
-      expect(updatedSub.endTime).withContext('Invert Right: End time should be adjusted').toBe(10.5);
+      expect(updatedSub.endTime).withContext('Invert Right: End time should be adjusted').toBeCloseTo(10 + MIN_SUBTITLE_DURATION);
     });
 
     it('should handle rapid, repeated adjustments of adjacent clips without state corruption', () => {
@@ -1182,8 +1189,7 @@ Dialogue: 0,0:00:10.00,0:00:15.00,Default,,0,0,0,,Clip B
       const firstSub = service.clips()[1];
       service.updateClipTimesFromTimeline(firstSub.id, 5, 4);
       const modifiedClip = service.clips()[1];
-      // A subtitled clip's min duration is 0.5s
-      expect(modifiedClip.endTime).toBeCloseTo(modifiedClip.startTime + 0.5);
+      expect(modifiedClip.endTime).toBeCloseTo(modifiedClip.startTime + MIN_SUBTITLE_DURATION);
     });
 
     it('correctly updates rawAssContent after multiple consecutive adjustments', () => {
@@ -1436,7 +1442,7 @@ ${initialLine}
       // The number of subtitled clips should remain 1.
       expect(service.clips().filter(c => c.hasSubtitle).length).toBe(1);
       // The user should be warned with the correct minimum duration.
-      expect(toastService.warn).toHaveBeenCalledWith('Selected clip is too short to split. Minimum required duration is 1.1s.');
+      expect(toastService.warn).toHaveBeenCalledWith(`Selected clip is too short to split. Minimum required duration is ${MIN_REQUIRED_CLIP_DURATION_FOR_SPLIT.toFixed(1)}s.`);
     }));
 
     it('clamps the split point to respect minimum clip duration when splitting near the end', () => {
@@ -1454,14 +1460,14 @@ ${initialLine}
       expect(subtitledClips.length).toBe(3); // Original 'subtitle-5' + the two new pieces
 
       // The logic is: max split point = end - min_duration - min_gap
-      const expectedSplitPoint = 19.4; // 20 - 0.5 - 0.1 = 19.4
+      const expectedSplitPoint = 20 - MIN_SUBTITLE_DURATION - MIN_GAP_DURATION;
       const firstClipPart = subtitledClips[1];
       const secondClipPart = subtitledClips[2];
 
       expect(firstClipPart.endTime).toBeCloseTo(expectedSplitPoint);
       expect(secondClipPart.startTime).toBeCloseTo(expectedSplitPoint + MIN_GAP_DURATION);
       expect(secondClipPart.endTime).toBe(20);
-      expect(secondClipPart.duration).toBeCloseTo(0.5);
+      expect(secondClipPart.duration).toBeCloseTo(MIN_SUBTITLE_DURATION);
       videoStateService.setCurrentTime(0);
     });
 
@@ -1480,13 +1486,13 @@ ${initialLine}
       expect(subtitledClips.length).toBe(3);
 
       // The logic is: min split point = start + min_duration
-      const expectedSplitPoint = 15.5; // 15 + 0.5 = 15.5
+      const expectedSplitPoint = 15 + MIN_SUBTITLE_DURATION;
       const firstClipPart = subtitledClips[1];
       const secondClipPart = subtitledClips[2];
 
       expect(firstClipPart.startTime).toBe(15);
       expect(firstClipPart.endTime).toBeCloseTo(expectedSplitPoint);
-      expect(firstClipPart.duration).toBeCloseTo(0.5);
+      expect(firstClipPart.duration).toBeCloseTo(MIN_SUBTITLE_DURATION);
       expect(secondClipPart.startTime).toBeCloseTo(expectedSplitPoint + MIN_GAP_DURATION);
       expect(secondClipPart.endTime).toBe(20);
       videoStateService.setCurrentTime(0);
@@ -1513,7 +1519,10 @@ ${initialLine}
       const clipsAfterSecondSplit = service.clips();
       const subtitledClips2 = clipsAfterSecondSplit.filter(c => c.hasSubtitle);
       expect(subtitledClips2.length).withContext('After 2nd split').toBe(4);
-      const firstGap = clipsAfterSecondSplit.find(c => c.startTime === 19.0 && c.endTime === 19.1);
+
+      const firstGapStartTime = 19.0;
+      const firstGapEndTime = firstGapStartTime + MIN_GAP_DURATION;
+      const firstGap = clipsAfterSecondSplit.find(c => c.startTime === firstGapStartTime && c.endTime === firstGapEndTime);
       expect(firstGap).withContext('Gap from first split should still exist').toBeDefined();
     });
 
@@ -1813,11 +1822,15 @@ Dialogue: 0,0:00:12.00,0:00:14.00,Default,,0,0,0,,Animated Text
       expect(clipsAfterSecondSplit.length).withContext('After 2nd split, should have 9 total clips').toBe(9);
 
       // Crucially, verify that the gap from the *first* split still exists and wasn't corrupted:
-      const firstGap = clipsAfterSecondSplit.find(c => c.startTime === 19.0 && c.endTime === 19.1);
+      const firstGapStartTime = 19.0;
+      const firstGapEndTime = firstGapStartTime + MIN_GAP_DURATION;
+      const firstGap = clipsAfterSecondSplit.find(c => c.startTime === firstGapStartTime && c.endTime === firstGapEndTime);
       expect(firstGap).withContext('Gap from first split should still exist').toBeDefined();
 
       // And verify the new gap from the second split also exists:
-      const secondGap = clipsAfterSecondSplit.find(c => c.startTime === 16.0 && c.endTime === 16.1);
+      const secondGapStartTime = 16.0;
+      const secondGapEndTime = secondGapStartTime + MIN_GAP_DURATION;
+      const secondGap = clipsAfterSecondSplit.find(c => c.startTime === secondGapStartTime && c.endTime === secondGapEndTime);
       expect(secondGap).withContext('Gap from second split should exist').toBeDefined();
     });
   });
