@@ -15,6 +15,7 @@ interface BaseSubtitleData {
   startTime: number;
   endTime: number;
   track: number;
+  splitGroupId?: string;
 }
 
 export interface SrtSubtitleData extends BaseSubtitleData {

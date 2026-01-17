@@ -258,6 +258,8 @@ export class ClipsStateService implements OnDestroy {
     const subtitlesToCreate: SubtitleData[] = [];
     const subtitlesToRemove = new Set<string>();
     const newSecondHalvesForAss: AssSubtitleData[] = [];
+    const leftGroupId = uuidv4();
+    const rightGroupId = uuidv4();
 
     for (const sub of clipToSplit.sourceSubtitles) {
       if (sub.startTime >= splitPoint) {
@@ -267,6 +269,7 @@ export class ClipsStateService implements OnDestroy {
         const newSub = this.trimSubtitleToBoundaries(sub, splitPoint + MIN_GAP_DURATION, sub.endTime);
         if (newSub) {
           newSub.id = newId;
+          newSub.splitGroupId = rightGroupId;
           subtitlesToCreate.push(newSub);
           if (newSub.type === 'ass') {
             newSecondHalvesForAss.push(newSub as AssSubtitleData);
@@ -278,6 +281,7 @@ export class ClipsStateService implements OnDestroy {
 
         const firstHalf = this.trimSubtitleToBoundaries(sub, sub.startTime, splitPoint);
         if (firstHalf) {
+          firstHalf.splitGroupId = leftGroupId;
           subtitlesToUpdate.set(firstHalf.id, firstHalf);
         }
 
@@ -286,6 +290,7 @@ export class ClipsStateService implements OnDestroy {
         const secondHalf = this.trimSubtitleToBoundaries(sub, splitPoint + MIN_GAP_DURATION, sub.endTime);
         if (secondHalf) {
           secondHalf.id = newId;
+          secondHalf.splitGroupId = rightGroupId;
           subtitlesToCreate.push(secondHalf);
           if (secondHalf.type === 'ass') {
             newSecondHalvesForAss.push(secondHalf as AssSubtitleData);
@@ -478,11 +483,15 @@ export class ClipsStateService implements OnDestroy {
     onMergeCallback?: (originalFirstSubtitles: SubtitleData[], deletedSecondSubtitles: SubtitleData[]) => void
   ): void {
     const project = this.appStateService.currentProject();
-    if (!project) return;
+    if (!project) {
+      return;
+    }
 
     const firstClip = this.clips().find(c => c.id === firstClipId);
     const secondClip = this.clips().find(c => c.id === secondClipId);
-    if (!firstClip || !secondClip) return;
+    if (!firstClip || !secondClip) {
+      return;
+    }
 
     const originalFirstSubtitles = cloneDeep(firstClip.sourceSubtitles as SubtitleData[]);
     const originalSecondSubtitles = cloneDeep(secondClip.sourceSubtitles as SubtitleData[]);
@@ -491,13 +500,15 @@ export class ClipsStateService implements OnDestroy {
     const gapStartTime = firstClip.endTime;
     const gapEndTime = secondClip.startTime;
     const midpoint = AssSubtitlesUtils.roundToAssPrecision(gapStartTime + ((gapEndTime - gapStartTime) / 2));
-
+    const newMergedGroupId = uuidv4();
     const allSubsToModifyIds = new Set([...originalFirstSubtitles.map(s => s.id), ...originalSecondSubtitles.map(s => s.id)]);
+
     const newSubtitles = this._subtitles().map(sub => {
       if (!allSubsToModifyIds.has(sub.id)) {
         return sub;
       }
       const updatedSub = cloneDeep(sub);
+      updatedSub.splitGroupId = newMergedGroupId;
       if (originalFirstSubtitles.some(s => s.id === updatedSub.id)) {
         updatedSub.endTime = midpoint;
       } else {
@@ -1016,7 +1027,9 @@ export class ClipsStateService implements OnDestroy {
         const nextSegment = segments[i];
 
         const getCurrentKey = (seg: Partial<VideoClip>): string => {
-          if (!seg.hasSubtitle || !seg.sourceSubtitles || seg.sourceSubtitles.length === 0) return 'gap';
+          if (!seg.hasSubtitle || !seg.sourceSubtitles || seg.sourceSubtitles.length === 0) {
+            return 'gap';
+          }
 
           // For ASS, the key is the sorted list of unique parts (style + text)
           const assParts = new Map<string, SubtitlePart>();
@@ -1034,8 +1047,15 @@ export class ClipsStateService implements OnDestroy {
             .map(s => (s as SrtSubtitleData).text)
             .join('\\N'); // Use a separator that won't appear in normal text
 
-          // The final key is a combination of both
-          return `${assKey}|${srtKey}`;
+          // Include splitGroupId in the key
+          const splitGroupKey = seg.sourceSubtitles
+            .map(s => s.splitGroupId)
+            .filter(g => g)
+            .sort()
+            .join(',');
+
+          // The final key is a combination of all three
+          return `${assKey}|${srtKey}|${splitGroupKey}`;
         };
 
         const currentKey = getCurrentKey(currentSegment);

@@ -2314,4 +2314,92 @@ Dialogue: 0:01:01.00,0:01:02.00,Default,Animating Text
       expect(sub3.startTime).toBe(sub2.endTime);
     });
   });
+
+  describe('Split Group Logic & Visual Merging', () => {
+    it('prevents visual merging of clips with identical text that were split and then expanded to touch', () => {
+      // ARRANGE: One long clip [0 - 10s]
+      const initialSubs: SrtSubtitleData[] = [
+        {type: 'srt', id: 'orig', startTime: 0, endTime: 10, text: 'Identical Text', track: 0}
+      ];
+      service.setSubtitles(initialSubs);
+
+      expect(service.clips().filter(c => c.hasSubtitle).length).toBe(1);
+
+      // SPLIT #1: Split at 5.0s
+      videoStateService.setCurrentTime(5.0);
+      let clipToSplit = service.clips().find(c => c.hasSubtitle)!;
+      service.splitSubtitledClip(clipToSplit.id);
+
+      expect(service.clips().filter(c => c.hasSubtitle).length).toBe(2);
+
+      // SPLIT #2: Split the LEFT part [0-5] at 2.5s
+      videoStateService.setCurrentTime(2.5);
+      clipToSplit = service.clips().filter(c => c.hasSubtitle)[0]; // [0-5]
+      service.splitSubtitledClip(clipToSplit.id);
+
+      expect(service.clips().filter(c => c.hasSubtitle).length).toBe(3);
+
+      // SPLIT #3: Split the RIGHT MOST part [5.1-10] at 7.5s
+      videoStateService.setCurrentTime(7.5);
+      clipToSplit = service.clips().filter(c => c.hasSubtitle)[2]; // [5.1-10]
+      service.splitSubtitledClip(clipToSplit.id);
+
+      // Check: Should be 4 clips now: [0-2.5], [2.6-5.0], [5.1-7.5], [7.6-10.0]
+      let clips = service.clips().filter(c => c.hasSubtitle);
+      expect(clips.length).toBe(4);
+
+      // EXPAND to CLOSE GAPS
+      // Clip 1 ends at 2.5. Clip 2 starts at 2.6. Drag Clip 1 end to 2.6.
+      const clip1 = clips[0];
+      const clip2 = clips[1];
+      service.updateClipTimesFromTimeline(clip1.id, clip1.startTime, clip2.startTime);
+
+      // Refresh clips list as IDs might change or refs become stale
+      clips = service.clips().filter(c => c.hasSubtitle);
+      // Drag Clip 2 end to Clip 3 start (5.1)
+      service.updateClipTimesFromTimeline(clips[1].id, clips[1].startTime, clips[2].startTime);
+
+      // Refresh clips list (again) as IDs might change or refs become stale
+      clips = service.clips().filter(c => c.hasSubtitle);
+      // Drag Clip 3 end to Clip 4 start (7.6)
+      service.updateClipTimesFromTimeline(clips[2].id, clips[2].startTime, clips[3].startTime);
+
+      // FINAL ASSERTION
+      const finalClips = service.clips().filter(c => c.hasSubtitle);
+
+      // Clips should NOT have merged into 1 clip, despite identical text and touching boundaries
+      expect(finalClips.length).withContext('Should remain 4 separate clips due to splitGroupIds').toBe(4);
+
+      // Verify no gaps exist between them
+      expect(finalClips[0].endTime).toBe(finalClips[1].startTime);
+      expect(finalClips[1].endTime).toBe(finalClips[2].startTime);
+      expect(finalClips[2].endTime).toBe(finalClips[3].startTime);
+    });
+
+    it('merges split clips back together if explicitly merged via command', () => {
+      // ARRANGE: 1 clip split into 2
+      const initialSubs: SrtSubtitleData[] = [
+        {type: 'srt', id: 'orig', startTime: 0, endTime: 10, text: 'A', track: 0}
+      ];
+      service.setSubtitles(initialSubs);
+
+      videoStateService.setCurrentTime(5); // Split in the middle
+      const clipId = service.clips().find(c => c.hasSubtitle)!.id;
+      service.splitSubtitledClip(clipId);
+
+      const splitClips = service.clips().filter(c => c.hasSubtitle);
+      expect(splitClips.length).toBe(2);
+
+      // Merge clips back
+      service.mergeClips(splitClips[0].id, splitClips[1].id);
+
+      // Assert they are now 1 clip
+      const mergedClips = service.clips().filter(c => c.hasSubtitle);
+      expect(mergedClips.length).toBe(1);
+
+      // Verify the merged clip covers the full range
+      expect(mergedClips[0].startTime).toBe(0);
+      expect(mergedClips[0].endTime).toBe(10);
+    });
+  });
 });
