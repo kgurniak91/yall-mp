@@ -136,17 +136,34 @@ export class AssEditService {
     const lines = rawAssContent.split(/\r?\n/);
     const updatedLineIndexes = new Set<number>();
 
-    for (let i = 0; i < originalSourceSubtitles.length; i++) {
-      const originalSub = originalSourceSubtitles[i];
-      const updatedSub = updatedSourceSubtitles[i];
+    // Helper to flatten hierarchies
+    const getLeafPairs = (original: AssSubtitleData, updated: AssSubtitleData): {
+      original: AssSubtitleData,
+      updated: AssSubtitleData
+    }[] => {
+      if (original.sourceDialogues && original.sourceDialogues.length > 0 && updated.sourceDialogues && updated.sourceDialogues.length > 0) {
+        const leaves: { original: AssSubtitleData, updated: AssSubtitleData }[] = [];
+        for (let i = 0; i < original.sourceDialogues.length; i++) {
+          leaves.push(...getLeafPairs(original.sourceDialogues[i], updated.sourceDialogues[i]));
+        }
+        return leaves;
+      }
+      return [{original, updated}];
+    };
 
-      for (const part of originalSub.parts) {
+    const allPairs = [];
+    for (let i = 0; i < originalSourceSubtitles.length; i++) {
+      allPairs.push(...getLeafPairs(originalSourceSubtitles[i], updatedSourceSubtitles[i]));
+    }
+
+    for (const {original, updated} of allPairs) {
+      for (const part of original.parts) {
         let searchStartIndex = 0;
 
         while (searchStartIndex < lines.length) {
           const lineIndex = this.findOriginalDialogueLineIndex(lines, formatSpec, {
-            startTime: originalSub.startTime,
-            endTime: originalSub.endTime,
+            startTime: original.startTime,
+            endTime: original.endTime,
             style: part.style,
             text: part.text,
           }, searchStartIndex);
@@ -157,8 +174,8 @@ export class AssEditService {
 
           if (!updatedLineIndexes.has(lineIndex)) {
             const lineParts = lines[lineIndex].split(',');
-            lineParts[startIdx] = AssSubtitlesUtils.formatTime(updatedSub.startTime);
-            lineParts[endIdx] = AssSubtitlesUtils.formatTime(updatedSub.endTime);
+            lineParts[startIdx] = AssSubtitlesUtils.formatTime(updated.startTime);
+            lineParts[endIdx] = AssSubtitlesUtils.formatTime(updated.endTime);
             lines[lineIndex] = lineParts.join(',');
             updatedLineIndexes.add(lineIndex);
           }

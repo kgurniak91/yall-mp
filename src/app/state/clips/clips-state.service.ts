@@ -1222,31 +1222,55 @@ export class ClipsStateService implements OnDestroy {
     const originalSubtitles = this._subtitles();
     const changedSubtitles = new Map<string, { original: SubtitleData, updated: SubtitleData }>();
 
+    // Helper to recursively update nested ASS dialogues
+    const updateAssTimings = (sub: AssSubtitleData, ratio: number, oldClipStart: number, newClipStart: number) => {
+      const startOffset = sub.startTime - oldClipStart;
+      const endOffset = sub.endTime - oldClipStart;
+
+      const calcStart = newClipStart + (startOffset * ratio);
+      const calcEnd = newClipStart + (endOffset * ratio);
+
+      // Apply rounding
+      sub.startTime = AssSubtitlesUtils.roundToAssPrecision(calcStart);
+      sub.endTime = AssSubtitlesUtils.roundToAssPrecision(calcEnd);
+
+      // Recursively update children
+      if (sub.sourceDialogues) {
+        sub.sourceDialogues.forEach(child => updateAssTimings(child, ratio, oldClipStart, newClipStart));
+      }
+    };
+
     updatedClips.forEach(updatedClip => {
-      if (!updatedClip.hasSubtitle) return;
+      if (!updatedClip.hasSubtitle) {
+        return;
+      }
 
       const originalClip = originalClips.find(oc => this.areVideoClipsEqual(oc, updatedClip));
 
       if (originalClip && (Math.abs(originalClip.startTime - updatedClip.startTime) > 0.001 || Math.abs(originalClip.endTime - updatedClip.endTime) > 0.001)) {
         for (const sourceSub of updatedClip.sourceSubtitles) {
           const originalSourceSub = originalSubtitles.find(s => s.id === sourceSub.id);
-          if (!originalSourceSub) continue;
+          if (!originalSourceSub) {
+            continue;
+          }
 
           const updatedSub = cloneDeep(originalSourceSub);
           const oldDuration = originalClip.duration;
 
           if (oldDuration > 0.01) { // Avoid division by zero for vanished clips
             const newDuration = updatedClip.duration;
-            const startRatio = (originalSourceSub.startTime - originalClip.startTime) / oldDuration;
-            const endRatio = (originalSourceSub.endTime - originalClip.startTime) / oldDuration;
+            const durationRatio = newDuration / oldDuration;
 
-            // Calculate new times
-            const calcStart = updatedClip.startTime + (startRatio * newDuration);
-            const calcEnd = updatedClip.startTime + (endRatio * newDuration);
+            if (updatedSub.type === 'ass') {
+              updateAssTimings(updatedSub as AssSubtitleData, durationRatio, originalClip.startTime, updatedClip.startTime);
+            } else {
+              const startOffset = originalSourceSub.startTime - originalClip.startTime;
+              const endOffset = originalSourceSub.endTime - originalClip.startTime;
 
-            // Apply rounding only for modified subtitles
-            updatedSub.startTime = AssSubtitlesUtils.roundToAssPrecision(calcStart);
-            updatedSub.endTime = AssSubtitlesUtils.roundToAssPrecision(calcEnd);
+              // Apply rounding only for modified subtitles
+              updatedSub.startTime = AssSubtitlesUtils.roundToAssPrecision(updatedClip.startTime + (startOffset * durationRatio));
+              updatedSub.endTime = AssSubtitlesUtils.roundToAssPrecision(updatedClip.startTime + (endOffset * durationRatio));
+            }
 
             // Ensures rounding never pushes the subtitle outside its logical container
             updatedSub.startTime = Math.max(updatedSub.startTime, AssSubtitlesUtils.roundToAssPrecision(updatedClip.startTime));

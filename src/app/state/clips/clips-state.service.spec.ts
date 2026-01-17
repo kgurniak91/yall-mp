@@ -528,6 +528,55 @@ Dialogue: 0,0:08:27.90,0:08:28.28,RomajiED,,0,0,0,,ki
     });
   });
 
+  describe('Clip Timing Adjustments (ASS)', () => {
+    it('correctly updates nested sourceDialogues timings when stretching a merged ASS clip', () => {
+      // ARRANGE: Create a complex ASS subtitle structure with nested sourceDialogues
+      const nestedSourceDialogue: AssSubtitleData = {
+        type: 'ass',
+        id: 'nested-1',
+        startTime: 10,
+        endTime: 15,
+        track: -1,
+        parts: [{text: 'Nested Part', style: 'Default'}]
+      };
+
+      const parentSubtitle: AssSubtitleData = {
+        type: 'ass',
+        id: 'parent-1',
+        startTime: 10,
+        endTime: 15,
+        track: 0,
+        parts: [{text: 'Visible Part', style: 'Default'}],
+        sourceDialogues: [nestedSourceDialogue]
+      };
+
+      projectState.subtitles = [parentSubtitle];
+      service.setSubtitles([parentSubtitle]);
+
+      // Verify setup
+      const clip = service.clips().find(c => c.hasSubtitle)!;
+      expect(clip.startTime).toBe(10);
+      expect(clip.endTime).toBe(15);
+
+      // ACT: Shift the entire clip by +2 seconds (10-15 -> 12-17)
+      service.updateClipTimesFromTimeline(clip.id, 12, 17);
+
+      // ASSERT
+      const updateArgs = (appStateService.updatePartialProject as jasmine.Spy).calls.mostRecent().args[1];
+      const updatedSubtitles = updateArgs.subtitles as AssSubtitleData[];
+      const updatedParent = updatedSubtitles[0];
+      const updatedNested = updatedParent.sourceDialogues![0];
+
+      // The parent container should be updated
+      expect(updatedParent.startTime).toBe(12);
+      expect(updatedParent.endTime).toBe(17);
+
+      // The nested sourceDialogue MUST also be updated
+      expect(updatedNested.startTime).withContext('Nested dialogue start time should be shifted').toBe(12);
+      expect(updatedNested.endTime).withContext('Nested dialogue end time should be shifted').toBe(17);
+    });
+  });
+
   describe('Clip Timing Adjustments (SRT)', () => {
     const initialSrtSubtitles: SrtSubtitleData[] = [
       {type: 'srt', id: 'srt-1', startTime: 5, endTime: 10, text: 'Subtitle A', track: 0},

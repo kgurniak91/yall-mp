@@ -787,6 +787,50 @@ Dialogue: 1,0:00:20.00,0:00:22.00,Default,,0,0,0,,Shadow Text
       expect(result).toContain(expectedLine);
       expect(result).toContain(expectedLineLayer1);
     });
+
+    it('correctly updates individual dialogue lines for a merged animation clip', () => {
+      // ARRANGE: The file has two separate lines that form a continuous animation
+      const dialogueLines = `
+Dialogue: 0,0:00:10.00,0:00:11.00,Default,,0,0,0,,Frame 1
+Dialogue: 0,0:00:11.00,0:00:12.00,Default,,0,0,0,,Frame 2
+      `.trim();
+      const rawAssContent = assFileTemplate(dialogueLines);
+
+      // Construct the MERGED state object
+      const frame1: AssSubtitleData = {
+        type: 'ass', id: 'f1', startTime: 10, endTime: 11, track: 0,
+        parts: [{text: 'Frame 1', style: 'Default'}]
+      };
+      const frame2: AssSubtitleData = {
+        type: 'ass', id: 'f2', startTime: 11, endTime: 12, track: 0,
+        parts: [{text: 'Frame 2', style: 'Default'}]
+      };
+
+      const originalMerged: AssSubtitleData = {
+        type: 'ass', id: 'merged', startTime: 10, endTime: 12, track: 0,
+        parts: [{text: 'Frame 1', style: 'Default'}],
+        sourceDialogues: [frame1, frame2]
+      };
+
+      // Construct the UPDATED state object (shifted by +5 seconds)
+      const updatedFrame1: AssSubtitleData = {...frame1, startTime: 15, endTime: 16};
+      const updatedFrame2: AssSubtitleData = {...frame2, startTime: 16, endTime: 17};
+      const updatedMerged: AssSubtitleData = {
+        ...originalMerged,
+        startTime: 15, endTime: 17,
+        sourceDialogues: [updatedFrame1, updatedFrame2]
+      };
+
+      // ACT
+      const result = service.stretchClipTimings([originalMerged], [updatedMerged], rawAssContent);
+
+      // ASSERT: The service should have looked inside sourceDialogues to find the 10-11s and 11-12s lines and updated them to 15-16s and 16-17s
+      expect(result).toContain('Dialogue: 0,0:00:15.00,0:00:16.00,Default,,0,0,0,,Frame 1');
+      expect(result).toContain('Dialogue: 0,0:00:16.00,0:00:17.00,Default,,0,0,0,,Frame 2');
+
+      // Ensure old lines are gone
+      expect(result).not.toContain('0:00:10.00,0:00:11.00');
+    });
   });
 
   describe('addDialogueLines', () => {
