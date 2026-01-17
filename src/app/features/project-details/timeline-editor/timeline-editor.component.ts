@@ -48,6 +48,7 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
   private readonly currentZoom = signal<number>(INITIAL_ZOOM);
   private readonly hasPerformedInitialSync = signal(false);
   private lastDrawnClipsSignature: string | null = null;
+  private lastTrackIndex: number | null = null;
   private activeGlowStyle!: string;
   private inactiveSubtitleBg!: string;
   private gapBg!: string;
@@ -123,10 +124,16 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
       return;
     }
 
+    // Capture the current visual scroll position
+    const savedScroll = this.wavesurfer.getScroll();
+
     // Perform a tiny scroll nudge to force Wavesurfer to re-render all regions
     const currentTime = this.videoStateService.currentTime();
     this.wavesurfer.setScrollTime(currentTime + 0.1);
     this.wavesurfer.setScrollTime(currentTime);
+
+    // Restore the original scroll position
+    this.wavesurfer.setScroll(savedScroll);
 
     setTimeout(() => {
       this.syncHighlight();
@@ -148,6 +155,7 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
     const duration = this.videoStateService.duration();
     const container = this.timelineContainer()?.nativeElement;
     const expectPeaks = this.globalSettingsStateService.generateAudioPeaks();
+    const currentTrackIndex = this.clipsStateService.activeTrack();
     this.clipsStateService.activeTrackClipIndex();
 
     // Audio peaks are generating in the background but are not available yet
@@ -175,8 +183,12 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
       if (clipsSignature !== this.lastDrawnClipsSignature) {
         this.drawRegions(clips);
         this.lastDrawnClipsSignature = clipsSignature;
-        // Force redraw whenever clips change (e.g., track switch)
-        this.forceWavesurferRedraw();
+
+        // Only force redraw if the track has changed (or it's the first load)
+        if (this.lastTrackIndex !== currentTrackIndex) {
+          this.forceWavesurferRedraw();
+          this.lastTrackIndex = currentTrackIndex;
+        }
       }
 
       // Once the first set of regions is drawn, hide the loader
