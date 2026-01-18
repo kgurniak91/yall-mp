@@ -307,6 +307,13 @@ async function createWindow() {
   });
 
   mainWindow.on('focus', () => {
+    // Failsafe: If the window gets focus (e.g., returning from Win+D) and is stuck in the restoring state, force a sync to reveal the UI.
+    if (mainWindow && !mainWindow.isMinimized() && isRestoring) {
+      console.log('[Main Process] Window focused while state was stuck in restoring. Forcing geometry sync.');
+      isRestoring = false;
+      syncWindowGeometry();
+    }
+
     // Defer focus transfer to next iteration of the event loop, after the current event loop phase completes.
     // This allows mainWindow to settle its focus state, preventing swallowed keyboard inputs during the transition.
     setImmediate(() => {
