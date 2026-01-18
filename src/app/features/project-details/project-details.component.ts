@@ -935,6 +935,19 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
         icon: 'fa-regular fa-square-plus',
         command: () => this.createNewSubtitledClipAtCurrentTime()
       });
+
+      const clips = this.clipsStateService.clips();
+      const index = clips.findIndex(c => c.id === clip.id);
+      const prev = clips[index - 1];
+      const next = clips[index + 1];
+      const canRemoveGap = prev && next && prev.hasSubtitle && next.hasSubtitle;
+
+      items.push({
+        label: 'Remove gap',
+        icon: 'fa-solid fa-eraser',
+        disabled: !canRemoveGap,
+        command: () => this.deleteCurrentClip()
+      });
     }
 
     this.timelineMenuItems.set(items);

@@ -260,7 +260,7 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
   {
     action: KeyboardAction.DeleteClip,
     key: 'Delete',
-    description: 'Delete current clip (or merge gap)',
+    description: 'Delete current clip or remove gap',
     displayKeys: ['Delete'],
     scope: KeyboardShortcutScope.Project,
     type: ActionType.SingleShot,
