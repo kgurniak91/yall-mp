@@ -1,4 +1,4 @@
-import {Component, input} from '@angular/core';
+import {ChangeDetectionStrategy, Component, input} from '@angular/core';
 import {AbstractControl} from '@angular/forms';
 import {Tag} from 'primeng/tag';
 
@@ -8,7 +8,8 @@ import {Tag} from 'primeng/tag';
     Tag
   ],
   templateUrl: './form-control-error.component.html',
-  styleUrl: './form-control-error.component.scss'
+  styleUrl: './form-control-error.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FormControlErrorComponent {
   public readonly control = input.required<AbstractControl | null>();

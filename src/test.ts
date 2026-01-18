@@ -3,11 +3,20 @@ import {BrowserDynamicTestingModule, platformBrowserDynamicTesting,} from '@angu
 import {MockInstance, MockService, ngMocks} from 'ng-mocks';
 import {DefaultTitleStrategy, TitleStrategy} from '@angular/router';
 import {CommonModule} from '@angular/common';
-import {ApplicationModule} from '@angular/core';
+import {ApplicationModule, NgModule, provideExperimentalZonelessChangeDetection} from '@angular/core';
 import {BrowserModule} from '@angular/platform-browser';
 
+@NgModule({
+  providers: [provideExperimentalZonelessChangeDetection()]
+})
+export class ZonelessTestModule {
+}
+
 getTestBed().initTestEnvironment(
-  BrowserDynamicTestingModule,
+  [
+    BrowserDynamicTestingModule,
+    ZonelessTestModule
+  ],
   platformBrowserDynamicTesting(),
   {
     errorOnUnknownElements: true,

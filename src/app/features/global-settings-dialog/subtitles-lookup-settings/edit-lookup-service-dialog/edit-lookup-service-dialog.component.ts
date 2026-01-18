@@ -1,4 +1,4 @@
-import {Component, computed, inject, OnInit} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, inject, OnInit} from '@angular/core';
 import {DynamicDialogConfig, DynamicDialogRef} from 'primeng/dynamicdialog';
 import {FormBuilder, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
 import {Button} from 'primeng/button';
@@ -15,7 +15,8 @@ import {FormValidationService} from '../../../../core/services/form-validation/f
   selector: 'app-edit-lookup-service-dialog',
   imports: [ReactiveFormsModule, Button, InputText, Select, FormControlErrorComponent],
   templateUrl: './edit-lookup-service-dialog.component.html',
-  styleUrl: './edit-lookup-service-dialog.component.scss'
+  styleUrl: './edit-lookup-service-dialog.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EditLookupServiceDialogComponent implements OnInit {
   protected form!: FormGroup;

@@ -1,5 +1,5 @@
 import {
-  AfterViewInit,
+  AfterViewInit, ChangeDetectionStrategy,
   Component,
   effect,
   ElementRef,
@@ -31,7 +31,8 @@ const ZOOM_FACTOR = 1.2;
     SpinnerComponent
   ],
   templateUrl: './timeline-editor.component.html',
-  styleUrl: './timeline-editor.component.scss'
+  styleUrl: './timeline-editor.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit {
   public readonly contextMenuRequested = output<{ event: MouseEvent, clipId: string }>();

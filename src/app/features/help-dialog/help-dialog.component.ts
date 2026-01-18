@@ -1,4 +1,4 @@
-import {Component, inject, OnInit, signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject, OnInit, signal} from '@angular/core';
 import {TableModule} from 'primeng/table';
 import {Tag} from 'primeng/tag';
 import {Button} from 'primeng/button';
@@ -35,6 +35,7 @@ import {ScrollPanel} from 'primeng/scrollpanel';
   ],
   templateUrl: './help-dialog.component.html',
   styleUrl: './help-dialog.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class HelpDialogComponent implements OnInit {
   protected readonly selectedTabIndex = signal(HelpDialogTab.About);

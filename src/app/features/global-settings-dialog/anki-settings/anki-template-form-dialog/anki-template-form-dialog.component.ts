@@ -1,4 +1,4 @@
-import {Component, inject, OnInit} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject, OnInit, signal} from '@angular/core';
 import {FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
 import {AnkiCardTemplate, AnkiFieldMapping, AnkiFieldMappingSource} from '../../../../model/anki.types';
 import {AnkiStateService} from '../../../../state/anki/anki-state.service';
@@ -29,7 +29,8 @@ import {FormValidationService} from '../../../../core/services/form-validation/f
     FormControlErrorComponent
   ],
   templateUrl: './anki-template-form-dialog.component.html',
-  styleUrl: './anki-template-form-dialog.component.scss'
+  styleUrl: './anki-template-form-dialog.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AnkiTemplateFormDialogComponent implements OnInit {
   protected readonly form: FormGroup;
@@ -39,7 +40,7 @@ export class AnkiTemplateFormDialogComponent implements OnInit {
   private readonly dialogConfig = inject(DynamicDialogConfig);
   private readonly fb = inject(FormBuilder);
   private readonly formValidationService = inject(FormValidationService);
-  private allAnkiFieldsForNoteType: string[] = [];
+  private readonly allAnkiFieldsForNoteType = signal<string[]>([]);
 
   constructor() {
     this.form = this.initForm();
@@ -51,7 +52,7 @@ export class AnkiTemplateFormDialogComponent implements OnInit {
 
     if (template?.ankiNoteType) {
       this.ankiStateService.fetchNoteTypeFields(template.ankiNoteType).then(fields => {
-        this.allAnkiFieldsForNoteType = fields;
+        this.allAnkiFieldsForNoteType.set(fields);
       });
     }
 
@@ -59,15 +60,16 @@ export class AnkiTemplateFormDialogComponent implements OnInit {
       const mappingsGroup = this.form.get('fieldMappings') as FormGroup;
       mappingsGroup.reset(); // Clear old mappings when note type changes
       if (noteType) {
-        this.allAnkiFieldsForNoteType = await this.ankiStateService.fetchNoteTypeFields(noteType);
+        const fields = await this.ankiStateService.fetchNoteTypeFields(noteType);
+        this.allAnkiFieldsForNoteType.set(fields);
       } else {
-        this.allAnkiFieldsForNoteType = [];
+        this.allAnkiFieldsForNoteType.set([]);
       }
     });
   }
 
   protected getAvailableAnkiFields(currentSourceKey: AnkiFieldMappingSource): string[] {
-    const allFields = this.allAnkiFieldsForNoteType;
+    const allFields = this.allAnkiFieldsForNoteType();
     const mappingsGroup = this.form.get('fieldMappings') as FormGroup;
 
     // Get a list of all values selected in OTHER dropdowns.

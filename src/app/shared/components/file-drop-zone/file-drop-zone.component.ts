@@ -1,39 +1,40 @@
-import {Component, computed, input, output, signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, input, output, signal} from '@angular/core';
 
 @Component({
   selector: 'app-file-drop-zone',
   imports: [],
   templateUrl: './file-drop-zone.component.html',
-  styleUrl: './file-drop-zone.component.scss'
+  styleUrl: './file-drop-zone.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class FileDropZoneComponent {
-  label = input.required<string>();
-  icon = input.required<string>();
-  accept = input.required<string[]>();
-  existingFileName = input<string | null>(null);
-  filePathChange = output<string | null>();
-  protected displayLabel = computed(() => this.newFileName() ?? this.existingFileName() ?? this.label());
-  protected isFileSelected = computed(() => !!(this.newFileName() || this.existingFileName()));
-  protected isDragging = false;
-  protected newFileName = signal<string | null>(null);
+  public readonly label = input.required<string>();
+  public readonly icon = input.required<string>();
+  public readonly accept = input.required<string[]>();
+  public readonly existingFileName = input<string | null>(null);
+  public readonly filePathChange = output<string | null>();
+  protected readonly displayLabel = computed(() => this.newFileName() ?? this.existingFileName() ?? this.label());
+  protected readonly isFileSelected = computed(() => !!(this.newFileName() || this.existingFileName()));
+  protected readonly isDragging = signal(false);
+  protected readonly newFileName = signal<string | null>(null);
   private isFileDialogOpen = false;
 
   protected onDragOver(event: DragEvent): void {
     event.preventDefault();
     event.stopPropagation();
-    this.isDragging = true;
+    this.isDragging.set(true);
   }
 
   protected onDragLeave(event: DragEvent): void {
     event.preventDefault();
     event.stopPropagation();
-    this.isDragging = false;
+    this.isDragging.set(false);
   }
 
   protected onDrop(event: DragEvent): void {
     event.preventDefault();
     event.stopPropagation();
-    this.isDragging = false;
+    this.isDragging.set(false);
     const file = event.dataTransfer?.files[0];
 
     if (file) {

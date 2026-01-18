@@ -1,4 +1,4 @@
-import {Component, inject, OnInit} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject, OnInit} from '@angular/core';
 import {FormBuilder, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
 import {Button} from 'primeng/button';
 import {DynamicDialogConfig, DynamicDialogRef} from 'primeng/dynamicdialog';
@@ -19,7 +19,8 @@ import {CustomValidators} from '../../../shared/validators/validators';
     FormControlErrorComponent
   ],
   templateUrl: './note-form-dialog.component.html',
-  styleUrl: './note-form-dialog.component.scss'
+  styleUrl: './note-form-dialog.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class NoteFormDialogComponent implements OnInit {
   protected form!: FormGroup;

@@ -1,4 +1,4 @@
-import {Component, inject} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
 import {AppStateService} from '../../state/app/app-state.service';
 import {Router, RouterLink} from '@angular/router';
 import {MinimalProject, Project} from '../../model/project.types';
@@ -18,7 +18,8 @@ import {LogoComponent} from '../../shared/components/logo/logo.component';
     LogoComponent
   ],
   templateUrl: './list-of-projects.component.html',
-  styleUrl: './list-of-projects.component.scss'
+  styleUrl: './list-of-projects.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ListOfProjectsComponent {
   protected readonly appStateService = inject(AppStateService);

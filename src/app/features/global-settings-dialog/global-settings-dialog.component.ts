@@ -1,4 +1,4 @@
-import {Component, effect, inject, signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, effect, inject, signal} from '@angular/core';
 import {GlobalSettingsStateService} from '../../state/global-settings/global-settings-state.service';
 import {ProjectSettings} from '../../model/settings.types';
 import {Tab, TabList, TabPanel, TabPanels, Tabs} from 'primeng/tabs';
@@ -32,7 +32,8 @@ import {
     OfflineDictionariesSettingsComponent
   ],
   templateUrl: './global-settings-dialog.component.html',
-  styleUrl: './global-settings-dialog.component.scss'
+  styleUrl: './global-settings-dialog.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class GlobalSettingsDialogComponent {
   protected readonly globalSettingsStateService = inject(GlobalSettingsStateService);

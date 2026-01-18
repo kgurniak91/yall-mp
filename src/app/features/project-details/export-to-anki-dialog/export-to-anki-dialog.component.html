@@ -5,7 +5,7 @@
 <div class="p-dialog-header p-4">
   <span class="p-dialog-title">Export to Anki</span>
   <div class="p-dialog-header-actions">
-    @if (isAlreadyExported) {
+    @if (isAlreadyExported()) {
       <p-tag severity="success" value="Exported"/>
     } @else {
       <p-tag severity="info" value="Not exported yet"/>
@@ -15,11 +15,11 @@
 
 <div class="flex-1 overflow-y-auto p-4 pt-0">
   <div class="flex flex-column gap-4">
-    @if (assSubtitleData && assSubtitleData.parts && assSubtitleData.parts.length > 1) {
+    @if (assSubtitleData() && assSubtitleData()!.parts && assSubtitleData()!.parts!.length > 1) {
       <div class="flex flex-column gap-2">
         <label>Select subtitle parts to include:</label>
         <div class="flex flex-column gap-2">
-          @for (part of assSubtitleData.parts; track $index) {
+          @for (part of assSubtitleData()!.parts; track $index) {
             @let checkboxId = ('part-' + $index);
             <div class="flex align-items-center">
               <p-checkbox [(ngModel)]="selectedSubtitleParts"

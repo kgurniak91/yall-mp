@@ -1,4 +1,4 @@
-import {Component, inject, signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject, signal} from '@angular/core';
 import {Fieldset} from 'primeng/fieldset';
 import {RadioButton} from 'primeng/radiobutton';
 import {FormsModule} from '@angular/forms';
@@ -31,7 +31,8 @@ import {ToastService} from '../../../shared/services/toast/toast.service';
     Menu
   ],
   templateUrl: './subtitles-lookup-settings.component.html',
-  styleUrl: './subtitles-lookup-settings.component.scss'
+  styleUrl: './subtitles-lookup-settings.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SubtitlesLookupSettingsComponent {
   protected readonly globalSettingsStateService = inject(GlobalSettingsStateService);

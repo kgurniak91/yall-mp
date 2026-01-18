@@ -1,4 +1,13 @@
-import {Component, computed, ElementRef, inject, OnDestroy, OnInit, signal} from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  OnDestroy,
+  OnInit,
+  signal
+} from '@angular/core';
 import {
   AnkiCardTemplate,
   AnkiConnectStatus,
@@ -69,7 +78,8 @@ interface SelectionGroupView {
     I18nPluralPipe
   ],
   templateUrl: './export-to-anki-dialog.component.html',
-  styleUrl: './export-to-anki-dialog.component.scss'
+  styleUrl: './export-to-anki-dialog.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
   protected readonly data: ExportToAnkiDialogData;
@@ -131,8 +141,8 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
 
     return finalParts.join('');
   });
-  protected assSubtitleData: AssSubtitleData | null = null;
-  protected isAlreadyExported!: boolean;
+  protected assSubtitleData = signal<AssSubtitleData | null>(null);
+  protected isAlreadyExported = signal(false);
   protected readonly exportTags = signal<string[]>([]);
   protected readonly ankiService = inject(AnkiStateService);
   protected readonly suspendCard = signal<boolean>(false);
@@ -152,7 +162,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     const history = this.data.project.ankiExportHistory || [];
-    this.isAlreadyExported = history.includes(this.data.subtitleData.id);
+    this.isAlreadyExported.set(history.includes(this.data.subtitleData.id));
 
     if (this.data.subtitleData.type === 'ass') {
       const assData = this.data.subtitleData as AssSubtitleData & { parts: DialogSubtitlePart[] };
@@ -168,13 +178,13 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
       });
 
       // Create a new AssSubtitleData object with the sorted parts
-      this.assSubtitleData = {
+      this.assSubtitleData.set({
         ...assData,
         parts: sortedParts
-      };
+      });
 
       // Pre-select all parts (from the now sorted list) by default
-      this.selectedSubtitleParts.set([...this.assSubtitleData.parts]);
+      this.selectedSubtitleParts.set([...sortedParts]);
     }
 
     const project = this.data.project;

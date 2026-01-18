@@ -1,4 +1,4 @@
-import {Component, computed, inject, input, output} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, inject, input, output} from '@angular/core';
 import {BuiltInSettingsPreset, ProjectSettings, SettingsPreset} from '../../../model/settings.types';
 import {Fieldset} from 'primeng/fieldset';
 import {Select} from 'primeng/select';
@@ -38,7 +38,8 @@ import {MediaTrack} from '../../../../../shared/types/media.type';
     RouterLink
   ],
   templateUrl: './current-project-settings.component.html',
-  styleUrl: './current-project-settings.component.scss'
+  styleUrl: './current-project-settings.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CurrentProjectSettingsComponent {
   public readonly settings = input.required<ProjectSettings>();

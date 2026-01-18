@@ -1,4 +1,4 @@
-import {Component, input} from '@angular/core';
+import {ChangeDetectionStrategy, Component, input} from '@angular/core';
 
 @Component({
   selector: 'app-logo',
@@ -11,7 +11,8 @@ import {Component, input} from '@angular/core';
     '[style.background-color]': 'color()',
     '[style.webkitMaskImage]': '"url(yall-mp-logo.svg)"',
     '[style.maskImage]': '"url(yall-mp-logo.svg)"'
-  }
+  },
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LogoComponent {
   size = input.required<string>();

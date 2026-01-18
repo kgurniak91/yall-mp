@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   computed,
   DestroyRef,
@@ -6,7 +7,6 @@ import {
   ElementRef,
   inject,
   input,
-  NgZone,
   OnDestroy,
   output,
   signal,
@@ -35,7 +35,8 @@ const FALLBACK_VIDEO_ASPECT_RATIO = 16 / 9;
     YomitanPopupComponent
   ],
   templateUrl: './subtitles-overlay.component.html',
-  styleUrl: './subtitles-overlay.component.scss'
+  styleUrl: './subtitles-overlay.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SubtitlesOverlayComponent implements OnDestroy {
   public readonly currentClip = input<VideoClip | undefined>();
@@ -105,7 +106,6 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   private readonly tokenizationService = inject(TokenizationService);
   private readonly yomitanService = inject(YomitanService);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly ngZone = inject(NgZone);
   private readonly isInitialized = signal(false);
   private readonly isScaleApplied = signal(false);
   private assInstance: ASS | null = null;
@@ -360,16 +360,13 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       const handleKeyChange = (event: KeyboardEvent) => this.handleKeyChange(event);
       const handleGlobalMouseDown = (event: MouseEvent) => this.handleGlobalMouseDown(event, container);
 
-      // Listeners run outside Angular zone to prevent change detection cycles on every mouse movement
-      this.ngZone.runOutsideAngular(() => {
-        container.addEventListener('mousedown', handleMouseDown);
-        document.addEventListener('mousedown', handleGlobalMouseDown);
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-        document.addEventListener('contextmenu', handleContextMenu);
-        document.addEventListener('keydown', handleKeyChange);
-        document.addEventListener('keyup', handleKeyChange);
-      });
+      container.addEventListener('mousedown', handleMouseDown);
+      document.addEventListener('mousedown', handleGlobalMouseDown);
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('contextmenu', handleContextMenu);
+      document.addEventListener('keydown', handleKeyChange);
+      document.addEventListener('keyup', handleKeyChange);
 
       this.mutationObserver?.disconnect();
       this.mutationObserver = new MutationObserver(() => {
@@ -1033,10 +1030,8 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       const wordInfo = this.getWordInfoFromEvent(event);
       if (wordInfo) {
         if (wordInfo.node !== this.selectionFocus?.node || wordInfo.start !== this.selectionFocus?.start) {
-          this.ngZone.run(() => {
-            this.selectionFocus = wordInfo;
-            this.updateSelectionHighlight();
-          });
+          this.selectionFocus = wordInfo;
+          this.updateSelectionHighlight();
         }
       }
     } else {
@@ -1058,19 +1053,17 @@ export class SubtitlesOverlayComponent implements OnDestroy {
 
       this.lastLogicalHit = hitInfo ? {...hitInfo, ctrlKey: isCtrl} : null;
 
-      this.ngZone.run(() => {
-        if (hitInfo) {
-          this.hoverSubject.next({
-            event,
-            textNode: hitInfo.node,
-            offset: hitInfo.offset,
-            isImmediate
-          });
-        } else {
-          // Emit null to allow debouncer to cancel pending "real" lookups if user moved to empty space
-          this.hoverSubject.next(null);
-        }
-      });
+      if (hitInfo) {
+        this.hoverSubject.next({
+          event,
+          textNode: hitInfo.node,
+          offset: hitInfo.offset,
+          isImmediate
+        });
+      } else {
+        // Emit null to allow debouncer to cancel pending "real" lookups if user moved to empty space
+        this.hoverSubject.next(null);
+      }
     }
   }
 

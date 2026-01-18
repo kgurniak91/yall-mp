@@ -1,4 +1,14 @@
-import {Component, computed, effect, inject, OnDestroy, output, viewChild, ViewEncapsulation} from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  OnDestroy,
+  output,
+  viewChild,
+  ViewEncapsulation
+} from '@angular/core';
 import {VideoStateService} from '../../../state/video/video-state.service';
 import {SeekType} from '../../../model/video.types';
 import {ClipsStateService} from '../../../state/clips/clips-state.service';
@@ -11,7 +21,8 @@ import {VideoPlayerComponent} from '../video-player/video-player.component';
   ],
   templateUrl: './video-controller.component.html',
   styleUrl: './video-controller.component.scss',
-  encapsulation: ViewEncapsulation.None
+  encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class VideoControllerComponent implements OnDestroy {
   public readonly ready = output<void>();

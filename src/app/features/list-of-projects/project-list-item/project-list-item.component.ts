@@ -1,4 +1,4 @@
-import {Component, computed, input, output} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, input, output} from '@angular/core';
 import {MinimalProject} from '../../../model/project.types';
 import {Button} from 'primeng/button';
 import {Tooltip} from 'primeng/tooltip';
@@ -15,7 +15,8 @@ import {ProgressBar} from 'primeng/progressbar';
     DecimalPipe
   ],
   templateUrl: './project-list-item.component.html',
-  styleUrl: './project-list-item.component.scss'
+  styleUrl: './project-list-item.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProjectListItemComponent {
   project = input.required<MinimalProject>();

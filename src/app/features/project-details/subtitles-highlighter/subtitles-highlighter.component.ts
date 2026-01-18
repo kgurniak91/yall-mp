@@ -1,4 +1,4 @@
-import {Component, inject} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
 import {SubtitlesHighlighterService} from '../services/subtitles-highlighter/subtitles-highlighter.service';
 import {AsyncPipe} from '@angular/common';
 
@@ -8,7 +8,8 @@ import {AsyncPipe} from '@angular/common';
     AsyncPipe
   ],
   templateUrl: './subtitles-highlighter.component.html',
-  styleUrl: './subtitles-highlighter.component.scss'
+  styleUrl: './subtitles-highlighter.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SubtitlesHighlighterComponent {
   protected readonly rects$ = inject(SubtitlesHighlighterService).highlightRects$;

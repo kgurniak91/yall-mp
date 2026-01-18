@@ -1,4 +1,4 @@
-import {Component, input, output} from '@angular/core';
+import {ChangeDetectionStrategy, Component, input, output} from '@angular/core';
 import {ProjectSettings, SubtitleBehavior} from '../../../model/settings.types';
 import {Fieldset} from 'primeng/fieldset';
 import {SelectButton} from 'primeng/selectbutton';
@@ -16,7 +16,8 @@ import {FormsModule} from '@angular/forms';
     FormsModule
   ],
   templateUrl: './common-project-settings.component.html',
-  styleUrl: './common-project-settings.component.scss'
+  styleUrl: './common-project-settings.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CommonProjectSettingsComponent {
   public readonly settings = input.required<ProjectSettings>();

@@ -1,4 +1,4 @@
-import {Component, forwardRef, inject} from '@angular/core';
+import {ChangeDetectionStrategy, Component, forwardRef, inject, signal} from '@angular/core';
 import {ControlValueAccessor, FormsModule, NG_VALUE_ACCESSOR} from '@angular/forms';
 import {Button} from 'primeng/button';
 import {InputText} from 'primeng/inputtext';
@@ -22,12 +22,13 @@ import {Chip} from 'primeng/chip';
       useExisting: forwardRef(() => TagsInputComponent),
       multi: true
     }
-  ]
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TagsInputComponent implements ControlValueAccessor {
-  protected tags: string[] = [];
-  protected newTag = '';
-  protected disabled = false;
+  protected readonly tags = signal<string[]>([]);
+  protected readonly newTag = signal<string>('');
+  protected readonly disabled = signal<boolean>(false);
   private readonly toastService = inject(ToastService);
 
   private onChange: (value: string[]) => void = () => {
@@ -40,7 +41,7 @@ export class TagsInputComponent implements ControlValueAccessor {
   private readonly ankiTagRegex = /^[a-zA-Z0-9\-_]+(::[a-zA-Z0-9\-_]+)*$/;
 
   writeValue(value: string[]): void {
-    this.tags = Array.isArray(value) ? [...value] : [];
+    this.tags.set(Array.isArray(value) ? [...value] : []);
   }
 
   registerOnChange(fn: any): void {
@@ -52,12 +53,12 @@ export class TagsInputComponent implements ControlValueAccessor {
   }
 
   setDisabledState(isDisabled: boolean): void {
-    this.disabled = isDisabled;
+    this.disabled.set(isDisabled);
   }
 
   protected addTag(): void {
     // Sanitize the input: trim whitespace and auto-replace spaces with hyphens
-    const tag = this.newTag.trim().replace(/\s+/g, '-');
+    const tag = this.newTag().trim().replace(/\s+/g, '-');
     if (!tag) {
       return;
     }
@@ -69,21 +70,21 @@ export class TagsInputComponent implements ControlValueAccessor {
     }
 
     // Prevent duplicates
-    if (this.tags.includes(tag)) {
+    if (this.tags().includes(tag)) {
       this.toastService.info('This tag has already been added.');
-      this.newTag = '';
+      this.newTag.set('');
       return;
     }
 
-    this.tags.push(tag);
-    this.onChange(this.tags);
+    this.tags.update(current => [...current, tag]);
+    this.onChange(this.tags());
     this.onTouched();
-    this.newTag = '';
+    this.newTag.set('');
   }
 
   protected removeTag(tagToRemove: string): void {
-    this.tags = this.tags.filter(tag => tag !== tagToRemove);
-    this.onChange(this.tags);
+    this.tags.update(current => current.filter(tag => tag !== tagToRemove));
+    this.onChange(this.tags());
     this.onTouched();
   }
 }

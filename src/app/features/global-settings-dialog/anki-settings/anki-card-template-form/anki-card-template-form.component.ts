@@ -1,4 +1,4 @@
-import {Component, input, output} from '@angular/core';
+import {ChangeDetectionStrategy, Component, input, output} from '@angular/core';
 import {AnkiCardTemplate, AnkiFieldMapping, AnkiFieldMappingSource} from '../../../../model/anki.types';
 import {Button} from 'primeng/button';
 import {FormsModule} from '@angular/forms';
@@ -20,7 +20,8 @@ const APP_DATA_SOURCES: AnkiFieldMappingSource[] = [
     Fieldset
   ],
   templateUrl: './anki-card-template-form.component.html',
-  styleUrl: './anki-card-template-form.component.scss'
+  styleUrl: './anki-card-template-form.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AnkiCardTemplateFormComponent {
   template = input.required<AnkiCardTemplate>();

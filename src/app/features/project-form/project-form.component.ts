@@ -1,4 +1,4 @@
-import {Component, computed, effect, inject, OnInit, signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, effect, inject, OnInit, signal} from '@angular/core';
 import {ActivatedRoute, Router} from '@angular/router';
 import {AppStateService} from '../../state/app/app-state.service';
 import {Project, SubtitleSelection} from '../../model/project.types';
@@ -42,7 +42,8 @@ This action cannot be undone.
     SpinnerComponent
   ],
   templateUrl: './project-form.component.html',
-  styleUrl: './project-form.component.scss'
+  styleUrl: './project-form.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProjectFormComponent implements OnInit {
   protected readonly isLoading = signal(true);

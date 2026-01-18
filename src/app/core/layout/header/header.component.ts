@@ -1,5 +1,5 @@
 import {
-  AfterViewInit,
+  AfterViewInit, ChangeDetectionStrategy,
   Component,
   computed,
   ElementRef,
@@ -32,7 +32,8 @@ import {LogoComponent} from '../../../shared/components/logo/logo.component';
     LogoComponent
   ],
   templateUrl: './header.component.html',
-  styleUrl: './header.component.scss'
+  styleUrl: './header.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
   protected readonly isProjectDetailsView = signal(false);

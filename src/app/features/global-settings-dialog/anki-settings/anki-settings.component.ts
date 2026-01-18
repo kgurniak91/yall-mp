@@ -1,4 +1,4 @@
-import {Component, inject} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
 import {Button} from 'primeng/button';
 import {Fieldset} from 'primeng/fieldset';
 import {AnkiStateService} from '../../../state/anki/anki-state.service';
@@ -31,7 +31,8 @@ import {
     Checkbox
   ],
   templateUrl: './anki-settings.component.html',
-  styleUrl: './anki-settings.component.scss'
+  styleUrl: './anki-settings.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AnkiSettingsComponent {
   protected readonly AnkiConnectStatus = AnkiConnectStatus;

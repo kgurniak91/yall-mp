@@ -1,5 +1,5 @@
 import {
-  AfterViewInit,
+  AfterViewInit, ChangeDetectionStrategy,
   Component,
   effect,
   ElementRef,
@@ -18,7 +18,8 @@ import {SpinnerComponent} from '../../../shared/components/spinner/spinner.compo
     SpinnerComponent
   ],
   templateUrl: './video-player.component.html',
-  styleUrl: './video-player.component.scss'
+  styleUrl: './video-player.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
   public readonly ready = output<void>();

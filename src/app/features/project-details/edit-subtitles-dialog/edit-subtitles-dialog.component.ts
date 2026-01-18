@@ -1,4 +1,4 @@
-import {Component, inject, OnInit} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject, OnInit} from '@angular/core';
 import {Button} from 'primeng/button';
 import {FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
 import {Textarea} from 'primeng/textarea';
@@ -35,7 +35,8 @@ interface EditedPartFormValue {
     FormControlErrorComponent
   ],
   templateUrl: './edit-subtitles-dialog.component.html',
-  styleUrl: './edit-subtitles-dialog.component.scss'
+  styleUrl: './edit-subtitles-dialog.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EditSubtitlesDialogComponent implements OnInit {
   protected readonly config = inject(DynamicDialogConfig);

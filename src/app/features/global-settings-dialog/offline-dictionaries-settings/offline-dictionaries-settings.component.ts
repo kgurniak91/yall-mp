@@ -1,4 +1,14 @@
-import {Component, computed, ElementRef, inject, NO_ERRORS_SCHEMA, OnInit, signal, viewChild} from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  NO_ERRORS_SCHEMA,
+  OnInit,
+  signal,
+  viewChild
+} from '@angular/core';
 import {SpinnerComponent} from '../../../shared/components/spinner/spinner.component';
 import {YomitanService} from '../../../core/services/yomitan/yomitan.service';
 import {Select} from 'primeng/select';
@@ -17,7 +27,8 @@ import {AppStateService} from '../../../state/app/app-state.service';
     NO_ERRORS_SCHEMA // Needed for <webview> from Electron
   ],
   templateUrl: './offline-dictionaries-settings.component.html',
-  styleUrl: './offline-dictionaries-settings.component.scss'
+  styleUrl: './offline-dictionaries-settings.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class OfflineDictionariesSettingsComponent implements OnInit {
   protected readonly settingsUrl = signal<string | null>(null);

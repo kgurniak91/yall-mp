@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   ElementRef,
   inject,
@@ -18,7 +19,8 @@ import {YomitanService} from '../../../core/services/yomitan/yomitan.service';
     NO_ERRORS_SCHEMA // Needed for <webview> from Electron
   ],
   templateUrl: './yomitan-popup.component.html',
-  styleUrls: ['./yomitan-popup.component.scss']
+  styleUrls: ['./yomitan-popup.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class YomitanPopupComponent implements OnInit, OnDestroy {
   public readonly searchText = input.required<string>();

@@ -1,4 +1,4 @@
-import {Component, inject, OnInit} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject, OnInit} from '@angular/core';
 import {RouterOutlet} from '@angular/router';
 import {Toast} from 'primeng/toast';
 import {ConfirmDialog} from 'primeng/confirmdialog';
@@ -19,7 +19,8 @@ import {YomitanService} from './core/services/yomitan/yomitan.service';
     HeaderComponent
   ],
   templateUrl: './app.component.html',
-  styleUrl: './app.component.scss'
+  styleUrl: './app.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AppComponent implements OnInit {
   private readonly fileOpenIntentService = inject(FileOpenIntentService);

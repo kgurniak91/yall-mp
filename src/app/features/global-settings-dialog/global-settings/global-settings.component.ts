@@ -1,4 +1,4 @@
-import {Component, inject} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
 import {Fieldset} from 'primeng/fieldset';
 import {InputNumber} from 'primeng/inputnumber';
 import {Slider} from 'primeng/slider';
@@ -19,7 +19,8 @@ import {InputSwitch} from 'primeng/inputswitch';
     InputSwitch
   ],
   templateUrl: './global-settings.component.html',
-  styleUrl: './global-settings.component.scss'
+  styleUrl: './global-settings.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class GlobalSettingsComponent {
   protected readonly globalSettingsStateService = inject(GlobalSettingsStateService);

@@ -1,4 +1,4 @@
-import {Component, inject, OnInit} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject, OnInit} from '@angular/core';
 import {AppStateService} from '../../../state/app/app-state.service';
 import {Router} from '@angular/router';
 import {FileOpenIntentService} from '../../services/file-open-intent/file-open-intent.service';
@@ -7,7 +7,8 @@ import {ToastService} from '../../../shared/services/toast/toast.service';
 @Component({
   selector: 'app-home-redirect',
   imports: [],
-  template: '<!-- for redirects only -->'
+  template: '<!-- for redirects only -->',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class HomeRedirectComponent implements OnInit {
   private readonly appStateService = inject(AppStateService);

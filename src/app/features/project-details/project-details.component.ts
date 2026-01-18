@@ -1,4 +1,15 @@
-import {Component, computed, effect, inject, OnDestroy, OnInit, signal, untracked, viewChild} from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  OnDestroy,
+  OnInit,
+  signal,
+  untracked,
+  viewChild
+} from '@angular/core';
 import {VideoControllerComponent} from './video-controller/video-controller.component';
 import {VideoStateService} from '../../state/video/video-state.service';
 import {TimelineEditorComponent} from './timeline-editor/timeline-editor.component';
@@ -97,7 +108,8 @@ import {NoteFormDialogComponent} from './note-form-dialog/note-form-dialog.compo
     FontInjectionService,
     AssEditService,
     TokenizationService
-  ]
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProjectDetailsComponent implements OnInit, OnDestroy {
   protected readonly isYomitanEnabled = signal(false);

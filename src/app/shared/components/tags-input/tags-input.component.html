@@ -6,16 +6,16 @@
            [(ngModel)]="newTag"
            placeholder="Type a tag and press Enter..."
            (keydown.enter)="addTag(); $event.preventDefault()"
-           [disabled]="disabled"
+           [disabled]="disabled()"
            maxlength="100"/>
     <p-button icon="fa-solid fa-plus"
               (onClick)="addTag()"
-              [disabled]="disabled || !newTag.trim()">
+              [disabled]="disabled() || !newTag().trim()">
     </p-button>
   </div>
 
   <div class="flex flex-wrap gap-2">
-    @for (tag of tags; track tag) {
+    @for (tag of tags(); track tag) {
       <p-chip [label]="tag"
               [removable]="true"
               (onRemove)="removeTag(tag)"/>
