@@ -39,10 +39,15 @@ export class GlobalKeyboardShortcutsService implements OnDestroy {
     }
 
     const target = event.target as HTMLElement;
-    const isTyping = (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA');
+    const isTyping = (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
 
     // Handle events when a dialog is open
     if (this.isAnyDialogOpen()) {
+      // Exception - allow typing events to propagate so Angular bindings (like (keydown.enter)) on the input itself can fire
+      if (isTyping && event.key !== 'Escape') {
+        return;
+      }
+
       // Stop the event from propagating to other listeners (like the project-specific shortcuts)
       event.stopPropagation();
 
