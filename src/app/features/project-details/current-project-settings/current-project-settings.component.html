@@ -40,7 +40,7 @@
                 </li>
               </ul>
               <p class="m-0 p-0">
-                To move to the next clip, press <b>Spacebar</b> (unpause) or <b>↓</b> again (force continue).
+                To continue, press <b>Spacebar</b> (unpause) or <b>↓</b> again (force continue).
               </p>
             } @else if (preset.id === BuiltInSettingsPreset.SPEAKING) {
               <p class="mt-0 mb-2">
@@ -58,7 +58,25 @@
                 </li>
               </ul>
               <p class="m-0 p-0">
-                To move to the next clip, press <b>Spacebar</b> (unpause) or <b>↓</b> (force continue).
+                To continue, press <b>Spacebar</b> (unpause) or <b>↓</b> (force continue).
+              </p>
+            } @else if (preset.id === BuiltInSettingsPreset.SHADOWING) {
+              <p class="mt-0 mb-2">
+                Clips play automatically with subtitles visible.
+              </p>
+              <p class="mt-0 mb-2">
+                <strong>Goal:</strong> Shadow the audio (speak along with it).
+              </p>
+              <ul class="pl-3 m-0 mb-2">
+                <li>
+                  Audio plays immediately upon entering the clip.
+                </li>
+                <li>
+                  The clip automatically pauses at the end so you can repeat it with <b>↑</b>.
+                </li>
+              </ul>
+              <p class="m-0 p-0">
+                To continue, press <b>Spacebar</b> (unpause) or <b>↓</b> (force continue).
               </p>
             }
           </div>

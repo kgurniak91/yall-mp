@@ -112,7 +112,8 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
 
 export enum BuiltInSettingsPreset {
   LISTENING = 'LISTENING',
-  SPEAKING = 'SPEAKING'
+  SPEAKING = 'SPEAKING',
+  SHADOWING = 'SHADOWING'
 }
 
 export interface SettingsPreset {
@@ -141,9 +142,20 @@ export const SpeakingPracticeSettingsPreset: SettingsPreset = {
   }
 };
 
+export const ShadowingSettingsPreset: SettingsPreset = {
+  id: BuiltInSettingsPreset.SHADOWING,
+  name: 'Shadowing',
+  settings: {
+    autoPauseAtStart: false,
+    autoPauseAtEnd: true,
+    subtitleBehavior: SubtitleBehavior.ForceShow
+  }
+};
+
 export const BuiltInSettingsPresets: SettingsPreset[] = [
   ListeningPracticeSettingsPreset,
-  SpeakingPracticeSettingsPreset
+  SpeakingPracticeSettingsPreset,
+  ShadowingSettingsPreset
 ];
 
 export interface SubtitleLookupService {
