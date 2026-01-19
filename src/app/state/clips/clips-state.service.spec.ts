@@ -1435,7 +1435,7 @@ ${initialLine}
       spyOn(commandHistoryService, 'execute');
 
       // ACT
-      service.splitCurrentSubtitledClip();
+      service.splitClip();
       tick();
 
       // ASSERT
@@ -2421,6 +2421,33 @@ Dialogue: 0:01:01.00,0:01:02.00,Default,Animating Text
       // Verify the merged clip covers the full range
       expect(mergedClips[0].startTime).toBe(0);
       expect(mergedClips[0].endTime).toBe(10);
+    });
+  });
+
+  describe('Split clip under mouse cursor (Ctrl+Click)', () => {
+    it('shifts the active clip index when splitting a clip that precedes the current playhead position', () => {
+      // ARRANGE: Clip A (0-10), Clip B (10-20)
+      const initialSubs: SrtSubtitleData[] = [
+        {type: 'srt', id: 'clip-a', startTime: 0, endTime: 10, text: 'A', track: 0},
+        {type: 'srt', id: 'clip-b', startTime: 10, endTime: 20, text: 'B', track: 0}
+      ];
+      service.setSubtitles(initialSubs);
+
+      // Simulate user at Clip B (Time: 15s, Index: 1)
+      currentTimeSignal.set(15);
+      service.setCurrentClipByIndex(1);
+
+      // Sanity check
+      expect(service.masterClipIndex()).withContext('Should be at index 1 (Clip B) initially').toBe(1);
+
+      // ACT: Split Clip A (which is at index 0, before current time) at 5s
+      service.splitSubtitledClip('subtitle-0', 5);
+
+      // ASSERT:
+      // The timeline is now: Clip A1 [0], Clip A2 [1], Clip B [2].
+      // The service should have automatically incremented the master index to keep Clip B active.
+      expect(service.masterClipIndex()).withContext('Should shift to index 2 to stay on Clip B').toBe(2);
+      expect(service.currentClip()?.id).withContext('Active clip should still be Clip B').toBe('subtitle-10');
     });
   });
 });

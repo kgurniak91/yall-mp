@@ -258,6 +258,16 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
     group: KeyboardShortcutGroup.Timeline
   },
   {
+    action: KeyboardAction.SplitClip,
+    key: 'Click',
+    ctrlKey: true,
+    description: 'Split subtitled clip at mouse cursor',
+    displayKeys: ['Ctrl', 'Left Click'],
+    scope: KeyboardShortcutScope.Project,
+    type: ActionType.SingleShot,
+    group: KeyboardShortcutGroup.Timeline
+  },
+  {
     action: KeyboardAction.DeleteClip,
     key: 'Delete',
     description: 'Delete current clip or remove gap',

@@ -196,24 +196,28 @@ export class ClipsStateService implements OnDestroy {
     }
   }
 
-  public splitCurrentSubtitledClip(): void {
-    const currentClip = this.currentClip();
-    if (!currentClip || !currentClip.hasSubtitle) {
+  public splitClip(clipId?: string, splitTime?: number): void {
+    const targetClip = clipId
+      ? this.clips().find(c => c.id === clipId)
+      : this.currentClip();
+
+    if (!targetClip || !targetClip.hasSubtitle) {
       return;
     }
 
-    if (currentClip.duration < MIN_REQUIRED_CLIP_DURATION_FOR_SPLIT) {
+    if (targetClip.duration < MIN_REQUIRED_CLIP_DURATION_FOR_SPLIT) {
       this.toastService.warn(`Selected clip is too short to split. Minimum required duration is ${MIN_REQUIRED_CLIP_DURATION_FOR_SPLIT.toFixed(1)}s.`);
       return;
     }
 
     const project = this.appStateService.currentProject();
-    const command = new SplitSubtitledClipCommand(this, currentClip.id, project?.rawAssContent);
+    const command = new SplitSubtitledClipCommand(this, targetClip.id, project?.rawAssContent, splitTime);
     this.commandHistoryStateService.execute(command);
   }
 
   public splitSubtitledClip(
     clipId: string,
+    requestedSplitTime?: number,
     onSplitCallback?: (
       originalSubtitles: SubtitleData[],
       createdAndModifiedIds: string[],
@@ -242,7 +246,7 @@ export class ClipsStateService implements OnDestroy {
     // Generate aggregated notes for the new right-hand clip
     const aggregatedNotes = this.getAggregatedClipNotes(sourceIds, currentProjectNotes);
 
-    let splitPoint = currentTime;
+    let splitPoint = requestedSplitTime ?? currentTime;
     if (splitPoint <= clipToSplit.startTime || splitPoint >= clipToSplit.endTime) {
       splitPoint = clipToSplit.startTime + (clipToSplit.duration / 2);
     }
@@ -1324,29 +1328,52 @@ export class ClipsStateService implements OnDestroy {
   };
 
   private synchronizeStateAfterSplit(originalClip: VideoClip, splitPoint: number, currentTime: number): void {
+    // Case 1: Split happened chronologically BEFORE the current playhead position (with Ctrl+Click).
+    // Since one clip became two, the index of the current clip (where the user is) has shifted by +1.
+    if (originalClip.endTime <= currentTime) {
+      this._masterClipIndex.update(i => i + 1);
+      return;
+    }
+
+    // Case 2: Split happened chronologically AFTER the current playhead position (with Ctrl+Click).
+    // The current clip's index remains unchanged. No action needed.
+    if (originalClip.startTime > currentTime) {
+      return;
+    }
+
+    // Case 3: Split happened WITHIN the current clip (under the playhead).
+    // Logic needs to determine which of the two new parts should become active.
     const EPSILON = 0.001; // Tolerance for floating point comparisons
     const newClipsArray = this.clipsForAllTracks();
-    let newActiveClip: VideoClip | undefined;
-
     const findLeftPart = () => newClipsArray.find(c => Math.abs(c.endTime - splitPoint) < EPSILON);
     const findRightPart = () => newClipsArray.find(c => Math.abs(c.startTime - (splitPoint + MIN_GAP_DURATION)) < EPSILON);
+    const isSplitAtPlayhead = Math.abs(currentTime - splitPoint) < 0.1;
+    let newActiveClip: VideoClip | undefined;
 
-    if (currentTime < (originalClip.startTime + MIN_SUBTITLE_DURATION - 0.01)) {
-      // Case 1: Split was clamped near the START of the original clip.
-      // User intended to split early, so keep focus on the first part and don't move the playhead.
-      newActiveClip = findLeftPart();
-    } else if (currentTime > (originalClip.endTime - MIN_SUBTITLE_DURATION)) {
-      // Case 2: Split was clamped near the END of the original clip.
-      // User intended to split late, so switch focus to the second part and don't move the playhead.
-      newActiveClip = findRightPart();
+    if (isSplitAtPlayhead) {
+      if (currentTime < (originalClip.startTime + MIN_SUBTITLE_DURATION - 0.01)) {
+        // Case 1: Split was clamped near the START of the original clip.
+        // User intended to split early, so keep focus on the first part and don't move the playhead.
+        newActiveClip = findLeftPart();
+      } else if (currentTime > (originalClip.endTime - MIN_SUBTITLE_DURATION)) {
+        // Case 2: Split was clamped near the END of the original clip.
+        // User intended to split late, so switch focus to the second part and don't move the playhead.
+        newActiveClip = findRightPart();
+      } else {
+        // Case 3: Normal split in the middle.
+        // Focus on the first part and nudge the playhead to its end for a smooth workflow.
+        newActiveClip = findLeftPart();
+        if (newActiveClip) {
+          // Move playhead 50ms before the end of the new clip to stay within its bounds (at 24fps frame is ~41ms).
+          const safeSeekTime = Math.max(newActiveClip.startTime, newActiveClip.endTime - 0.05);
+          this.videoStateService.seekAbsolute(safeSeekTime);
+        }
+      }
     } else {
-      // Case 3: Normal split in the middle.
-      // Focus on the first part and nudge the playhead to its end for a smooth workflow.
-      newActiveClip = findLeftPart();
-      if (newActiveClip) {
-        // Move playhead 50ms before the end of the new clip to stay within its bounds (at 24fps frame is ~41ms).
-        const safeSeekTime = Math.max(newActiveClip.startTime, newActiveClip.endTime - 0.05);
-        this.videoStateService.seekAbsolute(safeSeekTime);
+      if (currentTime < splitPoint) {
+        newActiveClip = findLeftPart();
+      } else {
+        newActiveClip = findRightPart();
       }
     }
 

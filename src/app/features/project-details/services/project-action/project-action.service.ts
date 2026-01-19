@@ -113,7 +113,7 @@ export class ProjectActionService {
         this.commandHistoryStateService.redo();
         break;
       case KeyboardAction.SplitClip:
-        this.clipsStateService.splitCurrentSubtitledClip();
+        this.clipsStateService.splitClip();
         break;
       case KeyboardAction.DeleteClip:
         this.clipsStateService.deleteCurrentClip();

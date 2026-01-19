@@ -1,5 +1,6 @@
 import {
-  AfterViewInit, ChangeDetectionStrategy,
+  AfterViewInit,
+  ChangeDetectionStrategy,
   Component,
   effect,
   ElementRef,
@@ -37,6 +38,7 @@ const ZOOM_FACTOR = 1.2;
 export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit {
   public readonly contextMenuRequested = output<{ event: MouseEvent, clipId: string }>();
   public readonly hideContextMenuRequested = output<void>();
+  protected readonly isCtrlPressed = signal(false);
   protected readonly timelineContainer = viewChild.required<ElementRef<HTMLDivElement>>('timeline');
   protected readonly videoStateService = inject(VideoStateService);
   private readonly globalSettingsStateService = inject(GlobalSettingsStateService);
@@ -54,6 +56,7 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
   private inactiveSubtitleBg!: string;
   private gapBg!: string;
   private mustIgnoreNextScroll = false;
+  private readonly keyHandler = (e: KeyboardEvent) => this.handleKey(e);
 
   constructor() {
     effect(() => {
@@ -69,6 +72,11 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
         this.videoStateService.clearZoomOutRequest();
       }
     });
+
+    effect(() => {
+      const isCtrl = this.isCtrlPressed();
+      this.updateRegionCursors(isCtrl);
+    });
   }
 
   ngOnInit(): void {
@@ -81,6 +89,8 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
     this.activeGlowStyle = `inset 0 0 8px 4px ${glowColor}`;
     this.inactiveSubtitleBg = computedStyles.getPropertyValue('--app-inactive-subtitle-bg').trim();
     this.gapBg = computedStyles.getPropertyValue('--app-gap-bg').trim();
+    document.addEventListener('keydown', this.keyHandler);
+    document.addEventListener('keyup', this.keyHandler);
   }
 
   ngOnDestroy(): void {
@@ -90,6 +100,8 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
     this.wsRegions?.un('region-clicked', this.handleRegionLeftClicked);
     this.wsRegions?.un('region-created', this.handleRegionCreated);
     this.wavesurfer?.destroy();
+    document.removeEventListener('keydown', this.keyHandler);
+    document.removeEventListener('keyup', this.keyHandler);
   }
 
   public setAutoScroll(enabled: boolean): void {
@@ -282,12 +294,35 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
     }
 
     e.stopPropagation();
-    this.performSeekFromMouseEvent(region, e);
+
+    if (e.ctrlKey) {
+      const clickTime = this.calculateTimeFromMouseEvent(e, region.start);
+      this.clipsStateService.splitClip(region.id, clickTime);
+    } else {
+      this.performSeekFromMouseEvent(region, e);
+    }
+
     this.hideContextMenuRequested.emit();
+  }
+
+  private calculateTimeFromMouseEvent(e: MouseEvent, fallbackTime: number): number {
+    const wrapper = this.wavesurfer?.getWrapper();
+    if (!wrapper) {
+      return fallbackTime;
+    }
+
+    const bbox = wrapper.getBoundingClientRect();
+    const progress = (e.clientX - bbox.left) / bbox.width;
+    return progress * (this.wavesurfer?.getDuration() || 0);
   }
 
   private handleRegionCreated = (region: Region) => {
     const regionEl = region.element as HTMLElement;
+
+    if (this.isCtrlPressed()) {
+      const isGap = region.id.startsWith('gap-');
+      regionEl.style.cursor = isGap ? 'no-drop' : 'col-resize';
+    }
 
     // Apply active clip glow if needed
     const activeClipId = this.clipsStateService.currentClip()?.id || null;
@@ -312,15 +347,7 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
   };
 
   private performSeekFromMouseEvent(region: Region, e: MouseEvent): void {
-    e.stopPropagation();
-    const wrapper = this.wavesurfer?.getWrapper();
-    let targetTime = region.start;
-
-    if (wrapper) {
-      const bbox = wrapper.getBoundingClientRect();
-      const progress = (e.clientX - bbox.left) / bbox.width;
-      targetTime = progress * (this.wavesurfer?.getDuration() || 0);
-    }
+    const targetTime = this.calculateTimeFromMouseEvent(e, region.start);
 
     // Update visual indicator IMMEDIATELY for responsiveness
     this.wavesurfer?.setTime(targetTime);
@@ -423,6 +450,29 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
     regionMap.forEach((region, id) => {
       if (!processedIds.has(id)) {
         region.remove();
+      }
+    });
+  }
+
+  private handleKey(e: KeyboardEvent): void {
+    if (e.key === 'Control') {
+      this.isCtrlPressed.set(e.type === 'keydown');
+    }
+  }
+
+  private updateRegionCursors(isCtrl: boolean): void {
+    if (!this.wsRegions) {
+      return;
+    }
+
+    this.wsRegions.getRegions().forEach(region => {
+      const isGap = region.id.startsWith('gap-');
+      const el = region.element;
+
+      if (isCtrl) {
+        el.style.cursor = isGap ? 'no-drop' : 'col-resize';
+      } else {
+        el.style.cursor = 'default';
       }
     });
   }

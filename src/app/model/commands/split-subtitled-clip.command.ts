@@ -12,7 +12,8 @@ export class SplitSubtitledClipCommand implements Command {
   constructor(
     private clipsStateService: ClipsStateService,
     private clipIdToSplit: string,
-    rawAssContent?: string
+    rawAssContent?: string,
+    private splitTime?: number
   ) {
     this.originalRawAssContent = rawAssContent;
   }
@@ -20,6 +21,7 @@ export class SplitSubtitledClipCommand implements Command {
   execute(): void {
     this.clipsStateService.splitSubtitledClip(
       this.clipIdToSplit,
+      this.splitTime,
       (originalSubtitles, newlyCreatedSubtitleIds, originalNotes) => {
         this.originalSubtitles = originalSubtitles;
         this.newSubtitleIds = newlyCreatedSubtitleIds;
