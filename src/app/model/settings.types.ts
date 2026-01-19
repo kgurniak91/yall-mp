@@ -52,6 +52,7 @@ export interface GlobalSettings {
   ankiSuspendNewCardsByDefault: boolean;
   ankiInstantExport: boolean;
   generateAudioPeaks: boolean;
+  swapNavigationShortcuts: boolean;
 }
 
 export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
@@ -107,7 +108,8 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   subtitleLookupBrowserType: SubtitleLookupBrowserType.BuiltIn,
   ankiSuspendNewCardsByDefault: false,
   ankiInstantExport: false,
-  generateAudioPeaks: false
+  generateAudioPeaks: false,
+  swapNavigationShortcuts: false
 };
 
 export enum BuiltInSettingsPreset {

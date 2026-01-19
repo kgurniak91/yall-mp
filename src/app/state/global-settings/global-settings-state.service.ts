@@ -19,6 +19,7 @@ export class GlobalSettingsStateService {
   public readonly srtFontSizePx = computed(() => this.appStateService.globalSettings().srtFontSizePx);
   public readonly srtBackgroundOpacity = computed(() => this.appStateService.globalSettings().srtBackgroundOpacity);
   public readonly generateAudioPeaks = computed(() => this.appStateService.globalSettings().generateAudioPeaks);
+  public readonly swapNavigationShortcuts = computed(() => this.appStateService.globalSettings().swapNavigationShortcuts);
   public readonly srtBackgroundColor = computed(() => `rgba(0, 0, 0, ${this.srtBackgroundOpacity()})`);
   public readonly settingsReloadTrigger = this._settingsReloadTrigger.asReadonly();
 
@@ -68,5 +69,9 @@ export class GlobalSettingsStateService {
 
   public setGenerateAudioPeaks(value: boolean): void {
     this.appStateService.updateGlobalSettings({generateAudioPeaks: value});
+  }
+
+  public setSwapNavigationShortcuts(value: boolean): void {
+    this.appStateService.updateGlobalSettings({swapNavigationShortcuts: value});
   }
 }

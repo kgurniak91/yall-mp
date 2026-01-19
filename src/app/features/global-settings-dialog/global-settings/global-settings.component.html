@@ -13,6 +13,51 @@
     </div>
   </p-fieldset>
 
+  <p-fieldset legend="Keyboard Navigation" [toggleable]="false">
+    <div class="flex flex-column gap-3">
+      <!-- Option 1: Standard (Default) -->
+      <div class="flex">
+        <div class="flex align-items-center h-full mt-1">
+          <p-radioButton name="navSwap"
+                         [value]="false"
+                         inputId="nav-standard"
+                         [ngModel]="globalSettingsStateService.swapNavigationShortcuts()"
+                         (ngModelChange)="globalSettingsStateService.setSwapNavigationShortcuts($event)"/>
+        </div>
+        <div class="ml-2">
+          <label for="nav-standard" class="font-bold cursor-pointer block mb-1">Standard Media Player</label>
+          <div class="text-sm text-gray-600">
+            <ul class="m-0 pl-3">
+              <li><b>&larr; / &rarr;</b> : Seek time (skip {{ globalSettingsStateService.seekAmountSeconds() }}s)</li>
+              <li><b>Ctrl + &larr; / &rarr;</b> : Jump to previous/next subtitle</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Option 2: Swapped (Language Learner) -->
+      <div class="flex">
+        <div class="flex align-items-center h-full mt-1">
+          <p-radioButton name="navSwap"
+                         [value]="true"
+                         inputId="nav-swapped"
+                         [ngModel]="globalSettingsStateService.swapNavigationShortcuts()"
+                         (ngModelChange)="globalSettingsStateService.setSwapNavigationShortcuts($event)"/>
+        </div>
+        <div class="ml-2">
+          <label for="nav-swapped" class="font-bold cursor-pointer block mb-1">Language Learner Mode</label>
+          <div class="text-sm text-gray-600">
+            <ul class="m-0 pl-3">
+              <li><b>&larr; / &rarr;</b> : Jump to previous/next subtitle</li>
+              <li><b>Ctrl + &larr; / &rarr;</b> : Seek time (skip {{ globalSettingsStateService.seekAmountSeconds() }}s)
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </p-fieldset>
+
   <p-fieldset legend="Timeline Generation" [toggleable]="false">
     <div class="setting-item">
       <label for="generate-audio-peaks" class="font-semibold">Generate Audio Waveform</label>

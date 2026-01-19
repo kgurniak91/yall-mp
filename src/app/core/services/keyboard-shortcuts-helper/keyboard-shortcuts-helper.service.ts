@@ -1,4 +1,4 @@
-import {Injectable} from '@angular/core';
+import {effect, inject, Injectable} from '@angular/core';
 import {
   ActionType,
   KEYBOARD_SHORTCUTS,
@@ -7,6 +7,7 @@ import {
   KeyboardShortcutScope
 } from '../../../model/keyboard-shortcuts.types';
 import {KeyboardAction} from '../../../model/video.types';
+import {GlobalSettingsStateService} from '../../../state/global-settings/global-settings-state.service';
 
 @Injectable({
   providedIn: 'root'
@@ -15,9 +16,14 @@ export class KeyboardShortcutsHelperService {
   private readonly globalShortcuts = new Map<string, KeyboardShortcut>();
   private readonly projectShortcuts = new Map<string, KeyboardShortcut>();
   private readonly actionTypeMap = new Map<KeyboardAction, ActionType>();
+  private readonly globalSettingsStateService = inject(GlobalSettingsStateService);
+  private activeShortcuts: KeyboardShortcut[] = [];
 
   constructor() {
-    this.buildShortcutMaps();
+    effect(() => {
+      const swapNavigationShortcuts = this.globalSettingsStateService.swapNavigationShortcuts();
+      this.buildShortcutMaps(swapNavigationShortcuts);
+    });
   }
 
   public getShortcutForEvent(event: KeyboardEvent, scope: KeyboardShortcutScope): KeyboardShortcut | undefined {
@@ -32,7 +38,7 @@ export class KeyboardShortcutsHelperService {
 
   public getGroupedShortcuts(): { name: KeyboardShortcutGroup; shortcuts: KeyboardShortcut[] }[] {
     const groups = new Map<KeyboardShortcutGroup, KeyboardShortcut[]>();
-    for (const shortcut of KEYBOARD_SHORTCUTS) {
+    for (const shortcut of this.activeShortcuts) {
       if (!groups.has(shortcut.group)) {
         groups.set(shortcut.group, []);
       }
@@ -50,8 +56,33 @@ export class KeyboardShortcutsHelperService {
     return parts.join('-');
   }
 
-  private buildShortcutMaps(): void {
-    for (const shortcut of KEYBOARD_SHORTCUTS) {
+  private buildShortcutMaps(swapNavigationShortcuts: boolean): void {
+    this.globalShortcuts.clear();
+    this.projectShortcuts.clear();
+    this.actionTypeMap.clear();
+    this.activeShortcuts = [];
+
+    for (const shortcutDef of KEYBOARD_SHORTCUTS) {
+      let shortcut = {...shortcutDef};
+
+      if (swapNavigationShortcuts) {
+        if (shortcut.action === KeyboardAction.SeekBackward) {
+          shortcut.ctrlKey = true;
+          shortcut.displayKeys = ['Ctrl', '←'];
+        } else if (shortcut.action === KeyboardAction.PreviousSubtitledClip) {
+          shortcut.ctrlKey = false;
+          shortcut.displayKeys = ['←'];
+        } else if (shortcut.action === KeyboardAction.SeekForward) {
+          shortcut.ctrlKey = true;
+          shortcut.displayKeys = ['Ctrl', '→'];
+        } else if (shortcut.action === KeyboardAction.NextSubtitledClip) {
+          shortcut.ctrlKey = false;
+          shortcut.displayKeys = ['→'];
+        }
+      }
+
+      this.activeShortcuts.push(shortcut);
+
       const keyParts: string[] = [];
       if (shortcut.ctrlKey) keyParts.push('ctrl');
       if (shortcut.shiftKey) keyParts.push('shift');
