@@ -268,6 +268,16 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
     group: KeyboardShortcutGroup.Timeline
   },
   {
+    action: KeyboardAction.MergeSubtitles,
+    key: 'm',
+    ctrlKey: true,
+    description: 'Merge subtitles adjacent to current gap (works for plain text subtitles only)',
+    displayKeys: ['Ctrl', 'M'],
+    scope: KeyboardShortcutScope.Project,
+    type: ActionType.SingleShot,
+    group: KeyboardShortcutGroup.Timeline
+  },
+  {
     action: KeyboardAction.DeleteClip,
     key: 'Delete',
     description: 'Delete current clip or remove gap',

@@ -2,7 +2,7 @@ import {Command} from './commands.types';
 import {ClipsStateService} from '../../state/clips/clips-state.service';
 import type {SubtitleData} from '../../../../shared/types/subtitle.type';
 
-export class MergeSubtitledClipsCommand implements Command {
+export class RemoveGapCommand implements Command {
   private originalFirstSubtitles: SubtitleData[] = [];
   private originalSecondSubtitles: SubtitleData[] = [];
 
@@ -14,7 +14,7 @@ export class MergeSubtitledClipsCommand implements Command {
   }
 
   execute(): void {
-    this.clipsStateService.mergeClips(
+    this.clipsStateService.removeGap(
       this.firstClipId,
       this.secondClipId,
       (originalFirsts, deletedSeconds) => {
@@ -26,11 +26,11 @@ export class MergeSubtitledClipsCommand implements Command {
 
   undo(): void {
     if (this.originalFirstSubtitles.length === 0 || this.originalSecondSubtitles.length === 0) {
-      console.error("Cannot undo merge: original subtitle data was not captured.");
+      console.error("Cannot restore gap: original subtitle data was not captured.");
       return;
     }
 
-    this.clipsStateService.unmergeClips(
+    this.clipsStateService.restoreGap(
       this.originalFirstSubtitles,
       this.originalSecondSubtitles
     );

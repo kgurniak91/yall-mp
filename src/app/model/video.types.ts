@@ -43,6 +43,7 @@ export enum KeyboardAction {
   Undo = 'Undo',
   Redo = 'Redo',
   SplitClip = 'SplitClip',
+  MergeSubtitles = 'MergeSubtitles',
   DeleteClip = 'DeleteClip',
   CreateClip = 'CreateClip',
   ExportToAnki = 'ExportToAnki',

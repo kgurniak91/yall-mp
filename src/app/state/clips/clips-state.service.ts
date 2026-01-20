@@ -5,7 +5,7 @@ import {CommandHistoryStateService} from '../command-history/command-history-sta
 import {UpdateClipTimesCommand} from '../../model/commands/update-clip-times.command';
 import {ToastService} from '../../shared/services/toast/toast.service';
 import {SplitSubtitledClipCommand} from '../../model/commands/split-subtitled-clip.command';
-import {MergeSubtitledClipsCommand} from '../../model/commands/merge-subtitled-clips.command';
+import {RemoveGapCommand} from '../../model/commands/remove-gap.command';
 import {AppStateService} from '../app/app-state.service';
 import type {
   AssSubtitleData,
@@ -23,6 +23,7 @@ import {cloneDeep, isEqual} from 'lodash-es';
 import {v4 as uuidv4} from 'uuid';
 import {AssSubtitlesUtils} from '../../../../shared/utils/ass-subtitles.utils';
 import {ConfirmationService} from 'primeng/api';
+import {MergeSubtitlesCommand} from '../../model/commands/merge-subtitles.command';
 
 export const ADJUST_DEBOUNCE_MS = 50;
 export const MIN_GAP_DURATION = 0;
@@ -430,7 +431,7 @@ export class ClipsStateService implements OnDestroy {
         return;
       }
 
-      const command = new MergeSubtitledClipsCommand(this, prevClip.id, nextClip.id);
+      const command = new RemoveGapCommand(this, prevClip.id, nextClip.id);
       this.commandHistoryStateService.execute(command);
     }
   }
@@ -480,7 +481,7 @@ export class ClipsStateService implements OnDestroy {
     return {originalSubtitles, originalRawAssContent};
   }
 
-  public mergeClips(
+  public removeGap(
     firstClipId: string,
     secondClipId: string,
     onMergeCallback?: (originalFirstSubtitles: SubtitleData[], deletedSecondSubtitles: SubtitleData[]) => void
@@ -542,7 +543,7 @@ export class ClipsStateService implements OnDestroy {
     }
   }
 
-  public unmergeClips(
+  public restoreGap(
     originalFirstSubtitles: SubtitleData[],
     subtitlesToRestore: SubtitleData[]
   ): void {
@@ -585,6 +586,147 @@ export class ClipsStateService implements OnDestroy {
 
     this.appStateService.updatePartialProject(this._projectId!, updates);
     this._subtitles.set(restoredSubtitles);
+  }
+
+  public mergeCurrentGapSubtitles(): void {
+    const currentClip = this.currentClip();
+    if (!currentClip || currentClip.hasSubtitle) {
+      this.toastService.info('Please select a gap between two subtitles.');
+      return;
+    }
+
+    const project = this.appStateService.currentProject();
+    if (project?.rawAssContent) {
+      this.toastService.warn('Merging subtitles is not supported for ASS/SSA projects.');
+      return;
+    }
+
+    const clips = this.clips();
+    const currentIndex = this.activeTrackClipIndex();
+    const prevClip = clips[currentIndex - 1];
+    const nextClip = clips[currentIndex + 1];
+
+    if (!prevClip || !nextClip || !prevClip.hasSubtitle || !nextClip.hasSubtitle) {
+      this.toastService.warn('Can only merge a gap that is surrounded by subtitles.');
+      return;
+    }
+
+    const command = new MergeSubtitlesCommand(this, currentClip.id);
+    this.commandHistoryStateService.execute(command);
+  }
+
+  public mergeSubtitles(
+    gapClipId: string,
+    onMergeCallback?: (originalSubtitles: SubtitleData[]) => void
+  ): void {
+    const project = this.appStateService.currentProject();
+    if (!project) {
+      return;
+    }
+
+    if (project.rawAssContent) {
+      console.error("Cannot merge subtitles in an ASS/SSA project.");
+      return;
+    }
+
+    const clips = this.clips();
+    const gapIndex = clips.findIndex(c => c.id === gapClipId);
+    if (gapIndex === -1) {
+      return;
+    }
+
+    const prevClip = clips[gapIndex - 1];
+    const nextClip = clips[gapIndex + 1];
+
+    if (!prevClip || !nextClip || !prevClip.hasSubtitle || !nextClip.hasSubtitle) {
+      return;
+    }
+
+    const originalSubtitles: SubtitleData[] = [
+      ...prevClip.sourceSubtitles,
+      ...nextClip.sourceSubtitles
+    ].map(s => cloneDeep(s));
+
+    onMergeCallback?.(originalSubtitles);
+
+    // Join text
+    const leftText = prevClip.text || '';
+    const rightText = nextClip.text || '';
+    const mergedText = `${leftText}\n${rightText}`;
+
+    // Create new unified subtitle
+    const newStartTime = prevClip.startTime;
+    const newEndTime = nextClip.endTime;
+
+    const newSubtitle: SrtSubtitleData = {
+      type: 'srt',
+      id: uuidv4(),
+      startTime: newStartTime,
+      endTime: newEndTime,
+      text: mergedText,
+      track: this._activeTrack()
+    };
+
+    const idsToRemove = new Set(originalSubtitles.map(s => s.id));
+
+    // Create new state
+    const newSubtitlesState = this._subtitles().filter(s => !idsToRemove.has(s.id));
+    newSubtitlesState.push(newSubtitle);
+    newSubtitlesState.sort((a, b) => a.startTime - b.startTime);
+
+    this.appStateService.updatePartialProject(this._projectId!, {subtitles: newSubtitlesState});
+    this._subtitles.set(newSubtitlesState);
+
+    // Resync: The playhead is inside what used to be the gap. It is now inside the new merged clip.
+    const currentTime = this.videoStateService.currentTime();
+    const newClipsArray = this.clipsForAllTracks();
+    const newCorrectIndex = newClipsArray.findIndex(c =>
+      currentTime >= c.startTime && currentTime < c.endTime
+    );
+
+    if (newCorrectIndex !== -1) {
+      this._masterClipIndex.set(newCorrectIndex);
+    }
+  }
+
+  public unmergeSubtitles(originalSubtitles: SubtitleData[]): void {
+    const project = this.appStateService.currentProject();
+    if (!project) {
+      return;
+    }
+
+    // Find a subtitle that encompasses the range of originals and remove it
+    const minStart = Math.min(...originalSubtitles.map(s => s.startTime));
+    const maxEnd = Math.max(...originalSubtitles.map(s => s.endTime));
+
+    const currentSubtitles = this._subtitles();
+    const mergedSubIndex = currentSubtitles.findIndex(s =>
+      Math.abs(s.startTime - minStart) < 0.01 &&
+      Math.abs(s.endTime - maxEnd) < 0.01
+    );
+
+    let newSubtitlesState = [...currentSubtitles];
+    if (mergedSubIndex !== -1) {
+      newSubtitlesState.splice(mergedSubIndex, 1);
+    }
+
+    // Add back originals
+    newSubtitlesState.push(...originalSubtitles);
+    newSubtitlesState.sort((a, b) => a.startTime - b.startTime);
+
+    this.appStateService.updatePartialProject(this._projectId!, {subtitles: newSubtitlesState});
+    this._subtitles.set(newSubtitlesState);
+
+    // Resync active clip
+    const currentTime = this.videoStateService.currentTime();
+    const newClipsArray = this.clipsForAllTracks();
+    const newCorrectIndex = newClipsArray.findIndex(c =>
+      currentTime >= c.startTime && currentTime < c.endTime
+    );
+
+    if (newCorrectIndex !== -1) {
+      this._masterClipIndex.set(newCorrectIndex);
+    }
   }
 
   public createNewSubtitledClipAtCurrentTime(): void {

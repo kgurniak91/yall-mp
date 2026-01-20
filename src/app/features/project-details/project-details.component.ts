@@ -940,12 +940,19 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       const index = clips.findIndex(c => c.id === clip.id);
       const prev = clips[index - 1];
       const next = clips[index + 1];
-      const canRemoveGap = prev && next && prev.hasSubtitle && next.hasSubtitle;
+      const hasNeighbors = prev && next && prev.hasSubtitle && next.hasSubtitle;
+
+      items.push({
+        label: 'Merge adjacent subtitles',
+        icon: 'fa-solid fa-compress',
+        disabled: !hasNeighbors || this.isAssProject(),
+        command: () => this.actionService.dispatch(KeyboardAction.MergeSubtitles)
+      });
 
       items.push({
         label: 'Remove gap',
         icon: 'fa-solid fa-eraser',
-        disabled: !canRemoveGap,
+        disabled: !hasNeighbors,
         command: () => this.deleteCurrentClip()
       });
     }

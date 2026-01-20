@@ -115,6 +115,9 @@ export class ProjectActionService {
       case KeyboardAction.SplitClip:
         this.clipsStateService.splitClip();
         break;
+      case KeyboardAction.MergeSubtitles:
+        this.clipsStateService.mergeCurrentGapSubtitles();
+        break;
       case KeyboardAction.DeleteClip:
         this.clipsStateService.deleteCurrentClip();
         break;

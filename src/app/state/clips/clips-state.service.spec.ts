@@ -20,12 +20,13 @@ import {MOCK_VIDEO_DURATION, TEST_CASES, TestCase} from '../../../../test/test-c
 import {createServiceFactory, SpectatorService} from '@ngneat/spectator';
 import {CreateSubtitledClipCommand} from '../../model/commands/create-subtitled-clip.command';
 import {DeleteSubtitledClipCommand} from '../../model/commands/delete-subtitled-clip.command';
-import {MergeSubtitledClipsCommand} from '../../model/commands/merge-subtitled-clips.command';
+import {RemoveGapCommand} from '../../model/commands/remove-gap.command';
 import {SplitSubtitledClipCommand} from '../../model/commands/split-subtitled-clip.command';
 import {cloneDeep} from 'lodash-es';
 import {ClipContent, UpdateClipTextCommand} from '../../model/commands/update-clip-text.command';
 import {ConfirmationService} from 'primeng/api';
 import {ProjectClipNotes} from '../../model/project.types';
+import {MergeSubtitlesCommand} from '../../model/commands/merge-subtitles.command';
 
 describe('ClipsStateService', () => {
   const currentTimeSignal = signal(0);
@@ -1364,7 +1365,7 @@ ${initialLine}
     });
 
     it('correctly closes a gap by stretching adjacent clips, and then undo/redo the action', () => {
-      const mergeCommand = new MergeSubtitledClipsCommand(service, 'subtitle-5', 'subtitle-15');
+      const mergeCommand = new RemoveGapCommand(service, 'subtitle-5', 'subtitle-15');
 
       commandHistoryService.execute(mergeCommand);
       const clipsAfterMerge = service.clips();
@@ -1711,7 +1712,7 @@ Dialogue: 0,0:00:15.00,0:00:20.00,Top,,0,0,0,,Subtitle B Top
     });
 
     it('correctly closes a gap by stretching, and then undo/redo', () => {
-      const mergeCommand = new MergeSubtitledClipsCommand(service, 'subtitle-5', 'subtitle-15');
+      const mergeCommand = new RemoveGapCommand(service, 'subtitle-5', 'subtitle-15');
 
       commandHistoryService.execute(mergeCommand);
       const clipsAfterMerge = service.clips();
@@ -2412,7 +2413,7 @@ Dialogue: 0:01:01.00,0:01:02.00,Default,Animating Text
       expect(splitClips.length).toBe(2);
 
       // Merge clips back
-      service.mergeClips(splitClips[0].id, splitClips[1].id);
+      service.removeGap(splitClips[0].id, splitClips[1].id);
 
       // Assert they are now 1 clip
       const mergedClips = service.clips().filter(c => c.hasSubtitle);
@@ -2448,6 +2449,62 @@ Dialogue: 0:01:01.00,0:01:02.00,Default,Animating Text
       // The service should have automatically incremented the master index to keep Clip B active.
       expect(service.masterClipIndex()).withContext('Should shift to index 2 to stay on Clip B').toBe(2);
       expect(service.currentClip()?.id).withContext('Active clip should still be Clip B').toBe('subtitle-10');
+    });
+  });
+
+  describe('Merge subtitles adjacent to the gap', () => {
+    it('correctly merges two SRT subtitles across a gap into a single clip', () => {
+      // ARRANGE
+      // Timeline: Gap(0-5), SubA(5-10), Gap(10-15), SubB(15-20)
+      const initialSubs: SrtSubtitleData[] = [
+        {type: 'srt', id: 's1', startTime: 5, endTime: 10, text: 'A', track: 0},
+        {type: 'srt', id: 's2', startTime: 15, endTime: 20, text: 'B', track: 0}
+      ];
+      service.setSubtitles(initialSubs);
+
+      const gapClipId = 'gap-10'; // The ID generated for the gap between 10 and 15
+      const command = new MergeSubtitlesCommand(service, gapClipId);
+
+      // ACT
+      commandHistoryService.execute(command);
+
+      // ASSERT
+      const clips = service.clips();
+      const subtitledClips = clips.filter(c => c.hasSubtitle);
+
+      // Should now be 1 merged subtitle instead of 2
+      expect(subtitledClips.length).toBe(1);
+
+      const mergedClip = subtitledClips[0];
+      expect(mergedClip.startTime).toBe(5);
+      expect(mergedClip.endTime).toBe(20);
+      expect(mergedClip.text).toBe('A\nB');
+      expect((mergedClip.sourceSubtitles[0] as SrtSubtitleData).text).toBe('A\nB');
+
+      // Undo
+      commandHistoryService.undo();
+
+      const restoredClips = service.clips();
+      const restoredSubs = restoredClips.filter(c => c.hasSubtitle);
+      expect(restoredSubs.length).toBe(2);
+      expect(restoredSubs[0].text).toBe('A');
+      expect(restoredSubs[1].text).toBe('B');
+    });
+
+    it('should NOT merge if gap is not surrounded by subtitles', () => {
+      const initialSubs: SrtSubtitleData[] = [
+        {type: 'srt', id: 's1', startTime: 5, endTime: 10, text: 'A', track: 0}
+      ];
+      service.setSubtitles(initialSubs);
+
+      // Try to merge the first gap (0-5)
+      const gapClipId = 'gap-0';
+      const command = new MergeSubtitlesCommand(service, gapClipId);
+
+      commandHistoryService.execute(command);
+
+      // Assert nothing changed
+      expect(service.clips().filter(c => c.hasSubtitle).length).toBe(1);
     });
   });
 });
