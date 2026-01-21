@@ -103,6 +103,9 @@ export class ProjectActionService {
       case KeyboardAction.ToggleSettings:
         this.projectSettingsStateService.setSettingsDrawerOpen(!this.projectSettingsStateService.isSettingsDrawerOpen());
         break;
+      case KeyboardAction.ToggleNotes:
+        this.projectSettingsStateService.setNotesDrawerOpen(!this.projectSettingsStateService.isNotesDrawerOpen());
+        break;
       case KeyboardAction.EditCurrentSubtitles:
         this.videoStateService.requestEditSubtitles();
         break;

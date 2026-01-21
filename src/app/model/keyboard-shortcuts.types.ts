@@ -362,6 +362,15 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
     group: KeyboardShortcutGroup.Application
   },
   {
+    action: KeyboardAction.ToggleNotes,
+    key: 'n',
+    description: 'Toggle notes panel',
+    displayKeys: ['N'],
+    scope: KeyboardShortcutScope.Project,
+    type: ActionType.SingleShot,
+    group: KeyboardShortcutGroup.Application
+  },
+  {
     action: KeyboardAction.Undo,
     key: 'z',
     ctrlKey: true,

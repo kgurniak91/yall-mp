@@ -76,6 +76,7 @@ import {
 } from '../../shared/utils/disable-focus-in-parent-dialog/disable-focus-in-parent-dialog';
 import {NoteFormDialogData, NoteFormResult} from './note-form-dialog/note-form-dialog.types';
 import {NoteFormDialogComponent} from './note-form-dialog/note-form-dialog.component';
+import {ProjectNotesComponent} from './project-notes/project-notes.component';
 
 @Component({
   selector: 'app-project-details',
@@ -93,7 +94,8 @@ import {NoteFormDialogComponent} from './note-form-dialog/note-form-dialog.compo
     SubtitlesHighlighterComponent,
     ContextMenu,
     DatePipe,
-    OverlayBadgeModule
+    OverlayBadgeModule,
+    ProjectNotesComponent
   ],
   templateUrl: './project-details.component.html',
   styleUrl: './project-details.component.scss',
@@ -160,6 +162,30 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       value: i,
       hasContent: content[i]
     }));
+  });
+
+  protected readonly hasNotesForCurrentClip = computed(() => {
+    const project = this.project();
+    const currentClip = this.clipsStateService.currentClipForAllTracks();
+
+    if (!project || !currentClip || !currentClip.hasSubtitle) {
+      return false;
+    }
+
+    const clipId = currentClip.sourceSubtitles[0]?.id;
+    if (!clipId) {
+      return false;
+    }
+
+    const notes = project.notes?.[clipId];
+    if (!notes) {
+      return false;
+    }
+
+    const hasManualNote = Boolean(notes.manualNote && notes.manualNote.trim().length > 0);
+    const hasLookupNotes = notes.lookupNotes && Object.values(notes.lookupNotes).some(list => list.length > 0);
+
+    return hasManualNote || hasLookupNotes;
   });
 
   protected readonly canEditSubtitles = computed(() => {
@@ -503,6 +529,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     }
     this.fontInjectionService.clearFonts();
     this.headerCurrentProjectActionBridgeService.clear();
+    this.toastService.setPosition('top-right');
   }
 
   async canDeactivate(): Promise<boolean> {
@@ -566,6 +593,10 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
   toggleSettings(): void {
     this.actionService.dispatch(KeyboardAction.ToggleSettings);
+  }
+
+  toggleNotes(): void {
+    this.actionService.dispatch(KeyboardAction.ToggleNotes);
   }
 
   deleteCurrentClip(): void {
@@ -1040,10 +1071,13 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
-  private settingsDrawerListener = effect(() => {
-    const isOpen = this.projectSettingsStateService.isSettingsDrawerOpen();
+  private drawerListener = effect(() => {
+    const isSettingsOpen = this.projectSettingsStateService.isSettingsDrawerOpen();
+    const isNotesOpen = this.projectSettingsStateService.isNotesDrawerOpen();
+    const isOpen = isSettingsOpen || isNotesOpen;
 
     if (isOpen) {
+      this.toastService.setPosition('top-center');
       untracked(() => this.subtitlesOverlay().clearHighlightAndPopup());
 
       if (!this.wasSettingsDrawerOpened) {
@@ -1054,6 +1088,9 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
         }
       }
     } else if (!isOpen && this.wasSettingsDrawerOpened) {
+      // Restore default notification position
+      this.toastService.setPosition('top-right');
+
       // Drawer is closing
       if (this.wasPlayingBeforeSettingsOpened) {
         window.electronAPI.playbackPlay();

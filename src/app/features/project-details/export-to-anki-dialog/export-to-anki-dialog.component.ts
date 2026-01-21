@@ -15,7 +15,7 @@ import {
   ExportToAnkiDialogData
 } from '../../../model/anki.types';
 import {AnkiStateService} from '../../../state/anki/anki-state.service';
-import {DialogService, DynamicDialogConfig, DynamicDialogRef} from 'primeng/dynamicdialog';
+import {DynamicDialogConfig, DynamicDialogRef} from 'primeng/dynamicdialog';
 import {ToastService} from '../../../shared/services/toast/toast.service';
 import {FormsModule} from '@angular/forms';
 import {Button} from 'primeng/button';
@@ -27,7 +27,7 @@ import {
 } from '../../../../../shared/types/subtitle.type';
 import {Checkbox} from 'primeng/checkbox';
 import {Textarea} from 'primeng/textarea';
-import {LookupNotes, ProjectClipNotes} from '../../../model/project.types';
+import {ProjectClipNotes} from '../../../model/project.types';
 import {cloneDeep, escape, isEqual} from 'lodash-es';
 import {AppStateService} from '../../../state/app/app-state.service';
 import {Popover} from 'primeng/popover';
@@ -37,26 +37,8 @@ import {Divider} from 'primeng/divider';
 import {Chip} from 'primeng/chip';
 import {TagsInputComponent} from '../../../shared/components/tags-input/tags-input.component';
 import {Tooltip} from 'primeng/tooltip';
-import {Accordion, AccordionContent, AccordionHeader, AccordionPanel} from "primeng/accordion";
-import {ConfirmationService} from 'primeng/api';
-import {
-  disableFocusInParentDialog,
-  scheduleRestoreFocus
-} from '../../../shared/utils/disable-focus-in-parent-dialog/disable-focus-in-parent-dialog';
+import {ProjectNotesComponent} from '../project-notes/project-notes.component';
 import {Tag} from 'primeng/tag';
-import {I18nPluralPipe} from '@angular/common';
-import {NoteFormDialogData, NoteFormResult} from '../note-form-dialog/note-form-dialog.types';
-import {NoteFormDialogComponent} from '../note-form-dialog/note-form-dialog.component';
-
-interface NoteViewItem {
-  text: string;
-  originalIndex: number;
-}
-
-interface SelectionGroupView {
-  selection: string;
-  notes: NoteViewItem[];
-}
 
 @Component({
   selector: 'app-export-to-anki-dialog',
@@ -70,12 +52,8 @@ interface SelectionGroupView {
     Chip,
     TagsInputComponent,
     Tooltip,
-    Accordion,
-    AccordionPanel,
-    AccordionHeader,
-    AccordionContent,
-    Tag,
-    I18nPluralPipe
+    ProjectNotesComponent,
+    Tag
   ],
   templateUrl: './export-to-anki-dialog.component.html',
   styleUrl: './export-to-anki-dialog.component.scss',
@@ -88,7 +66,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
   protected readonly hint = signal<string>('');
   protected readonly isExporting = signal(false);
   protected readonly selectedSubtitleParts = signal<SubtitlePart[]>([]);
-  protected readonly activeNoteAccordionIndices = signal<number[]>([]);
+
   protected readonly finalTextPreview = computed(() => {
     if (this.data.subtitleData.type === 'srt') {
       return this.data.subtitleData.text;
@@ -96,65 +74,25 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
       return this.selectedSubtitleParts().map(p => p.text).join('\n');
     }
   });
+
   protected readonly finalTextPreviewHtml = computed(() => {
     const text = this.finalTextPreview();
     return text.replace(/\n/g, '<br>');
   });
-  protected readonly lookupNotesView = signal<SelectionGroupView[]>([]);
-  protected readonly formattedAnkiNotes = computed(() => {
-    const finalParts: string[] = [];
 
-    // Process Lookup Notes
-    for (const group of this.lookupNotesView()) {
-      const selection = group.selection;
-      let groupHtml = '';
-
-      if (selection) {
-        const escapedSelection = escape(selection);
-        groupHtml = `<b>"${escapedSelection}"</b>:<br><ul>`;
-      } else {
-        groupHtml = `<b>General notes</b>:<br><ul>`;
-      }
-
-      for (const note of group.notes) {
-        let formattedNote = escape(note.text).trim().replace(/\n/g, '<br>');
-        if (!formattedNote) {
-          formattedNote = '&nbsp;'; // Ensure empty notes are still visible in a list item
-        }
-        groupHtml += `<li>${formattedNote}<br></li>`;
-      }
-      groupHtml += '</ul>';
-      finalParts.push(groupHtml);
-    }
-
-    // Preserve legacy manual note if it exists in data but not in UI
-    const legacyManualNote = this.initialNotes?.manualNote?.trim();
-    if (legacyManualNote) {
-      let manualNoteHtml = '<b>Manual notes</b>:<br><ul>';
-      let formattedManualNote = escape(legacyManualNote).replace(/\n/g, '<br>');
-      if (!formattedManualNote) {
-        formattedManualNote = '&nbsp;';
-      }
-      manualNoteHtml += `<li>${formattedManualNote}<br></li></ul>`;
-      finalParts.push(manualNoteHtml);
-    }
-
-    return finalParts.join('');
-  });
-  protected assSubtitleData = signal<AssSubtitleData | null>(null);
-  protected isAlreadyExported = signal(false);
+  protected readonly assSubtitleData = signal<AssSubtitleData | null>(null);
+  protected readonly isAlreadyExported = signal(false);
   protected readonly exportTags = signal<string[]>([]);
   protected readonly ankiService = inject(AnkiStateService);
   protected readonly suspendCard = signal<boolean>(false);
+  protected readonly currentNotes = signal<ProjectClipNotes | undefined>(undefined);
+  protected readonly initialNotes = signal<ProjectClipNotes | undefined>(undefined);
   private readonly ref = inject(DynamicDialogRef);
   private readonly config = inject(DynamicDialogConfig);
   private readonly toastService = inject(ToastService);
   private readonly appStateService = inject(AppStateService);
   private readonly dialogOrchestrationService = inject(DialogOrchestrationService);
-  private readonly confirmationService = inject(ConfirmationService);
-  private readonly dialogService = inject(DialogService);
   private readonly elementRef = inject(ElementRef);
-  private initialNotes: ProjectClipNotes | undefined;
 
   constructor() {
     this.data = this.config.data as ExportToAnkiDialogData;
@@ -199,9 +137,9 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
     }
 
     const projectNotes = this.data.project.notes?.[this.data.subtitleData.id];
-    this.initialNotes = cloneDeep(projectNotes);
+    this.initialNotes.set(cloneDeep(projectNotes));
+    this.currentNotes.set(this.initialNotes());
     this.hint.set(projectNotes?.hint || '');
-    this.buildNotesView(projectNotes?.lookupNotes);
 
     if (this.data.instantExport) {
       this.toastService.info('Attempting instant export to Anki...');
@@ -212,13 +150,13 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.saveNotesIfChanged();
+    this.saveHintIfChanged();
     this.saveSelectedTemplates();
     this.savePostExportActions();
   }
 
-  onAddNoteToGroup(term: string): void {
-    this.openNoteDialog('create', term, '', false);
+  onNotesChanged(notes: ProjectClipNotes) {
+    this.currentNotes.set(notes);
   }
 
   getGroupedTagsForTemplate(template: AnkiCardTemplate): { global: string[], project: string[], template: string[] } {
@@ -231,41 +169,6 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
       project: [...new Set(project)],
       template: [...new Set(templateTags)],
     };
-  }
-
-  onAddManualNote(): void {
-    this.openNoteDialog('create', '', '', true);
-  }
-
-  onEditNote(term: string, note: NoteViewItem): void {
-    this.openNoteDialog('edit', term, note.text, true, note.originalIndex);
-  }
-
-  formatNoteText(text: string): string {
-    return escape(text).replace(/\n/g, '<br>');
-  }
-
-  onDeleteNote(selection: string, noteIndex: number): void {
-    this.confirmationService.confirm({
-      header: 'Confirm deletion',
-      message: `Are you sure you want to delete this note?<br>This action cannot be undone.`,
-      icon: 'fa-solid fa-circle-exclamation',
-      accept: () => {
-        this.lookupNotesView.update(currentView => {
-          return currentView.map(group => {
-            if (group.selection === selection) {
-              return {
-                ...group,
-                notes: group.notes.filter(note => note.originalIndex !== noteIndex)
-              };
-            }
-            return group;
-          }).filter(group => group.notes.length > 0); // Remove the entire group if it's now empty
-        });
-        this.saveNotesIfChanged();
-        this.toastService.success('Note removed');
-      }
-    });
   }
 
   onClose(): void {
@@ -297,7 +200,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.saveNotesIfChanged();
+    this.saveHintIfChanged();
 
     if (!this.finalTextPreview().trim()) {
       this.toastService.warn('Please select at least one subtitle part to export.');
@@ -340,7 +243,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
         mediaPath: project.mediaPath,
         exportTime,
         hint: this.hint(),
-        notes: this.formattedAnkiNotes(),
+        notes: this.generateFormattedNotes(this.currentNotes()),
         tags: finalTags,
         suspend: this.suspendCard()
       };
@@ -371,134 +274,94 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
     }
   }
 
-  private buildNotesView(lookupNotes: LookupNotes | undefined): void {
-    if (!lookupNotes) {
-      this.lookupNotesView.set([]);
-      return;
+  private generateFormattedNotes(notes: ProjectClipNotes | undefined): string {
+    if (!notes) {
+      return '';
     }
 
-    const view: SelectionGroupView[] = Object.entries(lookupNotes).map(([selection, noteList]) => ({
-      selection,
-      notes: noteList.map((text, index) => ({text, originalIndex: index}))
-    }));
+    const finalParts: string[] = [];
 
-    this.lookupNotesView.set(this.sortGroups(view));
+    // Process Lookup Notes
+    if (notes.lookupNotes) {
+      // Sort keys to ensure deterministic order
+      const sortedKeys = Object.keys(notes.lookupNotes).sort((a, b) => {
+        if (!a) {
+          return -1; // "General notes" first
+        }
+        if (!b) {
+          return 1;
+        }
+        return a.localeCompare(b);
+      });
+
+      for (const selection of sortedKeys) {
+        const noteList = notes.lookupNotes[selection];
+        if (!noteList || noteList.length === 0) {
+          continue;
+        }
+
+        let groupHtml = '';
+        if (selection) {
+          const escapedSelection = escape(selection);
+          groupHtml = `<b>"${escapedSelection}"</b>:<br><ul>`;
+        } else {
+          groupHtml = `<b>General notes</b>:<br><ul>`;
+        }
+
+        for (const text of noteList) {
+          let formattedNote = escape(text).trim().replace(/\n/g, '<br>');
+          if (!formattedNote) formattedNote = '&nbsp;';
+          groupHtml += `<li>${formattedNote}<br></li>`;
+        }
+
+        groupHtml += '</ul>';
+        finalParts.push(groupHtml);
+      }
+    }
+
+    // Preserve legacy manual note if it exists in data but not in UI
+    if (notes.manualNote?.trim()) {
+      let manualNoteHtml = '<b>Manual notes</b>:<br><ul>';
+      let formattedManualNote = escape(notes.manualNote).replace(/\n/g, '<br>');
+      if (!formattedManualNote) {
+        formattedManualNote = '&nbsp;';
+      }
+      manualNoteHtml += `<li>${formattedManualNote}<br></li></ul>`;
+      finalParts.push(manualNoteHtml);
+    }
+
+    return finalParts.join('');
   }
 
-  private openNoteDialog(
-    mode: 'create' | 'edit',
-    term: string,
-    noteText: string,
-    isTermEditable: boolean,
-    originalIndex?: number
-  ): void {
-    const restoreFocusability = disableFocusInParentDialog();
+  private saveHintIfChanged(): void {
+    const projectId = this.data.project.id;
+    const clipId = this.data.subtitleData.id;
+    const currentHint = this.hint();
+    const originalHint = this.initialNotes()?.hint || '';
 
-    const data: NoteFormDialogData = {
-      mode,
-      term,
-      noteText,
-      isTermEditable
-    };
+    if (currentHint !== originalHint) {
+      const currentProject = this.appStateService.currentProject();
 
-    const dialogRef = this.dialogService.open(NoteFormDialogComponent, {
-      header: mode === 'create' ? 'Add note' : 'Edit note',
-      modal: true,
-      width: 'clamp(20rem, 95vw, 35rem)',
-      closeOnEscape: false,
-      data: data
-    });
-
-    dialogRef.onClose.subscribe((result: NoteFormResult | undefined) => {
-      scheduleRestoreFocus(restoreFocusability);
-
-      if (!result) {
+      if (!currentProject || currentProject.id !== projectId) {
         return;
       }
 
-      this.lookupNotesView.update(currentView => {
-        const newView = cloneDeep(currentView);
+      const newProjectNotes = cloneDeep(currentProject.notes ?? {});
+      const clipNotes = newProjectNotes[clipId] ?? {};
 
-        if (mode === 'edit' && originalIndex !== undefined) {
-          // Find old group
-          const oldGroupIndex = newView.findIndex(g => g.selection === term);
-          if (oldGroupIndex > -1) {
-            // Remove from old group
-            newView[oldGroupIndex].notes = newView[oldGroupIndex].notes.filter(n => n.originalIndex !== originalIndex);
-            if (newView[oldGroupIndex].notes.length === 0) {
-              newView.splice(oldGroupIndex, 1);
-            }
-          }
-        }
+      clipNotes.hint = currentHint;
 
-        // Add to new group (either existing or new)
-        let targetGroup = newView.find(g => g.selection === result.term);
-        if (!targetGroup) {
-          targetGroup = {selection: result.term, notes: []};
-          newView.push(targetGroup);
-        }
+      const hasManualNote = Boolean(clipNotes.manualNote);
+      const hasLookup = clipNotes.lookupNotes && Object.keys(clipNotes.lookupNotes).length > 0;
+      const hasHint = Boolean(clipNotes.hint);
 
-        // Use a temporary index for the UI; save logic will re-index everything
-        const newNoteIndex = targetGroup.notes.length > 0
-          ? Math.max(...targetGroup.notes.map(n => n.originalIndex)) + 1
-          : 0;
-
-        targetGroup.notes.push({text: result.noteText, originalIndex: newNoteIndex});
-
-        return this.sortGroups(newView);
-      });
-
-      this.saveNotesIfChanged();
-      this.toastService.success(mode === 'create' ? 'Note added.' : 'Note updated.');
-    });
-  }
-
-  private sortGroups(groups: SelectionGroupView[]): SelectionGroupView[] {
-    return groups.sort((a, b) => {
-      // Empty selection string means "General notes" - always on top
-      if (!a.selection) {
-        return -1;
-      }
-      if (!b.selection) {
-        return 1;
-      }
-      return a.selection.localeCompare(b.selection);
-    });
-  }
-
-  private saveNotesIfChanged(): void {
-    const project = this.data.project;
-    const clipId = this.data.subtitleData.id;
-
-    const finalLookupNotes: LookupNotes = {};
-    for (const group of this.lookupNotesView()) {
-      if (group.notes.length > 0) {
-        // re-index the notes to get a clean, contiguous array
-        finalLookupNotes[group.selection] = group.notes
-          .sort((a, b) => a.originalIndex - b.originalIndex)
-          .map(note => note.text);
-      }
-    }
-
-    const finalNotes: ProjectClipNotes = {
-      lookupNotes: finalLookupNotes,
-      manualNote: this.initialNotes?.manualNote,
-      hint: this.hint()
-    };
-
-    if (!isEqual(this.initialNotes, finalNotes)) {
-      const newProjectNotes = cloneDeep(project.notes ?? {});
-
-      if (Object.keys(finalNotes.lookupNotes ?? {}).length > 0 || finalNotes.manualNote || finalNotes.hint) {
-        newProjectNotes[clipId] = finalNotes;
-      } else {
+      if (!hasManualNote && !hasLookup && !hasHint) {
         delete newProjectNotes[clipId];
+      } else {
+        newProjectNotes[clipId] = clipNotes;
       }
 
-      this.appStateService.updatePartialProject(project.id, {notes: newProjectNotes});
-
-      // Update the baseline to the newly saved state for future comparisons
-      this.initialNotes = cloneDeep(finalNotes);
+      this.appStateService.updatePartialProject(projectId, {notes: newProjectNotes});
     }
   }
 

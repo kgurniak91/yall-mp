@@ -6,6 +6,7 @@ import {AppStateService} from '../app/app-state.service';
 export class ProjectSettingsStateService {
   private readonly appStateService = inject(AppStateService);
   private readonly _isSettingsDrawerOpen = signal(false);
+  private readonly _isNotesDrawerOpen = signal(false);
 
   public readonly settings = computed(() => {
     return this.appStateService.currentProject()?.settings ?? DEFAULT_PROJECT_SETTINGS;
@@ -19,6 +20,7 @@ export class ProjectSettingsStateService {
   public readonly useMpvSubtitles = computed(() => this.settings().useMpvSubtitles);
   public readonly subtitlesLanguage = computed(() => this.settings().subtitlesLanguage);
   public readonly isSettingsDrawerOpen = this._isSettingsDrawerOpen.asReadonly();
+  public readonly isNotesDrawerOpen = this._isNotesDrawerOpen.asReadonly();
 
   public setSettings(projectSettings: Partial<ProjectSettings> | undefined): void {
     const project = this.appStateService.currentProject();
@@ -38,5 +40,15 @@ export class ProjectSettingsStateService {
 
   public setSettingsDrawerOpen(isOpen: boolean): void {
     this._isSettingsDrawerOpen.set(isOpen);
+    if (isOpen) {
+      this._isNotesDrawerOpen.set(false);
+    }
+  }
+
+  public setNotesDrawerOpen(isOpen: boolean): void {
+    this._isNotesDrawerOpen.set(isOpen);
+    if (isOpen) {
+      this._isSettingsDrawerOpen.set(false);
+    }
   }
 }

@@ -1,0 +1,27 @@
+.note-item {
+  .note-text {
+    word-break: break-word;
+    cursor: default;
+  }
+}
+
+.notes-placeholder {
+  color: var(--p-text-muted-color);
+  border: 1px dashed #444;
+}
+
+:host p-accordion ::ng-deep {
+  .p-accordioncontent-content {
+    padding: 0 !important;
+  }
+
+  p-accordion-header {
+    &:not(:hover) {
+      background-color: var(--p-slate-50) !important;
+    }
+
+    .p-iconwrapper {
+      transform: rotate(180deg); // fix for https://github.com/primefaces/primeng/issues/18444
+    }
+  }
+}

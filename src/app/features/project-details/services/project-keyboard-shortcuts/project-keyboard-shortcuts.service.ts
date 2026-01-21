@@ -46,6 +46,17 @@ export class ProjectKeyboardShortcutsService implements OnDestroy {
       return;
     }
 
+    // Handle current notes drawer shortcuts
+    if (this.projectSettingsStateService.isNotesDrawerOpen()) {
+      if (event.key === 'Escape' || event.key === 'n') {
+        event.preventDefault();
+        this.projectSettingsStateService.setNotesDrawerOpen(false);
+      }
+
+      // Block all other shortcuts when the drawer is open
+      return;
+    }
+
     const shortcut = this.keyboardShortcutsHelperService.getShortcutForEvent(event, KeyboardShortcutScope.Project);
     if (!shortcut) {
       return;

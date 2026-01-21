@@ -183,7 +183,8 @@ export class GlobalKeyboardShortcutsService implements OnDestroy {
   }
 
   private isDrawerOpen(): boolean {
-    return Boolean(document.querySelector('.p-drawer-active app-current-project-settings'));
+    return Boolean(document.querySelector('.p-drawer-active app-current-project-settings'))
+      || Boolean(document.querySelector('.p-drawer-active app-project-notes'));
   }
 
   private isAnyMenuOpen(): boolean {

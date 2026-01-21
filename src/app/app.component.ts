@@ -23,8 +23,8 @@ import {YomitanService} from './core/services/yomitan/yomitan.service';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AppComponent implements OnInit {
+  protected readonly toastService = inject(ToastService);
   private readonly fileOpenIntentService = inject(FileOpenIntentService);
-  private readonly toastService = inject(ToastService);
   private readonly yomitanService = inject(YomitanService);
 
   constructor() {

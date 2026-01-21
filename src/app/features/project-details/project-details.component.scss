@@ -152,3 +152,14 @@ app-timeline-editor {
   z-index: 999; /* Below header p-menu overlay */
   cursor: wait;
 }
+
+.notes-icon {
+  color: var(--app-text-secondary);
+}
+
+:host p-overlaybadge ::ng-deep .notes-icon-badge {
+  font-size: var(--p-badge-sm-font-size) !important;
+  min-width: 0.5625rem !important;
+  height: 0.5rem !important;
+  line-height: 0.5rem !important;
+}

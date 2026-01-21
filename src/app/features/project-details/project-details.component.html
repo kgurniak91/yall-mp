@@ -151,6 +151,20 @@
                 tooltipPosition="left"
                 severity="secondary"/>
 
+      <p-button pTooltip="Notes (N)"
+                tooltipStyleClass="tooltip-one-line"
+                tooltipPosition="left"
+                severity="secondary"
+                styleClass="p-button-icon-only"
+                (onClick)="toggleNotes()">
+        <p-overlaybadge badgeSize="small"
+                        severity="info"
+                        styleClass="notes-icon-badge"
+                        [badgeDisabled]="!hasNotesForCurrentClip()">
+          <i class="fa-solid fa-note-sticky notes-icon"></i>
+        </p-overlaybadge>
+      </p-button>
+
       <p-button icon="fa-solid fa-gear"
                 pTooltip="Project settings (P)"
                 tooltipStyleClass="tooltip-one-line"
@@ -183,6 +197,27 @@
                                     (settingsChange)="projectSettingsStateService.setSettings($event)"
                                     (selectedSettingsPresetChange)="onSettingsPresetChange($event)"
                                     (ankiTagsChange)="onAnkiTagsChange($event)"/>
+    </ng-template>
+  </p-drawer>
+
+  <p-drawer [visible]="projectSettingsStateService.isNotesDrawerOpen()"
+            (visibleChange)="projectSettingsStateService.setNotesDrawerOpen($event)"
+            header="Notes"
+            position="right"
+            [style]="{width: '30rem'}">
+    <ng-template pTemplate="content">
+      @if (project() && clipsStateService.currentClipForAllTracks(); as clip) {
+        @if (clip.hasSubtitle) {
+          <app-project-notes [projectId]="project()!.id"
+                             [clipId]="clip.sourceSubtitles[0].id"
+                             [initialExpandAll]="true">
+          </app-project-notes>
+        } @else {
+          <div class="text-center p-4 text-gray-500">
+            Select a subtitled clip to view notes.
+          </div>
+        }
+      }
     </ng-template>
   </p-drawer>
 </div>
