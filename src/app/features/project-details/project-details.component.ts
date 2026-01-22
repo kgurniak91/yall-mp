@@ -78,6 +78,7 @@ import {NoteFormDialogData, NoteFormResult} from './note-form-dialog/note-form-d
 import {NoteFormDialogComponent} from './note-form-dialog/note-form-dialog.component';
 import {ProjectNotesComponent} from './project-notes/project-notes.component';
 import {SearchSubtitlesDialogComponent} from './search-subtitles-dialog/search-subtitles-dialog.component';
+import {SearchSubtitlesDialogData} from './search-subtitles-dialog/search-subtitles-dialog.types';
 
 @Component({
   selector: 'app-project-details',
@@ -1427,6 +1428,11 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   }
 
   private openFindSubtitlesDialog(): void {
+    const data: SearchSubtitlesDialogData = {
+      clips: this.clipsStateService.clipsForAllTracks(),
+      currentTime: this.videoStateService.currentTime()
+    };
+
     const ref = this.dialogService.open(SearchSubtitlesDialogComponent, {
       header: 'Find in Subtitles',
       width: 'clamp(20rem, 95vw, 60rem)',
@@ -1440,9 +1446,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       modal: true,
       dismissableMask: true,
       closeOnEscape: true,
-      data: {
-        clips: this.clipsStateService.clipsForAllTracks()
-      }
+      data
     });
 
     ref.onClose.pipe(take(1)).subscribe((result: VideoClip | undefined) => {

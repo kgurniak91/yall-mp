@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, inject, OnInit, signal, viewChild} from '@angular/core';
+import {AfterViewInit, ChangeDetectionStrategy, Component, inject, OnInit, signal, viewChild} from '@angular/core';
 import {VideoClip} from '../../../model/video.types';
 import {DynamicDialogConfig, DynamicDialogRef} from 'primeng/dynamicdialog';
 import {FormsModule} from '@angular/forms';
@@ -10,10 +10,13 @@ import {ScrollPanel} from 'primeng/scrollpanel';
 import {Tag} from 'primeng/tag';
 import {IconField} from 'primeng/iconfield';
 import {InputIcon} from 'primeng/inputicon';
+import {SearchSubtitlesDialogData} from './search-subtitles-dialog.types';
 
 interface SearchResult {
   clip: VideoClip;
   cleanText: string;
+  isCurrent: boolean;
+  isGap: boolean;
 }
 
 @Component({
@@ -33,23 +36,52 @@ interface SearchResult {
   styleUrl: './search-subtitles-dialog.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class SearchSubtitlesDialogComponent implements OnInit {
+export class SearchSubtitlesDialogComponent implements OnInit, AfterViewInit {
   protected readonly searchQuery = signal('');
   protected readonly filteredClips = signal<SearchResult[]>([]);
   protected readonly scrollPanel = viewChild<ScrollPanel>('scrollPanel');
   private readonly ref = inject(DynamicDialogRef);
   private readonly config = inject(DynamicDialogConfig);
   private allSearchableClips: SearchResult[] = [];
+  private initialScrollTargetId: string | null = null;
 
   ngOnInit() {
-    const clips: VideoClip[] = this.config.data?.clips || [];
+    const data = this.config.data as SearchSubtitlesDialogData;
+    const clips: VideoClip[] = data?.clips || [];
+    const currentTime = data?.currentTime || 0;
+
+    const isInsideClip = (clip: VideoClip) => (currentTime >= clip.startTime) && (currentTime < clip.endTime);
 
     this.allSearchableClips = clips
-      .filter(c => c.hasSubtitle)
-      .map(clip => ({
-        clip,
-        cleanText: this.getCleanText(clip)
-      }));
+      .filter(c => c.hasSubtitle || isInsideClip(c))
+      .map(clip => {
+        const isGap = !clip.hasSubtitle;
+        return {
+          clip,
+          cleanText: isGap ? 'Current gap' : this.getCleanText(clip),
+          isCurrent: isInsideClip(clip),
+          isGap
+        };
+      });
+
+    const currentItem = this.allSearchableClips.find(i => i.isCurrent);
+
+    if (currentItem) {
+      this.initialScrollTargetId = currentItem.clip.id;
+    } else {
+      // Fallback: scroll to first item if somehow nothing is current (e.g., before 0s or after end)
+      this.initialScrollTargetId = this.allSearchableClips[0].clip.id;
+    }
+
+    this.filteredClips.set(this.allSearchableClips);
+  }
+
+  ngAfterViewInit() {
+    if (this.initialScrollTargetId) {
+      setTimeout(() => {
+        this.scrollToClip(this.initialScrollTargetId!);
+      }, 100);
+    }
   }
 
   onSearchQueryChange(query: string) {
@@ -64,9 +96,12 @@ export class SearchSubtitlesDialogComponent implements OnInit {
     this.ref.close();
   }
 
-  highlightMatch(text: string): string {
+  highlightMatch(item: SearchResult): string {
+    const text = item.cleanText;
     const query = this.searchQuery().trim();
-    if (!query) {
+
+    // Don't highlight the placeholder text for current gap
+    if (item.isGap || !query) {
       return text;
     }
 
@@ -76,16 +111,19 @@ export class SearchSubtitlesDialogComponent implements OnInit {
 
   private filterClips(query: string) {
     if (!query || query.trim().length === 0) {
-      this.filteredClips.set([]);
+      this.filteredClips.set(this.allSearchableClips);
       this.refreshScrollPanel();
       return;
     }
 
     const normalizedQuery = query.toLowerCase().trim();
 
-    const matches = this.allSearchableClips.filter(item =>
-      item.cleanText.toLowerCase().includes(normalizedQuery)
-    );
+    const matches = this.allSearchableClips.filter(item => {
+      if (item.isGap) {
+        return false;
+      }
+      return item.cleanText.toLowerCase().includes(normalizedQuery);
+    });
 
     this.filteredClips.set(matches);
     this.refreshScrollPanel();
@@ -118,5 +156,12 @@ export class SearchSubtitlesDialogComponent implements OnInit {
 
   private escapeRegExp(string: string): string {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  private scrollToClip(clipId: string) {
+    const element = document.getElementById(`search-clip-${clipId}`);
+    if (element) {
+      element.scrollIntoView({block: 'center', behavior: 'smooth'});
+    }
   }
 }
