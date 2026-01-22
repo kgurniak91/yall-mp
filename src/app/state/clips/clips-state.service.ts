@@ -24,6 +24,13 @@ import {v4 as uuidv4} from 'uuid';
 import {AssSubtitlesUtils} from '../../../../shared/utils/ass-subtitles.utils';
 import {ConfirmationService} from 'primeng/api';
 import {MergeSubtitlesCommand} from '../../model/commands/merge-subtitles.command';
+import {ShiftAllSubtitlesCommand} from '../../model/commands/shift-all-subtitles.command';
+
+export interface ShiftValidationResult {
+  totalClips: number;
+  deletedClips: number;
+  truncatedClips: number;
+}
 
 export const ADJUST_DEBOUNCE_MS = 50;
 export const MIN_GAP_DURATION = 0;
@@ -1013,6 +1020,108 @@ export class ClipsStateService implements OnDestroy {
     this.adjustDebounceTimer = setTimeout(() => {
       this.performAdjust(boundary, direction);
     }, ADJUST_DEBOUNCE_MS);
+  }
+
+  public validateGlobalShift(offset: number): ShiftValidationResult {
+    const subtitles = this._subtitles();
+    const duration = this.videoStateService.duration();
+
+    let deleted = 0;
+    let truncated = 0;
+
+    for (const sub of subtitles) {
+      const newStart = sub.startTime + offset;
+      const newEnd = sub.endTime + offset;
+
+      if (newEnd <= 0 || newStart >= duration) {
+        deleted++;
+        continue;
+      }
+
+      if ((newStart < 0 && newEnd > 0) || (newStart < duration && newEnd > duration)) {
+        truncated++;
+      }
+    }
+
+    return {
+      totalClips: subtitles.length,
+      deletedClips: deleted,
+      truncatedClips: truncated
+    };
+  }
+
+  public shiftAllSubtitles(offset: number): void {
+    const project = this.appStateService.currentProject();
+    if (!project) {
+      return;
+    }
+
+    const command = new ShiftAllSubtitlesCommand(this, offset, project.rawAssContent);
+    this.commandHistoryStateService.execute(command);
+  }
+
+  public performGlobalShift(offset: number): void {
+    const project = this.appStateService.currentProject();
+    if (!project) {
+      return;
+    }
+
+    const currentSubtitles = this._subtitles();
+    const duration = this.videoStateService.duration();
+    const newSubtitles: SubtitleData[] = [];
+
+    const shiftAssSubsRecursively = (sub: AssSubtitleData): AssSubtitleData | null => {
+      const sStart = sub.startTime + offset;
+      const sEnd = sub.endTime + offset;
+      if (sEnd <= 0 || sStart >= duration) {
+        return null;
+      }
+
+      const finalStart = AssSubtitlesUtils.roundToAssPrecision(Math.max(0, sStart));
+      const finalEnd = AssSubtitlesUtils.roundToAssPrecision(Math.min(duration, sEnd));
+
+      const newSub = cloneDeep(sub);
+      newSub.startTime = finalStart;
+      newSub.endTime = finalEnd;
+
+      if (newSub.sourceDialogues) {
+        newSub.sourceDialogues = newSub.sourceDialogues
+          .map(child => shiftAssSubsRecursively(child))
+          .filter((child): child is AssSubtitleData => child !== null);
+      }
+
+      return newSub;
+    };
+
+    for (const sub of currentSubtitles) {
+      if (sub.type === 'ass') {
+        const shifted = shiftAssSubsRecursively(sub as AssSubtitleData);
+        if (shifted) {
+          newSubtitles.push(shifted);
+        }
+      } else {
+        const sStart = sub.startTime + offset;
+        const sEnd = sub.endTime + offset;
+        if (sEnd <= 0 || sStart >= duration) {
+          continue;
+        }
+
+        newSubtitles.push({
+          ...sub,
+          startTime: AssSubtitlesUtils.roundToAssPrecision(Math.max(0, sStart)),
+          endTime: AssSubtitlesUtils.roundToAssPrecision(Math.min(duration, sEnd))
+        });
+      }
+    }
+
+    const updates: Partial<Project> = {subtitles: newSubtitles};
+    if (project.rawAssContent) {
+      updates.rawAssContent = this.assEditService.shiftAllTimings(project.rawAssContent, offset);
+    }
+
+    this.appStateService.updatePartialProject(this._projectId!, updates);
+    this._subtitles.set(newSubtitles);
+    this.videoStateService.requestAssRendererSync();
   }
 
   private performAdjust(boundary: 'start' | 'end', direction: 'left' | 'right'): void {

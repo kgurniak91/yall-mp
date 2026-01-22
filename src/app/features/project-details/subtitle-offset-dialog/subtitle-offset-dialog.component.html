@@ -1,0 +1,54 @@
+<div class="flex flex-column gap-4">
+  <div class="text-color-secondary line-height-3">
+    Adjust the timing of all subtitles in the project simultaneously.
+    <br>
+    Enter value in <b>milliseconds</b> (1 second = 1000ms).
+  </div>
+
+  <div class="flex flex-column gap-2">
+    <label for="offset-input" class="font-bold">Time Offset (ms)</label>
+    <p-inputNumber id="offset-input"
+                   [(ngModel)]="offsetMs"
+                   [showButtons]="true"
+                   buttonLayout="horizontal"
+                   placeholder="e.g. 500 or -200"
+                   [step]="50"
+                   incrementButtonClass="p-button-secondary"
+                   decrementButtonClass="p-button-secondary"
+                   incrementButtonIcon="fa-solid fa-plus"
+                   decrementButtonIcon="fa-solid fa-minus"
+                   [style]="{'width': '100%'}">
+    </p-inputNumber>
+
+    @if (offsetMs() !== null && offsetMs() !== 0) {
+      <div class="text-sm font-italic text-primary">
+        Equivalent to <b>{{ offsetSeconds() | number:'1.0-3' }}</b> seconds.
+      </div>
+    }
+  </div>
+
+  @if (validation(); as res) {
+    @if (res.deletedClips > 0 || res.truncatedClips > 0) {
+      <p-message severity="warn" styleClass="w-full">
+        <div class="flex flex-column gap-1">
+          <span class="font-bold">Warning: Potential Data Loss</span>
+          @if (res.deletedClips > 0) {
+            <span>• {{ res.deletedClips }} {{ res.deletedClips | i18nPlural: {'=1': 'clip', 'other': 'clips'} }} will be completely removed.</span>
+          }
+          @if (res.truncatedClips > 0) {
+            <span>• {{ res.truncatedClips }} {{ res.truncatedClips | i18nPlural: {'=1': 'clip', 'other': 'clips'} }} will be shortened.</span>
+          }
+        </div>
+      </p-message>
+    }
+  }
+
+  <div class="flex justify-content-end gap-2 mt-2">
+    <p-button label="Cancel" severity="secondary" icon="fa-solid fa-xmark" (click)="onClose()"/>
+    <p-button label="Apply Offset"
+              icon="fa-solid fa-clock-rotate-left"
+              (click)="onApply()"
+              [disabled]="!offsetMs() || offsetMs() === 0"
+              data-primary-action/>
+  </div>
+</div>

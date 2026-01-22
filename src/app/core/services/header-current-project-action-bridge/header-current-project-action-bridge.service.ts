@@ -14,6 +14,8 @@ import {KeyboardAction} from '../../../model/video.types';
 export class HeaderCurrentProjectActionBridgeService {
   private readonly _commandHistory = signal<CommandHistoryStateService | null>(null);
   private readonly _projectActionService = signal<ProjectActionService | null>(null);
+  private _openOffsetDialogCallback: (() => void) | null = null;
+
   public readonly canUndo = computed(() => this._commandHistory()?.canUndo() ?? false);
   public readonly canRedo = computed(() => this._commandHistory()?.canRedo() ?? false);
 
@@ -28,6 +30,7 @@ export class HeaderCurrentProjectActionBridgeService {
   public clear(): void {
     this._commandHistory.set(null);
     this._projectActionService.set(null);
+    this._openOffsetDialogCallback = null;
   }
 
   public undo(): void {
@@ -40,5 +43,13 @@ export class HeaderCurrentProjectActionBridgeService {
 
   public searchInSubtitles(): void {
     this._projectActionService()?.dispatch(KeyboardAction.FindInSubtitles);
+  }
+
+  public registerOffsetDialogOpener(fn: () => void): void {
+    this._openOffsetDialogCallback = fn;
+  }
+
+  public openSubtitleOffsetDialog(): void {
+    this._openOffsetDialogCallback?.();
   }
 }

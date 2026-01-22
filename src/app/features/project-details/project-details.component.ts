@@ -79,6 +79,8 @@ import {NoteFormDialogComponent} from './note-form-dialog/note-form-dialog.compo
 import {ProjectNotesComponent} from './project-notes/project-notes.component';
 import {SearchSubtitlesDialogComponent} from './search-subtitles-dialog/search-subtitles-dialog.component';
 import {SearchSubtitlesDialogData} from './search-subtitles-dialog/search-subtitles-dialog.types';
+import {SubtitleOffsetDialogComponent} from './subtitle-offset-dialog/subtitle-offset-dialog.component';
+import {SubtitleOffsetDialogData} from './subtitle-offset-dialog/subtitle-offset-dialog.types';
 
 @Component({
   selector: 'app-project-details',
@@ -429,6 +431,8 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       console.log('[ProjectDetails] Received mpv:managerReady signal!');
       this.isMpvReady.set(true);
     });
+
+    this.headerCurrentProjectActionBridgeService.registerOffsetDialogOpener(() => this.openSubtitleOffsetDialog());
   }
 
   async ngOnInit() {
@@ -1453,6 +1457,20 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       if (result) {
         this.videoStateService.seekAbsolute(result.startTime);
       }
+    });
+  }
+
+  private openSubtitleOffsetDialog(): void {
+    const data: SubtitleOffsetDialogData = {
+      validate: (offset: number) => this.clipsStateService.validateGlobalShift(offset),
+      apply: (offset: number) => this.clipsStateService.shiftAllSubtitles(offset)
+    };
+
+    this.dialogService.open(SubtitleOffsetDialogComponent, {
+      header: 'Shift All Subtitles',
+      width: 'clamp(20rem, 95vw, 40rem)',
+      modal: true,
+      data
     });
   }
 }

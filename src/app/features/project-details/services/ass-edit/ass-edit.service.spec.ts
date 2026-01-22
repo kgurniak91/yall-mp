@@ -1119,4 +1119,33 @@ Dialogue: 0,${gapStart},0:00:15.00,Default,,0,0,0,,This is a test
       expect(result.split('Dialogue:').length - 1).toBe(1);
     });
   });
+
+  describe('shiftAllTimings', () => {
+    it('shifts multiple lines forward correctly including rounding rollover', () => {
+      const dialogueLines = [
+        'Dialogue: 0,0:00:04.51,0:00:05.33,Default,,0,0,0,,Line 1',
+        'Dialogue: 0,0:00:10.00,0:00:11.99,Default,,0,0,0,,Line 2'
+      ].join('\r\n');
+      const rawAssContent = assFileTemplate(dialogueLines);
+
+      // 6666ms shift (6.666s)
+      const offset = 6.666;
+      const result = service.shiftAllTimings(rawAssContent, offset);
+
+      // Line 1: 4.51 + 6.666 = 11.176 -> rounded 11.18
+      // Line 1: 5.33 + 6.666 = 11.996 -> rounded 12.00 (ROLLOVER)
+      expect(result).toContain('Dialogue: 0,0:00:11.18,0:00:12.00,Default,,0,0,0,,Line 1');
+
+      // Line 2: 10.00 + 6.666 = 16.666 -> rounded 16.67
+      expect(result).toContain('Dialogue: 0,0:00:16.67,0:00:18.66,Default,,0,0,0,,Line 2');
+    });
+
+    it('clamps negative shifts at 0:00:00.00', () => {
+      const dialogueLine = 'Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Text';
+      const rawAssContent = assFileTemplate(dialogueLine);
+
+      const result = service.shiftAllTimings(rawAssContent, -5.0);
+      expect(result).toContain('Dialogue: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,,Text');
+    });
+  });
 });

@@ -2507,4 +2507,53 @@ Dialogue: 0:01:01.00,0:01:02.00,Default,Animating Text
       expect(service.clips().filter(c => c.hasSubtitle).length).toBe(1);
     });
   });
+
+  describe('Global Shift', () => {
+    beforeEach(() => {
+      projectState.subtitles = [
+        {type: 'srt', id: 's1', startTime: 10, endTime: 15, text: 'A', track: 0},
+        {type: 'srt', id: 's2', startTime: 20, endTime: 25, text: 'B', track: 0}
+      ];
+      service.setSubtitles(projectState.subtitles);
+    });
+
+    it('performs a global shift and can be undone', () => {
+      service.shiftAllSubtitles(5.5); // Shift +5.5s
+
+      let subs = service.getSubtitles();
+      expect(subs[0].startTime).toBe(15.5);
+      expect(subs[1].startTime).toBe(25.5);
+
+      commandHistoryService.undo();
+
+      subs = service.getSubtitles();
+      expect(subs[0].startTime).toBe(10);
+      expect(subs[1].startTime).toBe(20);
+    });
+
+    it('correctly reports data loss during shift validation', () => {
+      // Move -12s: s1 (10-15) becomes (-2 to 3), so it is truncated.
+      // Move -25s: s1 is completely deleted.
+
+      const result = service.validateGlobalShift(-12);
+      expect(result.truncatedClips).toBe(1);
+      expect(result.deletedClips).toBe(0);
+
+      const result2 = service.validateGlobalShift(-25);
+      expect(result2.deletedClips).toBe(2);
+    });
+
+    it('deletes clips shifted completely out of video duration', () => {
+      // Shift by 988s:
+      // s1 becomes 998 to 1003 -> Truncated at 1000
+      // s2 becomes 1008 to 1013 -> Starts after video duration -> Deleted
+      service.shiftAllSubtitles(988);
+
+      const subs = service.getSubtitles();
+      expect(subs.length).withContext('Should have deleted s2 but kept truncated s1').toBe(1);
+      expect(subs[0].id).toBe('s1');
+      expect(subs[0].startTime).toBe(998);
+      expect(subs[0].endTime).toBe(1000);
+    });
+  });
 });

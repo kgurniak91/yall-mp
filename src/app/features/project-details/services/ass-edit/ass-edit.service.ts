@@ -483,6 +483,32 @@ export class AssEditService {
     return -1;
   }
 
+  public shiftAllTimings(rawAssContent: string, offsetSeconds: number): string {
+    if (offsetSeconds === 0) {
+      return rawAssContent;
+    }
+
+    const parsedEvents = AssSubtitlesUtils.parseEvents(rawAssContent);
+    if (!parsedEvents) {
+      return rawAssContent;
+    }
+
+    const {header, formatLine, dialogueLines, formatSpec} = parsedEvents;
+    const startIdx = formatSpec.get('Start')!;
+    const endIdx = formatSpec.get('End')!;
+
+    const shiftedLines = dialogueLines.map(line => {
+      const parts = line.split(',');
+      const oldStart = AssSubtitlesUtils.timeToSeconds(parts[startIdx]);
+      const oldEnd = AssSubtitlesUtils.timeToSeconds(parts[endIdx]);
+      parts[startIdx] = AssSubtitlesUtils.formatTime(Math.max(0, oldStart + offsetSeconds));
+      parts[endIdx] = AssSubtitlesUtils.formatTime(Math.max(0, oldEnd + offsetSeconds));
+      return parts.join(',');
+    });
+
+    return `${header}[Events]\n${formatLine}\n${shiftedLines.join('\r\n')}`;
+  }
+
   private getLeafSubtitles(sub: AssSubtitleData): AssSubtitleData[] {
     if (sub.sourceDialogues && sub.sourceDialogues.length > 0) {
       return sub.sourceDialogues.flatMap(s => this.getLeafSubtitles(s));

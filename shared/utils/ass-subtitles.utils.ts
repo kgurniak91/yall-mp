@@ -122,10 +122,11 @@ export class AssSubtitlesUtils {
    * Converts seconds into the H:MM:SS.ss format required by ASS files.
    */
   static formatTime(seconds: number): string {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = Math.floor(seconds % 60);
-    const cs = Math.round((seconds - Math.floor(seconds)) * 100);
+    const totalCs = Math.round(seconds * 100);
+    const h = Math.floor(totalCs / 360000);
+    const m = Math.floor((totalCs % 360000) / 6000);
+    const s = Math.floor((totalCs % 6000) / 100);
+    const cs = totalCs % 100; // Centiseconds
     return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(cs).padStart(2, '0')}`;
   }
 
