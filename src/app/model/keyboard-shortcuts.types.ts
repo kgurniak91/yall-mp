@@ -324,6 +324,16 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
     group: KeyboardShortcutGroup.Subtitles
   },
   {
+    action: KeyboardAction.FindInSubtitles,
+    key: 'f',
+    ctrlKey: false,
+    description: 'Find in subtitles',
+    displayKeys: ['F'],
+    scope: KeyboardShortcutScope.Project,
+    type: ActionType.SingleShot,
+    group: KeyboardShortcutGroup.Subtitles
+  },
+  {
     action: KeyboardAction.EditCurrentSubtitles,
     key: 's',
     description: 'Edit current subtitles text',

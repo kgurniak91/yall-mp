@@ -152,6 +152,9 @@ export class ProjectActionService {
           this.fileOpenIntentService.openMedia(prevMediaFilePath);
         }
         break;
+      case KeyboardAction.FindInSubtitles:
+        this.videoStateService.requestFindInSubtitles();
+        break;
     }
   }
 }

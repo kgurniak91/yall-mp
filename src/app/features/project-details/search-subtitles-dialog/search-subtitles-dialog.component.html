@@ -1,0 +1,62 @@
+<div class="flex flex-column h-full gap-2">
+  <div class="p-3 flex-shrink-0">
+    <p-iconfield>
+      <p-inputicon class="fa-solid fa-search"/>
+      <input pInputText
+             type="text"
+             class="w-full"
+             [(ngModel)]="searchQuery"
+             (ngModelChange)="onSearchQueryChange($event)"
+             placeholder="Search..."
+             autofocus/>
+    </p-iconfield>
+  </div>
+
+  <div class="flex-grow-1 min-h-0 relative">
+    <p-scrollpanel #scrollPanel [style]="{width: '100%', height: '50vh'}" styleClass="search-scrollpanel">
+      @if (filteredClips().length > 0) {
+        <div class="flex flex-column p-3 pt-0">
+          @for (item of filteredClips(); track item.clip.id) {
+            <div class="search-result-item p-2 border-round cursor-pointer transition-colors flex align-items-center gap-3"
+                 (click)="selectClip(item.clip)">
+
+              <p-tag [value]="(item.clip.startTime * 1000 | date:'mm:ss.S') || ''"
+                     severity="secondary"
+                     styleClass="font-mono text-sm"></p-tag>
+
+              <div class="flex-grow-1 line-height-3 text-color">
+                <span [innerHTML]="highlightMatch(item.cleanText)"></span>
+              </div>
+
+              <div class="text-primary text-sm">
+                <i class="fa-solid fa-arrow-right-to-bracket"></i>
+              </div>
+            </div>
+
+            <p-divider styleClass="m-0"></p-divider>
+          }
+        </div>
+      } @else {
+        <div class="flex flex-column align-items-center justify-content-center h-full text-gray-500 gap-3 py-6 text-center select-none">
+          @if (searchQuery().length > 0) {
+            <i class="fa-solid fa-skull text-4xl"></i>
+            <span class="text-xl">No matches found</span>
+          } @else {
+            <i class="fa-solid fa-keyboard text-4xl"></i>
+            <div class="flex flex-column gap-1">
+              <span class="text-xl font-medium">Type to search...</span>
+              <span class="text-sm">Click on a search result to jump to given subtitle</span>
+            </div>
+          }
+        </div>
+      }
+    </p-scrollpanel>
+  </div>
+
+  <div class="flex align-items-center justify-content-end gap-2 p-3 mt-auto border-top-1 surface-border flex-shrink-0 bg-white z-1">
+    <p-button label="Close"
+              icon="fa-solid fa-xmark"
+              severity="secondary"
+              (onClick)="close()"></p-button>
+  </div>
+</div>

@@ -1,5 +1,6 @@
 import {
-  AfterViewInit, ChangeDetectionStrategy,
+  AfterViewInit,
+  ChangeDetectionStrategy,
   Component,
   computed,
   ElementRef,
@@ -173,6 +174,16 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
         icon: 'fa-solid fa-pencil',
         command: () => this.router.navigate(['/project/edit', project.id])
       });
+
+      if (this.isProjectDetailsView()) {
+        menu.push({
+          separator: true
+        }, {
+          label: 'Find in subtitles (F)',
+          icon: 'fa-solid fa-magnifying-glass',
+          command: () => this.headerCurrentProjectActionBridgeService.searchInSubtitles()
+        });
+      }
 
       menu.push({
         separator: true

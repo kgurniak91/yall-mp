@@ -77,6 +77,7 @@ import {
 import {NoteFormDialogData, NoteFormResult} from './note-form-dialog/note-form-dialog.types';
 import {NoteFormDialogComponent} from './note-form-dialog/note-form-dialog.component';
 import {ProjectNotesComponent} from './project-notes/project-notes.component';
+import {SearchSubtitlesDialogComponent} from './search-subtitles-dialog/search-subtitles-dialog.component';
 
 @Component({
   selector: 'app-project-details',
@@ -346,7 +347,10 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   constructor() {
     inject(ProjectKeyboardShortcutsService); // start listening
     inject(TokenizationService); // start listening
-    this.headerCurrentProjectActionBridgeService.register(this.commandHistoryStateService);
+    this.headerCurrentProjectActionBridgeService.register(
+      this.commandHistoryStateService,
+      this.actionService
+    );
 
     effect(() => {
       const subtitlesVisible = this.videoStateService.subtitlesVisible();
@@ -409,6 +413,15 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
         // Update Yomitan and re-check for valid dictionaries
         this.initializeYomitan(language);
       });
+    });
+
+    effect(() => {
+      if (this.videoStateService.findInSubtitlesRequest()) {
+        untracked(() => {
+          this.openFindSubtitlesDialog();
+        });
+        this.videoStateService.clearFindInSubtitlesRequest();
+      }
     });
 
     this.cleanupMpvReadyListener = window.electronAPI.onMpvManagerReady(() => {
@@ -1409,6 +1422,32 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
         } else {
           this.toastService.error('Could not determine context for note.');
         }
+      }
+    });
+  }
+
+  private openFindSubtitlesDialog(): void {
+    const ref = this.dialogService.open(SearchSubtitlesDialogComponent, {
+      header: 'Find in Subtitles',
+      width: 'clamp(20rem, 95vw, 60rem)',
+      contentStyle: {
+        "max-height": "80vh",
+        "overflow": "hidden",
+        "display": "flex",
+        "flex-direction": "column",
+        "padding": "0"
+      },
+      modal: true,
+      dismissableMask: true,
+      closeOnEscape: true,
+      data: {
+        clips: this.clipsStateService.clipsForAllTracks()
+      }
+    });
+
+    ref.onClose.pipe(take(1)).subscribe((result: VideoClip | undefined) => {
+      if (result) {
+        this.videoStateService.seekAbsolute(result.startTime);
       }
     });
   }

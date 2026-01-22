@@ -40,6 +40,7 @@ export enum KeyboardAction {
   AdjustClipEndRight = 'AdjustClipEndRight',
   ToggleSettings = 'ToggleSettings',
   ToggleNotes = 'ToggleNotes',
+  FindInSubtitles = 'FindInSubtitles',
   EditCurrentSubtitles = 'EditCurrentSubtitles',
   Undo = 'Undo',
   Redo = 'Redo',
