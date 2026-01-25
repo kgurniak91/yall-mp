@@ -18,8 +18,15 @@ export interface ProjectClipNotes {
   hint?: string;
 }
 
+export interface Catalog {
+  id: string;
+  parentId: string;
+  name: string;
+}
+
 export interface MinimalProject {
   id: string;
+  catalogId: string;
   mediaFileName: string;
   subtitleFileName: string;
   mediaPath: string;
@@ -33,6 +40,7 @@ export interface MinimalProject {
 
 export interface Project {
   id: string;
+  catalogId: string;
   mediaFileName: string;
   subtitleFileName: string;
   mediaPath: string;
@@ -67,6 +75,8 @@ export interface AppData {
   currentProject: Project | null;
   globalSettings: GlobalSettings;
   ankiSettings: AnkiSettings;
+  catalogs: Catalog[];
+  lastActiveCatalogId?: string;
 }
 
 /**
@@ -77,4 +87,13 @@ export interface CoreConfig {
   lastOpenedProjectId: string | null;
   globalSettings: GlobalSettings;
   ankiSettings: AnkiSettings;
+  catalogs: Catalog[];
+  lastActiveCatalogId?: string;
+}
+
+export class DuplicateCatalogError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'DuplicateCatalogError';
+  }
 }

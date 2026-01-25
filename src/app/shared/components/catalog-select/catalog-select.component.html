@@ -1,0 +1,9 @@
+<p-treeSelect class="w-full"
+              containerStyleClass="w-full"
+              [ngModel]="selectedNode()"
+              (ngModelChange)="onNodeChange($event)"
+              [options]="options()"
+              appendTo="body"
+              placeholder="Select Catalog"
+              [showClear]="false">
+</p-treeSelect>

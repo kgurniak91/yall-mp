@@ -39,6 +39,12 @@
   --p-overlaybadge-outline-color: black !important;
   --p-badge-sm-min-width: 0.5rem !important;
   --p-badge-sm-height: 0.5rem !important;
+  --p-splitter-background: var(--app-surface-dark) !important;
+  --p-splitter-border-color: var(--app-border) !important;
+  --p-splitter-gutter-background: var(--app-border) !important;
+  --p-splitter-color: var(--app-text) !important;
+  --p-tree-padding: 0 !important;
+  --p-tree-background: transparent !important;
 }
 
 html, body {
@@ -216,4 +222,8 @@ app-global-settings-dialog p-tabs {
 
 .p-confirmdialog .p-dialog-content .p-confirmdialog-message {
   word-break: break-all;
+}
+
+p-splitter * {
+  outline: none !important;
 }

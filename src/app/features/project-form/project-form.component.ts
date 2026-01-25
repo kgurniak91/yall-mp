@@ -18,6 +18,10 @@ import {SUBTITLE_OPTIONS, SubtitleOptionType} from './project-form.type';
 import {SpinnerComponent} from '../../shared/components/spinner/spinner.component';
 import {generateTagFromFileName} from '../../shared/utils/tag/tag.utils';
 import {FileOpenIntentService} from '../../core/services/file-open-intent/file-open-intent.service';
+import {TreeSelectModule} from 'primeng/treeselect';
+import {ROOT_CATALOG_ID} from '../../shared/types/catalog.types';
+import {CatalogSelectComponent} from '../../shared/components/catalog-select/catalog-select.component';
+import {isEqual} from 'lodash-es';
 
 const EDIT_CONFIRMATION_MESSAGE = `
 Are you sure you want to edit this project?
@@ -39,7 +43,9 @@ This action cannot be undone.
     FileDropZoneComponent,
     Select,
     FormsModule,
-    SpinnerComponent
+    SpinnerComponent,
+    TreeSelectModule,
+    CatalogSelectComponent
   ],
   templateUrl: './project-form.component.html',
   styleUrl: './project-form.component.scss',
@@ -71,6 +77,10 @@ export class ProjectFormComponent implements OnInit {
       return false;
     }
 
+    if (!this.selectedCatalogId()) {
+      return false;
+    }
+
     const subOption = this.selectedSubtitleOption();
 
     switch (subOption) {
@@ -86,6 +96,7 @@ export class ProjectFormComponent implements OnInit {
   });
   protected readonly subtitleOptions = SUBTITLE_OPTIONS;
   protected readonly SubtitleOptionType = SubtitleOptionType;
+  protected readonly selectedCatalogId = signal<string | null>(ROOT_CATALOG_ID);
   private readonly videoWidth = signal<number | undefined>(undefined);
   private readonly videoHeight = signal<number | undefined>(undefined);
   private readonly externalSubtitlePath = signal<string | null>(null);
@@ -98,6 +109,7 @@ export class ProjectFormComponent implements OnInit {
   private readonly confirmationService = inject(ConfirmationService);
   private readonly location = inject(Location);
   private readonly fileOpenIntentService = inject(FileOpenIntentService);
+  private originalProject: Project | null = null;
 
   constructor() {
     effect(() => {
@@ -127,6 +139,7 @@ export class ProjectFormComponent implements OnInit {
       this.editingProjectId.set(projectId);
       const project = await this.appStateService.getProjectById(projectId);
       if (project) {
+        this.originalProject = project; // Capture state for later comparison when saving
         const mediaFileExists = await window.electronAPI.checkFileExists(project.mediaPath);
 
         if (mediaFileExists) {
@@ -154,13 +167,19 @@ export class ProjectFormComponent implements OnInit {
             break;
         }
 
+        this.selectedCatalogId.set(project.catalogId);
         this.isLoading.set(false);
       } else {
         this.toastService.error('Project not found');
         this.goBack();
       }
-    } else if (!this.fileOpenIntentService.hasIntent()) {
-      this.isLoading.set(false);
+    } else {
+      const activeId = this.appStateService.activeCatalogId();
+      this.selectedCatalogId.set(activeId);
+
+      if (!this.fileOpenIntentService.hasIntent()) {
+        this.isLoading.set(false);
+      }
     }
   }
 
@@ -237,15 +256,47 @@ export class ProjectFormComponent implements OnInit {
 
   protected submitProject(): void {
     if (this.editMode()) {
-      this.confirmationService.confirm({
-        header: 'Confirm changes',
-        message: EDIT_CONFIRMATION_MESSAGE,
-        icon: 'fa-solid fa-circle-exclamation',
-        accept: () => this.editExistingProject()
-      });
+      if (this.hasDestructiveChanges()) {
+        this.confirmationService.confirm({
+          header: 'Confirm changes',
+          message: EDIT_CONFIRMATION_MESSAGE,
+          icon: 'fa-solid fa-circle-exclamation',
+          accept: () => this.editExistingProject()
+        });
+      } else {
+        // Safe updates (e.g., catalog change) don't need confirmation
+        this.editExistingProject();
+      }
     } else {
       this.createNewProject();
     }
+  }
+
+  private hasDestructiveChanges(): boolean {
+    if (!this.originalProject) {
+      return true;
+    }
+
+    const mediaPath = this.mediaFilePath();
+    const {subtitleSelection} = this.buildSubtitleSelection();
+    const audioTrackIndex = this.selectedAudioTrackIndex();
+
+    // Check media
+    if (this.originalProject.mediaPath !== mediaPath) {
+      return true;
+    }
+
+    // Check audio track
+    if (this.originalProject.settings.selectedAudioTrackIndex !== audioTrackIndex) {
+      return true;
+    }
+
+    // Check subtitles
+    if (!isEqual(this.originalProject.subtitleSelection, subtitleSelection)) {
+      return true;
+    }
+
+    return false;
   }
 
   private async applyFileIntent() {
@@ -282,9 +333,11 @@ export class ProjectFormComponent implements OnInit {
     const {subtitleSelection, subtitleFileName} = this.buildSubtitleSelection();
     const mediaFileName = this.getBaseName(mediaPath);
     const generatedAnkiTag = generateTagFromFileName(mediaFileName);
+    const catalogId = this.selectedCatalogId()!; // Validated by isValid()
 
     const newProject: Project = {
       id: uuidv4(),
+      catalogId,
       mediaFileName,
       subtitleFileName: subtitleFileName,
       mediaPath: mediaPath,
@@ -320,41 +373,45 @@ export class ProjectFormComponent implements OnInit {
 
     const mediaPath = this.mediaFilePath()!;
     const {subtitleSelection, subtitleFileName} = this.buildSubtitleSelection();
-    const existingProject = await this.appStateService.getProjectById(projectId);
+    const catalogId = this.selectedCatalogId()!; // Validated by isValid()
+    const isDestructive = this.hasDestructiveChanges();
+    let updates: Partial<Project>;
 
-    if (!existingProject) {
-      this.toastService.error('Could not find the project to update.');
-      return;
-    }
-
-    const isAudioChanged = (existingProject.settings.selectedAudioTrackIndex !== this.selectedAudioTrackIndex());
-    const isMediaChanged = (existingProject.mediaPath !== mediaPath);
-
-    const updates: Partial<Project> = {
-      mediaPath: mediaPath,
-      mediaFileName: this.getBaseName(mediaPath),
-      subtitleSelection: subtitleSelection,
-      subtitleFileName: subtitleFileName,
-      duration: 0,
-      lastPlaybackTime: 0,
-      subtitles: [],
-      settings: {
-        ...existingProject.settings,
-        selectedAudioTrackIndex: this.selectedAudioTrackIndex()
-      },
-      audioTracks: this.audioTracks(),
-      subtitleTracks: this.subtitleTracks(),
-      videoWidth: this.videoWidth(),
-      videoHeight: this.videoHeight()
-    };
-
-    if (isAudioChanged || isMediaChanged) {
-      updates.audioPeaks = undefined; // Force regeneration of audio waveform
+    if (isDestructive) {
+      updates = {
+        catalogId,
+        mediaPath: mediaPath,
+        mediaFileName: this.getBaseName(mediaPath),
+        subtitleSelection: subtitleSelection,
+        subtitleFileName: subtitleFileName,
+        duration: 0,
+        lastPlaybackTime: 0,
+        subtitles: [],
+        settings: {
+          ...this.originalProject!.settings,
+          selectedAudioTrackIndex: this.selectedAudioTrackIndex()
+        },
+        audioTracks: this.audioTracks(),
+        subtitleTracks: this.subtitleTracks(),
+        videoWidth: this.videoWidth(),
+        videoHeight: this.videoHeight(),
+        audioPeaks: undefined // Force regeneration of audio waveform
+      };
+    } else {
+      // Safe update - only update fields that don't affect timeline
+      updates = {
+        catalogId
+      };
     }
 
     this.appStateService.updatePartialProject(projectId, updates);
     this.toastService.success('Project updated successfully');
-    this.router.navigate(['/project', projectId]);
+
+    if (window.history.length > 1) {
+      this.location.back();
+    } else {
+      this.router.navigate(['/project', projectId]);
+    }
   }
 
   private buildSubtitleSelection(): { subtitleSelection: SubtitleSelection, subtitleFileName: string } {
@@ -382,6 +439,10 @@ export class ProjectFormComponent implements OnInit {
   }
 
   private showInvalidFormToast(): void {
+    if (!this.selectedCatalogId()) {
+      this.toastService.error('Please select a catalog');
+      return;
+    }
     this.toastService.error('Select the media file and pick correct option for subtitles');
   }
 }

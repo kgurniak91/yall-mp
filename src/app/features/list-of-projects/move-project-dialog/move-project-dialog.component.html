@@ -1,0 +1,12 @@
+<form [formGroup]="form" class="flex flex-column gap-4 h-full">
+  <div class="flex flex-column gap-2">
+    <label class="required font-bold">Select Destination Catalog</label>
+    <app-catalog-select formControlName="targetCatalogId"></app-catalog-select>
+    <app-form-control-error [control]="form.get('targetCatalogId')"/>
+  </div>
+
+  <div class="flex justify-content-end gap-2 mt-auto">
+    <p-button label="Cancel" severity="secondary" icon="fa-solid fa-xmark" (onClick)="close()"/>
+    <p-button label="Move" severity="primary" icon="fa-solid fa-arrow-right-to-bracket" (onClick)="save()"/>
+  </div>
+</form>

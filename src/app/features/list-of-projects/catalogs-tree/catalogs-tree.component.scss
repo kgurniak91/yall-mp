@@ -1,0 +1,20 @@
+:host p-tree ::ng-deep {
+  .p-tree {
+    flex-grow: 1;
+  }
+
+  .p-tree-node-content {
+    &:not(:hover):not(.p-tree-node-selected) {
+      color: var(--app-text) !important;
+    }
+
+    &:not(.p-tree-node-selectable) {
+      cursor: default !important;
+    }
+
+    &.p-tree-node-selected p-tag {
+      background-color: var(--app-text) !important;
+      color: #020617 !important;
+    }
+  }
+}

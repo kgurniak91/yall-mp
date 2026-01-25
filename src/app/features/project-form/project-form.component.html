@@ -9,7 +9,7 @@
     </div>
 
     <div class="content-grid">
-      <section class="form-panel">
+      <section class="form-panel media-panel">
         <h2 class="m-0 mb-3">Media</h2>
         <div class="panel-body">
           <app-file-drop-zone label="Drag and drop a media file here"
@@ -20,7 +20,7 @@
         </div>
       </section>
 
-      <section class="form-panel">
+      <section class="form-panel media-panel">
         @if (audioTracks().length > 1) {
           <h2 class="m-0 mb-3">Audio</h2>
 
@@ -96,6 +96,17 @@
               <span>Select a media file first to see available options</span>
             </div>
           }
+        </div>
+      </section>
+
+      <section class="form-panel catalog-panel">
+        <h2 class="m-0 mb-3">Project Location</h2>
+        <div class="panel-body">
+          <div class="flex flex-column gap-2">
+            <label>Save in catalog</label>
+            <app-catalog-select [(ngModel)]="selectedCatalogId"></app-catalog-select>
+            <small class="text-gray-500">Organize your projects into catalogs</small>
+          </div>
         </div>
       </section>
     </div>

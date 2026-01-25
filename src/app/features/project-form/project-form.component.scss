@@ -1,4 +1,4 @@
-$desktop-breakpoint: 62rem;
+$desktop-breakpoint: 66.5rem;
 
 :host {
   display: flex;
@@ -22,12 +22,18 @@ $desktop-breakpoint: 62rem;
   flex-direction: column;
   gap: 2rem;
   width: 100%;
-  max-width: 80rem;
+  max-width: 36rem;
+  margin: 0 auto;
+
+  @media (min-width: $desktop-breakpoint) {
+    max-width: 80rem;
+  }
 }
 
 .header {
   text-align: center;
   color: var(--app-text-secondary);
+
   h1 {
     margin: 0 0 0.5rem 0;
     font-size: 2.5rem;
@@ -54,6 +60,14 @@ $desktop-breakpoint: 62rem;
   border: 1px solid var(--app-border);
   border-radius: var(--app-border-radius);
   padding: 1rem;
+
+  &.media-panel {
+    aspect-ratio: 4 / 3;
+  }
+
+  &.catalog-panel {
+    grid-column: 1 / -1;
+  }
 }
 
 .panel-body {
@@ -90,6 +104,7 @@ $desktop-breakpoint: 62rem;
     font-size: 1rem;
     color: var(--app-text);
     user-select: none;
+
     input[type="radio"]:disabled + .custom-radio + span {
       opacity: 0.5;
     }
@@ -114,6 +129,7 @@ $desktop-breakpoint: 62rem;
 
   input[type="radio"]:checked + .custom-radio {
     border-color: var(--app-primary);
+
     &::after {
       content: '';
       position: absolute;

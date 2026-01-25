@@ -12,7 +12,7 @@ export class FormValidationService {
   public isFormValid(formGroup: FormGroup): boolean {
     if (formGroup.invalid) {
       FormUtils.markAllAsDirty(formGroup);
-      this.toastService.warn('Please correct the form errors before saving');
+      this.toastService.error('Please correct the form errors before saving');
       return false;
     }
 

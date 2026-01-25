@@ -1,12 +1,24 @@
-import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, inject} from '@angular/core';
 import {AppStateService} from '../../state/app/app-state.service';
 import {Router, RouterLink} from '@angular/router';
-import {MinimalProject, Project} from '../../model/project.types';
+import {MinimalProject} from '../../model/project.types';
 import {Button} from 'primeng/button';
 import {DataView} from 'primeng/dataview';
 import {ConfirmationService} from 'primeng/api';
 import {ProjectListItemComponent} from './project-list-item/project-list-item.component';
-import {LogoComponent} from '../../shared/components/logo/logo.component';
+import {SplitterModule} from 'primeng/splitter';
+import {FormsModule} from '@angular/forms';
+import {DragDropModule} from 'primeng/dragdrop';
+import {ToastService} from '../../shared/services/toast/toast.service';
+import {
+  disableFocusInParentDialog,
+  scheduleRestoreFocus
+} from '../../shared/utils/disable-focus-in-parent-dialog/disable-focus-in-parent-dialog';
+import {DialogService} from 'primeng/dynamicdialog';
+import {MoveProjectDialogComponent} from './move-project-dialog/move-project-dialog.component';
+import {CatalogsTreeComponent} from './catalogs-tree/catalogs-tree.component';
+import {CatalogsBreadcrumbComponent} from './catalogs-breadcrumb/catalogs-breadcrumb.component';
+import {MoveProjectDialogData} from './move-project-dialog/move-project-dialog.types';
 
 @Component({
   selector: 'app-list-of-projects',
@@ -15,7 +27,11 @@ import {LogoComponent} from '../../shared/components/logo/logo.component';
     DataView,
     RouterLink,
     ProjectListItemComponent,
-    LogoComponent
+    SplitterModule,
+    FormsModule,
+    DragDropModule,
+    CatalogsTreeComponent,
+    CatalogsBreadcrumbComponent
   ],
   templateUrl: './list-of-projects.component.html',
   styleUrl: './list-of-projects.component.scss',
@@ -23,8 +39,19 @@ import {LogoComponent} from '../../shared/components/logo/logo.component';
 })
 export class ListOfProjectsComponent {
   protected readonly appStateService = inject(AppStateService);
+  protected activeCatalogId = computed(() => this.appStateService.activeCatalogId());
+  protected filteredProjects = computed(() => {
+    const activeId = this.activeCatalogId();
+    return this.appStateService.projects().filter(p => p.catalogId === activeId);
+  });
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly dialogService = inject(DialogService);
+  private readonly toastService = inject(ToastService);
   private readonly router = inject(Router);
+
+  protected onBreadcrumbSelect(catalogId: string): void {
+    this.appStateService.setActiveCatalog(catalogId);
+  }
 
   async navigateToProject(project: MinimalProject): Promise<void> {
     await this.appStateService.setCurrentProject(project.id);
@@ -38,9 +65,37 @@ export class ListOfProjectsComponent {
   deleteProject(project: MinimalProject): void {
     this.confirmationService.confirm({
       header: 'Confirm deletion',
-      message: `Are you sure you want to delete the project <b>${project.mediaFileName}</b>?<br>This action cannot be undone.`,
+      message: `Delete project <b>${project.mediaFileName}</b>?`,
       icon: 'fa-solid fa-circle-exclamation',
       accept: () => this.appStateService.deleteProject(project.id)
+    });
+  }
+
+  openMoveProjectDialog(project: MinimalProject) {
+    const restoreFocus = disableFocusInParentDialog();
+
+    const data: MoveProjectDialogData = {
+      currentCatalogId: project.catalogId
+    };
+
+    const ref = this.dialogService.open(MoveProjectDialogComponent, {
+      header: 'Move Project',
+      width: 'clamp(20rem, 95vw, 45rem)',
+      modal: true,
+      data
+    });
+
+    ref.onClose.subscribe((newCatalogId: string | undefined) => {
+      scheduleRestoreFocus(restoreFocus);
+
+      if (newCatalogId === undefined) {
+        return;
+      }
+
+      if (newCatalogId !== project.catalogId) {
+        this.appStateService.moveProjectToCatalog(project.id, newCatalogId);
+        this.toastService.success('Project moved');
+      }
     });
   }
 }

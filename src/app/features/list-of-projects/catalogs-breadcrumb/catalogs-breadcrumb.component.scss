@@ -1,0 +1,31 @@
+:host p-breadcrumb ::ng-deep {
+  .p-breadcrumb-list {
+    flex-wrap: wrap !important;
+  }
+
+  .p-breadcrumb {
+    background-color: transparent !important;
+    padding: 0 !important;
+
+    .p-breadcrumb-item-icon,
+    .p-breadcrumb-item-label,
+    .p-iconwrapper {
+      color: var(--app-text) !important;
+    }
+
+    .p-breadcrumb-item:not(.breadcrumb-current) {
+      cursor: pointer !important;
+
+      &:hover {
+        .p-breadcrumb-item-icon,
+        .p-breadcrumb-item-label {
+          color: var(--p-primary-600) !important;
+        }
+      }
+    }
+
+    .p-breadcrumb-item.breadcrumb-current {
+      cursor: default !important;
+    }
+  }
+}

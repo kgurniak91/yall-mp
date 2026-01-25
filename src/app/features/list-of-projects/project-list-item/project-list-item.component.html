@@ -12,16 +12,14 @@
     </div>
 
     <div class="project-actions">
-      <p-button icon="fa-solid fa-pencil"
+      <p-button icon="fa-solid fa-ellipsis-v"
                 severity="secondary"
-                (onClick)="$event.stopPropagation(); editProject.emit();"
-                pTooltip="Edit project"
-                tooltipPosition="top"></p-button>
-      <p-button icon="fa-solid fa-trash"
-                severity="secondary"
-                (onClick)="$event.stopPropagation(); removeProject.emit();"
-                pTooltip="Delete project"
-                tooltipPosition="top"></p-button>
+                (onClick)="$event.stopPropagation(); menu.toggle($event)"></p-button>
+
+      <p-menu #menu
+              [model]="menuItems()"
+              [popup]="true"
+              appendTo="body"></p-menu>
     </div>
   </div>
 

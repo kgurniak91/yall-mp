@@ -1,5 +1,5 @@
 import {computed, DestroyRef, inject, Injectable, Injector, signal} from '@angular/core';
-import {AppData, CoreConfig, MinimalProject, Project} from '../../model/project.types';
+import {AppData, Catalog, CoreConfig, DuplicateCatalogError, MinimalProject, Project} from '../../model/project.types';
 import {DEFAULT_GLOBAL_SETTINGS, DEFAULT_PROJECT_SETTINGS, GlobalSettings} from '../../model/settings.types';
 import {AnkiSettings} from '../../model/anki.types';
 import {StorageService} from '../../core/services/storage/storage.service';
@@ -7,6 +7,7 @@ import {merge} from 'lodash-es';
 import {debounceTime, skip} from 'rxjs';
 import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
 import {normalizeLanguageCode} from '../../../../shared/types/yomitan';
+import {ROOT_CATALOG_ID} from '../../shared/types/catalog.types';
 
 const defaults: AppData = {
   projects: [],
@@ -15,7 +16,8 @@ const defaults: AppData = {
   ankiSettings: {
     ankiCardTemplates: [],
     tags: ['yall-mp']
-  }
+  },
+  catalogs: []
 };
 
 @Injectable({
@@ -26,12 +28,15 @@ export class AppStateService {
   private readonly _appData = signal<AppData>(defaults);
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly _activeCatalogId = signal<string>(ROOT_CATALOG_ID);
 
   private readonly coreConfig = computed<CoreConfig>(() => ({
     projects: this._appData().projects,
     lastOpenedProjectId: this._appData().currentProject?.id ?? null,
     globalSettings: this._appData().globalSettings,
     ankiSettings: this._appData().ankiSettings,
+    catalogs: this._appData().catalogs,
+    lastActiveCatalogId: this._activeCatalogId()
   }));
 
   public readonly projects = computed(() => {
@@ -43,6 +48,9 @@ export class AppStateService {
 
   public readonly globalSettings = computed(() => this._appData().globalSettings);
   public readonly ankiSettings = computed(() => this._appData().ankiSettings);
+
+  public readonly catalogs = computed(() => this._appData().catalogs.sort((a, b) => a.name.localeCompare(b.name)));
+  public readonly activeCatalogId = this._activeCatalogId.asReadonly();
 
   constructor() {
     toObservable(this.coreConfig, {injector: this.injector}).pipe(
@@ -59,6 +67,22 @@ export class AppStateService {
     if (data) {
       const mergedData = merge({}, defaults, data);
 
+      mergedData.projects.forEach(p => {
+        if (!p.catalogId) {
+          p.catalogId = ROOT_CATALOG_ID;
+        }
+      });
+
+      if (mergedData.currentProject && !mergedData.currentProject.catalogId) {
+        mergedData.currentProject.catalogId = ROOT_CATALOG_ID;
+      }
+
+      mergedData.catalogs.forEach(c => {
+        if (!c.parentId) {
+          c.parentId = ROOT_CATALOG_ID;
+        }
+      });
+
       if (data.globalSettings?.subtitleLookupServices) {
         mergedData.globalSettings.subtitleLookupServices = data.globalSettings.subtitleLookupServices;
       }
@@ -73,6 +97,7 @@ export class AppStateService {
       }
 
       this._appData.set(mergedData);
+      this.setActiveCatalogId(mergedData, data.lastActiveCatalogId);
     }
   }
 
@@ -142,18 +167,38 @@ export class AppStateService {
     }
 
     this._appData.update(currentData => {
-      if (currentData.currentProject?.id !== projectId) {
-        return currentData;
+      let currentProject = currentData.currentProject;
+      let projects = currentData.projects;
+
+      // Update current project if it matches
+      if (currentProject?.id === projectId) {
+        currentProject = {
+          ...currentProject,
+          ...fields
+        };
       }
 
-      const updatedProject = {
-        ...currentData.currentProject,
-        ...fields
-      };
+      // Update minimal project in projects list
+      projects = projects.map(p => {
+        if (p.id === projectId) {
+          return {
+            ...p,
+            catalogId: fields.catalogId !== undefined ? fields.catalogId : p.catalogId,
+            mediaFileName: fields.mediaFileName !== undefined ? fields.mediaFileName : p.mediaFileName,
+            subtitleFileName: fields.subtitleFileName !== undefined ? fields.subtitleFileName : p.subtitleFileName,
+            mediaPath: fields.mediaPath !== undefined ? fields.mediaPath : p.mediaPath,
+            lastOpenedDate: fields.lastOpenedDate !== undefined ? fields.lastOpenedDate : p.lastOpenedDate,
+            lastPlaybackTime: fields.lastPlaybackTime !== undefined ? fields.lastPlaybackTime : p.lastPlaybackTime,
+          };
+        } else {
+          return p;
+        }
+      });
 
       return {
         ...currentData,
-        currentProject: updatedProject
+        projects,
+        currentProject
       };
     });
 
@@ -247,6 +292,93 @@ export class AppStateService {
     });
   }
 
+  public setActiveCatalog(catalogId: string | null): void {
+    this._activeCatalogId.set(catalogId || ROOT_CATALOG_ID);
+  }
+
+  public isCatalogNameTaken(name: string, parentId: string, excludeCatalogId?: string): boolean {
+    const catalogs = this._appData().catalogs;
+    const normalizedName = name.trim().toLowerCase();
+
+    return catalogs.some(c =>
+      c.parentId === parentId &&
+      c.id !== excludeCatalogId &&
+      c.name.trim().toLowerCase() === normalizedName
+    );
+  }
+
+  public createCatalog(catalog: Catalog): void {
+    if (this.isCatalogNameTaken(catalog.name, catalog.parentId)) {
+      throw new DuplicateCatalogError(`A catalog named "${catalog.name}" already exists in this location.`);
+    }
+
+    this._appData.update(data => ({
+      ...data,
+      catalogs: [...data.catalogs, catalog]
+    }));
+  }
+
+  public updateCatalog(id: string, updates: Partial<Catalog>): void {
+    const currentCatalog = this._appData().catalogs.find(c => c.id === id);
+    if (!currentCatalog) {
+      return;
+    }
+
+    // Validate name uniqueness if name or parent is changing
+    const newName = (updates.name !== undefined) ? updates.name : currentCatalog.name;
+    const newParentId = (updates.parentId !== undefined) ? updates.parentId : currentCatalog.parentId;
+
+    // Only validate if something relevant actually changed
+    const isMoving = (updates.parentId !== undefined) && (updates.parentId !== currentCatalog.parentId);
+    const isRenaming = (updates.name !== undefined) && (updates.name !== currentCatalog.name);
+
+    if ((isMoving || isRenaming) && this.isCatalogNameTaken(newName, newParentId, id)) {
+      throw new DuplicateCatalogError(`A catalog named "${newName}" already exists in the destination.`);
+    }
+
+    this._appData.update(data => ({
+      ...data,
+      catalogs: data.catalogs.map(c => c.id === id ? {...c, ...updates} : c)
+    }));
+  }
+
+  public deleteCatalog(catalogId: string): void {
+    const hasProjects = this._appData().projects.some(p => p.catalogId === catalogId);
+    const hasSubCatalogs = this._appData().catalogs.some(c => c.parentId === catalogId);
+
+    if (hasProjects || hasSubCatalogs) {
+      console.error("Cannot delete non-empty catalog");
+      return;
+    }
+
+    this._appData.update(data => ({
+      ...data,
+      catalogs: data.catalogs.filter(c => c.id !== catalogId)
+    }));
+
+    // If currently active catalog was deleted, default to root
+    if (this._activeCatalogId() === catalogId) {
+      this._activeCatalogId.set(ROOT_CATALOG_ID);
+    }
+  }
+
+  public moveProjectToCatalog(projectId: string, catalogId: string): void {
+    // Update in-memory minimal list
+    this._appData.update(data => ({
+      ...data,
+      projects: data.projects.map(p => p.id === projectId ? {...p, catalogId} : p)
+    }));
+
+    // If this project is currently loaded in detail view, update it too
+    const current = this.currentProject();
+    if (current && current.id === projectId) {
+      this.updatePartialProject(projectId, {catalogId});
+    } else {
+      // Otherwise perform a disk patch
+      this.storageService.updateProjectFields(projectId, {catalogId});
+    }
+  }
+
   private toMinimalProject(project: Project): MinimalProject {
     return {
       id: project.id,
@@ -258,7 +390,8 @@ export class AppStateService {
       duration: project.duration,
       lastPlaybackTime: project.lastPlaybackTime,
       subtitleCount: project.subtitles.length,
-      lastSubtitleEndTime: project.lastSubtitleEndTime
+      lastSubtitleEndTime: project.lastSubtitleEndTime,
+      catalogId: project.catalogId
     };
   }
 
@@ -272,5 +405,17 @@ export class AppStateService {
       project.detectedLanguage = detectedLanguage;
       project.settings.subtitlesLanguage = selectedLanguage;
     }
+  }
+
+  private setActiveCatalogId(mergedData: AppData, lastActiveCatalogId?: string) {
+    let targetCatalogId = lastActiveCatalogId;
+
+    const isValid = targetCatalogId === ROOT_CATALOG_ID || mergedData.catalogs.some(c => c.id === targetCatalogId);
+
+    if (!isValid) {
+      targetCatalogId = ROOT_CATALOG_ID;
+    }
+
+    this._activeCatalogId.set(targetCatalogId!);
   }
 }

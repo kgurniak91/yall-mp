@@ -1,28 +1,31 @@
-import {ChangeDetectionStrategy, Component, computed, input, output} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, input, OnInit, output, signal} from '@angular/core';
 import {MinimalProject} from '../../../model/project.types';
 import {Button} from 'primeng/button';
-import {Tooltip} from 'primeng/tooltip';
 import {DatePipe, DecimalPipe} from '@angular/common';
 import {ProgressBar} from 'primeng/progressbar';
+import {MenuItem} from 'primeng/api';
+import {Menu} from 'primeng/menu';
 
 @Component({
   selector: 'app-project-list-item',
   imports: [
     Button,
-    Tooltip,
     DatePipe,
     ProgressBar,
-    DecimalPipe
+    DecimalPipe,
+    Menu
   ],
   templateUrl: './project-list-item.component.html',
   styleUrl: './project-list-item.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ProjectListItemComponent {
-  project = input.required<MinimalProject>();
-  selectProject = output<void>();
-  editProject = output<void>();
-  removeProject = output<void>();
+export class ProjectListItemComponent implements OnInit {
+  public readonly project = input.required<MinimalProject>();
+  public readonly selectProject = output<void>();
+  public readonly editProject = output<void>();
+  public readonly removeProject = output<void>();
+  public readonly moveProject = output<void>();
+  protected readonly menuItems = signal<MenuItem[]>([]);
 
   protected readonly completionPercentage = computed(() => {
     const project = this.project();
@@ -40,4 +43,28 @@ export class ProjectListItemComponent {
 
   protected readonly createdDate = computed(() => new Date(this.project().createdDate));
   protected readonly lastOpenedDate = computed(() => new Date(this.project().lastOpenedDate));
+
+  ngOnInit() {
+    const menuItems = [
+      {
+        label: 'Change catalog',
+        icon: 'fa-solid fa-folder-open',
+        command: () => this.moveProject.emit()
+      },
+      {
+        label: 'Edit project',
+        icon: 'fa-solid fa-pencil',
+        command: () => this.editProject.emit()
+      },
+      {separator: true},
+      {
+        label: 'Delete',
+        icon: 'fa-solid fa-trash',
+        styleClass: 'text-red-500',
+        command: () => this.removeProject.emit()
+      }
+    ];
+
+    this.menuItems.set(menuItems);
+  }
 }

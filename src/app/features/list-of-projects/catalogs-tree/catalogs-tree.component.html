@@ -1,0 +1,42 @@
+<div class="h-full flex flex-column w-full">
+  <div class="px-3 flex align-items-center justify-content-between">
+    <h2>Catalogs</h2>
+  </div>
+
+  <div class="overflow-y-auto flex-grow-1 flex flex-column">
+    <p-tree [value]="treeNodes()"
+            selectionMode="single"
+            [selection]="selectedNode()"
+            [contextMenu]="cm"
+            (onNodeSelect)="onNodeSelect($event)"
+            (onNodeContextMenuSelect)="onNodeContextMenuSelect($event)"
+            (onNodeDrop)="onNodeDrop($event)"
+            (onNodeExpand)="onNodeExpand($event)"
+            (onNodeCollapse)="onNodeCollapse($event)"
+            [draggableNodes]="true"
+            [droppableNodes]="true"
+            draggableScope="project"
+            droppableScope="project"
+            class="w-full flex border-none bg-transparent">
+      <ng-template let-node pTemplate="default">
+        <div class="flex align-items-center gap-2 w-full">
+          @let isRootCatalog = (node.data.id === ROOT_CATALOG_ID);
+          <i class="fa-solid"
+             [class.fa-house]="isRootCatalog"
+             [class.fa-folder]="!isRootCatalog && !node.expanded"
+             [class.fa-folder-open]="!isRootCatalog && node.expanded"></i>
+
+          <span class="white-space-nowrap overflow-hidden text-overflow-ellipsis font-bold">
+            {{ node.label }}
+          </span>
+
+          @if (node.data.projectCount > 0) {
+            <p-tag [value]="node.data.projectCount"></p-tag>
+          }
+        </div>
+      </ng-template>
+    </p-tree>
+  </div>
+</div>
+
+<p-contextMenu #cm [model]="contextMenuItems" appendTo="body"/>

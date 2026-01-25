@@ -2062,6 +2062,8 @@ async function readAppData(): Promise<AppData | null> {
       currentProject,
       globalSettings: coreConfig.globalSettings,
       ankiSettings: coreConfig.ankiSettings,
+      catalogs: coreConfig.catalogs || [],
+      lastActiveCatalogId: coreConfig.lastActiveCatalogId
     };
   } catch (error) {
     console.log('Could not read app data (file might not exist yet). Returning null.');
