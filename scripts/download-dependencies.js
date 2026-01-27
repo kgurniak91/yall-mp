@@ -18,7 +18,7 @@ const EXTENSIONS_DIR = path.join(RESOURCES_DIR, 'extensions');
 const URLS = {
   yomitan: 'https://github.com/yomidevs/yomitan/releases/download/25.11.11.0/yomitan-chrome.zip',
   win32: {
-    mpv: 'https://github.com/shinchiro/mpv-winbuild-cmake/releases/download/20251201/mpv-x86_64-20251201-git-72dbcf1.7z',
+    mpv: 'https://github.com/shinchiro/mpv-winbuild-cmake/releases/download/20260122/mpv-x86_64-20260122-git-6e54aa3.7z',
     audiowaveform: 'https://github.com/bbc/audiowaveform/releases/download/1.10.2/audiowaveform-1.10.2-win64.zip'
   }
 };
