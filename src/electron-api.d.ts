@@ -104,7 +104,7 @@ export interface IElectronAPI {
   playbackToggleSubtitles: () => void;
   playbackRepeat: () => void;
   playbackForceContinue: () => void;
-  playbackSeek: (time: number) => void;
+  playbackSeek: (time: number, isNavigation?: boolean) => void;
   playbackLoadProject: (clips: LightweightVideoClip[], settings: ProjectSettings, lastPlaybackTime: number) => Promise<void>;
   playbackUpdateSettings: (settings: ProjectSettings) => void;
   playbackUpdateClips: (clips: LightweightVideoClip[]) => void;

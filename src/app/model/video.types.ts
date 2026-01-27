@@ -85,6 +85,7 @@ export enum PlayerState {
   Idle = 'Idle',
   Playing = 'Playing',
   PausedByUser = 'PausedByUser',
+  PausedBySystem = 'PausedBySystem',
   AutoPausedAtStart = 'AutoPausedAtStart',
   AutoPausedAtEnd = 'AutoPausedAtEnd',
   Seeking = 'Seeking',

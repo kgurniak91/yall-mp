@@ -11,7 +11,7 @@ export class VideoStateService implements OnDestroy {
   private readonly _duration = signal(0);
   private readonly _mediaPath = signal<string | null>(null);
   private readonly _subtitlesVisible = signal(true);
-  private readonly _seekRequest = signal<{ time: number; type: SeekType } | null>(null);
+  private readonly _seekRequest = signal<{ time: number; type: SeekType; isNavigation: boolean } | null>(null);
   private readonly _seekCompleted = signal<number | null>(null);
   private readonly _playPauseRequest = signal<number | null>(null);
   private readonly _repeatRequest = signal<number | null>(null);
@@ -238,13 +238,13 @@ export class VideoStateService implements OnDestroy {
     targetTime = Math.max(0, Math.min(targetTime, duration - 0.01));
 
     this._isUserSeeking.set(true);
-    this._seekRequest.set({time, type: SeekType.Relative});
+    this._seekRequest.set({time, type: SeekType.Relative, isNavigation: false});
     this.saveCurrentPlaybackTime(targetTime);
   }
 
-  public seekAbsolute(time: number): void {
+  public seekAbsolute(time: number, isNavigation: boolean = false): void {
     this._isUserSeeking.set(true);
-    this._seekRequest.set({time, type: SeekType.Absolute});
+    this._seekRequest.set({time, type: SeekType.Absolute, isNavigation});
     this.saveCurrentPlaybackTime(time);
   }
 

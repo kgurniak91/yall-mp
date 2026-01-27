@@ -950,11 +950,11 @@ export class ClipsStateService implements OnDestroy {
   public goToAdjacentSubtitledClip(direction: SeekDirection): void {
     const adjacentClip = this.findAdjacentSubtitledClip(direction);
     if (adjacentClip) {
-      this.videoStateService.seekAbsolute(adjacentClip.startTime);
+      this.videoStateService.seekAbsolute(adjacentClip.startTime, true);
     } else if (direction === SeekDirection.Previous) {
       const current = this.currentClip();
       if (current?.hasSubtitle) {
-        this.videoStateService.seekAbsolute(current.startTime);
+        this.videoStateService.seekAbsolute(current.startTime, true);
       }
     }
   }

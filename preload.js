@@ -112,7 +112,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   playbackToggleSubtitles: () => ipcRenderer.send('playback:toggleSubtitles'),
   playbackRepeat: () => ipcRenderer.send('playback:repeat'),
   playbackForceContinue: () => ipcRenderer.send('playback:forceContinue'),
-  playbackSeek: (time) => ipcRenderer.send('playback:seek', time),
+  playbackSeek: (time, isNavigation) => ipcRenderer.send('playback:seek', time, isNavigation),
   playbackLoadProject: (clips, settings, lastPlaybackTime) => ipcRenderer.invoke('playback:loadProject', clips, settings, lastPlaybackTime),
   playbackUpdateSettings: (settings) => ipcRenderer.send('playback:updateSettings', settings),
   playbackUpdateClips: (clips) => ipcRenderer.send('playback:updateClips', clips),

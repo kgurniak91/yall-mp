@@ -1295,12 +1295,12 @@ if (!gotTheLock) {
     ipcMain.on('playback:toggleSubtitles', () => playbackManager?.toggleSubtitles());
     ipcMain.on('playback:repeat', () => playbackManager?.repeat());
     ipcMain.on('playback:forceContinue', () => playbackManager?.forceContinue());
-    ipcMain.on('playback:seek', (_, time) => {
+    ipcMain.on('playback:seek', (_, time, isNavigation) => {
       // Use this flag on first seek to coordinate showing the video window
       if (!hasRequestedInitialSeek) {
         hasRequestedInitialSeek = true;
       }
-      playbackManager?.seek(time);
+      playbackManager?.seek(time, isNavigation);
     });
     ipcMain.on('playback:updateSettings', (_, settings) => {
       playbackManager?.updateSettings(settings);

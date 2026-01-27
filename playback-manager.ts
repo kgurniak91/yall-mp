@@ -27,6 +27,7 @@ export class PlaybackManager extends EventEmitter {
   private mpvSubtitlesHiddenDueToRenderer = false;
   private isProjectLoaded = false;
   private isAwaitingRepeatSeek = false;
+  private isSeekForNavigation = false;
   private nextPlayerState: PlayerState | null = null;
 
   constructor(
@@ -129,7 +130,7 @@ export class PlaybackManager extends EventEmitter {
     }
   }
 
-  public seek(time: number): void {
+  public seek(time: number, isNavigation: boolean = false): void {
     const targetClipIndex = this.clips.findIndex(
       (c) => time >= c.startTime && time < c.endTime
     );
@@ -139,6 +140,7 @@ export class PlaybackManager extends EventEmitter {
 
     const oldClipIndex = this.currentClipIndex;
     this.isSeekingWithinSameClip = (oldClipIndex === targetClipIndex);
+    this.isSeekForNavigation = isNavigation;
 
     this.currentClipIndex = targetClipIndex;
     this.currentTime = time;
@@ -266,6 +268,10 @@ export class PlaybackManager extends EventEmitter {
         this.setPlayerState(PlayerState.AutoPausedAtEnd);
         this.notifyUI();
       } else {
+        if (this.playerState === PlayerState.PausedByUser) {
+          return;
+        }
+
         this.playClipAtIndex(this.currentClipIndex + 1);
       }
       return;
@@ -286,10 +292,10 @@ export class PlaybackManager extends EventEmitter {
         return;
       }
 
-      // Handle external pause (e.g. buffering, OS event, EOF side-effects)
+      // Handle external pause (e.g. buffering, OS event, EOF side-effects, Lua script)
       if (status.name === 'pause' && status.data === true) {
         if (this.playerState === PlayerState.Playing) {
-          this.setPlayerState(PlayerState.PausedByUser);
+          this.setPlayerState(PlayerState.PausedBySystem);
         }
       }
 
@@ -320,8 +326,27 @@ export class PlaybackManager extends EventEmitter {
           shouldResume = (newState === PlayerState.Playing);
           this.nextPlayerState = null;
         } else {
-          // Manual seek
-          shouldResume = this.preSeekState === PlayerState.Playing;
+          const targetClip = this.clips[this.currentClipIndex];
+          const destinationRequiresPause = targetClip?.hasSubtitle && this.settings?.autoPauseAtStart;
+
+          if (this.isSeekForNavigation) {
+            // Jump to specific subtitled clip (e.g., CTRL + right arrow)
+            // Always apply correct clip settings, even if the player was previously paused
+            if (targetClip?.hasSubtitle) {
+              shouldResume = !destinationRequiresPause;
+              newState = shouldResume ? PlayerState.Playing : PlayerState.AutoPausedAtStart;
+            } else {
+              shouldResume = true;
+              newState = PlayerState.Playing;
+            }
+          } else {
+            // Manual seek (e.g., right arrow, timeline click)
+            // Preserve the playing/paused status from before the seek
+            shouldResume = (this.preSeekState === PlayerState.Playing);
+            newState = shouldResume ? PlayerState.Playing : PlayerState.PausedByUser;
+          }
+
+          this.isSeekForNavigation = false;
           const isInitialSeek = this.preSeekState === PlayerState.Idle;
 
           // Apply final subtitle visibility state now that the seek is complete
@@ -330,7 +355,6 @@ export class PlaybackManager extends EventEmitter {
           }
 
           this.isSeekingWithinSameClip = false;
-          newState = shouldResume ? PlayerState.Playing : PlayerState.PausedByUser;
         }
 
         this.mpvManager.setProperty('pause', !shouldResume);

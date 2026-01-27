@@ -78,7 +78,7 @@ export class VideoControllerComponent implements OnDestroy {
     this.videoStateService.clearRepeatRequest();
   }
 
-  private handleSeek(request: { time: number; type: SeekType }): void {
+  private handleSeek(request: { time: number; type: SeekType; isNavigation: boolean }): void {
     let targetTime: number;
     if (request.type === SeekType.Relative) {
       const currentTime = this.videoStateService.currentTime();
@@ -92,7 +92,7 @@ export class VideoControllerComponent implements OnDestroy {
     // Optimistic UI update
     this.videoStateService.setCurrentTime(targetTime);
 
-    window.electronAPI.playbackSeek(targetTime);
+    window.electronAPI.playbackSeek(targetTime, request.isNavigation);
     this.videoStateService.clearSeekRequest();
   }
 }

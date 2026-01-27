@@ -891,7 +891,7 @@ describe('PlaybackManager', () => {
         vi.clearAllMocks();
 
         // Initiate seek
-        playbackManager.seek(15);
+        playbackManager.seek(15, true);
 
         // Verify immediate transition state
         expect(getLastStateUpdate()?.playerState).toBe(PlayerState.Transitioning);
@@ -970,6 +970,313 @@ describe('PlaybackManager', () => {
         expect(getLastStateUpdate()?.playerState).toBe(PlayerState.Playing);
         expect(mockMpvManager.setProperty).toHaveBeenCalledWith('pause', false);
         expect((playbackManager as any).currentClipIndex).toBe(1);
+      });
+    });
+
+    describe('Auto-resume logic on clip jumps', () => {
+      it('should automatically play the next clip when jumping from an AutoPausedAtEnd state if autoPauseAtStart flag is false', () => {
+        // ARRANGE: Setup "Listening Practice" style
+        playbackManager = setupManager({
+          autoPauseAtStart: false,
+          autoPauseAtEnd: true
+        });
+
+        // Simulate being auto-paused at the end of subtitled Clip 1 (10s to 20s)
+        (playbackManager as any).currentClipIndex = 1;
+        (playbackManager as any).currentTime = 20;
+        simulateMpvEvent(playbackManager, {event: 'auto-pause-fired'});
+
+        // Verify pre-condition: Player is auto-paused because the clip ended
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.AutoPausedAtEnd);
+        vi.clearAllMocks();
+
+        // ACT: User performs a NAVIGATION jump to the next subtitled clip
+        playbackManager.seek(30, true);
+        simulateSeekComplete(playbackManager);
+
+        // ASSERT: Should play immediately
+        expect(mockMpvManager.setProperty).toHaveBeenCalledWith('pause', false);
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.Playing);
+      });
+
+      it('should NOT play the next clip if autoPauseAtStart flag is true, even when jumping from an auto-pause', () => {
+        // ARRANGE: Setup "Speaking Practice" style
+        playbackManager = setupManager({
+          autoPauseAtStart: true,
+          autoPauseAtEnd: true
+        });
+
+        // Auto-pause at end of subtitled Clip 1
+        (playbackManager as any).currentClipIndex = 1;
+        (playbackManager as any).currentTime = 20;
+        simulateMpvEvent(playbackManager, {event: 'auto-pause-fired'});
+
+        // Verify pre-condition: Player is auto-paused because the clip ended
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.AutoPausedAtEnd);
+        vi.clearAllMocks();
+
+        // ACT: Jump to next subtitled clip (Clip 3 starts at 30s)
+        playbackManager.seek(30, true);
+        simulateSeekComplete(playbackManager);
+
+        // ASSERT: Stays paused
+        expect(mockMpvManager.setProperty).toHaveBeenCalledWith('pause', true);
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.AutoPausedAtStart);
+      });
+
+      it('should stay paused when jumping from an auto-pause into a GAP', () => {
+        // ARRANGE
+        playbackManager = setupManager({
+          autoPauseAtStart: false,
+          autoPauseAtEnd: true
+        });
+
+        // Auto-pause at end of subtitled Clip 1 (10s-20s)
+        (playbackManager as any).currentClipIndex = 1;
+        (playbackManager as any).currentTime = 20;
+        simulateMpvEvent(playbackManager, {event: 'auto-pause-fired'});
+
+        // Verify pre-condition: Player is auto-paused because the clip ended
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.AutoPausedAtEnd);
+        vi.clearAllMocks();
+
+        // ACT: User clicks into Gap 2 (20s-30s)
+        playbackManager.seek(25);
+        simulateSeekComplete(playbackManager);
+
+        // ASSERT: Stay paused because the destination is a gap
+        expect(mockMpvManager.setProperty).toHaveBeenCalledWith('pause', true);
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.PausedByUser);
+      });
+
+      it('should NOT auto-resume if the player is PausedByUser when a boundary event is received', () => {
+        // ARRANGE: Continuous playback (no auto-pauses)
+        playbackManager = setupManager({
+          autoPauseAtStart: false,
+          autoPauseAtEnd: false
+        });
+
+        // Seek into a clip
+        playbackManager.seek(15);
+        simulateSeekComplete(playbackManager);
+
+        // User manually pauses
+        playbackManager.pause();
+        expect((playbackManager as any).playerState).toBe(PlayerState.PausedByUser);
+        vi.clearAllMocks();
+
+        // Move time to the very end of the clip (simulating a click near edge)
+        (playbackManager as any).currentTime = 20;
+
+        // ACT: The Lua script fires the boundary event
+        simulateMpvEvent(playbackManager, {event: 'auto-pause-fired'});
+
+        // ASSERT:
+        // 1. The manager should have ignored the event (no unpause sent to MPV)
+        expect(mockMpvManager.setProperty).not.toHaveBeenCalledWith('pause', false);
+        // 2. The internal state must remain PausedByUser
+        expect((playbackManager as any).playerState).toBe(PlayerState.PausedByUser);
+        // 3. No new UI update should have been sent (since nothing changed)
+        expect(mockUiWindow.webContents.send).not.toHaveBeenCalled();
+      });
+
+      it('should handle continuous playback through Gap -> Sub -> Gap -> Sub without auto-pauses', () => {
+        // ARRANGE
+        // Timeline: Gap(0-10), Sub A(10-20), Gap(20-30), Sub B(30-40)
+        playbackManager = setupManager({
+          autoPauseAtStart: false,
+          autoPauseAtEnd: false,
+          gapSpeed: 2.0,
+          subtitledClipSpeed: 1.0
+        }, 5); // Start in Gap 1 (5s)
+
+        // Start playing
+        playbackManager.play();
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.Playing);
+        vi.clearAllMocks();
+
+        // TRANSITION 1: Gap 1 -> Sub A (10s)
+        (playbackManager as any).currentTime = 10;
+
+        // The Lua script forces a pause BEFORE sending the fired event.
+        // This causes the manager to switch to PausedByUser internally.
+        simulateMpvEvent(playbackManager, {event: 'property-change', name: 'pause', data: true});
+
+        // Then the Lua script sends the trigger
+        simulateMpvEvent(playbackManager, {event: 'auto-pause-fired'});
+
+        // The playback manager enters transitioning state internally
+        simulateSeekComplete(playbackManager);
+
+        // ASSERT: Continues to play after transition, without pausing
+        expect(mockMpvManager.setProperty).toHaveBeenCalledWith('speed', 1.0);
+        expect(mockMpvManager.setProperty).toHaveBeenCalledWith('pause', false);
+        expect(getLastStateUpdate()).toEqual(expect.objectContaining({
+          playerState: PlayerState.Playing,
+          currentClipIndex: 1
+        }));
+        vi.clearAllMocks();
+      });
+
+      it('should jump to next subtitled clip while playing and honor autoPauseAtStart setting', () => {
+        // ARRANGE
+        playbackManager = setupManager({
+          autoPauseAtStart: true,
+          autoPauseAtEnd: false
+        }, 5); // Start in Gap 1 (5s)
+
+        // Ensure video is playing
+        playbackManager.play();
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.Playing);
+        vi.clearAllMocks();
+
+        // ACT: User invokes "Next Subtitled Clip" (or Ctrl+Right) to jump to Clip 1 (starts at 10s)
+        playbackManager.seek(10, true);
+        simulateSeekComplete(playbackManager);
+
+        // ASSERT:
+        // Even though video was playing, the destination has 'autoPauseAtStart: true'.
+        // The player should pause and switch to 'AutoPausedAtStart'.
+        expect(mockMpvManager.setProperty).toHaveBeenCalledWith('pause', true);
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.AutoPausedAtStart);
+      });
+
+      it('should handle manual seek within same clip while AutoPausedAtEnd and should stay paused', () => {
+        // ARRANGE
+        playbackManager = setupManager({
+          autoPauseAtStart: false,
+          autoPauseAtEnd: true
+        }, 10); // Start at beginning of subtitled clip 1 (10-20)
+
+        // Reach the end of the clip to trigger AutoPause
+        (playbackManager as any).currentClipIndex = 1;
+        simulateEndOfClip(playbackManager, 20);
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.AutoPausedAtEnd);
+        vi.clearAllMocks();
+
+        // ACT: User manually clicks in the middle of the same clip (e.g. 15s)
+        playbackManager.seek(15);
+        simulateSeekComplete(playbackManager);
+
+        // ASSERT:
+        // The video should NOT resume. It should switch to PausedByUser.
+        // It should NOT use the "Next Clip" logic (which would resume because autoPauseAtStart is false).
+        expect(mockMpvManager.setProperty).toHaveBeenCalledWith('pause', true);
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.PausedByUser);
+      });
+
+      it('should NOT auto-resume during manual click on start of next clip', () => {
+        // ARRANGE
+        playbackManager = setupManager({
+          autoPauseAtStart: false,
+          autoPauseAtEnd: true
+        }, 10);
+
+        // Trigger AutoPause at end of Clip 1
+        (playbackManager as any).currentClipIndex = 1;
+        simulateEndOfClip(playbackManager, 20);
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.AutoPausedAtEnd);
+        vi.clearAllMocks();
+
+        // ACT: User clicks exactly on the start of the next subtitled clip (30s)
+        playbackManager.seek(30, false);
+        simulateSeekComplete(playbackManager);
+
+        // ASSERT: Should stay PausedByUser because it was a manual click, not a jump to subtitled clip
+        expect(mockMpvManager.setProperty).toHaveBeenCalledWith('pause', true);
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.PausedByUser);
+      });
+
+      it('should apply updated autoPauseAtEnd setting when resuming after settings change', () => {
+        // ARRANGE
+        playbackManager = setupManager({
+          autoPauseAtStart: false,
+          autoPauseAtEnd: true
+        });
+        playbackManager.seek(15);
+        simulateSeekComplete(playbackManager);
+        playbackManager.play();
+        vi.clearAllMocks();
+
+        // ACT 1: Simulate user opening settings (pauses) -> update -> close (resumes)
+        playbackManager.pause();
+        const newSettings = {...(playbackManager as any).settings, autoPauseAtEnd: false};
+        playbackManager.updateSettings(newSettings);
+        playbackManager.play();
+
+        // Clear mocks to focus on the boundary event behavior
+        vi.clearAllMocks();
+
+        // ACT 2: Reach end of clip
+        simulateEndOfClip(playbackManager, 20);
+
+        // ASSERT: Should NOT stay paused
+        expect(mockMpvManager.setProperty).toHaveBeenCalledWith('pause', false);
+        expect(getLastStateUpdate()?.currentClipIndex).toBe(2);
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.Playing);
+      });
+
+      it('should preserve PLAYING state after manual timeline click while playing', () => {
+        // ARRANGE: Continuous playback (no auto-pauses)
+        playbackManager = setupManager({
+          autoPauseAtStart: false,
+          autoPauseAtEnd: false
+        }, 5);
+
+        playbackManager.play();
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.Playing);
+        vi.clearAllMocks();
+
+        // ACT: User clicks on the timeline (isNavigation = false)
+        playbackManager.seek(25, false);
+        simulateSeekComplete(playbackManager);
+
+        // ASSERT: Should still be playing
+        expect(mockMpvManager.setProperty).toHaveBeenCalledWith('pause', false);
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.Playing);
+        expect(getLastStateUpdate()?.currentClipIndex).toBe(2); // In gap-2
+      });
+
+      it('should auto-resume if clip settings allow it after navigation shortcut from PAUSED state', () => {
+        // ARRANGE: Settings allow immediate play at start, but the player is currently manually paused
+        playbackManager = setupManager({
+          autoPauseAtStart: false,
+          autoPauseAtEnd: true
+        }, 5);
+
+        playbackManager.pause();
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.PausedByUser);
+        vi.clearAllMocks();
+
+        // ACT: User hits Ctrl + Right (navigation jump to 10s)
+        playbackManager.seek(10, true);
+        simulateSeekComplete(playbackManager);
+
+        // ASSERT:
+        // It should OVERRIDE the manual pause because isNavigation is true
+        // and the destination settings allow immediate playback.
+        expect(mockMpvManager.setProperty).toHaveBeenCalledWith('pause', false);
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.Playing);
+        expect(getLastStateUpdate()?.currentClipIndex).toBe(1);
+      });
+
+      it('should stay paused if autoPauseAtStart is true after navigation shortcut from PAUSED state', () => {
+        // ARRANGE: Settings require pause at start
+        playbackManager = setupManager({
+          autoPauseAtStart: true,
+          autoPauseAtEnd: true
+        }, 5);
+
+        playbackManager.pause();
+        vi.clearAllMocks();
+
+        // ACT: User hits Ctrl + Right
+        playbackManager.seek(10, true);
+        simulateSeekComplete(playbackManager);
+
+        // ASSERT: Respected the setting and stayed paused
+        expect(mockMpvManager.setProperty).toHaveBeenCalledWith('pause', true);
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.AutoPausedAtStart);
       });
     });
   });
