@@ -391,9 +391,13 @@ export class SubtitlesOverlayComponent implements OnDestroy {
     });
 
     effect(() => {
-      if (this.projectSettingsStateService.useMpvSubtitles()) {
-        this.subtitlesHighlighterService.hide();
-        this.popupPosition.set(null);
+      const subtitlesHidden = !this.videoStateService.subtitlesVisible();
+      const mpvRendererEnabled = this.projectSettingsStateService.useMpvSubtitles();
+
+      if (subtitlesHidden || mpvRendererEnabled) {
+        untracked(() => {
+          this.clearHighlightAndPopup();
+        });
       }
     });
 
