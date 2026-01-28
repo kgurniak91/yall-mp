@@ -1,4 +1,4 @@
-import {AnkiExportRequest} from './app/model/anki.types';
+import {AnkiBatchExportRequest} from './app/model/anki.types';
 import {AppData, CoreConfig, Project, SubtitleSelection, SupportedLanguage} from './app/model/project.types';
 import {LightweightVideoClip} from './app/model/video.types';
 import {ProjectSettings} from './app/model/settings.types';
@@ -66,7 +66,7 @@ export interface IElectronAPI {
   getAnkiDeckNames: () => Promise<any>;
   getAnkiNoteTypes: () => Promise<any>;
   getAnkiNoteTypeFieldNames: (noteTypeName: string) => Promise<any>;
-  exportAnkiCard: (exportRquest: AnkiExportRequest) => Promise<{ cardId: number | null; error?: string }>;
+  exportAnkiCardBatch: (batchRequest: AnkiBatchExportRequest) => Promise<{ successCount: number; error?: string }>;
   // --- FFmpeg
   checkFFmpegAvailability: () => Promise<boolean>;
   // --- MPV

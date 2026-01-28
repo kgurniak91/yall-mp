@@ -39,15 +39,19 @@ export interface AnkiCard {
   };
 }
 
-export interface AnkiExportRequest {
+export interface AnkiTemplateTarget {
   template: AnkiCardTemplate;
+  tags: string[];
+}
+
+export interface AnkiBatchExportRequest {
   subtitleData: SubtitleData;
   mediaPath: string;
   exportTime: number;
   notes: string;
   hint: string;
-  tags: string[];
   suspend: boolean;
+  targets: AnkiTemplateTarget[];
 }
 
 export interface ExportToAnkiDialogData {

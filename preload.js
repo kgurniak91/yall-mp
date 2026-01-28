@@ -59,7 +59,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getAnkiDeckNames: () => ipcRenderer.invoke('anki:getDeckNames'),
   getAnkiNoteTypes: () => ipcRenderer.invoke('anki:getNoteTypes'),
   getAnkiNoteTypeFieldNames: (noteTypeName) => ipcRenderer.invoke('anki:getNoteTypeFieldNames', noteTypeName),
-  exportAnkiCard: (exportRquest) => ipcRenderer.invoke('anki:exportAnkiCard', exportRquest),
+  exportAnkiCardBatch: (batchRequest) => ipcRenderer.invoke('anki:exportAnkiCardBatch', batchRequest),
   // --- FFmpeg
   checkFFmpegAvailability: () => ipcRenderer.invoke('ffmpeg:check'),
   // --- MPV

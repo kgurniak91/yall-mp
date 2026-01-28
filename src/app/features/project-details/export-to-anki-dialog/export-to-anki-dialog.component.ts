@@ -9,9 +9,10 @@ import {
   signal
 } from '@angular/core';
 import {
+  AnkiBatchExportRequest,
   AnkiCardTemplate,
   AnkiConnectStatus,
-  AnkiExportRequest,
+  AnkiTemplateTarget,
   ExportToAnkiDialogData
 } from '../../../model/anki.types';
 import {AnkiStateService} from '../../../state/anki/anki-state.service';
@@ -224,7 +225,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
       };
     }
 
-    let successCount = 0;
+    const targets: AnkiTemplateTarget[] = [];
 
     for (const template of templates) {
       if (!template.ankiDeck || !template.ankiNoteType) {
@@ -237,40 +238,49 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
       const cardSpecificTags = this.cardSpecificTags() || [];
       const finalTags = Array.from(new Set([...baseTags, ...templateTags, ...cardSpecificTags]));
 
-      const request: AnkiExportRequest = {
-        template: template,
-        subtitleData: subtitleForExport,
-        mediaPath: project.mediaPath,
-        exportTime,
-        hint: this.hint(),
-        notes: this.generateFormattedNotes(this.currentNotes()),
-        tags: finalTags,
-        suspend: this.suspendCard()
-      };
-
-      try {
-        const result = await window.electronAPI.exportAnkiCard(request);
-        if (result.cardId) {
-          this.toastService.success(`Successfully created Anki card for template "${template.name}"`);
-          successCount++;
-
-          const subtitleId = this.data.subtitleData.id;
-          this.appStateService.addAnkiExportToHistory(this.data.project.id, subtitleId);
-        } else {
-          this.toastService.error(result.error || `Failed to create Anki card for template "${template.name}". Is Anki open?`);
-        }
-      } catch (e: any) {
-        this.toastService.error(e.message || `An error occurred during export for template "${template.name}".`);
-        console.error(e);
-      }
+      targets.push({
+        template,
+        tags: finalTags
+      });
     }
 
-    this.isExporting.set(false);
-
-    if (successCount > 0) {
-      this.ref.close(true);
-    } else {
+    if (targets.length === 0) {
+      this.isExporting.set(false);
       this.revealDialog();
+      return;
+    }
+
+    const batchRequest: AnkiBatchExportRequest = {
+      subtitleData: subtitleForExport,
+      mediaPath: project.mediaPath,
+      exportTime,
+      hint: this.hint(),
+      notes: this.generateFormattedNotes(this.currentNotes()),
+      suspend: this.suspendCard(),
+      targets
+    };
+
+    try {
+      const result = await window.electronAPI.exportAnkiCardBatch(batchRequest);
+
+      if (result.successCount > 0) {
+        const countText = (result.successCount === 1) ? 'card' : 'cards';
+        this.toastService.success(`Successfully created ${result.successCount} Anki ${countText}.`);
+
+        const subtitleId = this.data.subtitleData.id;
+        this.appStateService.addAnkiExportToHistory(this.data.project.id, subtitleId);
+
+        this.ref.close(true);
+      } else {
+        this.toastService.error(result.error || 'Failed to export to Anki.');
+        this.revealDialog();
+      }
+    } catch (e: any) {
+      this.toastService.error(e.message || 'An error occurred during export to Anki.');
+      console.error(e);
+      this.revealDialog();
+    } finally {
+      this.isExporting.set(false);
     }
   }
 

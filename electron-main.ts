@@ -5,7 +5,7 @@ import {promises as fs, statSync} from 'fs';
 import type {CaptionsFileFormat, ParsedCaptionsResult, parseResponse, VTTCue} from 'media-captions';
 import type {SrtSubtitleData, SubtitleData} from './shared/types/subtitle.type';
 import type {MediaTrack} from './shared/types/media.type';
-import {AnkiCard, AnkiExportRequest} from './src/app/model/anki.types';
+import {AnkiBatchExportRequest, AnkiCard, AnkiFieldMappingSource} from './src/app/model/anki.types';
 import {v4 as uuidv4} from 'uuid';
 import {ChildProcess, spawn} from 'child_process';
 import {MpvManager} from './mpv-manager';
@@ -668,7 +668,7 @@ if (!gotTheLock) {
     ipcMain.handle('anki:getDeckNames', () => invokeAnkiConnect('deckNames'));
     ipcMain.handle('anki:getNoteTypes', () => invokeAnkiConnect('modelNames'));
     ipcMain.handle('anki:getNoteTypeFieldNames', (_, modelName) => invokeAnkiConnect('modelFieldNames', {modelName}));
-    ipcMain.handle('anki:exportAnkiCard', (_, exportRquest: AnkiExportRequest) => handleAnkiExport(exportRquest));
+    ipcMain.handle('anki:exportAnkiCardBatch', (_, batchRequest: AnkiBatchExportRequest) => handleAnkiBatchExport(batchRequest));
     ipcMain.handle('ffmpeg:check', async () => {
       await ensureFFmpegPaths();
       return isFFmpegAvailable;
@@ -1564,12 +1564,7 @@ async function invokeAnkiConnect(action: string, params = {}) {
   }
 }
 
-async function storeMediaFileInAnkiSafely(
-  filePath: string,
-  destinationField: string,
-  formatFn: (filename: string) => string,
-  finalFields: Record<string, string>
-) {
+async function storeMediaFileInAnki(filePath: string): Promise<string | null> {
   try {
     // Verify file was in fact created (FFmpeg didn't silently fail to output)
     await fs.access(filePath);
@@ -1580,58 +1575,180 @@ async function storeMediaFileInAnkiSafely(
       path: filePath
     });
 
-    // Update fields if successful
-    if (storedFilename) {
-      finalFields[destinationField] = formatFn(storedFilename);
-    }
+    return storedFilename || null;
   } catch (err) {
     console.warn(`[Anki Export] Failed to store media (${path.basename(filePath)}):`, err);
-    // Intentionally swallow the error here so the rest of the card can still be exported
+    return null;
   }
 }
 
-async function handleAnkiExport(exportRequest: AnkiExportRequest) {
+async function handleAnkiBatchExport(request: AnkiBatchExportRequest) {
   await ensureFFmpegPaths();
 
   if (!isFFmpegAvailable) {
     return {cardId: null, error: 'FFmpeg is not available, cannot export media.'};
   }
 
-  const {template, subtitleData, mediaPath, exportTime, hint, notes, tags, suspend} = exportRequest;
+  const {subtitleData, mediaPath, exportTime, hint, notes, suspend, targets} = request;
   const tempDir = os.tmpdir();
-  const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-  const finalFields: Record<string, string> = {};
+  const uniqueBatchId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
   const generatedFiles: string[] = [];
+  const mediaCache = new Map<AnkiFieldMappingSource, string>();
 
-  let hasRealVideoStream: boolean;
-  try {
-    const probeResult = await runFfprobe([
-      '-v', 'quiet',
-      '-print_format', 'json',
-      '-show_streams',
-      mediaPath
-    ]);
-
-    if (probeResult.streams) {
-      // Check for video stream that isn't a 1-frame static image (e.g., album art, audiobook cover etc.)
-      hasRealVideoStream = probeResult.streams.some((s: any) =>
-        s.codec_type === 'video' && s.disposition?.attached_pic !== 1
-      );
-    } else {
-      hasRealVideoStream = false;
+  // Identify which media types are needed across ALL templates
+  const requiredMediaTypes = new Set<AnkiFieldMappingSource>();
+  for (const target of targets) {
+    for (const mapping of target.template.fieldMappings) {
+      if (['audio', 'video', 'screenshot', 'animation'].includes(mapping.source)) {
+        requiredMediaTypes.add(mapping.source);
+      }
     }
-  } catch (e) {
-    console.warn('Failed to probe media during Anki export', e);
-    hasRealVideoStream = false;
+  }
+
+  let hasRealVideoStream = false;
+
+  if (requiredMediaTypes.has('video') || requiredMediaTypes.has('screenshot') || requiredMediaTypes.has('animation')) {
+    try {
+      const probeResult = await runFfprobe([
+        '-v', 'quiet',
+        '-print_format', 'json',
+        '-show_streams',
+        mediaPath
+      ]);
+
+      if (probeResult.streams) {
+        // Check for video stream that isn't a 1-frame static image (e.g., album art, audiobook cover etc.)
+        hasRealVideoStream = probeResult.streams.some((s: any) =>
+          s.codec_type === 'video' && s.disposition?.attached_pic !== 1
+        );
+      }
+    } catch (e) {
+      console.warn('Failed to probe media during Anki export', e);
+    }
   }
 
   try {
+    if (requiredMediaTypes.has('audio')) {
+      const audioPath = path.join(tempDir, `${uniqueBatchId}.mp3`);
+      generatedFiles.push(audioPath);
+
+      const audioArgs = [
+        '-i', mediaPath,                          // Input file
+        '-ss', subtitleData.startTime.toString(), // Start time
+        '-to', subtitleData.endTime.toString(),   // End time
+        '-vn',                                    // No video
+        '-acodec', 'libmp3lame',                  // Use MP3 codec
+        '-q:a', '2',                              // Audio quality (VBR)
+        audioPath
+      ];
+
+      await runFFmpeg(audioArgs);
+
+      const storedName = await storeMediaFileInAnki(audioPath);
+      if (storedName) {
+        mediaCache.set('audio', `[sound:${storedName}]`);
+      }
+    }
+
+    if (hasRealVideoStream) {
+      if (requiredMediaTypes.has('screenshot')) {
+        const imagePath = path.join(tempDir, `${uniqueBatchId}.jpg`);
+        generatedFiles.push(imagePath);
+
+        const imageArgs = [
+          '-ss', exportTime.toString(), // Go to the start time of the clip
+          '-i', mediaPath,              // Input file
+          '-vframes', '1',              // Take just one frame
+          '-q:v', '2',                  // Image quality
+          imagePath
+        ];
+
+        await runFFmpeg(imageArgs);
+
+        const storedName = await storeMediaFileInAnki(imagePath);
+        if (storedName) {
+          mediaCache.set('screenshot', `<img src="${storedName}">`);
+        }
+      }
+
+      if (requiredMediaTypes.has('video')) {
+        const videoPath = path.join(tempDir, `${uniqueBatchId}.webm`);
+        generatedFiles.push(videoPath);
+
+        const videoArgs = [
+          '-i', mediaPath,                          // Input file
+          '-ss', subtitleData.startTime.toString(), // Start time
+          '-to', subtitleData.endTime.toString(),   // End time
+          '-c:v', 'libvpx-vp9',                     // VP9 video codec
+          '-crf', '32',                             // Constant Rate Factor for VP9
+          '-b:v', '0',                              // Must be 0 when using CRF
+          '-vf', 'scale=-2:480',                    // Scale to 480p height to keep size down
+          '-c:a', 'libopus',                        // Opus audio codec
+          '-b:a', '96k',                            // Audio bitrate
+          videoPath
+        ];
+
+        await runFFmpeg(videoArgs);
+
+        const storedName = await storeMediaFileInAnki(videoPath);
+        if (storedName) {
+          mediaCache.set('video', `<video controls playsinline autoplay src="${storedName}"></video>`);
+        }
+      }
+
+      if (requiredMediaTypes.has('animation')) {
+        const avifPath = path.join(tempDir, `${uniqueBatchId}.avif`);
+        generatedFiles.push(avifPath);
+
+        const avifArgs = [
+          '-ss', subtitleData.startTime.toString(),
+          '-to', subtitleData.endTime.toString(),
+          '-i', mediaPath,
+          '-vf', 'scale=-2:480,fps=15', // Resize to 480p height and reduce framerate to keep the file size small
+          '-c:v', 'libaom-av1',         // AV1 video codec
+          '-crf', '35',                 // Constant Rate Factor for AV1
+          '-b:v', '0',                  // Must be 0 when using CRF
+          '-cpu-used', '8',             // Maximum speed in the range of 0-8 (8 is fastest - crucial for UX as AV1 is slow)
+          '-row-mt', '1',               // Enable row-based multi-threading to utilize all CPU cores
+          '-an',                        // No audio
+          avifPath
+        ];
+
+        await runFFmpeg(avifArgs);
+
+        const storedName = await storeMediaFileInAnki(avifPath);
+        if (storedName) {
+          mediaCache.set('animation', `<img src="${storedName}">`);
+        }
+      }
+    }
+  } catch (error: any) {
+    console.error('Anki media generation failed:', error);
+    // Cleanup files that might have been created before failure
+    for (const file of generatedFiles) {
+      await fs.unlink(file).catch(e => console.error(`Failed to delete temp file: ${file}`, e));
+    }
+    return {successCount: 0, error: `Media generation failed: ${error.message}`};
+  }
+
+  // Create flashcards using cached media
+  let successCount = 0;
+  let lastError = '';
+
+  for (const target of targets) {
+    const finalFields: Record<string, string> = {};
+    const {template, tags} = target;
+
     for (const mapping of template.fieldMappings) {
+      if (mediaCache.has(mapping.source)) {
+        finalFields[mapping.destination] = mediaCache.get(mapping.source)!;
+        continue;
+      }
+
       switch (mapping.source) {
         case 'id':
           finalFields[mapping.destination] = uuidv4();
           break;
-
         case 'text':
           if (subtitleData.type === 'srt') {
             finalFields[mapping.destination] = subtitleData.text;
@@ -1639,127 +1756,9 @@ async function handleAnkiExport(exportRequest: AnkiExportRequest) {
             finalFields[mapping.destination] = subtitleData.parts.map(p => p.text).join('\n');
           }
           break;
-
-        case 'audio':
-          const audioPath = path.join(tempDir, `${uniqueId}.mp3`);
-          generatedFiles.push(audioPath);
-
-          const audioArgs = [
-            '-i', mediaPath,                          // Input file
-            '-ss', subtitleData.startTime.toString(), // Start time
-            '-to', subtitleData.endTime.toString(),   // End time
-            '-vn',                                    // No video
-            '-acodec', 'libmp3lame',                  // Use MP3 codec
-            '-q:a', '2',                              // Audio quality (VBR)
-            audioPath
-          ];
-
-          await runFFmpeg(audioArgs);
-
-          await storeMediaFileInAnkiSafely(
-            audioPath,
-            mapping.destination,
-            (audioFilename) => `[sound:${audioFilename}]`,
-            finalFields
-          );
-          break;
-
-        case 'screenshot':
-          if (!hasRealVideoStream) {
-            console.log('[Anki Export] Skipping screenshot: No real video stream detected.');
-            continue;
-          }
-
-          const imagePath = path.join(tempDir, `${uniqueId}.jpg`);
-          generatedFiles.push(imagePath);
-
-          const imageArgs = [
-            '-ss', exportTime.toString(), // Go to the start time of the clip
-            '-i', mediaPath,              // Input file
-            '-vframes', '1',              // Take just one frame
-            '-q:v', '2',                  // Image quality
-            imagePath
-          ];
-
-          await runFFmpeg(imageArgs);
-
-          await storeMediaFileInAnkiSafely(
-            imagePath,
-            mapping.destination,
-            (imageFilename) => `<img src="${imageFilename}">`,
-            finalFields
-          );
-          break;
-
-        case 'video':
-          if (!hasRealVideoStream) {
-            console.log('[Anki Export] Skipping video clip: No real video stream detected.');
-            continue;
-          }
-
-          const videoPath = path.join(tempDir, `${uniqueId}.webm`);
-          generatedFiles.push(videoPath);
-
-          const videoArgs = [
-            '-i', mediaPath,                          // Input file
-            '-ss', subtitleData.startTime.toString(), // Start time
-            '-to', subtitleData.endTime.toString(),   // End time
-            '-c:v', 'libvpx-vp9',                     // VP9 video codec
-            '-crf', '32',                             // Constant Rate Factor for VP9
-            '-b:v', '0',                              // Must be 0 when using CRF
-            '-vf', 'scale=-2:480',                    // Scale to 480p height to keep size down
-            '-c:a', 'libopus',                        // Opus audio codec
-            '-b:a', '96k',                            // Audio bitrate
-            videoPath
-          ];
-
-          await runFFmpeg(videoArgs);
-
-          await storeMediaFileInAnkiSafely(
-            videoPath,
-            mapping.destination,
-            (videoFilename) => `<video controls playsinline autoplay src="${videoFilename}"></video>`,
-            finalFields
-          );
-          break;
-
-        case 'animation':
-          if (!hasRealVideoStream) {
-            console.log('[Anki Export] Skipping animation: No real video stream detected.');
-            continue;
-          }
-
-          const avifPath = path.join(tempDir, `${uniqueId}.avif`);
-          generatedFiles.push(avifPath);
-
-          const avifArgs = [
-            '-ss', subtitleData.startTime.toString(),
-            '-to', subtitleData.endTime.toString(),
-            '-i', mediaPath,
-            '-vf', 'scale=-2:480,fps=15', // Resize to 480p height and reduce framerate to keep the file size small
-            '-c:v', 'libaom-av1',         // AV1 video codec
-            '-crf', '35',                 // Constant Rate Factor for AV1
-            '-b:v', '0',                  // Must be 0 when using CRF
-            '-cpu-used', '8',             // Maximum speed in the range of 0-8 (8 is fastest - crucial for UX as AV1 is slow)
-            '-row-mt', '1',               // Enable row-based multi-threading to utilize all CPU cores
-            '-an',                        // No audio
-            avifPath
-          ];
-
-          await runFFmpeg(avifArgs);
-
-          await storeMediaFileInAnkiSafely(
-            avifPath,
-            mapping.destination,
-            (animationFilename) => `<img src="${animationFilename}">`,
-            finalFields
-          );
-          break;
-
         case 'notes':
           finalFields[mapping.destination] = notes;
           break;
-
         case 'hint':
           finalFields[mapping.destination] = hint || '';
           break;
@@ -1776,27 +1775,34 @@ async function handleAnkiExport(exportRequest: AnkiExportRequest) {
       }
     };
 
-    const cardId = await invokeAnkiConnect('addNote', {note});
-    if (!cardId) {
-      throw new Error('Failed to add note to Anki.');
-    }
-
-    if (suspend) {
-      const suspendResult = await invokeAnkiConnect('suspend', {cards: [cardId]});
-      if (suspendResult) {
-        console.log(`[Anki Export] Suspended new card: ${cardId}`);
+    try {
+      const cardId = await invokeAnkiConnect('addNote', {note});
+      if (cardId) {
+        if (suspend) {
+          const suspendResult = await invokeAnkiConnect('suspend', {cards: [cardId]});
+          if (suspendResult) {
+            console.log(`[Anki Export] Suspended new card: ${cardId}`);
+          }
+        }
+        successCount++;
+      } else {
+        lastError = 'Failed to add specific note to Anki.';
       }
-    }
-
-    return {cardId};
-  } catch (error: any) {
-    console.error('Anki export pipeline failed:', error);
-    return {cardId: null, error: error.message};
-  } finally {
-    for (const file of generatedFiles) {
-      await fs.unlink(file).catch(e => console.error(`Failed to delete temp file: ${file}`, e));
+    } catch (e: any) {
+      console.error(`Failed to add note for template ${template.name}`, e);
+      lastError = e.message;
     }
   }
+
+  // Cleanup temp files
+  for (const file of generatedFiles) {
+    await fs.unlink(file).catch(e => console.error(`Failed to delete temp file: ${file}`, e));
+  }
+
+  return {
+    successCount,
+    error: successCount === 0 ? (lastError || 'Unknown error') : undefined
+  };
 }
 
 function runFFmpeg(args: string[]): Promise<void> {
