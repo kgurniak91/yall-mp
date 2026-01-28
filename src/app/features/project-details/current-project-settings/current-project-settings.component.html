@@ -13,6 +13,7 @@
         <p-select id="preset-selector"
                   [options]="settingsPresets()"
                   styleClass="w-full"
+                  panelStyleClass="w-full"
                   optionLabel="name"
                   placeholder="Custom"
                   appendTo="body"
@@ -102,6 +103,7 @@
                   [ngModel]="settings().defaultSubtitleLookupServiceId"
                   (ngModelChange)="onSettingChange('defaultSubtitleLookupServiceId', $event)"
                   styleClass="w-full"
+                  panelStyleClass="w-full"
                   optionLabel="name"
                   appendTo="body"
                   optionValue="id"></p-select>
@@ -131,6 +133,7 @@
                   [virtualScroll]="true"
                   [virtualScrollItemSize]="36"
                   styleClass="w-full"
+                  panelStyleClass="w-full"
                   optionLabel="label"
                   optionValue="value"
                   [filter]="true"

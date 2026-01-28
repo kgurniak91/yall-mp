@@ -11,6 +11,7 @@
               [options]="ankiStateService.deckNames()"
               formControlName="ankiDeck"
               placeholder="Select Deck"
+              panelStyleClass="w-full"
               appendTo="body"/>
     <app-form-control-error [control]="form.get('ankiDeck')"/>
   </div>
@@ -21,6 +22,7 @@
               [options]="ankiStateService.noteTypes()"
               formControlName="ankiNoteType"
               placeholder="Select Note Type"
+              panelStyleClass="w-full"
               appendTo="body"/>
     <app-form-control-error [control]="form.get('ankiNoteType')"></app-form-control-error>
   </div>
@@ -47,8 +49,9 @@
                         [options]="getAvailableAnkiFields(source.key)"
                         [showClear]="true"
                         appendTo="body"
+                        panelStyleClass="w-full"
                         [formControlName]="source.key"
-                        [style]="{'width': '12.5rem'}"/>
+                        [style]="{'width': '13rem'}"/>
             </div>
           </div>
           @if (!isLast) {

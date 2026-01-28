@@ -29,6 +29,7 @@
                       [(ngModel)]="selectedAudioTrackIndex"
                       optionLabel="label"
                       appendTo="body"
+                      panelStyleClass="w-full"
                       optionValue="value"
                       placeholder="Select audio track"
                       styleClass="w-full">
@@ -64,6 +65,7 @@
                             <p-select [options]="subtitleTracks()"
                                       [(ngModel)]="selectedEmbeddedSubtitleTrackIndex"
                                       appendTo="body"
+                                      panelStyleClass="w-full"
                                       optionLabel="label"
                                       optionValue="index"
                                       placeholder="Select subtitle track"
