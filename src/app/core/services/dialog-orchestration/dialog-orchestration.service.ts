@@ -27,7 +27,7 @@ export class DialogOrchestrationService {
     };
 
     const ref = this.dialogService.open(GlobalSettingsDialogComponent, {
-      header: 'Global settings',
+      header: 'Global Settings',
       width: 'clamp(20rem, 95vw, 100rem)',
       height: 'clamp(20rem, 95vw, 100rem)',
       focusOnShow: false,

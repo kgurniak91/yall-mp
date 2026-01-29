@@ -23,5 +23,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const subscription = (_event, msg) => callback(msg);
     ipcRenderer.on('lookup:loading-message', subscription);
     return () => ipcRenderer.removeListener('lookup:loading-message', subscription);
+  },
+  onLookupLoadError: (callback) => {
+    const subscription = (_event, error) => callback(error);
+    ipcRenderer.on('lookup:load-error', subscription);
+    return () => ipcRenderer.removeListener('lookup:load-error', subscription);
   }
 });

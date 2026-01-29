@@ -917,6 +917,7 @@ if (!gotTheLock) {
         }
       });
       subtitlesLookupView = view;
+      let hasInitialLoadFailed = false;
 
       const updateNavState = () => {
         if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed() && subtitlesLookupView) {
@@ -931,6 +932,10 @@ if (!gotTheLock) {
       view.webContents.on('did-navigate-in-page', updateNavState);
 
       view.webContents.on('did-finish-load', () => {
+        if (hasInitialLoadFailed) {
+          return;
+        }
+
         if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
           subtitlesLookupWindow.webContents.send('view:loading-state-change', false);
           updateNavState();
@@ -944,11 +949,22 @@ if (!gotTheLock) {
         }
       });
 
-      view.webContents.on('did-fail-load', (_, errorCode, errorDescription) => {
+      view.webContents.on('did-fail-load', (_, errorCode, errorDescription, validatedURL) => {
         if (errorCode !== -3) { // Ignore ABORTED
-          console.error(`Lookup view failed: ${errorDescription}`);
+          hasInitialLoadFailed = true;
+          console.error(`Lookup view failed: ${errorDescription} for URL: ${validatedURL}`);
+
           if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
             subtitlesLookupWindow.webContents.send('view:loading-state-change', false);
+            subtitlesLookupWindow.webContents.send('lookup:load-error', {
+              description: errorDescription,
+              url: validatedURL
+            });
+          }
+
+          // Remove the view if it was somehow attached already
+          if (subtitlesLookupWindow?.contentView?.children?.includes(view)) {
+            subtitlesLookupWindow.contentView.removeChildView(view);
           }
         }
       });

@@ -241,6 +241,50 @@
       flex-direction: column;
       align-items: center;
     }
+
+    #error-container {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background-color: #ffffff;
+      z-index: 20;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    .error-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .error-title {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #dc2626;
+      margin-bottom: 1rem;
+    }
+
+    .error-details {
+      background-color: #f3f4f6;
+      border: 1px solid #d1d5db;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      width: 100%;
+      max-width: 600px;
+      word-break: break-all;
+      margin-bottom: 1.5rem;
+      font-family: monospace;
+      color: #374151;
+    }
+
+    .error-hint {
+      font-size: 1rem;
+      color: #4b5563;
+      line-height: 1.5;
+    }
   </style>
 </head>
 <body>
@@ -274,6 +318,18 @@
       <div id="loading-message">
         Loading...
       </div>
+    </div>
+  </div>
+
+  <div id="error-container" class="hidden">
+    <div class="error-icon">⚠️</div>
+    <div class="error-title">Page Load Failed</div>
+    <div class="error-details">
+      <div style="font-weight: bold; margin-bottom: 0.5rem;" id="error-desc"></div>
+      <div id="error-url"></div>
+    </div>
+    <div class="error-hint">
+      Fix the URL template in the <b>Global Settings</b> dialog and try again.
     </div>
   </div>
 </div>
@@ -348,8 +404,20 @@
   // Listen for events from the main process to show/hide the spinner
   window.electronAPI.onViewLoadingStateChange((isLoading) => {
     const spinner = document.getElementById('spinner-container');
-    if (spinner) {
-      spinner.classList.toggle('hidden', !isLoading);
+    const errorContainer = document.getElementById('error-container');
+
+    if (isLoading) {
+      if (spinner) {
+        spinner.classList.remove('hidden');
+      }
+      if (errorContainer) {
+        errorContainer.classList.add('hidden');
+      }
+    } else {
+      // If loading failed, the onLookupLoadError listener will unhide the error container separately
+      if (spinner) {
+        spinner.classList.add('hidden');
+      }
     }
   });
 
@@ -361,6 +429,25 @@
     if (event.key === 'Escape') {
       event.preventDefault();
       window.electronAPI.closeLookupWindow();
+    }
+  });
+
+  window.electronAPI.onLookupLoadError((error) => {
+    // Hide spinner
+    const spinner = document.getElementById('spinner-container');
+    if (spinner) {
+      spinner.classList.add('hidden');
+    }
+
+    // Show error
+    const errorContainer = document.getElementById('error-container');
+    const errorDesc = document.getElementById('error-desc');
+    const errorUrl = document.getElementById('error-url');
+
+    if (errorContainer && errorDesc && errorUrl) {
+      errorDesc.textContent = `Error: ${error.description}`;
+      errorUrl.innerHTML = `<b>URL:</b> "${error.url}"`;
+      errorContainer.classList.remove('hidden');
     }
   });
 </script>
