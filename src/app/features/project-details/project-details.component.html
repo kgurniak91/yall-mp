@@ -1,3 +1,11 @@
+@if (subtitlesLookupStateService.isLookupWindowOpen()) {
+  <div class="lookup-window-backdrop"
+       (click)="onLookupBackdropClick($event)"
+       (contextmenu)="onLookupBackdropClick($event)"
+       (mousedown)="onLookupBackdropClick($event)">
+  </div>
+}
+
 @if (videoStateService.isBusy()) {
   <div class="interaction-blocker" [title]="interactionBlockerTooltipText()"></div>
 }

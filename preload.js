@@ -35,6 +35,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('view:loading-state-change', subscription);
     return () => ipcRenderer.removeListener('view:loading-state-change', subscription);
   },
+  onLookupWindowStateChange: (callback) => {
+    const subscription = (_event, isVisible) => callback(isVisible);
+    ipcRenderer.on('lookup:window-state-changed', subscription);
+    return () => ipcRenderer.removeListener('lookup:window-state-changed', subscription);
+  },
   // --- Files
   openFileDialog: (options) => ipcRenderer.invoke('dialog:openFile', options),
   parseSubtitleFile: (projectId, filePath) => ipcRenderer.invoke('subtitle:parse', projectId, filePath),

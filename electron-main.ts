@@ -885,6 +885,7 @@ if (!gotTheLock) {
           if (uiWindow && !uiWindow.isDestroyed()) {
             uiWindow.focus();
           }
+          notifyLookupWindowState(false);
         };
 
         subtitlesLookupWindow.on('hide', handleClose);
@@ -905,6 +906,7 @@ if (!gotTheLock) {
       subtitlesLookupWindow.webContents.send('view:loading-state-change', true);
       subtitlesLookupWindow.show();
       subtitlesLookupWindow.focus();
+      notifyLookupWindowState(true);
 
       // Always create new view
       const view = new WebContentsView({
@@ -992,6 +994,7 @@ if (!gotTheLock) {
       if (subtitlesLookupWindow) {
         subtitlesLookupWindow.emit('hide');
       }
+      notifyLookupWindowState(false);
     });
 
     ipcMain.on('lookup:show-context-menu', (_, selectedText) => {
@@ -2761,5 +2764,11 @@ async function checkSystemDependencies() {
       shell.openExternal('https://github.com/kgurniak91/yall-mp#readme');
       app.quit();
     }
+  }
+}
+
+function notifyLookupWindowState(isVisible: boolean) {
+  if (uiWindow && !uiWindow.isDestroyed()) {
+    uiWindow.webContents.send('lookup:window-state-changed', isVisible);
   }
 }

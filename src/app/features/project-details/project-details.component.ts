@@ -81,6 +81,7 @@ import {SearchSubtitlesDialogComponent} from './search-subtitles-dialog/search-s
 import {SearchSubtitlesDialogData} from './search-subtitles-dialog/search-subtitles-dialog.types';
 import {SubtitleOffsetDialogComponent} from './subtitle-offset-dialog/subtitle-offset-dialog.component';
 import {SubtitleOffsetDialogData} from './subtitle-offset-dialog/subtitle-offset-dialog.types';
+import {SubtitlesLookupStateService} from './services/subtitles-lookup-state/subtitles-lookup-state.service';
 
 @Component({
   selector: 'app-project-details',
@@ -113,7 +114,8 @@ import {SubtitleOffsetDialogData} from './subtitle-offset-dialog/subtitle-offset
     VideoStateService,
     FontInjectionService,
     AssEditService,
-    TokenizationService
+    TokenizationService,
+    SubtitlesLookupStateService
   ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -266,6 +268,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   protected readonly ankiStateService = inject(AnkiStateService);
   protected readonly clipsStateService = inject(ClipsStateService);
   protected readonly projectSettingsStateService = inject(ProjectSettingsStateService);
+  protected readonly subtitlesLookupStateService = inject(SubtitlesLookupStateService);
   protected readonly project = computed(() => {
     const projectId = this.route.snapshot.paramMap.get('id');
     if (!projectId || this.appStateService.currentProjectId() !== projectId) {
@@ -570,6 +573,12 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       console.error('[ProjectDetails] Cleanup failed', e);
       return true; // Allow navigation anyway to prevent getting stuck
     }
+  }
+
+  onLookupBackdropClick(event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.subtitlesLookupStateService.closeLookup();
   }
 
   onPlayerReady(): void {
