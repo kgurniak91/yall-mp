@@ -1,4 +1,4 @@
-import {app, BrowserWindow, dialog, ipcMain, Menu, Rectangle, screen, shell, WebContentsView} from 'electron';
+import {app, BrowserWindow, dialog, ipcMain, Menu, Rectangle, screen, session, shell, WebContentsView} from 'electron';
 import path from 'path';
 import os from 'os';
 import {promises as fs, statSync} from 'fs';
@@ -45,6 +45,7 @@ const FONT_CACHE_DIR = path.join(app.getPath('userData'), 'font-cache');
 const USER_AGENT_OPTIONS = {
   userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 };
+const LOOKUP_PARTITION = 'persist:yall_mp_lookup_session';
 
 let playbackManager: PlaybackManager | null = null;
 let mpvManager: MpvManager | null = null;
@@ -828,9 +829,10 @@ if (!gotTheLock) {
     ipcMain.handle('lookup:open-window', async (_, data: {
       url: string,
       clipSubtitleId: string,
-      originalSelection: string
+      originalSelection: string,
+      automationText?: string
     }) => {
-      const {url, clipSubtitleId, originalSelection} = data;
+      const {url, clipSubtitleId, originalSelection, automationText} = data;
       currentSubtitlesLookupContext = {clipSubtitleId, originalSelection};
 
       const parentBounds = mainWindow!.getBounds();
@@ -841,7 +843,6 @@ if (!gotTheLock) {
 
       const TITLE_BAR_HEIGHT = 40; // 2.5rem
       const FOOTER_HEIGHT = 40; // 2.5rem
-      const LOOKUP_PARTITION = 'in-memory:lookup_session';
 
       // Destroy any existing view to ensure fresh state (no history leakage)
       if (subtitlesLookupView) {
@@ -931,7 +932,7 @@ if (!gotTheLock) {
       view.webContents.on('did-navigate', updateNavState);
       view.webContents.on('did-navigate-in-page', updateNavState);
 
-      view.webContents.on('did-finish-load', () => {
+      view.webContents.on('did-finish-load', async () => {
         if (hasInitialLoadFailed) {
           return;
         }
@@ -944,6 +945,52 @@ if (!gotTheLock) {
           if (subtitlesLookupView === view) {
             if (!subtitlesLookupWindow.contentView.children.includes(view)) {
               subtitlesLookupWindow.contentView.addChildView(view);
+            }
+          }
+
+          if (automationText) {
+            try {
+              // Ensure the webview itself has OS-level focus
+              view.webContents.focus();
+
+              // Wait until the loaded DOM actually focuses an input field
+              const inputReady = await view.webContents.executeJavaScript(`
+                (async () => {
+                  const isTextData = (el) => {
+                    if (!el) {
+                      return false;
+                    }
+                    return el.isContentEditable ||
+                           el.tagName === 'TEXTAREA' ||
+                           (el.tagName === 'INPUT' && /^(text|search|url|tel|email)$/i.test(el.type));
+                  };
+
+                  // Check immediately
+                  if (isTextData(document.activeElement)) {
+                    return true;
+                  }
+
+                  // Poll every 100ms for up to 5 seconds
+                  for (let i = 0; i < 50; i++) {
+                    await new Promise(r => setTimeout(r, 100));
+                    if (isTextData(document.activeElement)) {
+                      return true;
+                    }
+                  }
+
+                  return false;
+                })()
+              `);
+
+              if (inputReady) {
+                // Insert the text into AI prompt input
+                await view.webContents.insertText(automationText);
+                console.log('[Lookup] Text injected into focused input.');
+              } else {
+                console.warn('[Lookup] Automation skipped: No input field was focused by the page.');
+              }
+            } catch (e) {
+              console.error('[Lookup] Automation failed', e);
             }
           }
         }
@@ -1435,6 +1482,12 @@ if (!gotTheLock) {
       } catch (e) {
         return null;
       }
+    });
+
+    ipcMain.handle('lookup:clear-data', async () => {
+      const ses = session.fromPartition(LOOKUP_PARTITION);
+      await ses.clearStorageData();
+      console.log('[Main] Lookup session data cleared.');
     });
 
     createWindow();

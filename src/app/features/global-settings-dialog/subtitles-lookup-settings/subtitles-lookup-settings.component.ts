@@ -5,7 +5,7 @@ import {FormsModule} from '@angular/forms';
 import {TableModule} from 'primeng/table';
 import {Button} from 'primeng/button';
 import {GlobalSettingsStateService} from '../../../state/global-settings/global-settings-state.service';
-import {SubtitleLookupBrowserType, SubtitleLookupService} from '../../../model/settings.types';
+import {LookupType, SubtitleLookupBrowserType, SubtitleLookupService} from '../../../model/settings.types';
 import {v4 as uuidv4} from 'uuid';
 import {Message} from 'primeng/message';
 import {ConfirmationService, MenuItem} from 'primeng/api';
@@ -18,6 +18,7 @@ import {
   scheduleRestoreFocus
 } from '../../../shared/utils/disable-focus-in-parent-dialog/disable-focus-in-parent-dialog';
 import {ToastService} from '../../../shared/services/toast/toast.service';
+import {Tooltip} from 'primeng/tooltip';
 
 @Component({
   selector: 'app-subtitles-lookup-settings',
@@ -28,7 +29,8 @@ import {ToastService} from '../../../shared/services/toast/toast.service';
     TableModule,
     Button,
     Message,
-    Menu
+    Menu,
+    Tooltip
   ],
   templateUrl: './subtitles-lookup-settings.component.html',
   styleUrl: './subtitles-lookup-settings.component.scss',
@@ -37,7 +39,9 @@ import {ToastService} from '../../../shared/services/toast/toast.service';
 export class SubtitlesLookupSettingsComponent {
   protected readonly globalSettingsStateService = inject(GlobalSettingsStateService);
   protected readonly SubtitleLookupBrowserType = SubtitleLookupBrowserType;
+  protected readonly SEARCH_AI_TYPE: LookupType = 'ai';
   protected actionMenuItems = signal<MenuItem[]>([]);
+  protected isClearingData = signal<boolean>(false);
   private readonly dialogService = inject(DialogService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly toastService = inject(ToastService);
@@ -184,6 +188,18 @@ export class SubtitlesLookupSettingsComponent {
       isDefault: s.id === serviceToMakeDefault.id
     }));
     this.globalSettingsStateService.updateSubtitleLookupServices(newServices);
+  }
+
+  async onClearBrowserData(): Promise<void> {
+    this.isClearingData.set(true);
+    try {
+      await window.electronAPI.clearLookupData();
+      this.toastService.success('Browser data cleared successfully.');
+    } catch (e) {
+      this.toastService.error('Failed to clear browser data.');
+    } finally {
+      this.isClearingData.set(false);
+    }
   }
 
   private openEditDialog(subtitleLookupService: Partial<SubtitleLookupService>, header: string): void {

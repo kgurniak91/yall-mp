@@ -27,6 +27,7 @@ import {AppStateService} from '../../state/app/app-state.service';
 import {ProjectSettingsStateService} from '../../state/project-settings/project-settings-state.service';
 import {
   BuiltInSettingsPresets,
+  LookupType,
   ProjectSettings,
   SettingsPreset,
   SubtitleLookupBrowserType,
@@ -805,10 +806,12 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       }
     ];
 
-    allServices.forEach(service => {
-      const isDefault = service.id === effectiveDefaultServiceId;
+    allServices.forEach((service: SubtitleLookupService) => {
+      const isDefault = (service.id === effectiveDefaultServiceId);
+      const type: LookupType = (service.type || 'search');
       const menuItem: MenuItem = {
         label: service.name,
+        icon: (type === 'search') ? 'fa-solid fa-globe' : 'fa-solid fa-microchip',
         badge: isDefault ? 'Default' : undefined,
         badgeStyleClass: 'default-lookup-service-badge',
         command: () => this.executeLookup(service, this.selectedSubtitleTextForMenu)
@@ -1084,16 +1087,34 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const finalUrl = service.urlTemplate.replace('%%SS', encodeURIComponent(text));
+    const type = service.type || 'search';
+    let finalUrl: string;
+    let automationText: string | undefined;
+
+    if (type === 'ai') {
+      // AI Mode: URL is static, prompt text is passed separately
+      finalUrl = service.urlTemplate;
+      automationText = service.aiPrePrompt ? `${service.aiPrePrompt.trim()} "${text}"` : text;
+    } else {
+      // Search Mode: Text is embedded in URL
+      finalUrl = service.urlTemplate.replace('%%SS', encodeURIComponent(text));
+    }
+
     const browserType = service.browserType || this.globalSettingsStateService.subtitleLookupBrowserType();
 
     if (browserType === SubtitleLookupBrowserType.System) {
       window.electronAPI.openInSystemBrowser(finalUrl);
+
+      if (automationText) {
+        navigator.clipboard.writeText(automationText);
+        this.toastService.info('Prompt copied to clipboard.');
+      }
     } else { // SubtitleLookupBrowserType.BuiltIn
       window.electronAPI.openSubtitlesLookupWindow({
         url: finalUrl,
         clipSubtitleId: currentClip.sourceSubtitles[0].id,
-        originalSelection: text
+        originalSelection: text,
+        automationText
       });
     }
   }

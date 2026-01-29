@@ -1,4 +1,4 @@
-import {SubtitleLookupService} from '../../../../model/settings.types';
+import {LookupType, SubtitleLookupService} from '../../../../model/settings.types';
 import {AbstractControl, ValidationErrors, ValidatorFn} from '@angular/forms';
 
 export interface EditLookupServiceDialogTypes {
@@ -8,13 +8,20 @@ export interface EditLookupServiceDialogTypes {
 export function urlTemplateValidator(): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
     const value = control.value as string;
+
     if (!value) {
       return null; // Don't validate empty values, let 'required' handle it
     }
 
-    const hasPlaceholder = value.includes('%%SS');
-    if (!hasPlaceholder) {
-      return {missingPlaceholder: true};
+    const group = control.parent;
+    if (group) {
+      const type: LookupType = group.get('type')?.value;
+      if (type !== 'ai') {
+        const hasPlaceholder = value.includes('%%SS');
+        if (!hasPlaceholder) {
+          return {missingPlaceholder: true};
+        }
+      }
     }
 
     try {

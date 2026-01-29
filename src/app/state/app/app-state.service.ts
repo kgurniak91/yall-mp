@@ -1,6 +1,11 @@
 import {computed, DestroyRef, inject, Injectable, Injector, signal} from '@angular/core';
 import {AppData, Catalog, CoreConfig, DuplicateCatalogError, MinimalProject, Project} from '../../model/project.types';
-import {DEFAULT_GLOBAL_SETTINGS, DEFAULT_PROJECT_SETTINGS, GlobalSettings} from '../../model/settings.types';
+import {
+  DEFAULT_AI_SUBTITLE_LOOKUP_SERVICES,
+  DEFAULT_GLOBAL_SETTINGS,
+  DEFAULT_PROJECT_SETTINGS,
+  GlobalSettings
+} from '../../model/settings.types';
 import {AnkiSettings} from '../../model/anki.types';
 import {StorageService} from '../../core/services/storage/storage.service';
 import {merge} from 'lodash-es';
@@ -66,6 +71,7 @@ export class AppStateService {
     const data = await this.storageService.get();
     if (data) {
       const mergedData = merge({}, defaults, data);
+      let requiresSave = false;
 
       mergedData.projects.forEach(p => {
         if (!p.catalogId) {
@@ -87,6 +93,29 @@ export class AppStateService {
         mergedData.globalSettings.subtitleLookupServices = data.globalSettings.subtitleLookupServices;
       }
 
+      mergedData.globalSettings.subtitleLookupServices.forEach(service => {
+        if (!service.type) {
+          service.type = 'search';
+          requiresSave = true;
+        }
+      });
+
+      if (!data.globalSettings?.migratedDefaultAiServices) {
+        console.log('[AppState] Migrating default AI services...');
+
+        const existingIds = new Set(mergedData.globalSettings.subtitleLookupServices.map(s => s.id));
+        const aiServicesToAdd = [...DEFAULT_AI_SUBTITLE_LOOKUP_SERVICES];
+
+        for (const service of aiServicesToAdd) {
+          if (!existingIds.has(service.id)) {
+            mergedData.globalSettings.subtitleLookupServices.push(service);
+          }
+        }
+
+        mergedData.globalSettings.migratedDefaultAiServices = true;
+        requiresSave = true;
+      }
+
       if (data.ankiSettings?.ankiCardTemplates) {
         mergedData.ankiSettings.ankiCardTemplates = data.ankiSettings.ankiCardTemplates;
       }
@@ -98,6 +127,12 @@ export class AppStateService {
 
       this._appData.set(mergedData);
       this.setActiveCatalogId(mergedData, data.lastActiveCatalogId);
+
+      if (requiresSave) {
+        setTimeout(() => {
+          this.storageService.saveCoreConfig(this.coreConfig());
+        });
+      }
     }
   }
 

@@ -40,6 +40,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('lookup:window-state-changed', subscription);
     return () => ipcRenderer.removeListener('lookup:window-state-changed', subscription);
   },
+  clearLookupData: () => ipcRenderer.invoke('lookup:clear-data'),
   // --- Files
   openFileDialog: (options) => ipcRenderer.invoke('dialog:openFile', options),
   parseSubtitleFile: (projectId, filePath) => ipcRenderer.invoke('subtitle:parse', projectId, filePath),

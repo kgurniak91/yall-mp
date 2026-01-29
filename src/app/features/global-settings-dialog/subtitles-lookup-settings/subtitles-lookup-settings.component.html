@@ -35,12 +35,23 @@
         Some websites (like Google) use anti-bot measures that can cause delays or CAPTCHAs in the <b>Built-in Browser</b>.
         <br>
         For these websites, using the <b>System Browser</b> is recommended for a smoother experience.
+        <br><br>
+        Note that using the <b>System Browser</b> disables some of the integration features:
         <br>
-        Note that using the <b>System Browser</b> disables the ability to automatically add notes for Anki export.
+        • Adding notes for Anki export via right-click context menu or keyboard shortcut (Ctrl+Shift+S)
+        <br>
+        • Automatically filling AI chat inputs with predefined prompts (the prompt is copied to the clipboard instead for easy pasting)
       </p>
     </p-message>
 
-    <div class="flex justify-content-end mb-3">
+    <div class="flex justify-content-end mb-3 gap-2">
+      <p-button label="Clear Built-in Browser Data"
+                icon="fa-solid fa-eraser"
+                severity="secondary"
+                [loading]="isClearingData()"
+                pTooltip="Clears cookies and cache for the built-in browser (clears login data of AI services etc.)"
+                tooltipPosition="bottom"
+                (onClick)="onClearBrowserData()"/>
       <p-button label="Add New Service" icon="fa-solid fa-plus" (onClick)="onAddNewService()"/>
     </div>
 
@@ -51,6 +62,7 @@
         <tr>
           <th style="width: 25%">Name</th>
           <th>URL Template</th>
+          <th style="width: 6rem">Type</th>
           <th style="width: 10rem">Browser</th>
           <th style="width: 5rem" class="text-center">Default</th>
           <th style="width: 4rem" class="text-center"></th>
@@ -60,6 +72,7 @@
         <tr>
           <td class="word-break">{{ service.name }}</td>
           <td class="word-break">{{ service.urlTemplate }}</td>
+          <td>{{ service.type === SEARCH_AI_TYPE ? 'AI Chat' : 'Website' }}</td>
           <td>{{ getDisplayBrowserType(service) }}</td>
           <td class="text-center">
             @if (service.isDefault) {

@@ -37,6 +37,7 @@ export interface IElectronAPI {
     url: string;
     clipSubtitleId: string;
     originalSelection: string;
+    automationText?: string;
   }) => Promise<void>;
   onProjectAddNote: (callback: (note: {
     clipSubtitleId: string;
@@ -47,6 +48,7 @@ export interface IElectronAPI {
   onViewLoadingStateChange: (callback: (isLoading: boolean) => void) => (() => void);
   onLookupShowToast: (callback: (message: string) => void) => (() => void);
   onLookupWindowStateChange: (callback: (isVisible: boolean) => void) => (() => void);
+  clearLookupData: () => Promise<void>;
   // --- Files
   openFileDialog: (options: any) => Promise<string[]>;
   parseSubtitleFile: (projectId: string, filePath: string) => Promise<ParsedSubtitlesData>;

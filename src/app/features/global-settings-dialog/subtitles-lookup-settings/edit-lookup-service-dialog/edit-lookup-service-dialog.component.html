@@ -1,17 +1,48 @@
+@let isAiType = (form.get('type')?.value === SEARCH_AI_TYPE);
+
 <form [formGroup]="form" class="flex flex-column gap-4 mb-4">
   <div class="flex flex-column gap-2">
-    <label for="service-name" class="required">Name</label>
-    <input pInputText id="service-name" formControlName="name" placeholder="e.g., French Dictionary"/>
-    <app-form-control-error [control]="form.get('name')"></app-form-control-error>
+    <label for="service-type" class="font-bold">Lookup Service Type</label>
+    <p-select id="service-type"
+              [options]="typeOptions"
+              formControlName="type"
+              optionLabel="label"
+              optionValue="value"
+              appendTo="body"
+              panelStyleClass="w-full"></p-select>
   </div>
 
   <div class="flex flex-column gap-2">
-    <label for="service-url" class="required">URL Template</label>
-    <input pInputText id="service-url" formControlName="urlTemplate"
-           placeholder="e.g., https://images.google.com/search?q=%%SS"/>
-    <small>Use <b>%%SS</b> as a placeholder for the selected subtitle text.</small>
-    <app-form-control-error [control]="form.get('urlTemplate')"></app-form-control-error>
+    <label for="service-name" class="required">Name</label>
+    <input pInputText id="service-name" formControlName="name"
+           placeholder="e.g., {{ isAiType ? 'ChatGPT' : 'French Dictionary' }}"/>
+    <app-form-control-error [control]="form.get('name')"></app-form-control-error>
   </div>
+
+  @if (isAiType) {
+    <div class="flex flex-column gap-2">
+      <label for="ai-url" class="required">Base URL</label>
+      <input pInputText id="ai-url" formControlName="urlTemplate"
+             placeholder="e.g., https://gemini.google.com/app"/>
+      <small>The main page URL where the AI chat starts.</small>
+      <app-form-control-error [control]="form.get('urlTemplate')"></app-form-control-error>
+    </div>
+
+    <div class="flex flex-column gap-2">
+      <label for="ai-prompt">Prompt Prefix</label>
+      <textarea pTextarea id="ai-prompt" formControlName="aiPrePrompt" rows="2"
+                placeholder="e.g. Explain this sentence: "></textarea>
+      <small>This text will be added in prompt before the selected subtitle text.</small>
+    </div>
+  } @else {
+    <div class="flex flex-column gap-2">
+      <label for="service-url" class="required">URL Template</label>
+      <input pInputText id="service-url" formControlName="urlTemplate"
+             placeholder="e.g., https://google.com/search?q=%%SS"/>
+      <small>Use <b>%%SS</b> as a placeholder for the selected text.</small>
+      <app-form-control-error [control]="form.get('urlTemplate')"></app-form-control-error>
+    </div>
+  }
 
   <div class="flex flex-column gap-2">
     <label for="service-browser">Browser</label>

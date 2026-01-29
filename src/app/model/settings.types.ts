@@ -1,5 +1,7 @@
 import {SupportedLanguage} from './project.types';
 
+export type LookupType = 'search' | 'ai';
+
 export enum SubtitleBehavior {
   DoNothing = 'DoNothing',
   ForceShow = 'ForceShow',
@@ -53,7 +55,80 @@ export interface GlobalSettings {
   ankiInstantExport: boolean;
   generateAudioPeaks: boolean;
   swapNavigationShortcuts: boolean;
+  migratedDefaultAiServices?: boolean; // Flag set only once when migrating from older versions to v0.9.3-beta
 }
+
+const DEFAULT_SEARCH_SUBTITLE_LOOKUP_SERVICES: SubtitleLookupService[] = [
+  {
+    id: 'brave',
+    name: 'Brave Search',
+    urlTemplate: 'https://search.brave.com/search?q=%%SS&source=web',
+    isDefault: true,
+    browserType: null,
+    type: 'search'
+  },
+  {
+    id: 'google',
+    name: 'Google Search',
+    urlTemplate: 'https://www.google.com/search?q=%%SS',
+    isDefault: false,
+    browserType: SubtitleLookupBrowserType.System,
+    type: 'search'
+  },
+  {
+    id: 'wikipedia',
+    name: 'Wikipedia',
+    urlTemplate: 'https://en.wikipedia.org/wiki/Special:Search?search=%%SS',
+    isDefault: false,
+    browserType: null,
+    type: 'search'
+  },
+  {
+    id: 'oxford',
+    name: 'Oxford Learner\'s Dictionaries',
+    urlTemplate: 'https://www.oxfordlearnersdictionaries.com/us/definition/english/%%SS',
+    isDefault: false,
+    browserType: null,
+    type: 'search'
+  },
+  {
+    id: 'forvo-en',
+    name: 'Forvo (English pronunciation)',
+    urlTemplate: 'https://forvo.com/word/%%SS/#en',
+    isDefault: false,
+    browserType: null,
+    type: 'search'
+  },
+  {
+    id: 'deepl-es',
+    name: 'DeepL (English to Spanish translation)',
+    urlTemplate: 'https://www.deepl.com/translator#en/es/%%SS',
+    isDefault: false,
+    browserType: null,
+    type: 'search'
+  }
+];
+
+export const DEFAULT_AI_SUBTITLE_LOOKUP_SERVICES: SubtitleLookupService[] = [
+  {
+    id: 'gemini',
+    name: 'Gemini AI (Explain)',
+    urlTemplate: 'https://gemini.google.com/app',
+    isDefault: false,
+    browserType: null,
+    type: 'ai',
+    aiPrePrompt: 'Explain the grammar and nuance of this sentence: '
+  },
+  {
+    id: 'chatgpt',
+    name: 'ChatGPT (Analyze)',
+    urlTemplate: 'https://chatgpt.com/',
+    isDefault: false,
+    browserType: null,
+    type: 'ai',
+    aiPrePrompt: 'Analyze this text: '
+  }
+];
 
 export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   boundaryAdjustAmountMs: 50,
@@ -62,54 +137,15 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   srtFontSizePx: 28,
   srtBackgroundOpacity: 0.3,
   subtitleLookupServices: [
-    {
-      id: 'brave',
-      name: 'Brave Search',
-      urlTemplate: 'https://search.brave.com/search?q=%%SS&source=web',
-      isDefault: true,
-      browserType: null
-    },
-    {
-      id: 'google',
-      name: 'Google Search',
-      urlTemplate: 'https://www.google.com/search?q=%%SS',
-      isDefault: false,
-      browserType: SubtitleLookupBrowserType.System
-    },
-    {
-      id: 'wikipedia',
-      name: 'Wikipedia',
-      urlTemplate: 'https://en.wikipedia.org/wiki/Special:Search?search=%%SS',
-      isDefault: false,
-      browserType: null
-    },
-    {
-      id: 'oxford',
-      name: 'Oxford Learner\'s Dictionaries',
-      urlTemplate: 'https://www.oxfordlearnersdictionaries.com/us/definition/english/%%SS',
-      isDefault: false,
-      browserType: null
-    },
-    {
-      id: 'forvo-en',
-      name: 'Forvo (English pronunciation)',
-      urlTemplate: 'https://forvo.com/word/%%SS/#en',
-      isDefault: false,
-      browserType: null
-    },
-    {
-      id: 'deepl-es',
-      name: 'DeepL (English to Spanish translation)',
-      urlTemplate: 'https://www.deepl.com/translator#en/es/%%SS',
-      isDefault: false,
-      browserType: null
-    }
+    ...DEFAULT_SEARCH_SUBTITLE_LOOKUP_SERVICES,
+    ...DEFAULT_AI_SUBTITLE_LOOKUP_SERVICES
   ],
   subtitleLookupBrowserType: SubtitleLookupBrowserType.BuiltIn,
   ankiSuspendNewCardsByDefault: false,
   ankiInstantExport: false,
   generateAudioPeaks: false,
-  swapNavigationShortcuts: false
+  swapNavigationShortcuts: false,
+  migratedDefaultAiServices: true // Set initially to true so new installations don't trigger migration
 };
 
 export enum BuiltInSettingsPreset {
@@ -166,4 +202,6 @@ export interface SubtitleLookupService {
   urlTemplate: string; // e.g., "https://www.google.com/search?q=%%SS"
   isDefault: boolean;
   browserType: SubtitleLookupBrowserType | null;
+  type: LookupType;
+  aiPrePrompt?: string;
 }
