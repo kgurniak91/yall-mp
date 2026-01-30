@@ -1462,6 +1462,8 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   }
 
   private openFindSubtitlesDialog(): void {
+    untracked(() => this.subtitlesOverlay().clearHighlightAndPopup());
+
     const data: SearchSubtitlesDialogData = {
       clips: this.clipsStateService.clipsForAllTracks(),
       currentTime: this.videoStateService.currentTime()

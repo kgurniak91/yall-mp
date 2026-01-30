@@ -10,15 +10,30 @@
              placeholder="Search..."
              autofocus/>
     </p-iconfield>
-    <div class="mt-3 text-sm text-gray-500 flex align-items-center gap-2">
-      <i class="fa-solid fa-info-circle"></i>
-      <span>Click on a search result to jump to the given subtitle</span>
+    <div class="mt-3 flex align-items-center justify-content-between">
+      <div class="text-sm text-gray-500 flex align-items-center gap-2">
+        <i class="fa-solid fa-info-circle"></i>
+        <span>Click on a search result to jump to the given subtitle</span>
+      </div>
+      <div class="text-sm font-bold text-primary">
+        {{ resultsSummary() }}
+      </div>
     </div>
   </div>
+
   <div class="flex-grow-1 min-h-0 relative">
-    <p-scrollpanel #scrollPanel [style]="{width: '100%', height: '50vh'}" styleClass="search-scrollpanel">
+    <div #scrollContainer
+         class="w-full overflow-y-auto custom-scrollbar"
+         style="height: 50vh">
       @if (filteredClips().length > 0) {
         <div class="flex flex-column p-3 pt-0">
+
+          @if (hasMoreAbove()) {
+            <div class="text-center py-2 text-gray-400">
+              <i class="fa-solid fa-ellipsis"></i>
+            </div>
+          }
+
           @for (item of filteredClips(); track item.clip.id) {
             <div [id]="'search-clip-' + item.clip.id"
                  class="search-result-item p-2 border-round cursor-pointer transition-colors flex align-items-center gap-3"
@@ -41,6 +56,12 @@
 
             <p-divider styleClass="m-0"></p-divider>
           }
+
+          @if (hasMoreBelow()) {
+            <div class="text-center py-2 text-gray-400">
+              <i class="fa-solid fa-ellipsis"></i>
+            </div>
+          }
         </div>
       } @else {
         <div class="flex flex-column align-items-center justify-content-center h-full text-gray-500 gap-3 py-6 text-center select-none">
@@ -48,7 +69,7 @@
           <span class="text-xl">No matches found</span>
         </div>
       }
-    </p-scrollpanel>
+    </div>
   </div>
 
   <div class="flex align-items-center justify-content-end gap-2 p-3 mt-auto border-top-1 surface-border flex-shrink-0 bg-white z-1">

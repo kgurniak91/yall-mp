@@ -4,10 +4,6 @@
   }
 }
 
-:host ::ng-deep .search-scrollpanel .p-scrollpanel-bar {
-  opacity: 1;
-}
-
 :host ::ng-deep .highlight-text {
   background-color: rgba(255, 255, 0, 0.3);
   font-weight: bold;

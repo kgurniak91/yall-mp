@@ -1,4 +1,13 @@
-import {AfterViewInit, ChangeDetectionStrategy, Component, inject, OnInit, signal, viewChild} from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  inject,
+  OnInit,
+  signal,
+  viewChild
+} from '@angular/core';
 import {VideoClip} from '../../../model/video.types';
 import {DynamicDialogConfig, DynamicDialogRef} from 'primeng/dynamicdialog';
 import {FormsModule} from '@angular/forms';
@@ -6,7 +15,6 @@ import {InputText} from 'primeng/inputtext';
 import {DatePipe} from '@angular/common';
 import {Divider} from 'primeng/divider';
 import {Button} from 'primeng/button';
-import {ScrollPanel} from 'primeng/scrollpanel';
 import {Tag} from 'primeng/tag';
 import {IconField} from 'primeng/iconfield';
 import {InputIcon} from 'primeng/inputicon';
@@ -19,6 +27,9 @@ interface SearchResult {
   isGap: boolean;
 }
 
+const CONTEXT_RANGE = 10;
+const MAX_SEARCH_RESULTS = 20;
+
 @Component({
   selector: 'app-search-subtitles-dialog',
   imports: [
@@ -27,7 +38,6 @@ interface SearchResult {
     DatePipe,
     Divider,
     Button,
-    ScrollPanel,
     Tag,
     IconField,
     InputIcon
@@ -39,11 +49,15 @@ interface SearchResult {
 export class SearchSubtitlesDialogComponent implements OnInit, AfterViewInit {
   protected readonly searchQuery = signal('');
   protected readonly filteredClips = signal<SearchResult[]>([]);
-  protected readonly scrollPanel = viewChild<ScrollPanel>('scrollPanel');
+  protected readonly resultsSummary = signal<string>('');
+  protected readonly hasMoreAbove = signal(false);
+  protected readonly hasMoreBelow = signal(false);
+  protected readonly scrollContainer = viewChild<ElementRef<HTMLElement>>('scrollContainer');
   private readonly ref = inject(DynamicDialogRef);
   private readonly config = inject(DynamicDialogConfig);
   private allSearchableClips: SearchResult[] = [];
   private initialScrollTargetId: string | null = null;
+  private currentClipIndex = -1;
 
   ngOnInit() {
     const data = this.config.data as SearchSubtitlesDialogData;
@@ -64,20 +78,22 @@ export class SearchSubtitlesDialogComponent implements OnInit, AfterViewInit {
         };
       });
 
-    const currentItem = this.allSearchableClips.find(i => i.isCurrent);
+    this.currentClipIndex = this.allSearchableClips.findIndex(i => i.isCurrent);
 
-    if (currentItem) {
-      this.initialScrollTargetId = currentItem.clip.id;
-    } else {
-      // Fallback: scroll to first item if somehow nothing is current (e.g., before 0s or after end)
-      this.initialScrollTargetId = this.allSearchableClips[0].clip.id;
+    // If no specific clip is active (e.g., before 0s or after end), default to first clip
+    if (this.currentClipIndex === -1 && this.allSearchableClips.length > 0) {
+      this.currentClipIndex = 0;
     }
 
-    this.filteredClips.set(this.allSearchableClips);
+    if (this.currentClipIndex !== -1) {
+      this.initialScrollTargetId = this.allSearchableClips[this.currentClipIndex].clip.id;
+    }
+
+    this.performFiltering('');
   }
 
   ngAfterViewInit() {
-    if (this.initialScrollTargetId) {
+    if (this.initialScrollTargetId && !this.searchQuery()) {
       setTimeout(() => {
         this.scrollToClip(this.initialScrollTargetId!);
       }, 100);
@@ -85,7 +101,7 @@ export class SearchSubtitlesDialogComponent implements OnInit, AfterViewInit {
   }
 
   onSearchQueryChange(query: string) {
-    this.filterClips(query);
+    this.performFiltering(query);
   }
 
   selectClip(clip: VideoClip) {
@@ -109,29 +125,65 @@ export class SearchSubtitlesDialogComponent implements OnInit, AfterViewInit {
     return text.replace(regex, '<span class="highlight-text">$1</span>');
   }
 
-  private filterClips(query: string) {
+  private performFiltering(query: string) {
+    const totalItems = this.allSearchableClips.length;
+
     if (!query || query.trim().length === 0) {
-      this.filteredClips.set(this.allSearchableClips);
-      this.refreshScrollPanel();
-      return;
+      let start = 0;
+      let end: number;
+
+      if (this.currentClipIndex !== -1) {
+        start = Math.max(0, this.currentClipIndex - CONTEXT_RANGE);
+        end = Math.min(totalItems, this.currentClipIndex + CONTEXT_RANGE + 1);
+      } else {
+        // Fallback: if no current index, show first page
+        end = Math.min(totalItems, MAX_SEARCH_RESULTS);
+      }
+
+      const slice = this.allSearchableClips.slice(start, end);
+      this.filteredClips.set(slice);
+
+      this.hasMoreAbove.set(start > 0);
+      this.hasMoreBelow.set(end < totalItems);
+      this.resultsSummary.set('Showing nearest neighbours of the current clip');
+    } else {
+      const normalizedQuery = query.toLowerCase().trim();
+
+      const matches = this.allSearchableClips.filter(item => {
+        if (item.isGap) {
+          return false;
+        }
+        return item.cleanText.toLowerCase().includes(normalizedQuery);
+      });
+
+      const totalMatches = matches.length;
+      const slicedMatches = matches.slice(0, MAX_SEARCH_RESULTS);
+
+      this.filteredClips.set(slicedMatches);
+      this.hasMoreAbove.set(false); // Never show top dots in search results
+      this.hasMoreBelow.set(totalMatches > MAX_SEARCH_RESULTS);
+
+      if (totalMatches === 0) {
+        this.resultsSummary.set('No matches found');
+      } else if (totalMatches > MAX_SEARCH_RESULTS) {
+        this.resultsSummary.set(`Showing top ${MAX_SEARCH_RESULTS} of ${totalMatches} matches`);
+      } else {
+        this.resultsSummary.set(`Found ${totalMatches} matches`);
+      }
     }
 
-    const normalizedQuery = query.toLowerCase().trim();
-
-    const matches = this.allSearchableClips.filter(item => {
-      if (item.isGap) {
-        return false;
-      }
-      return item.cleanText.toLowerCase().includes(normalizedQuery);
-    });
-
-    this.filteredClips.set(matches);
-    this.refreshScrollPanel();
+    this.resetScroll();
   }
 
-  private refreshScrollPanel() {
+  private resetScroll() {
     setTimeout(() => {
-      this.scrollPanel()?.refresh();
+      // In search mode, reset scroll to top so user sees the best matches first
+      if (this.searchQuery()) {
+        const el = this.scrollContainer()?.nativeElement;
+        if (el) {
+          el.scrollTop = 0;
+        }
+      }
     });
   }
 
