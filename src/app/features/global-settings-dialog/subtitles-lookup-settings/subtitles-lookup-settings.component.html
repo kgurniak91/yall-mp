@@ -82,7 +82,7 @@
           <td class="text-center">
             <p-button icon="fa-solid fa-ellipsis-v"
                       severity="secondary"
-                      (onClick)="$event.stopPropagation(); menu.toggle($event)"/>
+                      (onClick)="menu.toggle($event)"/>
             <p-menu #menu [model]="actionMenuItems()"
                     [popup]="true"
                     appendTo="body"

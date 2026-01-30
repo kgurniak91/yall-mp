@@ -1,4 +1,4 @@
-<div class="project-card" (click)="selectProject.emit()">
+<div class="project-card" (click)="onCardClick($event)">
   <div class="project-header">
     <div class="project-title">
       <div>
@@ -14,7 +14,7 @@
     <div class="project-actions">
       <p-button icon="fa-solid fa-ellipsis-v"
                 severity="secondary"
-                (onClick)="$event.stopPropagation(); menu.toggle($event)"></p-button>
+                (onClick)="menu.toggle($event)"></p-button>
 
       <p-menu #menu
               [model]="menuItems()"

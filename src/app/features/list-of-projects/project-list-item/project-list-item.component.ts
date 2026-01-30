@@ -67,4 +67,12 @@ export class ProjectListItemComponent implements OnInit {
 
     this.menuItems.set(menuItems);
   }
+
+  protected onCardClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    if (target.closest('.project-actions') || target.closest('.p-menu')) {
+      return;
+    }
+    this.selectProject.emit();
+  }
 }
