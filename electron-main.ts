@@ -996,7 +996,13 @@ if (!gotTheLock) {
         }
       });
 
-      view.webContents.on('did-fail-load', (_, errorCode, errorDescription, validatedURL) => {
+      view.webContents.on('did-fail-load', (_, errorCode, errorDescription, validatedURL, isMainFrame) => {
+        // Only show the error page if the main URL requested by user failed,
+        // ignore failures from background resources like ads, trackers, iframes etc.
+        if (!isMainFrame) {
+          return;
+        }
+
         if (errorCode !== -3) { // Ignore ABORTED
           hasInitialLoadFailed = true;
           console.error(`Lookup view failed: ${errorDescription} for URL: ${validatedURL}`);
