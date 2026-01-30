@@ -138,11 +138,6 @@ export class GlobalKeyboardShortcutsService implements OnDestroy {
       return;
     }
 
-    // If the drawer is open, do nothing here and let the event propagate to the ProjectKeyboardShortcutsService to close it
-    if (this.isDrawerOpen()) {
-      return;
-    }
-
     // Close the confirmation dialog if any
     if (this.isConfirmDialogOpen()) {
       this.confirmationService.close();
@@ -154,6 +149,11 @@ export class GlobalKeyboardShortcutsService implements OnDestroy {
       const dialogRefs = Array.from(this.dialogService.dialogComponentRefMap.keys());
       const topDialogRef = dialogRefs[dialogRefs.length - 1];
       topDialogRef.close();
+      return;
+    }
+
+    // If the drawer is open, do nothing here and let the event propagate to the ProjectKeyboardShortcutsService to close it
+    if (this.isDrawerOpen()) {
       return;
     }
 
