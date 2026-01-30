@@ -23,6 +23,13 @@ import {SUPPORTED_MEDIA_TYPES, SUPPORTED_SUBTITLE_TYPES} from './src/app/model/v
 import {YomitanManager} from './yomitan-manager';
 import {LEGACY_TO_YOMITAN_ISO_MAP} from './shared/types/yomitan';
 
+// Data isolation for development purposes only to avoid corrupting real study data on the local machine
+if (!app.isPackaged) {
+  const userDataPath = path.join(app.getPath('appData'), 'yall-mp-dev');
+  app.setPath('userData', userDataPath);
+  console.log(`[Main] Development mode detected. Data path set to: ${userDataPath}`);
+}
+
 interface AvailableFont {
   family: string;
   style: string;
