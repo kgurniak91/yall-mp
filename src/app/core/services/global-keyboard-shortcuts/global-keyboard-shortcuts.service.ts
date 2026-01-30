@@ -41,8 +41,26 @@ export class GlobalKeyboardShortcutsService implements OnDestroy {
     const target = event.target as HTMLElement;
     const isTyping = (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
 
+    // Identify if the pressed key combination matches any global shortcut
+    const globalShortcut = this.keyboardShortcutsHelperService.getShortcutForEvent(event, KeyboardShortcutScope.Global);
+
+    // Always handle fullscreen toggle, regardless of dialog state
+    if (globalShortcut?.action === KeyboardAction.ToggleFullScreen) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.executeGlobalAction(globalShortcut.action, event);
+      return;
+    }
+
     // Handle events when a dialog is open
     if (this.isAnyDialogOpen()) {
+      // If a global dialog is already open, ignore requests to open it again
+      if (globalShortcut?.action === KeyboardAction.OpenHelpDialog || globalShortcut?.action === KeyboardAction.OpenGlobalSettings) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+
       // Exception - allow typing events to propagate so Angular bindings (like (keydown.enter)) on the input itself can fire
       if (isTyping && event.key !== 'Escape') {
         return;
@@ -64,7 +82,6 @@ export class GlobalKeyboardShortcutsService implements OnDestroy {
     }
 
     // If no dialog is open, check for other global shortcuts
-    const globalShortcut = this.keyboardShortcutsHelperService.getShortcutForEvent(event, KeyboardShortcutScope.Global);
     if (!globalShortcut) {
       // Shortcuts that are not global are allowed to propagate to listeners like ProjectKeyboardShortcutsService
       return;
