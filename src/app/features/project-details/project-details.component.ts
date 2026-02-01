@@ -25,14 +25,7 @@ import {Popover} from 'primeng/popover';
 import {ActivatedRoute, Router} from '@angular/router';
 import {AppStateService} from '../../state/app/app-state.service';
 import {ProjectSettingsStateService} from '../../state/project-settings/project-settings-state.service';
-import {
-  BuiltInSettingsPresets,
-  LookupType,
-  ProjectSettings,
-  SettingsPreset,
-  SubtitleLookupBrowserType,
-  SubtitleLookupService
-} from '../../model/settings.types';
+import {LookupType, SubtitleLookupBrowserType, SubtitleLookupService} from '../../model/settings.types';
 import {DialogService, DynamicDialogRef} from 'primeng/dynamicdialog';
 import {CommandHistoryStateService} from '../../state/command-history/command-history-state.service';
 import {EditSubtitlesDialogComponent} from './edit-subtitles-dialog/edit-subtitles-dialog.component';
@@ -277,8 +270,6 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     }
     return this.appStateService.currentProject();
   });
-  protected readonly settingsPresets = signal<SettingsPreset[]>(BuiltInSettingsPresets);
-  protected readonly selectedSettingsPreset = signal<SettingsPreset | null>(null);
 
   protected readonly parsedSubtitleData = computed<ParsedSubtitlesData | null>(() => {
     const project = this.project();
@@ -717,18 +708,6 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     });
 
     this.watchDialogPlaybackState(dialogRef);
-  }
-
-  onSettingsPresetChange(preset: SettingsPreset | null): void {
-    this.selectedSettingsPreset.set(preset);
-
-    if (preset) {
-      const currentProjectSettings = this.projectSettingsStateService.settings();
-      this.projectSettingsStateService.setSettings({
-        ...currentProjectSettings,
-        ...preset.settings
-      });
-    }
   }
 
   onAnkiTagsChange(ankiTags: string[]) {
@@ -1209,18 +1188,6 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       });
       this.videoStateService.clearEditSubtitlesRequest();
     }
-  });
-
-  private matchingSettingsPresetListener = effect(() => {
-    const currentSettings = this.projectSettingsStateService.settings();
-
-    const matchingPreset = this.settingsPresets().find(preset =>
-      Object.entries(preset.settings).every(([key, value]) =>
-        currentSettings[key as keyof ProjectSettings] === value
-      )
-    );
-
-    this.selectedSettingsPreset.set(matchingPreset || null);
   });
 
   private requestAnkiExportListener = effect(() => {

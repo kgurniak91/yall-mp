@@ -10,19 +10,26 @@
   <div class="settings-preset-fieldset">
     <p-fieldset legend="Settings Preset" [toggleable]="false">
       <div class="setting-item">
-        <p-select id="preset-selector"
-                  [options]="settingsPresets()"
-                  styleClass="w-full"
-                  panelStyleClass="w-full"
-                  optionLabel="name"
-                  placeholder="Custom"
-                  appendTo="body"
-                  [ngModel]="selectedSettingsPreset()"
-                  (ngModelChange)="onSettingsPresetChange($event)">
-        </p-select>
+        <div class="flex align-items-center gap-2 w-full">
+          <p-select id="preset-selector"
+                    [options]="BuiltInSettingsPresets"
+                    styleClass="w-full"
+                    panelStyleClass="w-full"
+                    optionLabel="name"
+                    [placeholder]="placeholderText()"
+                    appendTo="body"
+                    [ngModel]="activePreset()"
+                    (ngModelChange)="onSettingsPresetChange($event)">
+          </p-select>
+          <p-button icon="fa-solid fa-rotate-left"
+                    (click)="onResetToDefault()"
+                    [disabled]="!canResetToDefault()"
+                    pTooltip="Reset to global defaults"
+                    styleClass="p-button-secondary"/>
+        </div>
       </div>
 
-      @if (selectedSettingsPreset(); as preset) {
+      @if (activePreset(); as preset) {
         <p-message severity="secondary" styleClass="w-full">
           <div class="p-0 m-0 font-normal line-height-3">
             @if (preset.id === BuiltInSettingsPreset.LISTENING) {

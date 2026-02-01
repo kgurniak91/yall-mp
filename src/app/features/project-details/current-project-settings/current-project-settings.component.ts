@@ -1,5 +1,10 @@
 import {ChangeDetectionStrategy, Component, computed, inject, input, output} from '@angular/core';
-import {BuiltInSettingsPreset, ProjectSettings, SettingsPreset} from '../../../model/settings.types';
+import {
+  BuiltInSettingsPreset,
+  BuiltInSettingsPresets,
+  ProjectSettings,
+  SettingsPreset
+} from '../../../model/settings.types';
 import {Fieldset} from 'primeng/fieldset';
 import {Select} from 'primeng/select';
 import {
@@ -20,6 +25,7 @@ import {TagsInputComponent} from '../../../shared/components/tags-input/tags-inp
 import {YomitanService} from '../../../core/services/yomitan/yomitan.service';
 import {RouterLink} from '@angular/router';
 import {MediaTrack} from '../../../../../shared/types/media.type';
+import {cloneDeep} from 'lodash-es';
 
 @Component({
   selector: 'app-current-project-settings',
@@ -43,17 +49,16 @@ import {MediaTrack} from '../../../../../shared/types/media.type';
 })
 export class CurrentProjectSettingsComponent {
   public readonly settings = input.required<ProjectSettings>();
-  public readonly settingsPresets = input.required<SettingsPreset[]>();
   public readonly isAssProject = input(false);
-  public readonly selectedSettingsPreset = input.required<SettingsPreset | null>();
   public readonly detectedLanguage = input<SupportedLanguage>();
   public readonly ankiTags = input<string[]>();
   public readonly audioTracks = input<MediaTrack[]>([]);
   public readonly projectId = input.required<string>();
   public readonly ankiTagsChange = output<string[]>();
   public readonly settingsChange = output<ProjectSettings>();
-  public readonly selectedSettingsPresetChange = output<SettingsPreset | null>();
+  protected readonly BuiltInSettingsPresets = BuiltInSettingsPresets;
   protected readonly BuiltInSettingsPreset = BuiltInSettingsPreset;
+
   protected readonly subtitlesLanguageOptions = computed(() => {
     const fromYomitan = this.yomitanService.supportedLanguages().map(l => ({
       label: `${l.name} (${l.iso})`,
@@ -65,6 +70,7 @@ export class CurrentProjectSettingsComponent {
       {label: 'Other', value: 'other'}
     ];
   });
+
   protected readonly lookupServiceOptions = computed(() => {
     const globalServices = this.globalSettingsStateService.subtitleLookupServices();
     const options: { name: string, id: string | null }[] = [...globalServices];
@@ -76,6 +82,7 @@ export class CurrentProjectSettingsComponent {
 
     return options;
   });
+
   protected readonly selectedAudioTrackLabel = computed(() => {
     const selectedIndex = this.settings().selectedAudioTrackIndex;
     const track = this.audioTracks().find(t => t.index === selectedIndex);
@@ -85,9 +92,45 @@ export class CurrentProjectSettingsComponent {
     }
     return `Track ${selectedIndex ?? 'Unknown'}`;
   });
+
+  protected readonly activePreset = computed(() => {
+    const currentSettings = this.settings();
+    return BuiltInSettingsPresets.find(preset =>
+      this.settingsPresetKeys.every(k => currentSettings[k] === preset.settings[k])
+    ) || null;
+  });
+
+  protected readonly placeholderText = computed(() => {
+    if (this.activePreset()) {
+      return 'Custom';
+    }
+
+    const currentSettings = this.settings();
+    const globalDefaults = this.globalSettingsStateService.defaultProjectSettings();
+    const isDefault = this.allCommonKeys.every(k => currentSettings[k] === globalDefaults[k]);
+    return isDefault ? 'Default' : 'Custom';
+  });
+
+  protected readonly canResetToDefault = computed(() => {
+    const currentSettings = this.settings();
+    const globalDefaults = this.globalSettingsStateService.defaultProjectSettings();
+    return !this.allCommonKeys.every(k => currentSettings[k] === globalDefaults[k]);
+  });
+
   private readonly globalSettingsStateService = inject(GlobalSettingsStateService);
   private readonly dialogOrchestrationService = inject(DialogOrchestrationService);
   private readonly yomitanService = inject(YomitanService);
+  private readonly settingsPresetKeys: (keyof ProjectSettings)[] = [
+    'autoPauseAtStart',
+    'autoPauseAtEnd',
+    'subtitleBehavior'
+  ];
+  private readonly allCommonKeys: (keyof ProjectSettings)[] = [
+    ...this.settingsPresetKeys,
+    'subtitledClipSpeed',
+    'gapSpeed',
+    'speedOverride'
+  ];
 
   protected openGlobalSettings(event: MouseEvent): void {
     event.preventDefault();
@@ -100,7 +143,24 @@ export class CurrentProjectSettingsComponent {
   }
 
   protected onSettingsPresetChange(preset: SettingsPreset | null): void {
-    this.selectedSettingsPresetChange.emit(preset);
+    if (preset) {
+      this.settingsChange.emit({
+        ...this.settings(),
+        ...preset.settings
+      });
+    }
+  }
+
+  protected onResetToDefault(): void {
+    const globalDefaults = this.globalSettingsStateService.defaultProjectSettings();
+    const currentSettings = this.settings();
+    const newSettings = cloneDeep(currentSettings);
+
+    this.allCommonKeys.forEach(key => {
+      (newSettings as any)[key] = globalDefaults[key];
+    });
+
+    this.settingsChange.emit(newSettings);
   }
 
   protected onSettingChange<K extends keyof ProjectSettings>(key: K, value: ProjectSettings[K]): void {
