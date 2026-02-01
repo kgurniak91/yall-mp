@@ -113,6 +113,7 @@ export interface IElectronAPI {
   playbackUpdateClips: (clips: LightweightVideoClip[]) => void;
   onPlaybackStateUpdate: (callback: (update: PlaybackStateUpdate) => void) => (() => void);
   onRepeatSeekCompleted: (callback: () => void) => (() => void);
+  playbackSetSpeedOverride: (isActive: boolean) => void;
   // --- Yomitan
   getYomitanExtensionId: () => Promise<string | null>;
   getYomitanSettingsUrl: () => Promise<string | null>;

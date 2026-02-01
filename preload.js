@@ -132,6 +132,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('playback:repeat-seek-completed', subscription);
     return () => ipcRenderer.removeListener('playback:repeat-seek-completed', subscription);
   },
+  playbackSetSpeedOverride: (isActive) => ipcRenderer.send('playback:setSpeedOverride', isActive),
   // --- Yomitan
   getYomitanExtensionId: () => ipcRenderer.invoke('yomitan:get-extension-id'),
   getYomitanSettingsUrl: () => ipcRenderer.invoke('yomitan:get-settings-url'),

@@ -5,6 +5,7 @@ import {
   KeyboardShortcutsHelperService
 } from '../../../../core/services/keyboard-shortcuts-helper/keyboard-shortcuts-helper.service';
 import {ActionType, KeyboardShortcutScope} from '../../../../model/keyboard-shortcuts.types';
+import {KeyboardAction} from '../../../../model/video.types';
 
 @Injectable()
 export class ProjectKeyboardShortcutsService implements OnDestroy {
@@ -17,15 +18,31 @@ export class ProjectKeyboardShortcutsService implements OnDestroy {
   constructor() {
     document.addEventListener('keydown', this.handleKeyDown);
     document.addEventListener('keyup', this.handleKeyUp);
+    window.addEventListener('blur', this.handleBlur);
   }
 
   ngOnDestroy(): void {
     document.removeEventListener('keydown', this.handleKeyDown);
     document.removeEventListener('keyup', this.handleKeyUp);
+    window.removeEventListener('blur', this.handleBlur);
   }
 
+  private readonly handleBlur = (): void => {
+    this.activeKeys.clear();
+    this.actionService.dispatch(KeyboardAction.ActivateSpeedOverride, false);
+  };
+
   private readonly handleKeyUp = (event: KeyboardEvent): void => {
-    this.activeKeys.delete(event.code);
+    const code = event.code;
+    if (this.activeKeys.has(code)) {
+      this.activeKeys.delete(code);
+
+      // Detect release of the speed override key
+      const shortcut = this.keyboardShortcutsHelperService.getShortcutForEvent(event, KeyboardShortcutScope.Project);
+      if (shortcut?.action === KeyboardAction.ActivateSpeedOverride) {
+        this.actionService.dispatch(shortcut.action, false);
+      }
+    }
   };
 
   private readonly handleKeyDown = (event: KeyboardEvent): void => {
@@ -59,6 +76,16 @@ export class ProjectKeyboardShortcutsService implements OnDestroy {
 
     const shortcut = this.keyboardShortcutsHelperService.getShortcutForEvent(event, KeyboardShortcutScope.Project);
     if (!shortcut) {
+      return;
+    }
+
+    // Special handling for hold-to-activate speed override
+    if (shortcut.action === KeyboardAction.ActivateSpeedOverride) {
+      // Only dispatch Start event if key wasn't already held down (ignore OS repeats)
+      if (!this.activeKeys.has(event.code)) {
+        this.activeKeys.add(event.code);
+        this.actionService.dispatch(shortcut.action, true); // true = active
+      }
       return;
     }
 

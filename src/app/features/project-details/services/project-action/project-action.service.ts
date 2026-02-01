@@ -13,6 +13,11 @@ import {
 import {ActionType} from '../../../../model/keyboard-shortcuts.types';
 import {FileOpenIntentService} from '../../../../core/services/file-open-intent/file-open-intent.service';
 
+export interface ActionPayload {
+  action: KeyboardAction;
+  payload?: any;
+}
+
 @Injectable()
 export class ProjectActionService {
   private videoStateService = inject(VideoStateService);
@@ -22,7 +27,7 @@ export class ProjectActionService {
   private commandHistoryStateService = inject(CommandHistoryStateService);
   private keyboardShortcutsHelperService = inject(KeyboardShortcutsHelperService);
   private fileOpenIntentService = inject(FileOpenIntentService);
-  private action$ = new Subject<KeyboardAction>();
+  private readonly action$ = new Subject<ActionPayload>();
   private readonly destroyRef = inject(DestroyRef);
 
   constructor() {
@@ -42,11 +47,11 @@ export class ProjectActionService {
     ).subscribe(action => this.executeAction(action));
   }
 
-  public dispatch(action: KeyboardAction): void {
-    this.action$.next(action);
+  public dispatch(action: KeyboardAction, payload?: any): void {
+    this.action$.next({action, payload});
   }
 
-  private executeAction(action: KeyboardAction): void {
+  private executeAction({action, payload}: ActionPayload): void {
     if (this.videoStateService.isBusy()) {
       return;
     }
@@ -154,6 +159,9 @@ export class ProjectActionService {
         break;
       case KeyboardAction.FindInSubtitles:
         this.videoStateService.requestFindInSubtitles();
+        break;
+      case KeyboardAction.ActivateSpeedOverride:
+        this.videoStateService.setSpeedOverride(Boolean(payload));
         break;
     }
   }

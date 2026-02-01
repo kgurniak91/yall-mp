@@ -29,6 +29,7 @@ export class PlaybackManager extends EventEmitter {
   private isAwaitingRepeatSeek = false;
   private isSeekForNavigation = false;
   private nextPlayerState: PlayerState | null = null;
+  private isSpeedOverridden = false;
 
   constructor(
     private mpvManager: MpvManager,
@@ -148,7 +149,7 @@ export class PlaybackManager extends EventEmitter {
     // Apply speed setting immediately for the new clip to prevent race condition
     const clip = this.clips[this.currentClipIndex];
     if (clip && this.settings) {
-      const speed = clip.hasSubtitle ? this.settings.subtitledClipSpeed : this.settings.gapSpeed;
+      const speed = this.getTargetSpeedForClip(clip);
       this.mpvManager.setProperty('speed', speed);
       this.refreshLuaAutoPause();
     }
@@ -254,6 +255,14 @@ export class PlaybackManager extends EventEmitter {
 
     // Always notify the UI after a clip update, because the clip list or state might need syncing.
     this.notifyUI();
+  }
+
+  public setSpeedOverride(isActive: boolean): void {
+    if (this.isSpeedOverridden === isActive) {
+      return;
+    }
+    this.isSpeedOverridden = isActive;
+    this.applyClipTransitionSettings();
   }
 
   private handleMpvEvent(status: any): void {
@@ -402,11 +411,25 @@ export class PlaybackManager extends EventEmitter {
       return;
     }
 
-    const speed = clip.hasSubtitle ? this.settings.subtitledClipSpeed : this.settings.gapSpeed;
+    const speed = this.getTargetSpeedForClip(clip);
     this.mpvManager.setProperty('speed', speed);
 
     this.refreshLuaAutoPause();
     this.applySubtitleVisibilityForClip();
+  }
+
+  private getTargetSpeedForClip(clip: LightweightVideoClip) {
+    if (!this.settings) {
+      return 1.0;
+    }
+
+    // Priority 1: User override (Shift held down)
+    if (this.isSpeedOverridden) {
+      return this.settings.speedOverride;
+    }
+
+    // Priority 2: Context-aware speed
+    return clip.hasSubtitle ? this.settings.subtitledClipSpeed : this.settings.gapSpeed;
   }
 
   private refreshLuaAutoPause(): void {

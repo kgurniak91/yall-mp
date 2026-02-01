@@ -1388,6 +1388,10 @@ if (!gotTheLock) {
       playbackManager?.updateClips(clips);
     });
     ipcMain.handle('playback:loadProject', (_, clips, settings, lastPlaybackTime) => playbackManager?.loadProject(clips, settings, lastPlaybackTime));
+    ipcMain.on('playback:setSpeedOverride', (_, isActive: boolean) => {
+      playbackManager?.setSpeedOverride(isActive);
+    });
+
     ipcMain.handle('app:get-version', () => app.getVersion());
 
     ipcMain.handle('app:get-pending-files', () => {

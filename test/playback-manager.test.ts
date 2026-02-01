@@ -1280,4 +1280,191 @@ describe('PlaybackManager', () => {
       });
     });
   });
+
+  describe('Speed Override Feature', () => {
+    beforeEach(() => {
+      playbackManager = setupManager({
+        gapSpeed: 2.0,
+        subtitledClipSpeed: 1.0,
+        speedOverride: 0.5
+      });
+    });
+
+    it('should apply override speed immediately when enabled while playing', () => {
+      playbackManager.seek(15); // Start in subtitled clip (Normal speed 1.0)
+      simulateSeekComplete(playbackManager);
+      playbackManager.play();
+      vi.clearAllMocks();
+
+      // Enable override
+      playbackManager.setSpeedOverride(true);
+
+      expect(mockMpvManager.setProperty).toHaveBeenCalledWith('speed', 0.5);
+    });
+
+    it('should revert to context-aware speed when disabled', () => {
+      playbackManager.seek(15);
+      simulateSeekComplete(playbackManager);
+
+      // Toggle On -> Off
+      playbackManager.setSpeedOverride(true);
+      vi.clearAllMocks();
+
+      playbackManager.setSpeedOverride(false);
+
+      // Should revert to subtitled speed (1.0)
+      expect(mockMpvManager.setProperty).toHaveBeenCalledWith('speed', 1.0);
+    });
+
+    it('should revert to GAP speed if disabled while in a gap', () => {
+      playbackManager.seek(5); // Start in gap (Normal speed 2.0)
+      simulateSeekComplete(playbackManager);
+
+      playbackManager.setSpeedOverride(true); // Speed -> 0.5
+      vi.clearAllMocks();
+
+      playbackManager.setSpeedOverride(false);
+
+      // Should revert to gap speed (2.0)
+      expect(mockMpvManager.setProperty).toHaveBeenCalledWith('speed', 2.0);
+    });
+
+    it('should maintain override speed when transitioning between clips', () => {
+      // Start in Gap (0-10) with override ENABLED
+      playbackManager.seek(5);
+      simulateSeekComplete(playbackManager);
+      playbackManager.play();
+      playbackManager.setSpeedOverride(true);
+      vi.clearAllMocks();
+
+      // Transition Gap -> Subtitle (at 10s)
+      simulateEndOfClip(playbackManager, 10);
+
+      // The manager reapplies settings on transition.
+      // It should NOT switch to 1.0 (sub speed), it should stay 0.5 (override).
+      expect(mockMpvManager.setProperty).toHaveBeenCalledWith('speed', 0.5);
+      expect(mockMpvManager.setProperty).not.toHaveBeenCalledWith('speed', 1.0);
+    });
+
+    it('should NOT resume playback if paused when speed override is toggled', () => {
+      // ARRANGE: Seek to a clip and ensure it is paused
+      playbackManager.seek(15);
+      simulateSeekComplete(playbackManager);
+      playbackManager.pause();
+
+      expect(getLastStateUpdate()?.playerState).toBe(PlayerState.PausedByUser);
+      vi.clearAllMocks();
+
+      // ACT: Enable Speed Override while paused
+      playbackManager.setSpeedOverride(true);
+
+      // ASSERT:
+      // 1. Speed should be updated
+      expect(mockMpvManager.setProperty).toHaveBeenCalledWith('speed', 0.5);
+
+      // 2. Pause property should NOT be changed to false
+      expect(mockMpvManager.setProperty).not.toHaveBeenCalledWith('pause', false);
+
+      // 3. State should remain PausedByUser
+      const lastUpdate = getLastStateUpdate();
+      if (lastUpdate) {
+        expect(lastUpdate.playerState).toBe(PlayerState.PausedByUser);
+      }
+    });
+
+    it('should maintain override speed after seeking', () => {
+      // ARRANGE
+      playbackManager.seek(15);
+      simulateSeekComplete(playbackManager);
+
+      // Enable override (Speed -> 0.5)
+      playbackManager.setSpeedOverride(true);
+      vi.clearAllMocks();
+
+      // ACT: Seek to a different clip (e.g. gap at 5s, which would normally be 2.0x)
+      playbackManager.seek(5);
+
+      // ASSERT: Speed should be set to override (0.5), NOT gap speed (2.0)
+      expect(mockMpvManager.setProperty).toHaveBeenCalledWith('speed', 0.5);
+    });
+  });
+
+  describe('Speed Override & Subtitle Visibility Interaction', () => {
+    beforeEach(() => {
+      playbackManager = setupManager({
+        subtitlesVisible: true,
+        useMpvSubtitles: true, // Use MPV subs to test hideSubtitles/showSubtitles calls
+        subtitledClipSpeed: 1.0,
+        speedOverride: 0.5
+      });
+    });
+
+    it('should NOT toggle subtitle visibility when enabling speed override', () => {
+      // Start in a subtitled clip with subtitles visible
+      playbackManager.seek(15);
+      simulateSeekComplete(playbackManager);
+      expect(mockMpvManager.showSubtitles).toHaveBeenCalled();
+      vi.clearAllMocks();
+
+      // Enable Speed Override
+      playbackManager.setSpeedOverride(true);
+
+      // Should apply speed...
+      expect(mockMpvManager.setProperty).toHaveBeenCalledWith('speed', 0.5);
+
+      // ...but should NOT call hideSubtitles or showSubtitles again unnecessarily
+      expect(mockMpvManager.hideSubtitles).not.toHaveBeenCalled();
+    });
+
+    it('should respect ForceHide behavior even when speed override is active', () => {
+      playbackManager = setupManager({
+        useMpvSubtitles: true,
+        subtitleBehavior: SubtitleBehavior.ForceHide,
+        subtitlesVisible: true,
+        speedOverride: 0.5
+      });
+
+      // Seek to subtitled clip
+      playbackManager.seek(15);
+      simulateSeekComplete(playbackManager);
+
+      // ForceHide should have hidden them
+      expect(mockMpvManager.hideSubtitles).toHaveBeenCalled();
+      vi.clearAllMocks();
+
+      // Enable Speed Override
+      playbackManager.setSpeedOverride(true);
+
+      // Should still be hidden
+      expect(mockMpvManager.showSubtitles).not.toHaveBeenCalled();
+      expect(mockMpvManager.setProperty).toHaveBeenCalledWith('speed', 0.5);
+    });
+
+    it('should allow toggling subtitles manually while override is active', () => {
+      playbackManager = setupManager({
+        subtitlesVisible: false,
+        useMpvSubtitles: true
+      });
+
+      playbackManager.seek(15);
+      simulateSeekComplete(playbackManager);
+
+      // Enable override
+      playbackManager.setSpeedOverride(true);
+
+      // User toggles subs ON while slowed down
+      playbackManager.toggleSubtitles();
+
+      expect(mockMpvManager.showSubtitles).toHaveBeenCalled();
+
+      // Clear mocks so previous calls don't trigger the next assertion
+      vi.clearAllMocks();
+
+      // Disable override
+      playbackManager.setSpeedOverride(false);
+
+      // Subs should stay ON
+      expect(mockMpvManager.hideSubtitles).not.toHaveBeenCalled();
+    });
+  });
 });

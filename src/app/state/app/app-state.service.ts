@@ -121,8 +121,7 @@ export class AppStateService {
       }
 
       if (mergedData.currentProject) {
-        this.migrateLanguageCodeForProject(mergedData.currentProject);
-        mergedData.currentProject.settings = merge({}, DEFAULT_PROJECT_SETTINGS, mergedData.currentProject.settings);
+        this.ensureProjectDefaults(mergedData.currentProject);
       }
 
       this._appData.set(mergedData);
@@ -140,7 +139,14 @@ export class AppStateService {
     if (this.currentProjectId() === projectId) {
       return this.currentProject();
     }
-    return this.storageService.getProjectById(projectId);
+
+    const project = await this.storageService.getProjectById(projectId);
+
+    if (project) {
+      this.ensureProjectDefaults(project);
+    }
+
+    return project;
   }
 
   public createProject(project: Project): void {
@@ -251,8 +257,7 @@ export class AppStateService {
       return;
     }
 
-    this.migrateLanguageCodeForProject(projectToLoad);
-
+    this.ensureProjectDefaults(projectToLoad);
     projectToLoad.lastOpenedDate = Date.now();
     const minimalProject = this.toMinimalProject(projectToLoad);
 
@@ -430,7 +435,15 @@ export class AppStateService {
     };
   }
 
-  // Language migration from franc-all to Yomitan:
+  /**
+   * Applies any missing default fields to a project object loaded from storage.
+   * This handles migrations when new settings in DEFAULT_PROJECT_SETTINGS are added.
+   */
+  private ensureProjectDefaults(project: Project): void {
+    this.migrateLanguageCodeForProject(project);
+    project.settings = merge({}, DEFAULT_PROJECT_SETTINGS, project.settings);
+  }
+
   private migrateLanguageCodeForProject(project: Project) {
     const detectedLanguage = normalizeLanguageCode(project.detectedLanguage);
     const selectedLanguage = normalizeLanguageCode(project.settings.subtitlesLanguage);

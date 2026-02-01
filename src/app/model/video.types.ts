@@ -58,6 +58,7 @@ export enum KeyboardAction {
   CloseDialogOrEsc = 'CloseDialogOrEsc',
   ConfirmDialog = 'ConfirmDialog',
   AddNote = 'AddNote',
+  ActivateSpeedOverride = 'ActivateSpeedOverride',
   SwitchToTrack1 = 'SwitchToTrack1',
   SwitchToTrack2 = 'SwitchToTrack2',
   SwitchToTrack3 = 'SwitchToTrack3',

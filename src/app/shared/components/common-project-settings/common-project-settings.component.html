@@ -34,7 +34,7 @@
       <p-slider id="sub-speed"
                 [ngModel]="settings().subtitledClipSpeed"
                 (ngModelChange)="onSettingChange('subtitledClipSpeed', $event)"
-                [min]="0.5" [max]="5" [step]="0.1"/>
+                [min]="0.1" [max]="5" [step]="0.1"/>
     </div>
     <div class="setting-item-column">
       <label for="gap-speed" class="font-semibold">
@@ -43,7 +43,18 @@
       <p-slider id="gap-speed"
                 [ngModel]="settings().gapSpeed"
                 (ngModelChange)="onSettingChange('gapSpeed', $event)"
-                [min]="0.5" [max]="5" [step]="0.1"/>
+                [min]="0.1" [max]="5" [step]="0.1"/>
+    </div>
+    <p-divider/>
+    <div class="setting-item-column">
+      <label for="override-speed" class="font-semibold">
+        Momentary Override Speed ({{ settings().speedOverride }}x)
+      </label>
+      <p-slider id="override-speed"
+                [ngModel]="settings().speedOverride"
+                (ngModelChange)="onSettingChange('speedOverride', $event)"
+                [min]="0.1" [max]="5" [step]="0.1"/>
+      <small class="block mt-2">Applied for all clip types while holding the <b>Shift</b> key.</small>
     </div>
   </p-fieldset>
 </div>

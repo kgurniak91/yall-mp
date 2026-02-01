@@ -248,6 +248,10 @@ export class VideoStateService implements OnDestroy {
     this.saveCurrentPlaybackTime(time);
   }
 
+  public setSpeedOverride(isActive: boolean): void {
+    window.electronAPI.playbackSetSpeedOverride(isActive);
+  }
+
   public requestAssRendererSync(): void {
     this._assRendererSyncRequest.set(Date.now());
   }
