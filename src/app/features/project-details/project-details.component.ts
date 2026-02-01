@@ -341,7 +341,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   private readonly headerCurrentProjectActionBridgeService = inject(HeaderCurrentProjectActionBridgeService);
   private readonly fileOpenIntentService = inject(FileOpenIntentService);
   private readonly yomitanService = inject(YomitanService);
-  private dialogRef: DynamicDialogRef | undefined;
+  private activeDialogRef: DynamicDialogRef | null = null;
   private isMpvReady = signal(false);
   private isUiReady = signal(false);
   private hasFiredStartupSequence = false;
@@ -540,6 +540,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.activeDialogRef?.close();
     if (this.cleanupMpvReadyListener) {
       this.cleanupMpvReadyListener();
     }
@@ -695,7 +696,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       instantExport
     };
 
-    this.dialogService.open(ExportToAnkiDialogComponent, {
+    const dialogRef = this.dialogService.open(ExportToAnkiDialogComponent, {
       width: 'clamp(20rem, 95vw, 45rem)',
       style: {
         'max-height': '90vh'
@@ -714,6 +715,8 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       styleClass: instantExport ? 'instant-anki-export-hidden' : undefined,
       data
     });
+
+    this.watchDialogPlaybackState(dialogRef);
   }
 
   onSettingsPresetChange(preset: SettingsPreset | null): void {
@@ -1167,7 +1170,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
       const data: SubtitleData = this.createSubtitleDataFromVideoClip(currentClip);
 
-      this.dialogRef = this.dialogService.open(EditSubtitlesDialogComponent, {
+      const dialogRef = this.dialogService.open(EditSubtitlesDialogComponent, {
         header: 'Edit Subtitles',
         width: '50vw',
         modal: true,
@@ -1175,7 +1178,9 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
         data
       });
 
-      this.dialogRef.onClose.pipe(
+      this.watchDialogPlaybackState(dialogRef);
+
+      dialogRef.onClose.pipe(
         take(1)
       ).subscribe((result: ClipContent | undefined) => {
         if (!result) {
@@ -1437,7 +1442,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       isTermEditable
     };
 
-    this.dialogRef = this.dialogService.open(NoteFormDialogComponent, {
+    const dialogRef = this.dialogService.open(NoteFormDialogComponent, {
       header: isTermEditable ? 'Add manual note' : 'Add note to highlighted text',
       width: 'clamp(20rem, 95vw, 35rem)',
       modal: true,
@@ -1445,7 +1450,9 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       data
     });
 
-    this.dialogRef.onClose.pipe(take(1)).subscribe((result: NoteFormResult | undefined) => {
+    this.watchDialogPlaybackState(dialogRef);
+
+    dialogRef.onClose.pipe(take(1)).subscribe((result: NoteFormResult | undefined) => {
       scheduleRestoreFocus(restoreFocusability);
       if (result) {
         const currentClip = this.clipsStateService.currentClipForAllTracks();
@@ -1469,7 +1476,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       currentTime: this.videoStateService.currentTime()
     };
 
-    const ref = this.dialogService.open(SearchSubtitlesDialogComponent, {
+    const dialogRef = this.dialogService.open(SearchSubtitlesDialogComponent, {
       header: 'Find in Subtitles',
       width: 'clamp(20rem, 95vw, 60rem)',
       contentStyle: {
@@ -1485,7 +1492,9 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       data
     });
 
-    ref.onClose.pipe(take(1)).subscribe((result: VideoClip | undefined) => {
+    this.watchDialogPlaybackState(dialogRef);
+
+    dialogRef.onClose.pipe(take(1)).subscribe((result: VideoClip | undefined) => {
       if (result) {
         this.videoStateService.seekAbsolute(result.startTime);
       }
@@ -1498,11 +1507,32 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       apply: (offset: number) => this.clipsStateService.shiftAllSubtitles(offset)
     };
 
-    this.dialogService.open(SubtitleOffsetDialogComponent, {
+    const dialogRef = this.dialogService.open(SubtitleOffsetDialogComponent, {
       header: 'Shift All Subtitles',
       width: 'clamp(20rem, 95vw, 40rem)',
       modal: true,
       data
+    });
+
+    this.watchDialogPlaybackState(dialogRef);
+  }
+
+  private watchDialogPlaybackState(ref: DynamicDialogRef): void {
+    this.activeDialogRef?.close(); // Close any already open dialog
+    this.activeDialogRef = ref;
+
+    const wasPlaying = this.clipsStateService.isPlaying();
+    if (wasPlaying) {
+      window.electronAPI.playbackPause();
+    }
+
+    ref.onClose.pipe(take(1)).subscribe(() => {
+      if (this.activeDialogRef === ref) {
+        this.activeDialogRef = null;
+      }
+      if (wasPlaying) {
+        window.electronAPI.playbackPlay();
+      }
     });
   }
 }

@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, computed, inject} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, inject, OnDestroy} from '@angular/core';
 import {AppStateService} from '../../state/app/app-state.service';
 import {Router, RouterLink} from '@angular/router';
 import {MinimalProject} from '../../model/project.types';
@@ -14,11 +14,12 @@ import {
   disableFocusInParentDialog,
   scheduleRestoreFocus
 } from '../../shared/utils/disable-focus-in-parent-dialog/disable-focus-in-parent-dialog';
-import {DialogService} from 'primeng/dynamicdialog';
+import {DialogService, DynamicDialogRef} from 'primeng/dynamicdialog';
 import {MoveProjectDialogComponent} from './move-project-dialog/move-project-dialog.component';
 import {CatalogsTreeComponent} from './catalogs-tree/catalogs-tree.component';
 import {CatalogsBreadcrumbComponent} from './catalogs-breadcrumb/catalogs-breadcrumb.component';
 import {MoveProjectDialogData} from './move-project-dialog/move-project-dialog.types';
+import {take} from 'rxjs';
 
 @Component({
   selector: 'app-list-of-projects',
@@ -37,7 +38,7 @@ import {MoveProjectDialogData} from './move-project-dialog/move-project-dialog.t
   styleUrl: './list-of-projects.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ListOfProjectsComponent {
+export class ListOfProjectsComponent implements OnDestroy {
   protected readonly appStateService = inject(AppStateService);
   protected activeCatalogId = computed(() => this.appStateService.activeCatalogId());
   protected filteredProjects = computed(() => {
@@ -48,6 +49,11 @@ export class ListOfProjectsComponent {
   private readonly dialogService = inject(DialogService);
   private readonly toastService = inject(ToastService);
   private readonly router = inject(Router);
+  private activeDialogRef: DynamicDialogRef | null = null;
+
+  ngOnDestroy(): void {
+    this.activeDialogRef?.close();
+  }
 
   protected onBreadcrumbSelect(catalogId: string): void {
     this.appStateService.setActiveCatalog(catalogId);
@@ -78,14 +84,15 @@ export class ListOfProjectsComponent {
       currentCatalogId: project.catalogId
     };
 
-    const ref = this.dialogService.open(MoveProjectDialogComponent, {
+    this.activeDialogRef = this.dialogService.open(MoveProjectDialogComponent, {
       header: 'Move Project',
       width: 'clamp(20rem, 95vw, 45rem)',
       modal: true,
       data
     });
 
-    ref.onClose.subscribe((newCatalogId: string | undefined) => {
+    this.activeDialogRef.onClose.pipe(take(1)).subscribe((newCatalogId: string | undefined) => {
+      this.activeDialogRef = null;
       scheduleRestoreFocus(restoreFocus);
 
       if (newCatalogId === undefined) {
