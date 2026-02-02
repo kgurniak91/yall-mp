@@ -469,10 +469,12 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
       const isGap = region.id.startsWith('gap-');
       const el = region.element;
 
-      if (isCtrl) {
-        el.style.cursor = isGap ? 'no-drop' : 'col-resize';
-      } else {
-        el.style.cursor = 'default';
+      if (el) {
+        if (isCtrl) {
+          el.style.cursor = isGap ? 'no-drop' : 'col-resize';
+        } else {
+          el.style.cursor = 'default';
+        }
       }
     });
   }
