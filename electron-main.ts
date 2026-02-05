@@ -1722,9 +1722,9 @@ async function handleAnkiBatchExport(request: AnkiBatchExportRequest) {
       generatedFiles.push(audioPath);
 
       const audioArgs = [
-        '-i', mediaPath,                          // Input file
         '-ss', subtitleData.startTime.toString(), // Start time
         '-to', subtitleData.endTime.toString(),   // End time
+        '-i', mediaPath,                          // Input file
         '-vn',                                    // No video
         '-acodec', 'libmp3lame',                  // Use MP3 codec
         '-q:a', '2',                              // Audio quality (VBR)
@@ -1765,9 +1765,9 @@ async function handleAnkiBatchExport(request: AnkiBatchExportRequest) {
         generatedFiles.push(videoPath);
 
         const videoArgs = [
-          '-i', mediaPath,                          // Input file
           '-ss', subtitleData.startTime.toString(), // Start time
           '-to', subtitleData.endTime.toString(),   // End time
+          '-i', mediaPath,                          // Input file
           '-c:v', 'libvpx-vp9',                     // VP9 video codec
           '-crf', '32',                             // Constant Rate Factor for VP9
           '-b:v', '0',                              // Must be 0 when using CRF
