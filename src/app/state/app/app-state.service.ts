@@ -222,7 +222,7 @@ export class AppStateService {
       // Update minimal project in projects list
       projects = projects.map(p => {
         if (p.id === projectId) {
-          return {
+          const updatedMinimalProject: MinimalProject = {
             ...p,
             catalogId: fields.catalogId !== undefined ? fields.catalogId : p.catalogId,
             mediaFileName: fields.mediaFileName !== undefined ? fields.mediaFileName : p.mediaFileName,
@@ -230,7 +230,11 @@ export class AppStateService {
             mediaPath: fields.mediaPath !== undefined ? fields.mediaPath : p.mediaPath,
             lastOpenedDate: fields.lastOpenedDate !== undefined ? fields.lastOpenedDate : p.lastOpenedDate,
             lastPlaybackTime: fields.lastPlaybackTime !== undefined ? fields.lastPlaybackTime : p.lastPlaybackTime,
+            duration: fields.duration !== undefined ? fields.duration : p.duration,
+            subtitleCount: fields.subtitles !== undefined ? fields.subtitles.length : p.subtitleCount,
+            lastSubtitleEndTime: fields.lastSubtitleEndTime !== undefined ? fields.lastSubtitleEndTime : p.lastSubtitleEndTime
           };
+          return updatedMinimalProject;
         } else {
           return p;
         }
@@ -247,10 +251,6 @@ export class AppStateService {
   }
 
   public async setCurrentProject(projectId: string): Promise<void> {
-    if (this.currentProjectId() === projectId) {
-      return;
-    }
-
     const projectToLoad = await this.storageService.getProjectById(projectId);
     if (!projectToLoad) {
       console.error(`Failed to set current project: Project with ID ${projectId} not found on disk.`);

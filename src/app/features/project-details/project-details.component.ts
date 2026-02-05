@@ -491,6 +491,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
           styles: subtitleResult.styles,
           subtitles: subtitleResult.subtitles,
           detectedLanguage: subtitleResult.detectedLanguage,
+          lastSubtitleEndTime: Math.max(...subtitleResult.subtitles.map(s => s.endTime), 0),
           settings: {
             ...foundProject.settings,
             subtitlesLanguage: subtitleResult.detectedLanguage,
