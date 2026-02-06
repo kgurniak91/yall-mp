@@ -54,15 +54,15 @@ export class GlobalKeyboardShortcutsService implements OnDestroy {
 
     // Handle events when a dialog is open
     if (this.isAnyDialogOpen()) {
+      // When typing, allow events to propagate so Angular bindings (like (keydown.enter)) on the input itself can fire
+      if (isTyping && event.key !== 'Escape') {
+        return;
+      }
+
       // If a global dialog is already open, ignore requests to open it again
       if (globalShortcut?.action === KeyboardAction.OpenHelpDialog || globalShortcut?.action === KeyboardAction.OpenGlobalSettings) {
         event.preventDefault();
         event.stopPropagation();
-        return;
-      }
-
-      // Exception - allow typing events to propagate so Angular bindings (like (keydown.enter)) on the input itself can fire
-      if (isTyping && event.key !== 'Escape') {
         return;
       }
 
