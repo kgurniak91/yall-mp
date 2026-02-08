@@ -121,3 +121,8 @@ export const SUPPORTED_SUBTITLE_TYPES = [
   // Text-based (Most common)
   'srt', 'vtt', 'ssa', 'ass', 'smi', 'sub'
 ];
+
+export const SUPPORTED_TEXT_SUBTITLE_CODECS = [
+  'subrip', 'srt', 'ass', 'ssa', 'webvtt', 'mov_text', 'text',
+  'microdvd', 'jacosub', 'mpl2', 'pjs', 'realtext', 'sami', 'stl', 'subviewer'
+];

@@ -4,6 +4,8 @@ export interface MediaTrack {
   languageCode?: string; // The standard language code (e.g., 'en', 'fr')
   title?: string;
   label?: string;
+  codec?: string; // e.g., 'srt', 'ass', 'hdmv_pgs_subtitle'
+  isSupported?: boolean; // some of the subtitle types, like image subtitles from Blu-rays, are not supported
 }
 
 export interface MediaMetadata {

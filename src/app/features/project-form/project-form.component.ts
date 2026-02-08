@@ -61,17 +61,34 @@ export class ProjectFormComponent implements OnInit {
   protected readonly SUPPORTED_SUBTITLE_TYPES = SUPPORTED_SUBTITLE_TYPES;
   protected readonly SUPPORTED_MEDIA_TYPES = SUPPORTED_MEDIA_TYPES;
   protected readonly audioTracks = signal<MediaTrack[]>([]);
-  protected readonly subtitleTracks = signal<MediaTrack[]>([]);
   protected readonly selectedSubtitleOption = signal<'embedded' | 'external' | 'none'>('external');
   protected readonly selectedEmbeddedSubtitleTrackIndex = signal<number | null>(null);
   protected readonly selectedAudioTrackIndex = signal<number | null>(null);
   protected readonly isProcessingMedia = signal(false);
+
   protected readonly audioTrackOptions = computed(() => {
     return this.audioTracks().map(track => ({
       label: track.label || `Track ${track.index}`,
       value: track.index
     }));
   });
+
+  protected readonly subtitleTrackOptions = computed(() => {
+    return this.subtitleTracks().map(track => {
+      let label = track.label || `Track ${track.index}`;
+
+      if (track.isSupported === false) {
+        label = `${label} (image-based subtitles - unsupported)`;
+      }
+
+      return {
+        label: label,
+        value: track.index,
+        disabled: !track.isSupported
+      };
+    });
+  });
+
   protected readonly isValid = computed(() => {
     if (!this.mediaFilePath()) {
       return false;
@@ -94,9 +111,11 @@ export class ProjectFormComponent implements OnInit {
         return false;
     }
   });
+
   protected readonly subtitleOptions = SUBTITLE_OPTIONS;
   protected readonly SubtitleOptionType = SubtitleOptionType;
   protected readonly selectedCatalogId = signal<string | null>(ROOT_CATALOG_ID);
+  private readonly subtitleTracks = signal<MediaTrack[]>([]);
   private readonly videoWidth = signal<number | undefined>(undefined);
   private readonly videoHeight = signal<number | undefined>(undefined);
   private readonly externalSubtitlePath = signal<string | null>(null);

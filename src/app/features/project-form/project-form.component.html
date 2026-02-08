@@ -47,7 +47,7 @@
             <div class="radio-group">
               @for (option of subtitleOptions; track option.value) {
                 <!-- Conditionally render the "embedded" option only if tracks exist -->
-                @if (option.value !== SubtitleOptionType.embedded || subtitleTracks().length > 0) {
+                @if (option.value !== SubtitleOptionType.embedded || subtitleTrackOptions().length > 0) {
                   @let isSelected = (selectedSubtitleOption() === option.value);
                   <div class="radio-option"
                        [class.flex-1]="isSelected && option.value === SubtitleOptionType.external"
@@ -62,12 +62,13 @@
                       <div class="radio-content">
                         @switch (option.value) {
                           @case (SubtitleOptionType.embedded) {
-                            <p-select [options]="subtitleTracks()"
+                            <p-select [options]="subtitleTrackOptions()"
                                       [(ngModel)]="selectedEmbeddedSubtitleTrackIndex"
                                       appendTo="body"
                                       panelStyleClass="w-full"
                                       optionLabel="label"
-                                      optionValue="index"
+                                      optionValue="value"
+                                      optionDisabled="disabled"
                                       placeholder="Select subtitle track"
                                       styleClass="w-full">
                             </p-select>

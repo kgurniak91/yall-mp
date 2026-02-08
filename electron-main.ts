@@ -19,7 +19,11 @@ import {
 } from './shared/utils/subtitle-parsing';
 import {PlaybackManager} from './playback-manager';
 import type fontkit from 'fontkit';
-import {SUPPORTED_MEDIA_TYPES, SUPPORTED_SUBTITLE_TYPES} from './src/app/model/video.types';
+import {
+  SUPPORTED_MEDIA_TYPES,
+  SUPPORTED_SUBTITLE_TYPES,
+  SUPPORTED_TEXT_SUBTITLE_CODECS
+} from './src/app/model/video.types';
 import {YomitanManager} from './yomitan-manager';
 import {LEGACY_TO_YOMITAN_ISO_MAP} from './shared/types/yomitan';
 
@@ -1959,6 +1963,7 @@ async function handleGetMediaMetadata(filePath: string) {
   if (!isFFmpegAvailable) {
     return {audioTracks: [], subtitleTracks: []};
   }
+
   try {
     const probeResult = await runFfprobe([
       '-v', 'quiet',
@@ -1981,11 +1986,15 @@ async function handleGetMediaMetadata(filePath: string) {
         };
 
         const {label, code} = getLanguageInfo(baseTrack);
+        const codec = stream.codec_name?.toLowerCase() || 'unknown';
+        const isSupported = SUPPORTED_TEXT_SUBTITLE_CODECS.includes(codec);
 
         const finalTrack: MediaTrack = {
           ...baseTrack,
           label: label,
-          languageCode: code
+          languageCode: code,
+          codec: codec,
+          isSupported: isSupported
         };
 
         if (stream.codec_type === 'video') {
