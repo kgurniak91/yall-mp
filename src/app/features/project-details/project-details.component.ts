@@ -422,6 +422,13 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       }
     });
 
+    effect(() => {
+      const useHwDec = this.globalSettingsStateService.hardwareAcceleration();
+      if (this.isMpvReady()) {
+        window.electronAPI.mpvSetProperty('hwdec', useHwDec ? 'auto' : 'no');
+      }
+    });
+
     this.cleanupMpvReadyListener = window.electronAPI.onMpvManagerReady(() => {
       console.log('[ProjectDetails] Received mpv:managerReady signal!');
       this.isMpvReady.set(true);
@@ -513,6 +520,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
     // Map absolute stream index to MPV relative audio track ID
     const audioTrackId = this.getMpvAudioTrackId(foundProject.audioTracks, foundProject.settings.selectedAudioTrackIndex);
+    const hardwareAcceleration = this.globalSettingsStateService.hardwareAcceleration();
 
     try {
       await window.electronAPI.mpvCreateViewport(
@@ -521,7 +529,8 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
         foundProject.subtitleSelection,
         foundProject.subtitleTracks,
         foundProject.settings.useMpvSubtitles,
-        foundProject.settings.subtitlesVisible
+        foundProject.settings.subtitlesVisible,
+        hardwareAcceleration
       );
     } catch (e: any) {
       console.error('MPV failed to initialize unexpectedly', e);

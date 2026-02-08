@@ -79,7 +79,8 @@ export interface IElectronAPI {
     subtitleSelection: SubtitleSelection,
     subtitleTracks: MediaTrack[],
     useMpvSubtitles: boolean,
-    subtitlesVisible: boolean
+    subtitlesVisible: boolean,
+    hardwareAcceleration: boolean
   ) => Promise<void>;
   mpvFinishVideoResize: (rect: { x: number, y: number, width: number, height: number }) => Promise<void>;
   mpvCommand: (commandArray: any[]) => Promise<void>;

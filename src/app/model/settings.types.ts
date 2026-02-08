@@ -58,6 +58,7 @@ export interface GlobalSettings {
   generateAudioPeaks: boolean;
   swapNavigationShortcuts: boolean;
   migratedDefaultAiServices?: boolean; // Flag set only once when migrating from older versions to v0.9.3-beta
+  hardwareAcceleration: boolean;
 }
 
 const DEFAULT_SEARCH_SUBTITLE_LOOKUP_SERVICES: SubtitleLookupService[] = [
@@ -147,7 +148,8 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   ankiInstantExport: false,
   generateAudioPeaks: false,
   swapNavigationShortcuts: false,
-  migratedDefaultAiServices: true // Set initially to true so new installations don't trigger migration
+  migratedDefaultAiServices: true, // Set initially to true so new installations don't trigger migration
+  hardwareAcceleration: false
 };
 
 export enum BuiltInSettingsPreset {

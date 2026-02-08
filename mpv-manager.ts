@@ -24,6 +24,7 @@ export class MpvManager extends EventEmitter {
     allSubtitleTracks: MediaTrack[],
     useMpvSubtitles: boolean,
     subtitlesVisible: boolean,
+    hardwareAcceleration: boolean
   ): Promise<void> {
     this.mediaPath = mediaPath;
 
@@ -41,7 +42,7 @@ export class MpvManager extends EventEmitter {
       `--script=${scriptPath}`,
       '--no-config',
       '--vo=gpu,xv,x11',
-      '--hwdec=auto',
+      `--hwdec=${hardwareAcceleration ? 'auto' : 'no'}`,
       '--no-osc',
       '--no-osd-bar',
       '--no-border',
@@ -54,7 +55,14 @@ export class MpvManager extends EventEmitter {
       '--hr-seek-framedrop=yes',
       '--cache=no',
       '--ontop=no',
-      '--force-window=yes'
+      '--force-window=yes',
+      '--vd-lavc-threads=0',          // Use all available CPU cores for decoding
+      '--audio-buffer=3.0',           // Increase audio buffer to prevent underruns
+      '--demuxer-max-bytes=150MiB',   // Increase demuxer cache
+      '--demuxer-readahead-secs=20',  // Prefetch more data
+      '--framedrop=vo',               // Drop frames visually if rendering is too slow to maintain sync
+      '--vd-lavc-fast',               // Allow optimizations that might slightly violate spec but improve speed
+      '--sws-allow-zimg=no',          // Disable zimg (can be slow/buggy on old systems), fallback to swscale
     ];
 
     if (audioTrackIndex !== null) {

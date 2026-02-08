@@ -13,6 +13,20 @@
     </div>
   </p-fieldset>
 
+  <p-fieldset legend="Playback Settings" [toggleable]="false">
+    <div class="setting-item">
+      <label for="hardware-accel" class="font-semibold">Hardware Acceleration</label>
+      <p-inputSwitch inputId="hardware-accel"
+                     [ngModel]="globalSettingsStateService.hardwareAcceleration()"
+                     (ngModelChange)="globalSettingsStateService.setHardwareAcceleration($event)"/>
+    </div>
+    <small class="block mt-2 text-sm">
+      Uses GPU for video decoding. Can improve performance on modern PCs but <b>may cause lagging or freezing on older hardware/drivers</b> (especially with HEVC).
+      <br>
+      <b>Recommended:</b> Leave <b>OFF</b> unless you experience high CPU usage or lag on high-resolution videos. Enable only if your GPU supports at least native HEVC decoding.
+    </small>
+  </p-fieldset>
+
   <p-fieldset legend="Keyboard Navigation" [toggleable]="false">
     <div class="flex flex-column gap-3">
       <!-- Option 1: Standard (Default) -->

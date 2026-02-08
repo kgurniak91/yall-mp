@@ -1120,7 +1120,8 @@ if (!gotTheLock) {
       subtitleSelection: SubtitleSelection,
       subtitleTracks: MediaTrack[],
       useMpvSubtitles: boolean,
-      subtitlesVisible: boolean
+      subtitlesVisible: boolean,
+      hardwareAcceleration: boolean
     ) => {
       if (!uiWindow || !mainWindow) {
         return;
@@ -1204,7 +1205,7 @@ if (!gotTheLock) {
 
       try {
         // Start MPV inside the child window's handle
-        await mpvManager.start(mediaPath, audioTrackIndex, subtitleSelection, subtitleTracks, useMpvSubtitles, subtitlesVisible);
+        await mpvManager.start(mediaPath, audioTrackIndex, subtitleSelection, subtitleTracks, useMpvSubtitles, subtitlesVisible, hardwareAcceleration);
         mpvManager.observeProperty('time-pos');
         mpvManager.observeProperty('duration');
         mpvManager.observeProperty('pause');
