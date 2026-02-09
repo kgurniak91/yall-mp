@@ -1693,7 +1693,7 @@ async function handleAnkiBatchExport(request: AnkiBatchExportRequest) {
     return {cardId: null, error: 'FFmpeg is not available, cannot export media.'};
   }
 
-  const {subtitleData, mediaPath, exportTime, hint, notes, suspend, targets} = request;
+  const {subtitleData, mediaPath, exportTime, hint, notes, suspend, targets, audioTrackIndex} = request;
   const tempDir = os.tmpdir();
   const uniqueBatchId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
   const generatedFiles: string[] = [];
@@ -1739,12 +1739,21 @@ async function handleAnkiBatchExport(request: AnkiBatchExportRequest) {
       const audioArgs = [
         '-ss', subtitleData.startTime.toString(), // Start time
         '-to', subtitleData.endTime.toString(),   // End time
-        '-i', mediaPath,                          // Input file
+        '-i', mediaPath                           // Input file
+      ];
+
+      if (audioTrackIndex != null) {
+        audioArgs.push(
+          '-map', `0:${audioTrackIndex}`          // Audio track index
+        );
+      }
+
+      audioArgs.push(
         '-vn',                                    // No video
         '-acodec', 'libmp3lame',                  // Use MP3 codec
         '-q:a', '2',                              // Audio quality (VBR)
         audioPath
-      ];
+      );
 
       await runFFmpeg(audioArgs);
 
@@ -1783,6 +1792,16 @@ async function handleAnkiBatchExport(request: AnkiBatchExportRequest) {
           '-ss', subtitleData.startTime.toString(), // Start time
           '-to', subtitleData.endTime.toString(),   // End time
           '-i', mediaPath,                          // Input file
+        ];
+
+        if (audioTrackIndex != null) {
+          videoArgs.push(
+            '-map', '0:v:0',                        // Video track index
+            '-map', `0:${audioTrackIndex}`          // Audio track index
+          );
+        }
+
+        videoArgs.push(
           '-c:v', 'libvpx-vp9',                     // VP9 video codec
           '-crf', '32',                             // Constant Rate Factor for VP9
           '-b:v', '0',                              // Must be 0 when using CRF
@@ -1790,7 +1809,7 @@ async function handleAnkiBatchExport(request: AnkiBatchExportRequest) {
           '-c:a', 'libopus',                        // Opus audio codec
           '-b:a', '96k',                            // Audio bitrate
           videoPath
-        ];
+        );
 
         await runFFmpeg(videoArgs);
 

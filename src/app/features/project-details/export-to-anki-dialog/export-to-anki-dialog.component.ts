@@ -257,7 +257,8 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
       hint: this.hint(),
       notes: this.generateFormattedNotes(this.currentNotes()),
       suspend: this.suspendCard(),
-      targets
+      targets,
+      audioTrackIndex: project.settings.selectedAudioTrackIndex
     };
 
     try {

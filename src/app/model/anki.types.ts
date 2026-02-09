@@ -52,6 +52,7 @@ export interface AnkiBatchExportRequest {
   hint: string;
   suspend: boolean;
   targets: AnkiTemplateTarget[];
+  audioTrackIndex?: number | null;
 }
 
 export interface ExportToAnkiDialogData {
