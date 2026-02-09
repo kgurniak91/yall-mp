@@ -95,10 +95,10 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
   {
     action: KeyboardAction.AddNote,
     key: 'S',
-    shiftKey: true,
+    shiftKey: false,
     ctrlKey: true,
     description: 'Add selected text to Anki lookup notes\n(from offline dictionary popup or online lookup in built-in browser)',
-    displayKeys: ['Ctrl', 'Shift', 'S'],
+    displayKeys: ['Ctrl', 'S'],
     scope: KeyboardShortcutScope.Global,
     type: ActionType.SingleShot,
     group: KeyboardShortcutGroup.Subtitles
@@ -326,9 +326,9 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
   {
     action: KeyboardAction.FindInSubtitles,
     key: 'f',
-    ctrlKey: false,
+    ctrlKey: true,
     description: 'Find in subtitles',
-    displayKeys: ['F'],
+    displayKeys: ['Ctrl', 'F'],
     scope: KeyboardShortcutScope.Project,
     type: ActionType.SingleShot,
     group: KeyboardShortcutGroup.Subtitles

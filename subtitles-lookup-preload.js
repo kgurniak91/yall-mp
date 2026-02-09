@@ -13,8 +13,8 @@ document.addEventListener('contextmenu', (e) => {
 
 // Keyboard Shortcut listener for events within the loaded website
 document.addEventListener('keydown', (e) => {
-  // Handle Ctrl+Shift+S for adding notes
-  if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+  // Handle Ctrl+S for adding notes
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
     e.preventDefault();
     const selectedText = window.getSelection().toString().trim();
     if (selectedText) {

@@ -179,7 +179,7 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
         menu.push({
           separator: true
         }, {
-          label: 'Find in subtitles (F)',
+          label: 'Find in subtitles (Ctrl+F)',
           icon: 'fa-solid fa-magnifying-glass',
           command: () => this.headerCurrentProjectActionBridgeService.searchInSubtitles()
         }, {

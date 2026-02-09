@@ -277,8 +277,8 @@ function blockDefaultBrowserShortcuts(event: Electron.Event, input: Electron.Inp
     event.preventDefault();
   }
 
-  // Block "Find in Page" (Ctrl+F)
-  if (isModifier && key === 'f') {
+  // Block "Save as" (Ctrl+S)
+  if (isModifier && key === 's') {
     event.preventDefault();
   }
 }
