@@ -245,35 +245,40 @@ function handleWindowEscape() {
 }
 
 function blockDefaultBrowserShortcuts(event: Electron.Event, input: Electron.Input): void {
+  if (input.type !== 'keyDown') {
+    return;
+  }
+
+  const key = input.key.toLowerCase();
+  const isModifier = input.control || input.meta; // Ctrl on Win/Linux, Cmd on Mac
+
   // Block app reloading
-  if (input.type === 'keyDown') {
-    if (
-      (input.control && input.key.toLowerCase() === 'r') ||
-      input.key === 'F5'
-    ) {
-      event.preventDefault();
-    }
+  if ((isModifier && key === 'r') || key === 'f5') {
+    event.preventDefault();
   }
 
-  // Block zooming
-  if (input.control && input.type === 'keyDown') {
-    if (input.key === '=' || input.key === '-' || input.key === '0') {
-      event.preventDefault();
-    }
+  // Block opening new windows (Ctrl+N)
+  if (isModifier && key === 'n') {
+    event.preventDefault();
   }
 
-  // Block opening DevTools
-  if (input.type === 'keyDown') {
-    if (
-      input.key === 'F12' ||
-      (input.control && input.shift && input.key.toLowerCase() === 'i')
-    ) {
-      event.preventDefault();
-    }
+  // Block window/tab closing (Ctrl+W)
+  if (isModifier && key === 'w') {
+    event.preventDefault();
   }
 
-  // Block "Find in Page"
-  if (input.control && input.key.toLowerCase() === 'f' && input.type === 'keyDown') {
+  // Block zooming (Ctrl++, Ctrl+-, Ctrl+0)
+  if (isModifier && (key === '=' || key === '-' || key === '0')) {
+    event.preventDefault();
+  }
+
+  // Block opening DevTools (F12, Ctrl+Shift+I)
+  if (key === 'f12' || (isModifier && input.shift && key === 'i')) {
+    event.preventDefault();
+  }
+
+  // Block "Find in Page" (Ctrl+F)
+  if (isModifier && key === 'f') {
     event.preventDefault();
   }
 }
@@ -884,6 +889,8 @@ if (!gotTheLock) {
         });
 
         await subtitlesLookupWindow.loadFile(path.join(__dirname, './dist/yall-mp/browser/subtitles-lookup-host.html'));
+
+        subtitlesLookupWindow.webContents.on('before-input-event', blockDefaultBrowserShortcuts);
 
         const handleClose = () => {
           if (subtitlesLookupView) {
@@ -1511,6 +1518,9 @@ if (!gotTheLock) {
       await ses.clearStorageData();
       console.log('[Main] Lookup session data cleared.');
     });
+
+    // Disable the default menu bar and its associated shortcuts
+    Menu.setApplicationMenu(null);
 
     createWindow();
 
