@@ -87,6 +87,7 @@
             <th>Name</th>
             <th>Anki Deck</th>
             <th>Anki Note Type</th>
+            <th style="width: 5rem" class="text-center">Default</th> <!-- Added -->
             <th style="width: 8rem"></th>
           </tr>
         </ng-template>
@@ -95,8 +96,18 @@
             <td class="word-break">{{ template.name }}</td>
             <td>{{ template.ankiDeck }}</td>
             <td>{{ template.ankiNoteType }}</td>
+            <td class="text-center">
+              @if (template.isDefault) {
+                <i class="fa-solid fa-check text-green-500"></i>
+              }
+            </td>
             <td>
               <div class="flex gap-2 justify-content-end">
+                <p-button icon="fa-solid fa-star"
+                          severity="secondary"
+                          (onClick)="toggleDefault(template)"
+                          pTooltip="Toggle default"
+                          tooltipPosition="bottom"/>
                 <p-button icon="fa-solid fa-pencil"
                           severity="secondary"
                           (onClick)="onEditTemplate(template)"

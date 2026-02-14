@@ -124,6 +124,7 @@ export class AnkiTemplateFormDialogComponent implements OnInit {
       ankiDeck: [template?.ankiDeck || null, Validators.required],
       ankiNoteType: [template?.ankiNoteType || null, Validators.required],
       tags: [template?.tags || []],
+      isDefault: [template?.isDefault || false],
       fieldMappings: this.fb.group(mappingControls, {validators: ankiMappingValidator})
     });
   }

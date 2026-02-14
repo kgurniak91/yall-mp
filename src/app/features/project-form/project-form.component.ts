@@ -22,6 +22,7 @@ import {TreeSelectModule} from 'primeng/treeselect';
 import {ROOT_CATALOG_ID} from '../../shared/types/catalog.types';
 import {CatalogSelectComponent} from '../../shared/components/catalog-select/catalog-select.component';
 import {isEqual} from 'lodash-es';
+import {AnkiStateService} from '../../state/anki/anki-state.service';
 
 const EDIT_CONFIRMATION_MESSAGE = `
 Are you sure you want to edit this project?
@@ -128,6 +129,7 @@ export class ProjectFormComponent implements OnInit {
   private readonly confirmationService = inject(ConfirmationService);
   private readonly location = inject(Location);
   private readonly fileOpenIntentService = inject(FileOpenIntentService);
+  private readonly ankiStateService = inject(AnkiStateService);
   private originalProject: Project | null = null;
 
   constructor() {
@@ -361,6 +363,9 @@ export class ProjectFormComponent implements OnInit {
     const mediaFileName = this.getBaseName(mediaPath);
     const generatedAnkiTag = generateTagFromFileName(mediaFileName);
     const catalogId = this.selectedCatalogId()!; // Validated by isValid()
+    const defaultTemplateIds = this.ankiStateService.ankiCardTemplates()
+      .filter(t => t.isDefault)
+      .map(t => t.id);
 
     const newProject: Project = {
       id: uuidv4(),
@@ -385,7 +390,8 @@ export class ProjectFormComponent implements OnInit {
       videoHeight: this.videoHeight(),
       detectedLanguage: 'other',
       ankiTags: [generatedAnkiTag],
-      lastAnkiSuspendState: this.globalSettingsStateService.ankiSuspendNewCardsByDefault()
+      lastAnkiSuspendState: this.globalSettingsStateService.ankiSuspendNewCardsByDefault(),
+      selectedAnkiTemplateIds: defaultTemplateIds
     };
     this.appStateService.createProject(newProject);
     this.router.navigate(['/project', newProject.id]);

@@ -15,6 +15,7 @@ export interface AnkiCardTemplate {
   ankiNoteType: string | null;
   fieldMappings: AnkiFieldMapping[];
   tags: string[];
+  isDefault?: boolean;
 }
 
 export enum AnkiConnectStatus {

@@ -62,6 +62,13 @@ export class AnkiSettingsComponent {
     });
   }
 
+  protected toggleDefault(template: AnkiCardTemplate): void {
+    this.ankiStateService.updateAnkiCardTemplate(template.id, {
+      ...template,
+      isDefault: !Boolean(template.isDefault)
+    });
+  }
+
   protected onEditTemplate(template: AnkiCardTemplate): void {
     const restoreFocusability = disableFocusInParentDialog();
 
