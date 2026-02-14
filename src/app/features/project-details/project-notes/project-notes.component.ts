@@ -99,6 +99,7 @@ export class ProjectNotesComponent {
     this.confirmationService.confirm({
       header: 'Confirm deletion',
       message: 'Are you sure you want to delete this note?',
+      rejectButtonStyleClass: 'p-button-secondary',
       icon: 'fa-solid fa-circle-exclamation',
       accept: () => {
         this.lookupNotesView.update(currentView => {

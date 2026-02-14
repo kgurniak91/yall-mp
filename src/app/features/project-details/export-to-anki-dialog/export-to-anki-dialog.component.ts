@@ -40,6 +40,7 @@ import {TagsInputComponent} from '../../../shared/components/tags-input/tags-inp
 import {Tooltip} from 'primeng/tooltip';
 import {ProjectNotesComponent} from '../project-notes/project-notes.component';
 import {Tag} from 'primeng/tag';
+import {ConfirmationService} from 'primeng/api';
 
 @Component({
   selector: 'app-export-to-anki-dialog',
@@ -94,6 +95,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
   private readonly appStateService = inject(AppStateService);
   private readonly dialogOrchestrationService = inject(DialogOrchestrationService);
   private readonly elementRef = inject(ElementRef);
+  private readonly confirmationService = inject(ConfirmationService);
 
   constructor() {
     this.data = this.config.data as ExportToAnkiDialogData;
@@ -142,6 +144,27 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
     this.currentNotes.set(this.initialNotes());
     this.hint.set(projectNotes?.hint || '');
 
+    setTimeout(() => {
+      if (this.isAlreadyExported()) {
+        this.confirmationService.confirm({
+          header: 'Potential Anki Duplicate',
+          message: 'This clip has already been exported to Anki. Are you sure you want to export it again?',
+          icon: 'fa-solid fa-circle-exclamation',
+          acceptLabel: this.data.instantExport ? 'Yes, export again immediately' : 'Yes, continue to export configuration',
+          rejectLabel: 'Cancel',
+          rejectButtonStyleClass: 'p-button-secondary',
+          closeOnEscape: false,
+          closable: false,
+          accept: () => this.attemptInstantExport(),
+          reject: () => this.onClose(),
+        });
+      } else {
+        this.attemptInstantExport();
+      }
+    });
+  }
+
+  private attemptInstantExport() {
     if (this.data.instantExport) {
       this.toastService.info('Attempting instant export to Anki...');
       setTimeout(() => {

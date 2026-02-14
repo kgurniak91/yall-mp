@@ -410,6 +410,7 @@ export class ClipsStateService implements OnDestroy {
           header: 'Notes Mismatch',
           message: 'The notes in the clips you are merging differ. Any changes made to the notes after splitting will be lost. Continue?',
           icon: 'fa-solid fa-triangle-exclamation',
+          rejectButtonStyleClass: 'p-button-secondary',
           accept: () => performUnsplit(),
           reject: () => this.commandHistoryStateService.cancelLastUndo()
         });

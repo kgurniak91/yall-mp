@@ -112,6 +112,7 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
         header: 'Confirm deletion',
         message: `Are you sure you want to delete the project <b>${project.mediaFileName}</b>?<br>This action cannot be undone.`,
         icon: 'fa-solid fa-circle-exclamation',
+        rejectButtonStyleClass: 'p-button-secondary',
         accept: () => {
           this.appStateService.deleteProject(project.id);
           this.router.navigate(['/projects']);

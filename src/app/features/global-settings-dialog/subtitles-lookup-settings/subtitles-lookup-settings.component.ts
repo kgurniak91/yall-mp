@@ -166,6 +166,7 @@ export class SubtitlesLookupSettingsComponent {
       header: 'Confirm deletion',
       message: `Are you sure you want to delete the lookup service <b>${serviceToDelete.name}</b>?<br>This action cannot be undone.`,
       icon: 'fa-solid fa-circle-exclamation',
+      rejectButtonStyleClass: 'p-button-secondary',
       accept: () => {
         let services = this.globalSettingsStateService.subtitleLookupServices();
         const newServices = services.filter(s => s.id !== serviceToDelete.id);

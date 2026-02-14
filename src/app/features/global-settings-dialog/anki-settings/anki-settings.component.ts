@@ -88,6 +88,7 @@ export class AnkiSettingsComponent {
       header: 'Confirm deletion',
       message: `Are you sure you want to delete this template?<br>This action cannot be undone.`,
       icon: 'fa-solid fa-circle-exclamation',
+      rejectButtonStyleClass: 'p-button-secondary',
       accept: () => {
         this.ankiStateService.deleteCardTemplate(id);
         this.toastService.success('Template deleted.');

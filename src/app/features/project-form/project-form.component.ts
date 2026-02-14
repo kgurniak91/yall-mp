@@ -280,6 +280,7 @@ export class ProjectFormComponent implements OnInit {
           header: 'Confirm changes',
           message: EDIT_CONFIRMATION_MESSAGE,
           icon: 'fa-solid fa-circle-exclamation',
+          rejectButtonStyleClass: 'p-button-secondary',
           accept: () => this.editExistingProject()
         });
       } else {

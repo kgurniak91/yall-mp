@@ -73,6 +73,7 @@ export class ListOfProjectsComponent implements OnDestroy {
       header: 'Confirm deletion',
       message: `Delete project <b>${project.mediaFileName}</b>?`,
       icon: 'fa-solid fa-circle-exclamation',
+      rejectButtonStyleClass: 'p-button-secondary',
       accept: () => this.appStateService.deleteProject(project.id)
     });
   }

@@ -140,7 +140,15 @@ export class GlobalKeyboardShortcutsService implements OnDestroy {
 
     // Close the confirmation dialog if any
     if (this.isConfirmDialogOpen()) {
-      this.confirmationService.close();
+      const topDialogMask = this.getTopDialogMask();
+      const rejectButton = topDialogMask?.querySelector('.p-confirmdialog-reject-button') as HTMLElement;
+
+      if (rejectButton) {
+        rejectButton.click();
+      } else {
+        this.confirmationService.close();
+      }
+
       return;
     }
 

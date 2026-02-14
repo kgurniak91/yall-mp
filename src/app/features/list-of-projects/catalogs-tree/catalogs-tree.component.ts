@@ -198,6 +198,7 @@ export class CatalogsTreeComponent {
       header: 'Delete Catalog',
       message: `Delete catalog "<b>${name}</b>"?<br>It must be empty to be deleted.`,
       icon: 'fa-solid fa-triangle-exclamation',
+      rejectButtonStyleClass: 'p-button-secondary',
       accept: () => {
         const projects = this.appStateService.projects().filter(p => p.catalogId === id);
         const subCatalogs = this.appStateService.catalogs().filter(c => c.parentId === id);
