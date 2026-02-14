@@ -82,11 +82,11 @@
           <td class="text-center">
             <p-button icon="fa-solid fa-ellipsis-v"
                       severity="secondary"
-                      (onClick)="menu.toggle($event)"/>
-            <p-menu #menu [model]="actionMenuItems()"
+                      (onClick)="prepareAndToggleMenu($event, menu, service)"/>
+            <p-menu #menu
+                    [model]="actionMenuItems()"
                     [popup]="true"
-                    appendTo="body"
-                    (onShow)="onActionsMenuShow(service)"/>
+                    appendTo="body"/>
           </td>
         </tr>
       </ng-template>

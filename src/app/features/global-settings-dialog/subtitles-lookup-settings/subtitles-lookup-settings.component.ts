@@ -62,7 +62,7 @@ export class SubtitlesLookupSettingsComponent {
     return `Default (${defaultLabel})`;
   }
 
-  onActionsMenuShow(service: SubtitleLookupService): void {
+  protected prepareAndToggleMenu(event: MouseEvent, menu: Menu, service: SubtitleLookupService): void {
     const services = this.globalSettingsStateService.subtitleLookupServices();
     const index = services.findIndex(s => s.id === service.id);
     const count = services.length;
@@ -125,6 +125,7 @@ export class SubtitlesLookupSettingsComponent {
     );
 
     this.actionMenuItems.set(menuItems);
+    menu.toggle(event);
   }
 
   onMoveService(service: SubtitleLookupService, direction: 'up' | 'down'): void {
