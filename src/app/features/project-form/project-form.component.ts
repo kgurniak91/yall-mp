@@ -242,11 +242,18 @@ export class ProjectFormComponent implements OnInit {
         this.selectedSubtitleOption.set('external');
         this.onSubtitleFilePathChange(companionPath);
         this.existingSubtitleFileName.set(this.getBaseName(companionPath));
-      } else if (metadata.subtitleTracks.length > 0) {
-        this.selectedSubtitleOption.set('embedded');
-        this.selectedEmbeddedSubtitleTrackIndex.set(null);
       } else {
-        this.selectedSubtitleOption.set('external');
+        const supportedTracks = metadata.subtitleTracks.filter(t => t.isSupported);
+
+        if (supportedTracks.length === 1) {
+          this.selectedSubtitleOption.set('embedded');
+          this.selectedEmbeddedSubtitleTrackIndex.set(supportedTracks[0].index);
+        } else if (metadata.subtitleTracks.length > 0) {
+          this.selectedSubtitleOption.set('embedded');
+          this.selectedEmbeddedSubtitleTrackIndex.set(null);
+        } else {
+          this.selectedSubtitleOption.set('external');
+        }
       }
     } catch (e: any) {
       this.toastService.error(`Failed to read media metadata: ${e.message}`);
