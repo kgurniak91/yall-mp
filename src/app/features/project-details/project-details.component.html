@@ -169,7 +169,7 @@
   <div class="timeline-area">
     <app-timeline-editor #timelineEditor
                          (contextMenuRequested)="onTimelineContextMenu($event)"
-                         (hideContextMenuRequested)="onTimelineContextMenuHide()"/>
+                         (hideContextMenuRequested)="hideAllContextMenus()"/>
   </div>
 
   <p-drawer [visible]="projectSettingsStateService.isSettingsDrawerOpen()"

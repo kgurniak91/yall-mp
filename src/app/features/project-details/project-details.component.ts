@@ -748,8 +748,8 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   }
 
   protected hideAllContextMenus(): void {
-    this.timelineContextMenu().hide();
-    this.subtitlesContextMenu().hide();
+    this.timelineContextMenu()?.hide();
+    this.subtitlesContextMenu()?.hide();
   }
 
   onSubtitlesContextMenu(payload: { event: MouseEvent, text: string }): void {
