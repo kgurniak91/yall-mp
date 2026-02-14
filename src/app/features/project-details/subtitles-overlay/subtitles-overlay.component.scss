@@ -44,6 +44,7 @@
   cursor: default;
   white-space: pre-wrap;
   width: max-content;
+  overflow-wrap: anywhere;
 }
 
 :host ::ng-deep {

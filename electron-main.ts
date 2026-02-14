@@ -1554,9 +1554,9 @@ function cleanSrtText(text: string): string {
   return text
     // Remove ASS/SSA style override tags (e.g. {\an8}, {\pos(20,50)}, {\c&HFFFFFF&})
     .replace(/\{[^}]+}/g, '')
-    // Replace literal ASS newlines (\N, \n) with HTML breaks
-    .replace(/\\N/gi, '<br>')
-    .replace(/\n/g, '<br>')
+    // Replace literal ASS newlines (\N) and HTML breaks (<br>) into real newlines (\n)
+    .replace(/\\N/gi, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
     // Clean up WebVTT-style voice tags <v Name> or <c.class>
     .replace(/<[vc][^>]*>/g, '')
     .replace(/<\/[vc]>/g, '')
