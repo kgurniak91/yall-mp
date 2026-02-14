@@ -194,6 +194,16 @@
       background-color: #16A34A;
       color: white;
       font-weight: bold;
+      animation: footer-flash-fade 3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    @keyframes footer-flash-fade {
+      0% {
+        background-color: #16A34A;
+      }
+      100% {
+        background-color: #1e1e1e;
+      }
     }
 
     #help-text {
@@ -352,6 +362,12 @@
     }
 
     clearTimeout(toastTimeout);
+
+    // Remove the class to stop any existing animation
+    footer.classList.remove('toast-active');
+
+    // Force reflow and recalculate styles
+    void footer.offsetWidth;
 
     // Instantly change the footer's content and appearance
     helpText.textContent = message;
