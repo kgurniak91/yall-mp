@@ -101,18 +101,19 @@ const DEFAULT_SEARCH_SUBTITLE_LOOKUP_SERVICES: SubtitleLookupService[] = [
     isDefault: false,
     browserType: null,
     type: 'search'
-  },
-  {
-    id: 'deepl-es',
-    name: 'DeepL (English to Spanish translation)',
-    urlTemplate: 'https://www.deepl.com/translator#en/es/%%SS',
-    isDefault: false,
-    browserType: null,
-    type: 'search'
   }
 ];
 
 export const DEFAULT_AI_SUBTITLE_LOOKUP_SERVICES: SubtitleLookupService[] = [
+  {
+    id: 'deepl-pl',
+    name: 'DeepL (English to Polish translation)',
+    urlTemplate: 'https://www.deepl.com/en/translator/l/en/pl',
+    isDefault: false,
+    browserType: null,
+    type: 'ai',
+    aiPrePrompt: ''
+  },
   {
     id: 'gemini',
     name: 'Gemini AI (Explain)',

@@ -25,8 +25,15 @@ export function urlTemplateValidator(): ValidatorFn {
     }
 
     try {
+      let testValue = value.replace('%%SS', 'test');
+
+      // For urls starting with "www", prepend protocol just for the validation check
+      if (testValue.toLowerCase().startsWith('www.')) {
+        testValue = 'https://' + testValue;
+      }
+
       // Use a dummy replacement to check if the resulting URL is valid
-      new URL(value.replace('%%SS', 'test'));
+      new URL(testValue);
     } catch (e) {
       return {invalidUrl: true};
     }

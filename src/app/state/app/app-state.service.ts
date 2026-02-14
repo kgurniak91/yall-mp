@@ -116,6 +116,23 @@ export class AppStateService {
         requiresSave = true;
       }
 
+      const services = mergedData.globalSettings.subtitleLookupServices;
+      const oldDeeplIndex = services.findIndex(s => s.id === 'deepl-es');
+
+      if (oldDeeplIndex !== -1) {
+        console.log('[Migration] Replacing legacy DeepL search with AI service...');
+        services.splice(oldDeeplIndex, 1);
+
+        if (!services.some(s => s.id === 'deepl-pl')) {
+          const newDeepl = DEFAULT_AI_SUBTITLE_LOOKUP_SERVICES.find(s => s.id === 'deepl-pl');
+          if (newDeepl) {
+            services.splice(oldDeeplIndex, 0, newDeepl);
+          }
+        }
+
+        requiresSave = true;
+      }
+
       if (data.ankiSettings?.ankiCardTemplates) {
         mergedData.ankiSettings.ankiCardTemplates = data.ankiSettings.ankiCardTemplates;
       }

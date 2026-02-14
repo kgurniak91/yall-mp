@@ -76,6 +76,11 @@ export class EditLookupServiceDialogComponent implements OnInit {
 
     const formValue = this.form.value;
 
+    const url = formValue.urlTemplate as string;
+    if (url && url.toLowerCase().startsWith('www.')) {
+      formValue.urlTemplate = 'https://' + url;
+    }
+
     if (formValue.type !== 'ai') {
       formValue.aiPrePrompt = undefined;
     }
