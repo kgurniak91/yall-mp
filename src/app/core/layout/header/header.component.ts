@@ -177,17 +177,36 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
       });
 
       if (this.isProjectDetailsView()) {
-        menu.push({
-          separator: true
-        }, {
-          label: 'Find in subtitles (Ctrl+F)',
-          icon: 'fa-solid fa-magnifying-glass',
-          command: () => this.headerCurrentProjectActionBridgeService.searchInSubtitles()
-        }, {
-          label: 'Shift all subtitles',
-          icon: 'fa-solid fa-clock-rotate-left',
-          command: () => this.headerCurrentProjectActionBridgeService.openSubtitleOffsetDialog()
-        });
+        menu.push(
+          {
+            separator: true
+          },
+          {
+            label: 'Find in subtitles (Ctrl+F)',
+            icon: 'fa-solid fa-magnifying-glass',
+            command: () => this.headerCurrentProjectActionBridgeService.searchInSubtitles()
+          },
+          {
+            label: 'Shift all subtitles',
+            icon: 'fa-solid fa-clock-rotate-left',
+            command: () => this.headerCurrentProjectActionBridgeService.openSubtitleOffsetDialog()
+          },
+          {
+            separator: true
+          },
+          {
+            label: 'Previous media file (Ctrl+,)',
+            icon: 'fa-solid fa-backward-step',
+            disabled: !this.headerCurrentProjectActionBridgeService.canGoToPrevMedia(),
+            command: () => this.headerCurrentProjectActionBridgeService.goToPreviousMediaFile()
+          },
+          {
+            label: 'Next media file (Ctrl+.)',
+            icon: 'fa-solid fa-forward-step',
+            disabled: !this.headerCurrentProjectActionBridgeService.canGoToNextMedia(),
+            command: () => this.headerCurrentProjectActionBridgeService.goToNextMediaFile()
+          }
+        );
       }
 
       menu.push({

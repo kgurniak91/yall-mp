@@ -14,10 +14,14 @@ import {KeyboardAction} from '../../../model/video.types';
 export class HeaderCurrentProjectActionBridgeService {
   private readonly _commandHistory = signal<CommandHistoryStateService | null>(null);
   private readonly _projectActionService = signal<ProjectActionService | null>(null);
+  private readonly _canGoToNextMedia = signal(false);
+  private readonly _canGoToPrevMedia = signal(false);
   private _openOffsetDialogCallback: (() => void) | null = null;
 
   public readonly canUndo = computed(() => this._commandHistory()?.canUndo() ?? false);
   public readonly canRedo = computed(() => this._commandHistory()?.canRedo() ?? false);
+  public readonly canGoToNextMedia = this._canGoToNextMedia.asReadonly();
+  public readonly canGoToPrevMedia = this._canGoToPrevMedia.asReadonly();
 
   public register(
     commandHistoryService: CommandHistoryStateService,
@@ -27,9 +31,16 @@ export class HeaderCurrentProjectActionBridgeService {
     this._projectActionService.set(projectActionService);
   }
 
+  public updateMediaNavigationState(canGoNext: boolean, canGoPrev: boolean): void {
+    this._canGoToNextMedia.set(canGoNext);
+    this._canGoToPrevMedia.set(canGoPrev);
+  }
+
   public clear(): void {
     this._commandHistory.set(null);
     this._projectActionService.set(null);
+    this._canGoToNextMedia.set(false);
+    this._canGoToPrevMedia.set(false);
     this._openOffsetDialogCallback = null;
   }
 
@@ -51,5 +62,13 @@ export class HeaderCurrentProjectActionBridgeService {
 
   public openSubtitleOffsetDialog(): void {
     this._openOffsetDialogCallback?.();
+  }
+
+  public goToNextMediaFile(): void {
+    this._projectActionService()?.dispatch(KeyboardAction.NextMediaFile);
+  }
+
+  public goToPreviousMediaFile(): void {
+    this._projectActionService()?.dispatch(KeyboardAction.PreviousMediaFile);
   }
 }

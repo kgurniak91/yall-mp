@@ -330,7 +330,6 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   private readonly dialogOrchestrationService = inject(DialogOrchestrationService);
   private readonly subtitlesHighlighterService = inject(SubtitlesHighlighterService);
   private readonly headerCurrentProjectActionBridgeService = inject(HeaderCurrentProjectActionBridgeService);
-  private readonly fileOpenIntentService = inject(FileOpenIntentService);
   private readonly yomitanService = inject(YomitanService);
   private activeDialogRef: DynamicDialogRef | null = null;
   private isMpvReady = signal(false);
@@ -655,16 +654,6 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
   redo(): void {
     this.actionService.dispatch(KeyboardAction.Redo);
-  }
-
-  loadAdjacentMedia(direction: 'next' | 'previous'): void {
-    const targetPath = direction === 'next'
-      ? this.videoStateService.nextMediaPath()
-      : this.videoStateService.prevMediaPath();
-
-    if (targetPath) {
-      this.fileOpenIntentService.openMedia(targetPath);
-    }
   }
 
   async openAnkiExportDialog(instantExport: boolean): Promise<void> {
@@ -1212,6 +1201,14 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     this.dialogOrchestrationService.dialogOpenedTrigger();
     untracked(() => {
       this.subtitlesOverlay().clearHighlightAndPopup();
+    });
+  });
+
+  private mediaNavigationSyncEffect = effect(() => {
+    const next = Boolean(this.videoStateService.nextMediaPath());
+    const prev = Boolean(this.videoStateService.prevMediaPath());
+    untracked(() => {
+      this.headerCurrentProjectActionBridgeService.updateMediaNavigationState(next, prev);
     });
   });
 
