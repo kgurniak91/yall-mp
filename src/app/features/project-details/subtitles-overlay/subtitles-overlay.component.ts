@@ -594,8 +594,28 @@ export class SubtitlesOverlayComponent implements OnDestroy {
     this.subtitlesHighlighterService.hide();
     this.currentSearchTerm.set(null);
     this.popupPosition.set(null);
-    this.currentHighlight = null;
     this.isWordHovered.set(false);
+    this.lastLogicalHit = null;
+
+    const previousHighlight = this.currentHighlight;
+    this.currentHighlight = null;
+
+    if (previousHighlight && this.lastMouseEvent) {
+      try {
+        const range = document.createRange();
+        range.setStart(previousHighlight.node, previousHighlight.start);
+        range.setEnd(previousHighlight.node, previousHighlight.end);
+
+        // If the cached mouse position is NOT inside the previously highlighted word anymore, user moved the mouse away (e.g. into the popup)
+        if (!this.isPointInRects(this.lastMouseEvent, range.getClientRects())) {
+          this.lastMouseEvent = null;
+        }
+      } catch (e) {
+        this.lastMouseEvent = null;
+      }
+    } else {
+      this.lastMouseEvent = null;
+    }
   }
 
   private showHighlight(rects: DOMRect | DOMRect[]): void {
@@ -1158,6 +1178,10 @@ export class SubtitlesOverlayComponent implements OnDestroy {
         this.clearHighlightAndPopup();
         return;
       }
+    }
+
+    if (event.repeat) {
+      return;
     }
 
     if (event.key === 'Control' && this.lastMouseEvent && !this.isSelecting()) {
