@@ -959,6 +959,11 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
           }
         },
         {
+          label: 'Add manual note',
+          icon: 'fa-solid fa-note-sticky',
+          command: () => this.openNoteDialog('', '', true)
+        },
+        {
           label: 'Split clip',
           icon: 'fa-solid fa-divide',
           command: () => this.splitCurrentSubtitledClip()
