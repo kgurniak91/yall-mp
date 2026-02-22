@@ -18,6 +18,7 @@ import {
 import {NoteFormDialogComponent} from '../note-form-dialog/note-form-dialog.component';
 import {take} from 'rxjs';
 import {cloneDeep, escape} from 'lodash-es';
+import {DEFAULT_CONFIRMATION} from '../../../shared/types/confirmation.types';
 
 interface NoteViewItem {
   text: string;
@@ -97,10 +98,9 @@ export class ProjectNotesComponent {
 
   onDeleteNote(selection: string, noteIndex: number): void {
     this.confirmationService.confirm({
+      ...DEFAULT_CONFIRMATION,
       header: 'Confirm deletion',
       message: 'Are you sure you want to delete this note?',
-      rejectButtonStyleClass: 'p-button-secondary',
-      icon: 'fa-solid fa-circle-exclamation',
       accept: () => {
         this.lookupNotesView.update(currentView => {
           return currentView.map(group => {

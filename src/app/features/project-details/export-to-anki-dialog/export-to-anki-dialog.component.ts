@@ -41,6 +41,7 @@ import {Tooltip} from 'primeng/tooltip';
 import {ProjectNotesComponent} from '../project-notes/project-notes.component';
 import {Tag} from 'primeng/tag';
 import {ConfirmationService} from 'primeng/api';
+import {DEFAULT_CONFIRMATION} from '../../../shared/types/confirmation.types';
 
 @Component({
   selector: 'app-export-to-anki-dialog',
@@ -147,12 +148,11 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
     setTimeout(() => {
       if (this.isAlreadyExported()) {
         this.confirmationService.confirm({
+          ...DEFAULT_CONFIRMATION,
           header: 'Potential Anki Duplicate',
           message: 'This clip has already been exported to Anki. Are you sure you want to export it again?',
-          icon: 'fa-solid fa-circle-exclamation',
           acceptLabel: this.data.instantExport ? 'Yes, export again immediately' : 'Yes, continue to export configuration',
           rejectLabel: 'Cancel',
-          rejectButtonStyleClass: 'p-button-secondary',
           closeOnEscape: false,
           closable: false,
           accept: () => this.attemptInstantExport(),

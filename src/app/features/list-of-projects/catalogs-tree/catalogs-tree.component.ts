@@ -14,6 +14,7 @@ import {
   scheduleRestoreFocus
 } from '../../../shared/utils/disable-focus-in-parent-dialog/disable-focus-in-parent-dialog';
 import {Tag} from 'primeng/tag';
+import {DEFAULT_CONFIRMATION} from '../../../shared/types/confirmation.types';
 
 @Component({
   selector: 'app-catalogs-tree',
@@ -195,10 +196,9 @@ export class CatalogsTreeComponent {
 
   private deleteCatalog(id: string, name: string | undefined) {
     this.confirmationService.confirm({
+      ...DEFAULT_CONFIRMATION,
       header: 'Delete Catalog',
       message: `Delete catalog "<b>${name}</b>"?<br>It must be empty to be deleted.`,
-      icon: 'fa-solid fa-triangle-exclamation',
-      rejectButtonStyleClass: 'p-button-secondary',
       accept: () => {
         const projects = this.appStateService.projects().filter(p => p.catalogId === id);
         const subCatalogs = this.appStateService.catalogs().filter(c => c.parentId === id);

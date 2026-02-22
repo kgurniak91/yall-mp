@@ -18,6 +18,7 @@ import {
   disableFocusInParentDialog,
   scheduleRestoreFocus
 } from '../../../shared/utils/disable-focus-in-parent-dialog/disable-focus-in-parent-dialog';
+import {DEFAULT_CONFIRMATION} from '../../../shared/types/confirmation.types';
 
 @Component({
   selector: 'app-anki-settings',
@@ -92,10 +93,9 @@ export class AnkiSettingsComponent {
 
   protected onDeleteTemplate(id: string): void {
     this.confirmationService.confirm({
+      ...DEFAULT_CONFIRMATION,
       header: 'Confirm deletion',
       message: `Are you sure you want to delete this template?<br>This action cannot be undone.`,
-      icon: 'fa-solid fa-circle-exclamation',
-      rejectButtonStyleClass: 'p-button-secondary',
       accept: () => {
         this.ankiStateService.deleteCardTemplate(id);
         this.toastService.success('Template deleted.');

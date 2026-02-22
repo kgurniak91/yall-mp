@@ -20,6 +20,7 @@ import {CatalogsTreeComponent} from './catalogs-tree/catalogs-tree.component';
 import {CatalogsBreadcrumbComponent} from './catalogs-breadcrumb/catalogs-breadcrumb.component';
 import {MoveProjectDialogData} from './move-project-dialog/move-project-dialog.types';
 import {take} from 'rxjs';
+import {DEFAULT_CONFIRMATION} from '../../shared/types/confirmation.types';
 
 @Component({
   selector: 'app-list-of-projects',
@@ -70,10 +71,9 @@ export class ListOfProjectsComponent implements OnDestroy {
 
   deleteProject(project: MinimalProject): void {
     this.confirmationService.confirm({
+      ...DEFAULT_CONFIRMATION,
       header: 'Confirm deletion',
       message: `Delete project <b>${project.mediaFileName}</b>?`,
-      icon: 'fa-solid fa-circle-exclamation',
-      rejectButtonStyleClass: 'p-button-secondary',
       accept: () => this.appStateService.deleteProject(project.id)
     });
   }

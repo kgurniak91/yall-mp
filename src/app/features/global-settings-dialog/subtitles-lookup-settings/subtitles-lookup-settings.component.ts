@@ -19,6 +19,7 @@ import {
 } from '../../../shared/utils/disable-focus-in-parent-dialog/disable-focus-in-parent-dialog';
 import {ToastService} from '../../../shared/services/toast/toast.service';
 import {Tooltip} from 'primeng/tooltip';
+import {DEFAULT_CONFIRMATION} from '../../../shared/types/confirmation.types';
 
 @Component({
   selector: 'app-subtitles-lookup-settings',
@@ -164,10 +165,9 @@ export class SubtitlesLookupSettingsComponent {
 
   onDeleteService(serviceToDelete: SubtitleLookupService): void {
     this.confirmationService.confirm({
+      ...DEFAULT_CONFIRMATION,
       header: 'Confirm deletion',
       message: `Are you sure you want to delete the lookup service <b>${serviceToDelete.name}</b>?<br>This action cannot be undone.`,
-      icon: 'fa-solid fa-circle-exclamation',
-      rejectButtonStyleClass: 'p-button-secondary',
       accept: () => {
         let services = this.globalSettingsStateService.subtitleLookupServices();
         const newServices = services.filter(s => s.id !== serviceToDelete.id);

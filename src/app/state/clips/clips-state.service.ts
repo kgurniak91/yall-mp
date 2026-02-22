@@ -25,6 +25,7 @@ import {AssSubtitlesUtils} from '../../../../shared/utils/ass-subtitles.utils';
 import {ConfirmationService} from 'primeng/api';
 import {MergeSubtitlesCommand} from '../../model/commands/merge-subtitles.command';
 import {ShiftAllSubtitlesCommand} from '../../model/commands/shift-all-subtitles.command';
+import {DEFAULT_CONFIRMATION} from '../../shared/types/confirmation.types';
 
 export interface ShiftValidationResult {
   totalClips: number;
@@ -407,10 +408,9 @@ export class ClipsStateService implements OnDestroy {
 
       if (!isEqual(leftAggregated, rightAggregated)) {
         this.confirmationService.confirm({
+          ...DEFAULT_CONFIRMATION,
           header: 'Notes Mismatch',
           message: 'The notes in the clips you are merging differ. Any changes made to the notes after splitting will be lost. Continue?',
-          icon: 'fa-solid fa-triangle-exclamation',
-          rejectButtonStyleClass: 'p-button-secondary',
           accept: () => performUnsplit(),
           reject: () => this.commandHistoryStateService.cancelLastUndo()
         });

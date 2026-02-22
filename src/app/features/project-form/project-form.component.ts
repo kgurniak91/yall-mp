@@ -23,6 +23,7 @@ import {ROOT_CATALOG_ID} from '../../shared/types/catalog.types';
 import {CatalogSelectComponent} from '../../shared/components/catalog-select/catalog-select.component';
 import {isEqual} from 'lodash-es';
 import {AnkiStateService} from '../../state/anki/anki-state.service';
+import {DEFAULT_CONFIRMATION} from '../../shared/types/confirmation.types';
 
 const EDIT_CONFIRMATION_MESSAGE = `
 Are you sure you want to edit this project?
@@ -286,10 +287,9 @@ export class ProjectFormComponent implements OnInit {
     if (this.editMode()) {
       if (this.hasDestructiveChanges()) {
         this.confirmationService.confirm({
+          ...DEFAULT_CONFIRMATION,
           header: 'Confirm changes',
           message: EDIT_CONFIRMATION_MESSAGE,
-          icon: 'fa-solid fa-circle-exclamation',
-          rejectButtonStyleClass: 'p-button-secondary',
           accept: () => this.editExistingProject()
         });
       } else {

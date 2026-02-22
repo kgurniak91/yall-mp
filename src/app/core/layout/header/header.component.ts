@@ -23,6 +23,7 @@ import {
   HeaderCurrentProjectActionBridgeService
 } from '../../services/header-current-project-action-bridge/header-current-project-action-bridge.service';
 import {LogoComponent} from '../../../shared/components/logo/logo.component';
+import {DEFAULT_CONFIRMATION} from '../../../shared/types/confirmation.types';
 
 @Component({
   selector: 'app-header',
@@ -107,12 +108,10 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
   private deleteProject(): void {
     const project = this.currentProject();
     if (project) {
-      // TODO refactor duplicate code
       this.confirmationService.confirm({
+        ...DEFAULT_CONFIRMATION,
         header: 'Confirm deletion',
         message: `Are you sure you want to delete the project <b>${project.mediaFileName}</b>?<br>This action cannot be undone.`,
-        icon: 'fa-solid fa-circle-exclamation',
-        rejectButtonStyleClass: 'p-button-secondary',
         accept: () => {
           this.appStateService.deleteProject(project.id);
           this.router.navigate(['/projects']);
