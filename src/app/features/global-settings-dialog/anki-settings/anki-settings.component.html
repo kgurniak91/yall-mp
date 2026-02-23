@@ -53,6 +53,7 @@
           You can always change it later in the "Export to Anki" dialog window.
         </small>
       </div>
+
       <div class="flex flex-column">
         <div class="setting-item">
           <div class="flex align-items-center">
@@ -67,6 +68,21 @@
           If enabled, pressing <b>E</b> will attempt to export immediately, bypassing the "Export to Anki" dialog, using the last used settings without waiting for confirmation.
           <br>
           You can always use <b>Ctrl+E</b> to force instant export regardless of this setting.
+        </small>
+      </div>
+
+      <div class="flex flex-column">
+        <div class="setting-item">
+          <div class="flex align-items-center">
+            <p-checkbox [ngModel]="globalSettingsStateService.warnUnexportedNotes()"
+                        (ngModelChange)="globalSettingsStateService.setWarnUnexportedNotes($event)"
+                        [binary]="true"
+                        inputId="warn-unexported"/>
+            <label for="warn-unexported" class="ml-2">Warn when leaving an unexported clip with notes</label>
+          </div>
+        </div>
+        <small class="block mt-2">
+          Displays a warning notification if you play or seek past a subtitled clip that contains custom notes but hasn't been exported yet.
         </small>
       </div>
     </div>

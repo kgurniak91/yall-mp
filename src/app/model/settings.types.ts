@@ -59,6 +59,7 @@ export interface GlobalSettings {
   swapNavigationShortcuts: boolean;
   migratedDefaultAiServices?: boolean; // Flag set only once when migrating from older versions to v0.9.3-beta
   hardwareAcceleration: boolean;
+  warnUnexportedNotes: boolean;
 }
 
 const DEFAULT_SEARCH_SUBTITLE_LOOKUP_SERVICES: SubtitleLookupService[] = [
@@ -150,7 +151,8 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   generateAudioPeaks: false,
   swapNavigationShortcuts: false,
   migratedDefaultAiServices: true, // Set initially to true so new installations don't trigger migration
-  hardwareAcceleration: false
+  hardwareAcceleration: false,
+  warnUnexportedNotes: true
 };
 
 export enum BuiltInSettingsPreset {

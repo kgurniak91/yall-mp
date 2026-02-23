@@ -60,7 +60,6 @@ import {DatePipe} from '@angular/common';
 import {AssSubtitlesUtils} from '../../../../shared/utils/ass-subtitles.utils';
 import {Project} from '../../model/project.types';
 import {OverlayBadgeModule} from 'primeng/overlaybadge';
-import {FileOpenIntentService} from '../../core/services/file-open-intent/file-open-intent.service';
 import {MediaTrack} from '../../../../shared/types/media.type';
 import {YomitanService} from '../../core/services/yomitan/yomitan.service';
 import {NoteRequest} from './subtitles-overlay/subtitles-overlay.types';
@@ -340,6 +339,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   private cleanupMpvReadyListener: (() => void) | null = null;
   private cleanupAddNoteListener: (() => void) | null = null;
   private clickTimeout: any = null;
+  private lastSubtitledClipId: string | null = null;
 
   constructor() {
     inject(ProjectKeyboardShortcutsService); // start listening
@@ -426,6 +426,41 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       if (this.isMpvReady()) {
         window.electronAPI.mpvSetProperty('hwdec', useHwDec ? 'auto' : 'no');
       }
+    });
+
+    effect(() => {
+      const currentClip = this.clipsStateService.currentClipForAllTracks();
+      const project = this.project();
+      const warnEnabled = this.globalSettingsStateService.warnUnexportedNotes();
+
+      if (!project || !currentClip) {
+        return;
+      }
+
+      untracked(() => {
+        const currentSourceId = currentClip.hasSubtitle ? currentClip.sourceSubtitles[0]?.id : null;
+
+        if (this.lastSubtitledClipId && this.lastSubtitledClipId !== currentSourceId && warnEnabled) {
+          const notes = project.notes?.[this.lastSubtitledClipId];
+
+          let hasNotes = false;
+          if (notes) {
+            const hasManualNote = Boolean(notes.manualNote && notes.manualNote.trim().length > 0);
+            const hasLookupNotes = Boolean(notes.lookupNotes && Object.values(notes.lookupNotes).some(list => list.length > 0));
+            hasNotes = hasManualNote || hasLookupNotes;
+          }
+
+          const isExported = project.ankiExportHistory?.includes(this.lastSubtitledClipId);
+
+          if (hasNotes && !isExported) {
+            this.toastService.warn('You moved past a clip with notes without exporting it to Anki.');
+          }
+        }
+
+        if (currentClip.hasSubtitle) {
+          this.lastSubtitledClipId = currentSourceId;
+        }
+      });
     });
 
     this.cleanupMpvReadyListener = window.electronAPI.onMpvManagerReady(() => {
