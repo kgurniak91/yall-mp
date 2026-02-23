@@ -15,6 +15,7 @@ import {AnkiStateService} from '../../state/anki/anki-state.service';
 import {
   OfflineDictionariesSettingsComponent
 } from './offline-dictionaries-settings/offline-dictionaries-settings.component';
+import {SettingsPresetComponent} from '../../shared/components/settings-preset/settings-preset.component';
 
 @Component({
   selector: 'app-global-settings-dialog',
@@ -29,7 +30,8 @@ import {
     GlobalSettingsComponent,
     AnkiSettingsComponent,
     SubtitlesLookupSettingsComponent,
-    OfflineDictionariesSettingsComponent
+    OfflineDictionariesSettingsComponent,
+    SettingsPresetComponent
   ],
   templateUrl: './global-settings-dialog.component.html',
   styleUrl: './global-settings-dialog.component.scss',

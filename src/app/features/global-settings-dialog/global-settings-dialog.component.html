@@ -17,8 +17,12 @@
       <p class="mt-0">
         Settings that will be applied by default to all new projects.
       </p>
-      <app-common-project-settings [settings]="globalSettingsStateService.defaultProjectSettings()"
-                                   (settingsChange)="onDefaultSettingsChange($event)"/>
+      <div class="flex flex-column gap-4">
+        <app-settings-preset [settings]="globalSettingsStateService.defaultProjectSettings()"
+                             (settingsChange)="onDefaultSettingsChange($event)"/>
+        <app-common-project-settings [settings]="globalSettingsStateService.defaultProjectSettings()"
+                                     (settingsChange)="onDefaultSettingsChange($event)"/>
+      </div>
     </p-tabpanel>
     <p-tabpanel [value]="GlobalSettingsTab.Anki">
       <p class="mt-0">

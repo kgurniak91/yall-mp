@@ -154,6 +154,7 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
 };
 
 export enum BuiltInSettingsPreset {
+  CONTINUOUS = 'CONTINUOUS',
   LISTENING = 'LISTENING',
   SPEAKING = 'SPEAKING',
   SHADOWING = 'SHADOWING'
@@ -164,6 +165,16 @@ export interface SettingsPreset {
   name: string;
   settings: Partial<ProjectSettings>;
 }
+
+export const ContinuousPlaybackSettingsPreset: SettingsPreset = {
+  id: BuiltInSettingsPreset.CONTINUOUS,
+  name: 'Continuous Playback',
+  settings: {
+    autoPauseAtStart: false,
+    autoPauseAtEnd: false,
+    subtitleBehavior: SubtitleBehavior.DoNothing
+  }
+};
 
 export const ListeningPracticeSettingsPreset: SettingsPreset = {
   id: BuiltInSettingsPreset.LISTENING,
@@ -196,6 +207,7 @@ export const ShadowingSettingsPreset: SettingsPreset = {
 };
 
 export const BuiltInSettingsPresets: SettingsPreset[] = [
+  ContinuousPlaybackSettingsPreset,
   ListeningPracticeSettingsPreset,
   SpeakingPracticeSettingsPreset,
   ShadowingSettingsPreset
