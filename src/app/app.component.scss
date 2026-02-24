@@ -9,3 +9,27 @@
   flex: 1;
   overflow-y: auto; // Allow content to scroll if it overflows
 }
+
+@keyframes bounce-small {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-25%);
+  }
+}
+
+.animate-bounce {
+  animation: bounce-small 1s infinite;
+}
+
+:host ::ng-deep .custom-toast-progress {
+  .p-progressbar {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.3) !important;
+
+    .p-progressbar-value {
+      background: #ffffff !important;
+    }
+  }
+}

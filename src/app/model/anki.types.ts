@@ -8,6 +8,19 @@ export interface AnkiFieldMapping {
   destination: string; // The name of the field in the Anki Note Type
 }
 
+export interface AnkiDailyGoal {
+  targetCount: number;
+  notifyInterval: number; // 0 for "Only when reached", otherwise e.g., 1, 2, 5, 10, 20
+  notifyAfterReached: boolean;
+  playSound: boolean;
+  enabled: boolean;
+}
+
+export interface AnkiTemplateProgress {
+  count: number;
+  goalReachedNotified: boolean;
+}
+
 export interface AnkiCardTemplate {
   id: string;
   name: string; // e.g., "Listening Practice Card"
@@ -16,6 +29,7 @@ export interface AnkiCardTemplate {
   fieldMappings: AnkiFieldMapping[];
   tags: string[];
   isDefault?: boolean;
+  dailyGoal?: AnkiDailyGoal;
 }
 
 export enum AnkiConnectStatus {
@@ -28,6 +42,7 @@ export enum AnkiConnectStatus {
 export interface AnkiSettings {
   ankiCardTemplates: AnkiCardTemplate[];
   tags: string[];
+  progressTracker?: Record<string, Record<string, AnkiTemplateProgress>>; // YYYY-MM-DD -> Template ID -> Progress
 }
 
 export interface AnkiCard {

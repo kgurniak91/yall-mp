@@ -291,6 +291,10 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
         const countText = (result.successCount === 1) ? 'card' : 'cards';
         this.toastService.success(`Successfully created ${result.successCount} Anki ${countText}.`);
 
+        for (const target of targets) {
+          this.ankiService.processDailyGoalProgress(target.template.id, 1);
+        }
+
         const subtitleId = this.data.subtitleData.id;
         this.appStateService.addAnkiExportToHistory(this.data.project.id, subtitleId);
 

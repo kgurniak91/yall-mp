@@ -1,6 +1,41 @@
 <p-toast [position]="toastService.position()"
          hideTransitionOptions="0ms"
-         showTransitionOptions="0ms"/>
+         showTransitionOptions="0ms">
+  <ng-template pTemplate="message" let-message>
+    <div class="flex align-items-center gap-3 w-full">
+      @if (message.data?.type === 'daily-goal-reached') {
+        <i class="fa-solid fa-trophy text-3xl flex-shrink-0 animate-bounce"></i>
+      } @else if (message.data?.type === 'daily-goal-progress') {
+        <i class="fa-solid fa-bullseye text-3xl flex-shrink-0"></i>
+      } @else {
+        @if (message.severity === 'success') {
+          <i class="fa-solid fa-check-circle text-2xl flex-shrink-0"></i>
+        } @else if (message.severity === 'info') {
+          <i class="fa-solid fa-info-circle text-2xl flex-shrink-0"></i>
+        } @else if (message.severity === 'warn') {
+          <i class="fa-solid fa-exclamation-triangle text-2xl flex-shrink-0"></i>
+        } @else if (message.severity === 'error') {
+          <i class="fa-solid fa-xmark-circle text-2xl flex-shrink-0"></i>
+        }
+      }
+
+      <div class="flex flex-column gap-1 w-full flex-1">
+        <span class="font-bold">{{ message.summary }}</span>
+        <span class="text-sm" [innerHTML]="message.detail"></span>
+
+        @if (message.data?.type?.startsWith('daily-goal')) {
+          <div class="flex align-items-center gap-2 mt-1 w-full">
+            <p-progressBar [value]="message.data.progressPercent" [showValue]="false"
+                           class="flex-1 custom-toast-progress"></p-progressBar>
+            <span class="text-xs font-bold white-space-nowrap">{{ message.data.current }}
+              / {{ message.data.target }}</span>
+          </div>
+        }
+      </div>
+    </div>
+  </ng-template>
+</p-toast>
+
 <p-confirmDialog [style]="{width: '45vw'}"
                  [breakpoints]="{'960px': '75vw', '640px': '95vw'}"/>
 

@@ -20,7 +20,8 @@ const defaults: AppData = {
   globalSettings: DEFAULT_GLOBAL_SETTINGS,
   ankiSettings: {
     ankiCardTemplates: [],
-    tags: ['yall-mp']
+    tags: ['yall-mp'],
+    progressTracker: {}
   },
   catalogs: []
 };

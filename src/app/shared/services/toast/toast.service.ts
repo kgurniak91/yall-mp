@@ -56,4 +56,25 @@ export class ToastService {
       life: 5000
     });
   }
+
+  dailyGoalProgress(templateName: string, current: number, target: number): void {
+    const percent = Math.min(100, Math.round((current / target) * 100));
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Daily Goal Progress',
+      detail: templateName,
+      data: {type: 'daily-goal-progress', current, target, progressPercent: percent},
+      life: 3000
+    });
+  }
+
+  dailyGoalReached(templateName: string, target: number): void {
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Daily Goal Reached! 🎉',
+      detail: templateName,
+      data: {type: 'daily-goal-reached', current: target, target, progressPercent: 100},
+      life: 6000
+    });
+  }
 }

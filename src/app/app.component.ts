@@ -9,6 +9,8 @@ import {
 import {FileOpenIntentService} from './core/services/file-open-intent/file-open-intent.service';
 import {ToastService} from './shared/services/toast/toast.service';
 import {YomitanService} from './core/services/yomitan/yomitan.service';
+import {ProgressBar} from 'primeng/progressbar';
+import {PrimeTemplate} from 'primeng/api';
 
 @Component({
   selector: 'app-root',
@@ -16,7 +18,9 @@ import {YomitanService} from './core/services/yomitan/yomitan.service';
     RouterOutlet,
     Toast,
     ConfirmDialog,
-    HeaderComponent
+    HeaderComponent,
+    ProgressBar,
+    PrimeTemplate
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',

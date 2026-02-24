@@ -103,8 +103,9 @@
             <th>Name</th>
             <th>Anki Deck</th>
             <th>Anki Note Type</th>
-            <th style="width: 5rem" class="text-center">Default</th> <!-- Added -->
-            <th style="width: 8rem"></th>
+            <th style="width: 8rem" class="text-center">Daily Goal</th>
+            <th style="width: 5rem" class="text-center">Default</th>
+            <th style="width: 4rem"></th>
           </tr>
         </ng-template>
         <ng-template pTemplate="body" let-template>
@@ -113,28 +114,37 @@
             <td>{{ template.ankiDeck }}</td>
             <td>{{ template.ankiNoteType }}</td>
             <td class="text-center">
+              @let count = getTodayExports(template.id);
+              @if (template.dailyGoal?.enabled) {
+                <span class="font-bold"
+                      [class.text-green-500]="count >= template.dailyGoal.targetCount"
+                      pTooltip="Daily goal progress"
+                      tooltipPosition="bottom">
+                  {{ count }} / {{ template.dailyGoal.targetCount }}
+                </span>
+              } @else if (template.dailyGoal) {
+                <span class="text-gray-400" pTooltip="Daily goal disabled" tooltipPosition="bottom">
+                  {{ count }} / {{ template.dailyGoal.targetCount }}
+                </span>
+              } @else {
+                <span class="text-gray-500" pTooltip="Cards exported today" tooltipPosition="bottom">
+                  {{ count }}
+                </span>
+              }
+            </td>
+            <td class="text-center">
               @if (template.isDefault) {
                 <i class="fa-solid fa-check text-green-500"></i>
               }
             </td>
-            <td>
-              <div class="flex gap-2 justify-content-end">
-                <p-button icon="fa-solid fa-star"
-                          severity="secondary"
-                          (onClick)="toggleDefault(template)"
-                          pTooltip="Toggle default"
-                          tooltipPosition="bottom"/>
-                <p-button icon="fa-solid fa-pencil"
-                          severity="secondary"
-                          (onClick)="onEditTemplate(template)"
-                          pTooltip="Edit"
-                          tooltipPosition="bottom"/>
-                <p-button icon="fa-solid fa-trash"
-                          severity="danger"
-                          (onClick)="onDeleteTemplate(template.id)"
-                          pTooltip="Delete"
-                          tooltipPosition="bottom"/>
-              </div>
+            <td class="text-center">
+              <p-button icon="fa-solid fa-ellipsis-v"
+                        severity="secondary"
+                        (onClick)="prepareAndToggleMenu($event, menu, template)"/>
+              <p-menu #menu
+                      [model]="actionMenuItems()"
+                      [popup]="true"
+                      appendTo="body"/>
             </td>
           </tr>
         </ng-template>

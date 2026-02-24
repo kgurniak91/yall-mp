@@ -1,0 +1,29 @@
+<form [formGroup]="form" class="flex flex-column gap-4 p-fluid">
+  <div class="flex flex-column gap-2">
+    <label for="targetCount" class="font-bold required">Daily Goal (Cards)</label>
+    <p-inputNumber id="targetCount" formControlName="targetCount" [min]="1" [max]="1000" [showButtons]="true"></p-inputNumber>
+    <app-form-control-error [control]="form.get('targetCount')"/>
+  </div>
+
+  <div class="flex flex-column gap-2">
+    <label for="notifyInterval" class="font-bold">Progress Notification Interval</label>
+    <p-select id="notifyInterval" formControlName="notifyInterval" [options]="intervalOptions" optionLabel="label" optionValue="value" appendTo="body"></p-select>
+  </div>
+
+  <div class="flex flex-column gap-3 mt-2">
+    <div class="flex align-items-center">
+      <p-checkbox formControlName="notifyAfterReached" [binary]="true" inputId="notifyAfterReached"></p-checkbox>
+      <label for="notifyAfterReached" class="ml-2 cursor-pointer">Continue notifying after goal is reached</label>
+    </div>
+
+    <div class="flex align-items-center">
+      <p-checkbox formControlName="playSound" [binary]="true" inputId="playSound"></p-checkbox>
+      <label for="playSound" class="ml-2 cursor-pointer">Play celebration sound when goal is reached</label>
+    </div>
+  </div>
+
+  <div class="flex justify-content-end gap-2">
+    <p-button label="Cancel" severity="secondary" icon="fa-solid fa-xmark" (click)="onCancel()"/>
+    <p-button label="Save" severity="primary" icon="fa-solid fa-check" (click)="onSave()" data-primary-action/>
+  </div>
+</form>
