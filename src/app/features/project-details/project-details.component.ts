@@ -453,7 +453,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
           const isExported = project.ankiExportHistory?.includes(this.lastSubtitledClipId);
 
           if (hasNotes && !isExported) {
-            this.toastService.warn('You moved past a clip with notes without exporting it to Anki.');
+            this.toastService.warn('You moved past a clip with notes without exporting it to Anki');
           }
         }
 
@@ -568,7 +568,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       );
     } catch (e: any) {
       console.error('MPV failed to initialize unexpectedly', e);
-      this.toastService.error(`The media player failed to start: ${e.message || 'The file may be corrupt or unsupported.'}`);
+      this.toastService.error(`The media player failed to start: ${e.message || 'The file may be corrupt or unsupported'}`);
       this.videoStateService.setVideoLoading(false);
       this.router.navigate(['/projects']);
     }
@@ -708,7 +708,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
     const currentClip = this.clipsStateService.currentClipForAllTracks();
     if (!currentClip || !currentClip.hasSubtitle) {
-      this.toastService.info('Anki export is only available for subtitled clips.');
+      this.toastService.info('Anki export is only available for subtitled clips');
       return;
     }
 
@@ -1094,7 +1094,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     if (serviceToUse) {
       this.executeLookup(serviceToUse, text);
     } else {
-      this.toastService.warn('No default lookup service is configured.');
+      this.toastService.warn('No default lookup service is configured');
     }
   }
 
@@ -1128,7 +1128,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
       if (automationText) {
         navigator.clipboard.writeText(automationText);
-        this.toastService.info('Prompt copied to clipboard.');
+        this.toastService.info('Prompt copied to clipboard');
       }
     } else { // SubtitleLookupBrowserType.BuiltIn
       window.electronAPI.openSubtitlesLookupWindow({
@@ -1175,13 +1175,13 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       untracked(() => this.subtitlesOverlay().clearHighlightAndPopup());
       const currentClip = this.clipsStateService.currentClipForAllTracks();
       if (!currentClip || !currentClip.hasSubtitle) {
-        this.toastService.info('Subtitle editing is not available for gaps.');
+        this.toastService.info('Subtitle editing is not available for gaps');
         this.videoStateService.clearEditSubtitlesRequest();
         return;
       }
 
       if (!this.canEditSubtitles()) {
-        this.toastService.info('Subtitle editing is only available in the "Interactive (ASS.js)" renderer mode.');
+        this.toastService.info('Subtitle editing is only available in the "Interactive (ASS.js)" renderer mode');
         this.videoStateService.clearEditSubtitlesRequest();
         return;
       }
@@ -1476,7 +1476,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
           this.addNoteToProject(subtitleId, result.term, result.noteText);
           this.toastService.success('Note added');
         } else {
-          this.toastService.error('Could not determine context for note.');
+          this.toastService.error('Could not determine context for note');
         }
       }
     });

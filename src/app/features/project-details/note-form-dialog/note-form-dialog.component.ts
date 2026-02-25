@@ -32,10 +32,11 @@ export class NoteFormDialogComponent implements OnInit {
 
   ngOnInit(): void {
     this.data = this.config.data as NoteFormDialogData;
+    const isRename = (this.data.mode === 'rename-term');
 
     this.form = this.fb.group({
       term: [this.data.term, [Validators.maxLength(255)]],
-      noteText: [this.data.noteText, [Validators.required, CustomValidators.notBlank(), Validators.maxLength(5000)]]
+      noteText: [this.data.noteText || '', isRename ? [] : [Validators.required, CustomValidators.notBlank(), Validators.maxLength(5000)]]
     });
 
     if (!this.data.isTermEditable) {
@@ -54,7 +55,7 @@ export class NoteFormDialogComponent implements OnInit {
 
     const result: NoteFormResult = {
       term: (this.form.getRawValue().term || '').trim(),
-      noteText: this.form.getRawValue().noteText
+      noteText: this.data.mode === 'rename-term' ? undefined : this.form.getRawValue().noteText
     };
 
     this.ref.close(result);

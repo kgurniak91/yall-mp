@@ -1,5 +1,5 @@
 export interface NoteFormDialogData {
-  mode: 'create' | 'edit';
+  mode: 'create' | 'edit' | 'rename-term';
   term: string;
   noteText: string;
   isTermEditable: boolean;

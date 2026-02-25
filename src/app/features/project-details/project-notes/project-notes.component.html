@@ -60,51 +60,50 @@
   @if (lookupNotesView().length > 0) {
     <p-accordion [multiple]="true" [(value)]="activeAccordionIndices">
       @for (selectionGroup of lookupNotesView(); track selectionGroup.selection; let i = $index) {
-        <p-accordion-panel [value]="i">
-          <p-accordion-header>
-            <p class="m-0 p-0">
-              @if (selectionGroup.selection) {
-                &quot;<span class="subtitles-font">{{ selectionGroup.selection }}</span>&quot;
-              } @else {
-                <span class="font-bold">General notes</span>
-              }
-              @let notesCount = selectionGroup.notes.length;
-              ({{ notesCount }} {{ notesCount | i18nPlural: {'=1': 'note', 'other': 'notes'} }})
-            </p>
-          </p-accordion-header>
-          <p-accordion-content>
-            @if (activeAccordionIndices().includes(i)) {
-              <div class="notes-list-container">
-                @for (note of selectionGroup.notes; track note.originalIndex) {
-                  <div class="note-item flex align-items-center gap-2 py-3 pl-3">
-                    <div class="note-text flex-1" [innerHTML]="formatNoteText(note.text)"></div>
-                    <p-button icon="fa-solid fa-pencil"
-                              severity="info"
-                              [text]="true"
-                              pTooltip="Edit Note"
-                              (onClick)="onEditNote(selectionGroup.selection, note)"></p-button>
-                    <p-button icon="fa-solid fa-trash"
-                              severity="danger"
-                              [text]="true"
-                              pTooltip="Delete Note"
-                              (onClick)="onDeleteNote(selectionGroup.selection, note.originalIndex)"></p-button>
-                  </div>
-                  <p-divider class="my-0"></p-divider>
-                }
-
-                <div class="flex justify-content-end p-2">
-                  <p-button label="Add another note"
-                            icon="fa-solid fa-plus"
-                            size="small"
-                            [text]="true"
-                            severity="primary"
-                            (onClick)="onAddNoteToGroup(selectionGroup.selection)">
-                  </p-button>
-                </div>
+        <div class="accordion-wrapper">
+          <p-accordion-panel [value]="i">
+            <p-accordion-header>
+              <div class="flex align-items-center justify-content-between w-full pr-3">
+                <p class="m-0 p-0 pr-6">
+                  @if (selectionGroup.selection) {
+                    &quot;<span class="subtitles-font">{{ selectionGroup.selection }}</span>&quot;
+                  } @else {
+                    <span class="font-bold"> General notes </span>
+                  }
+                  @let notesCount = selectionGroup.notes.length;
+                  <span class="text-gray-500 white-space-nowrap">
+                    ({{ notesCount }} {{ notesCount | i18nPlural: {'=1': 'note', 'other': 'notes'} }})
+                  </span>
+                </p>
               </div>
-            }
-          </p-accordion-content>
-        </p-accordion-panel>
+            </p-accordion-header>
+            <p-accordion-content>
+              @if (activeAccordionIndices().includes(i)) {
+                <div class="notes-list-container">
+                  @for (note of selectionGroup.notes; track note.originalIndex; let nIndex = $index) {
+                    <div class="note-item flex align-items-start gap-2 py-3 pl-3 pr-2">
+                      <div class="note-text flex-1 mt-2" [innerHTML]="formatNoteText(note.text)"></div>
+                      <p-button icon="fa-solid fa-ellipsis-v"
+                                [text]="true"
+                                [rounded]="true"
+                                (onClick)="prepareNoteMenu($event, noteMenu, selectionGroup, note, i, nIndex)"></p-button>
+                      <p-menu hidden #noteMenu [model]="noteMenuItems()" [popup]="true" appendTo="body"></p-menu>
+                    </div>
+                    <p-divider class="my-0"></p-divider>
+                  }
+                </div>
+              }
+            </p-accordion-content>
+          </p-accordion-panel>
+
+          <div class="header-menu-overlay">
+            <p-button icon="fa-solid fa-ellipsis-v"
+                      [text]="true"
+                      [rounded]="true"
+                      (onClick)="prepareGroupMenu($event, groupMenu, selectionGroup, i)"></p-button>
+            <p-menu hidden #groupMenu [model]="groupMenuItems()" [popup]="true" appendTo="body"></p-menu>
+          </div>
+        </div>
       }
     </p-accordion>
   } @else {

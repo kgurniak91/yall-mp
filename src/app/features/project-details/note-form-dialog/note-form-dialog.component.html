@@ -13,16 +13,18 @@
     <app-form-control-error [control]="form.get('term')"/>
   </div>
 
-  <div class="flex flex-column gap-2">
-    <label for="note" class="font-bold required">Note Content</label>
-    <textarea pInputTextarea
-              id="note"
-              formControlName="noteText"
-              [autoResize]="false"
-              rows="5"
-              placeholder="Enter your note here..."></textarea>
-    <app-form-control-error [control]="form.get('noteText')"/>
-  </div>
+  @if (data.mode !== 'rename-term') {
+    <div class="flex flex-column gap-2">
+      <label for="note" class="font-bold required">Note Content</label>
+      <textarea pInputTextarea
+                id="note"
+                formControlName="noteText"
+                [autoResize]="false"
+                rows="5"
+                placeholder="Enter your note here..."></textarea>
+      <app-form-control-error [control]="form.get('noteText')"/>
+    </div>
+  }
 </form>
 
 <div class="flex align-items-center justify-content-end gap-2">

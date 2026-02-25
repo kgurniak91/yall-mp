@@ -71,7 +71,7 @@ export class TagsInputComponent implements ControlValueAccessor {
 
     // Prevent duplicates
     if (this.tags().includes(tag)) {
-      this.toastService.info('This tag has already been added.');
+      this.toastService.info('This tag has already been added');
       this.newTag.set('');
       return;
     }

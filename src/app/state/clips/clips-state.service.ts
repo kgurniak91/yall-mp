@@ -435,7 +435,7 @@ export class ClipsStateService implements OnDestroy {
       const nextClip = clips[currentIndex + 1];
 
       if (!prevClip || !nextClip || !prevClip.hasSubtitle || !nextClip.hasSubtitle) {
-        this.toastService.warn('Cannot delete a gap at the beginning or end of the timeline.');
+        this.toastService.warn('Cannot delete a gap at the beginning or end of the timeline');
         return;
       }
 
@@ -599,13 +599,13 @@ export class ClipsStateService implements OnDestroy {
   public mergeCurrentGapSubtitles(): void {
     const currentClip = this.currentClip();
     if (!currentClip || currentClip.hasSubtitle) {
-      this.toastService.info('Please select a gap between two subtitles.');
+      this.toastService.info('Please select a gap between two subtitles');
       return;
     }
 
     const project = this.appStateService.currentProject();
     if (project?.rawAssContent) {
-      this.toastService.warn('Merging subtitles is not supported for ASS/SSA projects.');
+      this.toastService.warn('Merging subtitles is not supported for ASS/SSA projects');
       return;
     }
 
@@ -615,7 +615,7 @@ export class ClipsStateService implements OnDestroy {
     const nextClip = clips[currentIndex + 1];
 
     if (!prevClip || !nextClip || !prevClip.hasSubtitle || !nextClip.hasSubtitle) {
-      this.toastService.warn('Can only merge a gap that is surrounded by subtitles.');
+      this.toastService.warn('Can only merge a gap that is surrounded by subtitles');
       return;
     }
 
@@ -741,7 +741,7 @@ export class ClipsStateService implements OnDestroy {
     const currentClip = this.currentClip();
     const project = this.appStateService.currentProject();
     if (!project || !currentClip || currentClip.hasSubtitle) {
-      this.toastService.info('A new subtitle can only be added inside a gap.');
+      this.toastService.info('A new subtitle can only be added inside a gap');
       return;
     }
 
@@ -766,7 +766,7 @@ export class ClipsStateService implements OnDestroy {
 
     // Final check: Does the new clip, after potential adjustments, still fit?
     if (newEndTime > latestPossibleEnd) {
-      this.toastService.warn('Not enough space to add a new subtitle at this exact time.');
+      this.toastService.warn('Not enough space to add a new subtitle at this exact time');
       return;
     }
 
@@ -1646,7 +1646,7 @@ export class ClipsStateService implements OnDestroy {
       const now = Date.now();
       // Throttle the toast to show it at most once every 3 seconds to avoid spam during dragging or key-repeats.
       if (now - this.lastMinDurationToastTime > 3000) {
-        this.toastService.info(`A subtitled clip cannot be shorter than ${MIN_SUBTITLE_DURATION} seconds.`);
+        this.toastService.info(`A subtitled clip cannot be shorter than ${MIN_SUBTITLE_DURATION} seconds`);
         this.lastMinDurationToastTime = now;
       }
     }
@@ -1684,13 +1684,6 @@ export class ClipsStateService implements OnDestroy {
             }
           }
         }
-      }
-    }
-
-    // Sort lookup note arrays to ensure deterministic deep equality checks
-    if (aggregated.lookupNotes) {
-      for (const key in aggregated.lookupNotes) {
-        aggregated.lookupNotes[key].sort();
       }
     }
 

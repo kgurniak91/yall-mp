@@ -218,7 +218,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
 
     const templates = this.selectedTemplates();
     if (templates.length === 0) {
-      this.toastService.warn('Please select at least one template to export.');
+      this.toastService.warn('Please select at least one template to export');
       this.isExporting.set(false);
       this.revealDialog();
       return;
@@ -227,7 +227,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
     this.saveHintIfChanged();
 
     if (!this.finalTextPreview().trim()) {
-      this.toastService.warn('Please select at least one subtitle part to export.');
+      this.toastService.warn('Please select at least one subtitle part to export');
       this.isExporting.set(false);
       this.revealDialog();
       return;
@@ -252,7 +252,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
 
     for (const template of templates) {
       if (!template.ankiDeck || !template.ankiNoteType) {
-        this.toastService.warn(`Skipping template "${template.name}" as it is incomplete.`);
+        this.toastService.warn(`Skipping template "${template.name}" as it is incomplete`);
         continue;
       }
 
@@ -289,7 +289,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
 
       if (result.successCount > 0) {
         const countText = (result.successCount === 1) ? 'card' : 'cards';
-        this.toastService.success(`Successfully created ${result.successCount} Anki ${countText}.`);
+        this.toastService.success(`Successfully created ${result.successCount} Anki ${countText}`);
 
         for (const target of targets) {
           this.ankiService.processDailyGoalProgress(target.template.id, 1);
@@ -300,11 +300,11 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
 
         this.ref.close(true);
       } else {
-        this.toastService.error(result.error || 'Failed to export to Anki.');
+        this.toastService.error(result.error || 'Failed to export to Anki');
         this.revealDialog();
       }
     } catch (e: any) {
-      this.toastService.error(e.message || 'An error occurred during export to Anki.');
+      this.toastService.error(e.message || 'An error occurred during export to Anki');
       console.error(e);
       this.revealDialog();
     } finally {
@@ -321,16 +321,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
 
     // Process Lookup Notes
     if (notes.lookupNotes) {
-      // Sort keys to ensure deterministic order
-      const sortedKeys = Object.keys(notes.lookupNotes).sort((a, b) => {
-        if (!a) {
-          return -1; // "General notes" first
-        }
-        if (!b) {
-          return 1;
-        }
-        return a.localeCompare(b);
-      });
+      const sortedKeys = Object.keys(notes.lookupNotes);
 
       for (const selection of sortedKeys) {
         const noteList = notes.lookupNotes[selection];

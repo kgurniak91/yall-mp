@@ -167,7 +167,7 @@ export class AnkiSettingsComponent {
 
       if (templateData) {
         this.ankiStateService.addAnkiCardTemplate({...templateData, id: uuidv4()});
-        this.toastService.success('Template added successfully.');
+        this.toastService.success('Template added successfully');
       }
     });
   }
@@ -200,7 +200,7 @@ export class AnkiSettingsComponent {
       if (templateData) {
         const updatedTemplate = {...templateData, dailyGoal: template.dailyGoal};
         this.ankiStateService.updateAnkiCardTemplate(template.id, updatedTemplate);
-        this.toastService.success('Template updated successfully.');
+        this.toastService.success('Template updated successfully');
       }
     });
   }
@@ -212,7 +212,7 @@ export class AnkiSettingsComponent {
       message: `Are you sure you want to delete this template?<br>This action cannot be undone.`,
       accept: () => {
         this.ankiStateService.deleteCardTemplate(id);
-        this.toastService.success('Template deleted.');
+        this.toastService.success('Template deleted');
       }
     });
   }

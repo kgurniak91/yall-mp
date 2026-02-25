@@ -196,9 +196,9 @@ export class SubtitlesLookupSettingsComponent {
     this.isClearingData.set(true);
     try {
       await window.electronAPI.clearLookupData();
-      this.toastService.success('Browser data cleared successfully.');
+      this.toastService.success('Browser data cleared successfully');
     } catch (e) {
-      this.toastService.error('Failed to clear browser data.');
+      this.toastService.error('Failed to clear browser data');
     } finally {
       this.isClearingData.set(false);
     }

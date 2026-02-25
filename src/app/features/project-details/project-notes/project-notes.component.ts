@@ -1,14 +1,25 @@
-import {ChangeDetectionStrategy, Component, effect, inject, input, output, signal, untracked} from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+  untracked,
+  viewChildren
+} from '@angular/core';
 import {Button} from 'primeng/button';
 import {Popover} from 'primeng/popover';
 import {Accordion, AccordionContent, AccordionHeader, AccordionPanel} from 'primeng/accordion';
 import {I18nPluralPipe} from '@angular/common';
 import {Divider} from 'primeng/divider';
 import {Tooltip} from 'primeng/tooltip';
+import {Menu} from 'primeng/menu';
+import {ConfirmationService, MenuItem} from 'primeng/api';
 import {ProjectClipNotes} from '../../../model/project.types';
 import {DialogService} from 'primeng/dynamicdialog';
 import {ToastService} from '../../../shared/services/toast/toast.service';
-import {ConfirmationService} from 'primeng/api';
 import {AppStateService} from '../../../state/app/app-state.service';
 import {NoteFormDialogData, NoteFormResult} from '../note-form-dialog/note-form-dialog.types';
 import {
@@ -41,7 +52,8 @@ interface SelectionGroupView {
     AccordionContent,
     I18nPluralPipe,
     Divider,
-    Tooltip
+    Tooltip,
+    Menu
   ],
   templateUrl: './project-notes.component.html',
   styleUrl: './project-notes.component.scss',
@@ -55,11 +67,16 @@ export class ProjectNotesComponent {
   public readonly notesChange = output<ProjectClipNotes>();
   protected readonly lookupNotesView = signal<SelectionGroupView[]>([]);
   protected readonly activeAccordionIndices = signal<number[]>([]);
+  protected readonly groupMenuItems = signal<MenuItem[]>([]);
+  protected readonly noteMenuItems = signal<MenuItem[]>([]);
+  protected readonly groupMenus = viewChildren<Menu>('groupMenu');
+  protected readonly noteMenus = viewChildren<Menu>('noteMenu');
   private readonly dialogService = inject(DialogService);
   private readonly toastService = inject(ToastService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly appStateService = inject(AppStateService);
   private currentNotes: ProjectClipNotes | undefined;
+  private lastProcessedClipId: string | null = null;
 
   constructor() {
     effect(() => {
@@ -80,6 +97,13 @@ export class ProjectNotesComponent {
       untracked(() => {
         this.currentNotes = cloneDeep(notes);
         this.buildNotesView(notes);
+
+        // Only force expand after switching to a different clip
+        if (this.initialExpandAll() && this.lastProcessedClipId !== clipId) {
+          const view = this.lookupNotesView();
+          this.activeAccordionIndices.set(view.map((_, i) => i));
+          this.lastProcessedClipId = clipId;
+        }
       });
     });
   }
@@ -88,15 +112,218 @@ export class ProjectNotesComponent {
     this.openNoteDialog('create', '', '', true);
   }
 
-  onAddNoteToGroup(term: string): void {
+  formatNoteText(text: string): string {
+    return escape(text).replace(/\n/g, '<br>');
+  }
+
+  prepareGroupMenu(event: MouseEvent, menu: Menu, group: SelectionGroupView, index: number): void {
+    this.noteMenus().forEach(m => m.hide());
+
+    const items: MenuItem[] = [];
+
+    items.push({
+      label: 'Add another note',
+      icon: 'fa-solid fa-plus',
+      command: () => this.onAddNoteToGroup(group.selection)
+    });
+
+    items.push({
+      label: 'Edit term',
+      icon: 'fa-solid fa-pencil',
+      command: () => this.onEditGroupTerm(group.selection)
+    });
+
+    const canMoveUp = index > 0;
+    const canMoveDown = index < this.lookupNotesView().length - 1;
+
+    if (canMoveUp || canMoveDown) {
+      items.push({separator: true});
+    }
+
+    if (canMoveUp) {
+      items.push({
+        label: 'Move to Top',
+        icon: 'fa-solid fa-arrow-right-to-bracket fa-rotate-270',
+        command: () => this.onMoveGroupEdge(index, 'top')
+      });
+      items.push({label: 'Move Up', icon: 'fa-solid fa-arrow-up', command: () => this.onMoveGroup(index, -1)});
+    }
+
+    if (canMoveDown) {
+      items.push({label: 'Move Down', icon: 'fa-solid fa-arrow-down', command: () => this.onMoveGroup(index, 1)});
+      items.push({
+        label: 'Move to Bottom',
+        icon: 'fa-solid fa-arrow-right-to-bracket fa-rotate-90',
+        command: () => this.onMoveGroupEdge(index, 'bottom')
+      });
+    }
+
+    items.push({separator: true});
+
+    items.push({
+      label: 'Delete group',
+      icon: 'fa-solid fa-trash',
+      styleClass: 'text-red-500',
+      command: () => this.onDeleteGroup(group.selection)
+    });
+
+    this.groupMenuItems.set(items);
+    menu.toggle(event);
+  }
+
+  prepareNoteMenu(event: MouseEvent, menu: Menu, group: SelectionGroupView, note: NoteViewItem, groupIndex: number, noteIndex: number): void {
+    this.groupMenus().forEach(m => m.hide());
+
+    const items: MenuItem[] = [];
+
+    items.push({
+      label: 'Edit note',
+      icon: 'fa-solid fa-pencil',
+      command: () => this.onEditNote(group.selection, note)
+    });
+
+    const canMoveUp = noteIndex > 0;
+    const canMoveDown = noteIndex < group.notes.length - 1;
+
+    if (canMoveUp || canMoveDown) {
+      items.push({separator: true});
+    }
+
+    if (canMoveUp) {
+      items.push({
+        label: 'Move to Top',
+        icon: 'fa-solid fa-arrow-right-to-bracket fa-rotate-270',
+        command: () => this.onMoveNoteEdge(groupIndex, noteIndex, 'top')
+      });
+      items.push({
+        label: 'Move Up',
+        icon: 'fa-solid fa-arrow-up',
+        command: () => this.onMoveNote(groupIndex, noteIndex, -1)
+      });
+    }
+
+    if (canMoveDown) {
+      items.push({
+        label: 'Move Down',
+        icon: 'fa-solid fa-arrow-down',
+        command: () => this.onMoveNote(groupIndex, noteIndex, 1)
+      });
+      items.push({
+        label: 'Move to Bottom',
+        icon: 'fa-solid fa-arrow-right-to-bracket fa-rotate-90',
+        command: () => this.onMoveNoteEdge(groupIndex, noteIndex, 'bottom')
+      });
+    }
+
+    items.push({separator: true});
+
+    items.push({
+      label: 'Delete note',
+      icon: 'fa-solid fa-trash',
+      styleClass: 'text-red-500',
+      command: () => this.onDeleteNote(group.selection, note.originalIndex)
+    });
+
+    this.noteMenuItems.set(items);
+    menu.toggle(event);
+  }
+
+  private onAddNoteToGroup(term: string): void {
     this.openNoteDialog('create', term, '', false);
   }
 
-  onEditNote(term: string, note: NoteViewItem): void {
+  private onEditGroupTerm(oldTerm: string): void {
+    this.openNoteDialog('rename-term', oldTerm, '', true);
+  }
+
+  private onEditNote(term: string, note: NoteViewItem): void {
     this.openNoteDialog('edit', term, note.text, true, note.originalIndex);
   }
 
-  onDeleteNote(selection: string, noteIndex: number): void {
+  private syncAccordionIndices(oldView: SelectionGroupView[], newView: SelectionGroupView[]): void {
+    const openSelections = this.activeAccordionIndices().map(i => oldView[i].selection);
+    const newIndices = openSelections.map(sel => newView.findIndex(g => g.selection === sel)).filter(i => i !== -1);
+    this.activeAccordionIndices.set(newIndices);
+  }
+
+  private onMoveGroup(index: number, direction: -1 | 1): void {
+    const oldView = this.lookupNotesView();
+    this.lookupNotesView.update(view => {
+      const newView = cloneDeep(view);
+      const temp = newView[index];
+      newView[index] = newView[index + direction];
+      newView[index + direction] = temp;
+      return newView;
+    });
+
+    this.syncAccordionIndices(oldView, this.lookupNotesView());
+    this.saveNotes();
+  }
+
+  private onMoveGroupEdge(index: number, edge: 'top' | 'bottom'): void {
+    const oldView = this.lookupNotesView();
+    this.lookupNotesView.update(view => {
+      const newView = cloneDeep(view);
+      const [item] = newView.splice(index, 1);
+
+      if (edge === 'top') {
+        newView.unshift(item);
+      } else {
+        newView.push(item);
+      }
+
+      return newView;
+    });
+
+    this.syncAccordionIndices(oldView, this.lookupNotesView());
+    this.saveNotes();
+  }
+
+  private onMoveNote(groupIndex: number, noteIndex: number, direction: -1 | 1): void {
+    this.lookupNotesView.update(view => {
+      const newView = cloneDeep(view);
+      const notes = newView[groupIndex].notes;
+      const temp = notes[noteIndex];
+      notes[noteIndex] = notes[noteIndex + direction];
+      notes[noteIndex + direction] = temp;
+      notes.forEach((n, i) => n.originalIndex = i); // Keep index synced
+      return newView;
+    });
+    this.saveNotes();
+  }
+
+  private onMoveNoteEdge(groupIndex: number, noteIndex: number, edge: 'top' | 'bottom'): void {
+    this.lookupNotesView.update(view => {
+      const newView = cloneDeep(view);
+      const notes = newView[groupIndex].notes;
+      const [item] = notes.splice(noteIndex, 1);
+
+      if (edge === 'top') {
+        notes.unshift(item);
+      } else {
+        notes.push(item);
+      }
+
+      notes.forEach((n, i) => n.originalIndex = i); // Keep index synced
+      return newView;
+    });
+    this.saveNotes();
+  }
+
+  private onDeleteGroup(term: string): void {
+    this.confirmationService.confirm({
+      ...DEFAULT_CONFIRMATION,
+      header: 'Confirm deletion',
+      message: 'Are you sure you want to delete all notes in this group?',
+      accept: () => {
+        this.lookupNotesView.update(view => view.filter(g => g.selection !== term));
+        this.saveNotes();
+        this.toastService.success('Group deleted');
+      }
+    });
+  }
+
+  private onDeleteNote(selection: string, noteIndex: number): void {
     this.confirmationService.confirm({
       ...DEFAULT_CONFIRMATION,
       header: 'Confirm deletion',
@@ -105,10 +332,9 @@ export class ProjectNotesComponent {
         this.lookupNotesView.update(currentView => {
           return currentView.map(group => {
             if (group.selection === selection) {
-              return {
-                ...group,
-                notes: group.notes.filter(note => note.originalIndex !== noteIndex)
-              };
+              const filtered = group.notes.filter(note => note.originalIndex !== noteIndex);
+              filtered.forEach((n, i) => n.originalIndex = i); // Keep index synced
+              return {...group, notes: filtered};
             }
             return group;
           }).filter(group => group.notes.length > 0);
@@ -117,10 +343,6 @@ export class ProjectNotesComponent {
         this.toastService.success('Note removed');
       }
     });
-  }
-
-  formatNoteText(text: string): string {
-    return escape(text).replace(/\n/g, '<br>');
   }
 
   private buildNotesView(notes: ProjectClipNotes | undefined): void {
@@ -146,37 +368,44 @@ export class ProjectNotesComponent {
     if (notes.manualNote) {
       const generalGroup = view.find(g => g.selection === '');
       if (generalGroup) {
-        // If "General notes" already exists, add manual note to it at the end
-        generalGroup.notes.push({text: notes.manualNote, originalIndex: 9999});
+        generalGroup.notes.push({text: notes.manualNote, originalIndex: generalGroup.notes.length});
       } else {
-        view.push({
+        view.unshift({
           selection: '',
           notes: [{text: notes.manualNote, originalIndex: 0}]
         });
       }
     }
 
-    this.lookupNotesView.set(this.sortGroups(view));
-
-    if (this.initialExpandAll()) {
-      this.activeAccordionIndices.set(view.map((_, i) => i));
-    }
+    this.lookupNotesView.set(view);
   }
 
-  private sortGroups(groups: SelectionGroupView[]): SelectionGroupView[] {
-    return groups.sort((a, b) => {
-      if (!a.selection) {
-        return -1;
+  private handleRenameTerm(oldTerm: string, newTerm: string): void {
+    if (oldTerm === newTerm) {
+      return;
+    }
+
+    this.lookupNotesView.update(currentView => {
+      const newView = cloneDeep(currentView);
+      const oldGroupIndex = newView.findIndex(g => g.selection === oldTerm);
+      const targetGroupIndex = newView.findIndex(g => g.selection === newTerm);
+
+      if (targetGroupIndex > -1 && targetGroupIndex !== oldGroupIndex) {
+        newView[targetGroupIndex].notes.push(...newView[oldGroupIndex].notes);
+        newView.splice(oldGroupIndex, 1);
+        newView[targetGroupIndex].notes.forEach((n, i) => n.originalIndex = i);
+      } else if (oldGroupIndex > -1) {
+        newView[oldGroupIndex].selection = newTerm;
       }
-      if (!b.selection) {
-        return 1;
-      }
-      return a.selection.localeCompare(b.selection);
+      return newView;
     });
+
+    this.saveNotes();
+    this.toastService.success('Term renamed');
   }
 
   private openNoteDialog(
-    mode: 'create' | 'edit',
+    mode: 'create' | 'edit' | 'rename-term',
     term: string,
     noteText: string,
     isTermEditable: boolean,
@@ -191,8 +420,14 @@ export class ProjectNotesComponent {
       isTermEditable
     };
 
+    const headerMap = {
+      'create': 'Add note',
+      'edit': 'Edit note',
+      'rename-term': 'Edit term'
+    };
+
     const dialogRef = this.dialogService.open(NoteFormDialogComponent, {
-      header: mode === 'create' ? 'Add note' : 'Edit note',
+      header: headerMap[mode],
       modal: true,
       width: 'clamp(20rem, 95vw, 35rem)',
       closeOnEscape: false,
@@ -206,16 +441,35 @@ export class ProjectNotesComponent {
         return;
       }
 
+      if (mode === 'rename-term') {
+        this.handleRenameTerm(term, result.term);
+        return;
+      }
+
       this.lookupNotesView.update(currentView => {
         const newView = cloneDeep(currentView);
 
-        // Remove old note if editing
+        // If editing and the term hasn't changed, just update the text in-place
+        if (mode === 'edit' && term === result.term && originalIndex !== undefined) {
+          const targetGroup = newView.find(g => g.selection === term);
+          if (targetGroup) {
+            const noteToEdit = targetGroup.notes.find(n => n.originalIndex === originalIndex);
+            if (noteToEdit) {
+              noteToEdit.text = result.noteText!;
+            }
+          }
+          return newView;
+        }
+
+        // Applies only if creating a new note or moving an existing note to a DIFFERENT term
         if (mode === 'edit' && originalIndex !== undefined) {
           const oldGroupIndex = newView.findIndex(g => g.selection === term);
           if (oldGroupIndex > -1) {
             newView[oldGroupIndex].notes = newView[oldGroupIndex].notes.filter(n => n.originalIndex !== originalIndex);
             if (newView[oldGroupIndex].notes.length === 0) {
               newView.splice(oldGroupIndex, 1);
+            } else {
+              newView[oldGroupIndex].notes.forEach((n, i) => n.originalIndex = i);
             }
           }
         }
@@ -227,18 +481,13 @@ export class ProjectNotesComponent {
           newView.push(targetGroup);
         }
 
-        // Use a temporary index for the UI; save logic will re-index everything
-        const newNoteIndex = targetGroup.notes.length > 0
-          ? Math.max(...targetGroup.notes.map(n => n.originalIndex)) + 1
-          : 0;
+        targetGroup.notes.push({text: result.noteText!, originalIndex: targetGroup.notes.length});
 
-        targetGroup.notes.push({text: result.noteText, originalIndex: newNoteIndex});
-
-        return this.sortGroups(newView);
+        return newView;
       });
 
       this.saveNotes();
-      this.toastService.success(mode === 'create' ? 'Note added.' : 'Note updated.');
+      this.toastService.success(mode === 'create' ? 'Note added' : 'Note updated');
     });
   }
 

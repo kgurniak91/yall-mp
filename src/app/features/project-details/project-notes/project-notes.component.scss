@@ -25,3 +25,19 @@
     }
   }
 }
+
+.header-menu-overlay {
+  position: absolute;
+  right: 3rem;
+  top: 0.5rem;
+  z-index: 10;
+
+  p-button {
+    pointer-events: auto;
+  }
+}
+
+.accordion-wrapper {
+  position: relative;
+  margin-bottom: 1rem !important;
+}
