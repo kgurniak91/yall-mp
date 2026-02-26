@@ -228,6 +228,7 @@ p-splitter * {
   outline: none !important;
 }
 
+p-contextmenu .p-contextmenu-item.p-focus .p-contextmenu-item-content p-badge,
 p-contextmenu .p-contextmenu-item .p-contextmenu-item-content:hover p-badge {
   background: var(--p-badge-primary-color) !important;
   color: var(--p-badge-primary-background) !important;
