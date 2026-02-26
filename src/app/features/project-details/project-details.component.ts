@@ -50,7 +50,7 @@ import {ContextMenu} from 'primeng/contextmenu';
 import {GlobalSettingsStateService} from '../../state/global-settings/global-settings-state.service';
 import {MenuItem} from 'primeng/api';
 import {DialogOrchestrationService} from '../../core/services/dialog-orchestration/dialog-orchestration.service';
-import {cloneDeep} from 'lodash-es';
+import {cloneDeep, isEqual} from 'lodash-es';
 import {GlobalSettingsTab} from '../global-settings-dialog/global-settings-dialog.types';
 import {ProjectActionService} from './services/project-action/project-action.service';
 import {
@@ -58,7 +58,7 @@ import {
 } from '../../core/services/header-current-project-action-bridge/header-current-project-action-bridge.service';
 import {DatePipe} from '@angular/common';
 import {AssSubtitlesUtils} from '../../../../shared/utils/ass-subtitles.utils';
-import {Project} from '../../model/project.types';
+import {Project, ProjectClipNotes} from '../../model/project.types';
 import {OverlayBadgeModule} from 'primeng/overlaybadge';
 import {MediaTrack} from '../../../../shared/types/media.type';
 import {YomitanService} from '../../core/services/yomitan/yomitan.service';
@@ -339,7 +339,8 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   private cleanupMpvReadyListener: (() => void) | null = null;
   private cleanupAddNoteListener: (() => void) | null = null;
   private clickTimeout: any = null;
-  private lastSubtitledClipId: string | null = null;
+  private lastSubtitledSourceIds: string[] = [];
+  private unexportedClipWithNotesWarnTimeout: any = null;
 
   constructor() {
     inject(ProjectKeyboardShortcutsService); // start listening
@@ -438,27 +439,52 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       }
 
       untracked(() => {
-        const currentSourceId = currentClip.hasSubtitle ? currentClip.sourceSubtitles[0]?.id : null;
+        if (this.unexportedClipWithNotesWarnTimeout) {
+          clearTimeout(this.unexportedClipWithNotesWarnTimeout);
+          this.unexportedClipWithNotesWarnTimeout = null;
+        }
 
-        if (this.lastSubtitledClipId && this.lastSubtitledClipId !== currentSourceId && warnEnabled) {
-          const notes = project.notes?.[this.lastSubtitledClipId];
+        const currentSourceIds = currentClip.hasSubtitle ? currentClip.sourceSubtitles.map(s => s.id) : [];
+        const hasLeftLastClip = (this.lastSubtitledSourceIds.length > 0) && !currentSourceIds.some(id => this.lastSubtitledSourceIds.includes(id));
+
+        if (hasLeftLastClip && warnEnabled) {
+          const representativeId = this.lastSubtitledSourceIds[0];
+          const lastNotes = project.notes?.[representativeId];
 
           let hasNotes = false;
-          if (notes) {
-            const hasManualNote = Boolean(notes.manualNote && notes.manualNote.trim().length > 0);
-            const hasLookupNotes = Boolean(notes.lookupNotes && Object.values(notes.lookupNotes).some(list => list.length > 0));
+          if (lastNotes) {
+            const hasManualNote = Boolean(lastNotes.manualNote && lastNotes.manualNote.trim().length > 0);
+            const hasLookupNotes = Boolean(lastNotes.lookupNotes && Object.values(lastNotes.lookupNotes).some(list => list.length > 0));
             hasNotes = hasManualNote || hasLookupNotes;
           }
 
-          const isExported = project.ankiExportHistory?.includes(this.lastSubtitledClipId);
+          const isExported = project.ankiExportHistory?.includes(representativeId);
 
           if (hasNotes && !isExported) {
-            this.toastService.warn('You moved past a clip with notes without exporting it to Anki');
+            // Check if the NEW clip has the exact same notes (happens when splitting a clip)
+            const currentNotes = currentSourceIds.length > 0 ? project.notes?.[currentSourceIds[0]] : undefined;
+
+            // Normalize notes to treat `""` and `undefined` as identical for comparison
+            const normalize = (n: ProjectClipNotes | undefined) => ({
+              lookupNotes: n?.lookupNotes && Object.keys(n.lookupNotes).length > 0 ? n.lookupNotes : undefined,
+              manualNote: n?.manualNote?.trim() || undefined,
+              hint: n?.hint?.trim() || undefined
+            });
+
+            const notesAreDifferent = !isEqual(normalize(lastNotes), normalize(currentNotes));
+
+            if (notesAreDifferent) {
+              this.unexportedClipWithNotesWarnTimeout = setTimeout(() => {
+                this.toastService.warn('You moved past a clip with notes without exporting it to Anki');
+              }, 250);
+            }
           }
         }
 
         if (currentClip.hasSubtitle) {
-          this.lastSubtitledClipId = currentSourceId;
+          this.lastSubtitledSourceIds = currentSourceIds;
+        } else {
+          this.lastSubtitledSourceIds = [];
         }
       });
     });
@@ -575,6 +601,9 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.unexportedClipWithNotesWarnTimeout) {
+      clearTimeout(this.unexportedClipWithNotesWarnTimeout);
+    }
     this.activeDialogRef?.close();
     if (this.cleanupMpvReadyListener) {
       this.cleanupMpvReadyListener();
