@@ -139,21 +139,22 @@ export function mergeIdenticalConsecutiveSubtitles(subtitles: SubtitleData[]): S
 
   for (let i = 1; i < subtitles.length; i++) {
     const next = subtitles[i];
+    const isAdjacent = Math.abs(next.startTime - current.endTime) < 0.01;
+    const isIdentical = arePartsEqual(current, next);
 
-    if (Math.abs(next.startTime - current.endTime) < 0.01 && arePartsEqual(current, next) && current.type === 'ass' && next.type === 'ass') {
-      // It's a consecutive, identical ASS subtitle. Merge it.
+    if (isAdjacent && isIdentical && current.type === 'ass' && next.type === 'ass') {
+      // Intentionally merge adjacent identical lines (e.g., frame animations)
       current.endTime = next.endTime;
-
-      // Preserve the original, un-merged dialogues for accurate file editing later.
       const originalCurrent = {...current, sourceDialogues: undefined}; // Avoid deep nesting
       const originalNext = {...next, sourceDialogues: undefined};
-      current.sourceDialogues = [
-        ...(current.sourceDialogues || [originalCurrent]),
-        originalNext
-      ];
-
+      current.sourceDialogues = [...(current.sourceDialogues || [originalCurrent]), originalNext];
     } else {
-      // If they are different, push the completed current subtitle and start a new one.
+      // If lines are identical but NOT adjacent, assign splitGroupIds to prevent the UI from merging them visually on the timeline if the gap is closed later
+      if (isIdentical) {
+        current.splitGroupId = current.splitGroupId || uuidv4();
+        next.splitGroupId = next.splitGroupId || uuidv4();
+      }
+
       merged.push(current);
       current = {...next};
     }
@@ -161,7 +162,6 @@ export function mergeIdenticalConsecutiveSubtitles(subtitles: SubtitleData[]): S
 
   // Push the very last subtitle after the loop finishes.
   merged.push(current);
-
   return merged;
 }
 

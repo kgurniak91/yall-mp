@@ -1640,9 +1640,16 @@ function preprocessSubtitles(subtitles: SubtitleData[]): SubtitleData[] {
   sortedSubtitles.forEach((sub: SubtitleData, i: number) => {
     if (i > 0) {
       const previousSubtitle = sortedSubtitles[i - 1];
+
       // If there's an overlap, truncate the previous subtitle
       if (sub.startTime < previousSubtitle.endTime) {
         previousSubtitle.endTime = sub.startTime;
+      }
+
+      // Prevent identical consecutive subtitles from merging visually on the timeline if the gap is closed later
+      if (sub.type === 'srt' && previousSubtitle.type === 'srt' && sub.text === previousSubtitle.text) {
+        previousSubtitle.splitGroupId = previousSubtitle.splitGroupId || uuidv4();
+        sub.splitGroupId = sub.splitGroupId || uuidv4();
       }
     }
   });
