@@ -14,7 +14,7 @@ import {
   scheduleRestoreFocus
 } from '../../../shared/utils/disable-focus-in-parent-dialog/disable-focus-in-parent-dialog';
 import {Tag} from 'primeng/tag';
-import {DEFAULT_CONFIRMATION} from '../../../shared/types/confirmation.types';
+import {CatalogDeleteDialogComponent} from './catalog-delete-dialog/catalog-delete-dialog.component';
 
 @Component({
   selector: 'app-catalogs-tree',
@@ -142,7 +142,7 @@ export class CatalogsTreeComponent {
           label: 'Delete',
           icon: 'fa-solid fa-trash',
           styleClass: 'text-red-500',
-          command: () => this.deleteCatalog(catalogId, catalogName)
+          command: () => this.onDeleteCatalogRequest(catalogId, catalogName)
         }
       );
     }
@@ -194,21 +194,28 @@ export class CatalogsTreeComponent {
     });
   }
 
-  private deleteCatalog(id: string, name: string | undefined) {
-    this.confirmationService.confirm({
-      ...DEFAULT_CONFIRMATION,
+  private onDeleteCatalogRequest(id: string, name: string | undefined) {
+    const projectCount = this.appStateService.projects().filter(p => p.catalogId === id).length;
+
+    const hasSubCatalogs = this.appStateService.catalogs().some(c => c.parentId === id);
+    if (hasSubCatalogs) {
+      this.toastService.error('Cannot delete catalog which contains sub-catalogs. Please remove or move them first.');
+      return;
+    }
+
+    const ref = this.dialogService.open(CatalogDeleteDialogComponent, {
       header: 'Delete Catalog',
-      message: `Delete catalog "<b>${name}</b>"?<br>It must be empty to be deleted.`,
-      accept: () => {
-        const projects = this.appStateService.projects().filter(p => p.catalogId === id);
-        const subCatalogs = this.appStateService.catalogs().filter(c => c.parentId === id);
+      width: 'clamp(20rem, 95vw, 35rem)',
+      data: {catalogName: name, projectCount}
+    });
 
-        if (projects.length > 0 || subCatalogs.length > 0) {
-          this.toastService.error('Cannot delete catalog. It is not empty.');
-          return;
+    ref.onClose.subscribe((confirmed: boolean) => {
+      if (confirmed) {
+        if (projectCount > 0) {
+          this.appStateService.deleteCatalogAndContents(id);
+        } else {
+          this.appStateService.deleteCatalog(id);
         }
-
-        this.appStateService.deleteCatalog(id);
         this.toastService.success('Catalog deleted');
       }
     });

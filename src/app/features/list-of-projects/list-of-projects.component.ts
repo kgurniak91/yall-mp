@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, computed, inject, OnDestroy} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, inject, OnDestroy, signal} from '@angular/core';
 import {AppStateService} from '../../state/app/app-state.service';
 import {Router, RouterLink} from '@angular/router';
 import {MinimalProject} from '../../model/project.types';
@@ -46,6 +46,8 @@ export class ListOfProjectsComponent implements OnDestroy {
     const activeId = this.activeCatalogId();
     return this.appStateService.projects().filter(p => p.catalogId === activeId);
   });
+  protected readonly selectionMode = signal(false);
+  protected readonly selectedProjectIds = signal<Set<string>>(new Set());
   private readonly confirmationService = inject(ConfirmationService);
   private readonly dialogService = inject(DialogService);
   private readonly toastService = inject(ToastService);
@@ -63,6 +65,36 @@ export class ListOfProjectsComponent implements OnDestroy {
   async navigateToProject(project: MinimalProject): Promise<void> {
     await this.appStateService.setCurrentProject(project.id);
     this.router.navigate(['/project', project.id]);
+  }
+
+  toggleSelectionMode() {
+    this.selectionMode.update(v => !v);
+    this.selectedProjectIds.set(new Set());
+  }
+
+  onToggleProjectSelection(id: string) {
+    this.selectedProjectIds.update(set => {
+      const newSet = new Set(set);
+      if (newSet.has(id)) newSet.delete(id);
+      else newSet.add(id);
+      return newSet;
+    });
+  }
+
+  deleteSelected() {
+    const ids = Array.from(this.selectedProjectIds());
+    this.confirmationService.confirm({
+      ...DEFAULT_CONFIRMATION,
+      header: 'Confirm Bulk Deletion',
+      message: `Are you sure you want to delete <b>${ids.length}</b> selected projects?`,
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.appStateService.deleteProjects(ids);
+        this.selectedProjectIds.set(new Set());
+        this.selectionMode.set(false);
+        this.toastService.success(`${ids.length} projects deleted`);
+      }
+    });
   }
 
   editProject(project: MinimalProject): void {

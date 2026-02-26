@@ -1,41 +1,53 @@
-<div class="project-card" (click)="onCardClick($event)">
-  <div class="project-header">
-    <div class="project-title">
+<div class="project-card"
+     [class.selection-active]="selectionMode()"
+     [class.is-selected]="isSelected()"
+     (click)="onCardClick($event)">
+
+  @if (selectionMode()) {
+    <div class="selection-checkbox">
+      <p-checkbox [binary]="true" [ngModel]="isSelected()" (click)="$event.stopPropagation()" class="pointer-events-none"></p-checkbox>
+    </div>
+  }
+
+  <div class="project-card-content">
+    <div class="project-header">
+      <div class="project-title">
+        <div>
+          <i class="fa-solid fa-file-video"></i>
+          <span>{{ project().mediaFileName }}</span>
+        </div>
+        <div>
+          <i class="fa-solid fa-file-lines"></i>
+          <span>{{ project().subtitleFileName }}</span>
+        </div>
+      </div>
+
+      <div class="project-actions">
+        <p-button icon="fa-solid fa-ellipsis-v"
+                  severity="secondary"
+                  (onClick)="menu.toggle($event)"></p-button>
+
+        <p-menu #menu
+                [model]="menuItems()"
+                [popup]="true"
+                appendTo="body"></p-menu>
+      </div>
+    </div>
+
+    <div class="project-meta">
       <div>
-        <i class="fa-solid fa-file-video"></i>
-        <span>{{ project().mediaFileName }}</span>
+        <i class="fa-solid fa-calendar"></i>
+        <span><b>Created:</b> {{ createdDate() | date }}</span>
       </div>
       <div>
-        <i class="fa-solid fa-file-lines"></i>
-        <span>{{ project().subtitleFileName }}</span>
+        <i class="fa-solid fa-clock"></i>
+        <span><b>Last Opened:</b> {{ lastOpenedDate() | date }}</span>
       </div>
     </div>
 
-    <div class="project-actions">
-      <p-button icon="fa-solid fa-ellipsis-v"
-                severity="secondary"
-                (onClick)="menu.toggle($event)"></p-button>
-
-      <p-menu #menu
-              [model]="menuItems()"
-              [popup]="true"
-              appendTo="body"></p-menu>
+    <div class="project-progress">
+      <p-progress-bar [value]="completionPercentage()" [showValue]="false"/>
+      <span class="custom-progress-label">{{ completionPercentage() | number:'1.2-2' }}%</span>
     </div>
-  </div>
-
-  <div class="project-meta">
-    <div>
-      <i class="fa-solid fa-calendar"></i>
-      <span><b>Created:</b> {{ createdDate() | date }}</span>
-    </div>
-    <div>
-      <i class="fa-solid fa-clock"></i>
-      <span><b>Last Opened:</b> {{ lastOpenedDate() | date }}</span>
-    </div>
-  </div>
-
-  <div class="project-progress">
-    <p-progress-bar [value]="completionPercentage()" [showValue]="false"/>
-    <span class="custom-progress-label">{{ completionPercentage() | number:'1.2-2' }}%</span>
   </div>
 </div>

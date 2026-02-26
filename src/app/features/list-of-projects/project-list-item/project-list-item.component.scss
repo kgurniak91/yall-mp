@@ -1,7 +1,8 @@
 .project-card {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  flex-direction: row;
+  align-items: center;
+  gap: 1rem;
   padding: 1rem;
   border: 1px solid var(--app-border);
   border-radius: 0.5rem;
@@ -12,6 +13,13 @@
   &:hover {
     background-color: var(--app-surface-hover);
   }
+}
+
+.project-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
 }
 
 .project-header {

@@ -308,6 +308,41 @@ export class AppStateService {
     });
   }
 
+  public deleteProjects(projectIds: string[]): void {
+    projectIds.forEach(id => {
+      window.electronAPI.deleteProjectFonts(id);
+      this.storageService.deleteProjectFile(id);
+    });
+
+    this._appData.update(data => {
+      const updatedProjects = data.projects.filter(p => !projectIds.includes(p.id));
+      let newCurrentProject = data.currentProject;
+
+      if (data.currentProject && projectIds.includes(data.currentProject.id)) {
+        newCurrentProject = null;
+      }
+
+      return {
+        ...data,
+        projects: updatedProjects,
+        currentProject: newCurrentProject
+      };
+    });
+  }
+
+  public deleteCatalogAndContents(catalogId: string): void {
+    // Find all projects in this catalog
+    const projectIds = this._appData().projects
+      .filter(p => p.catalogId === catalogId)
+      .map(p => p.id);
+
+    // Delete projects first
+    this.deleteProjects(projectIds);
+
+    // Delete the catalog
+    this.deleteCatalog(catalogId);
+  }
+
   public updateGlobalSettings(updates: Partial<GlobalSettings>): void {
     this._appData.update(currentData => ({
       ...currentData,

@@ -1,0 +1,33 @@
+<div class="flex flex-column gap-4">
+  <p class="m-0">
+    You are about to delete the catalog "<b>{{ data.catalogName }}</b>".
+  </p>
+
+  @if (data.projectCount > 0) {
+    <div class="p-3 border-round bg-red-50 text-red-700 border-1 border-red-200">
+      <div class="flex align-items-center gap-2 mb-2 font-bold">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>Warning</span>
+      </div>
+      This catalog contains <b>{{ data.projectCount }}</b> projects.
+    </div>
+
+    <div class="flex align-items-start gap-2 cursor-pointer" (click)="confirmed.set(!confirmed())">
+      <p-checkbox [binary]="true" [ngModel]="confirmed()" (click)="$event.stopPropagation()"></p-checkbox>
+      <label class="cursor-pointer select-none">
+        I understand that deleting this catalog will also <b>permanently delete all projects</b> inside it.
+      </label>
+    </div>
+  } @else {
+    <p class="text-gray-600 italic">This catalog is currently empty.</p>
+  }
+
+  <div class="flex justify-content-end gap-2 mt-2">
+    <p-button label="Cancel" severity="secondary" icon="fa-solid fa-xmark" (onClick)="ref.close()"></p-button>
+    <p-button label="Delete Catalog"
+              severity="danger"
+              icon="fa-solid fa-trash"
+              [disabled]="data.projectCount > 0 && !confirmed()"
+              (onClick)="ref.close(true)"></p-button>
+  </div>
+</div>

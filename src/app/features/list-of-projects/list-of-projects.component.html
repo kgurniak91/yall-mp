@@ -16,10 +16,35 @@
 
       <ng-template pTemplate>
         <div class="h-full w-full overflow-y-auto p-3">
-          <app-catalogs-breadcrumb [activeCatalogId]="activeCatalogId()"
-                                   [catalogs]="appStateService.catalogs()"
-                                   (selectCatalog)="onBreadcrumbSelect($event)"
-                                   class="block mb-3"/>
+          <div class="mb-3 flex align-items-center justify-content-between">
+            <app-catalogs-breadcrumb [activeCatalogId]="activeCatalogId()"
+                                     [catalogs]="appStateService.catalogs()"
+                                     (selectCatalog)="onBreadcrumbSelect($event)"/>
+
+            <div class="flex gap-2">
+              @if (filteredProjects().length > 1) {
+                @if (selectionMode()) {
+                  <p-button label="Delete Selected ({{selectedProjectIds().size}})"
+                            severity="danger"
+                            icon="fa-solid fa-trash"
+                            size="small"
+                            [disabled]="selectedProjectIds().size === 0"
+                            (onClick)="deleteSelected()"/>
+                  <p-button label="Cancel Selection"
+                            severity="secondary"
+                            size="small"
+                            icon="fa-solid fa-xmark"
+                            (onClick)="toggleSelectionMode()"/>
+                } @else {
+                  <p-button label="Select Multiple Projects"
+                            icon="fa-solid fa-list-check"
+                            severity="secondary"
+                            size="small"
+                            (onClick)="toggleSelectionMode()"/>
+                }
+              }
+            </div>
+          </div>
 
           <p-dataView [value]="filteredProjects()">
             <ng-template #list let-projects>
@@ -27,6 +52,9 @@
                 @for (project of projects; track project.id) {
                   <div [class.mb-3]="!$last">
                     <app-project-list-item [project]="project"
+                                           [selectionMode]="selectionMode()"
+                                           [isSelected]="selectedProjectIds().has(project.id)"
+                                           (toggleSelection)="onToggleProjectSelection(project.id)"
                                            (selectProject)="navigateToProject(project)"
                                            (editProject)="editProject(project)"
                                            (removeProject)="deleteProject(project)"

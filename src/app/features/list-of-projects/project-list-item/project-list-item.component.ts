@@ -5,6 +5,8 @@ import {DatePipe, DecimalPipe} from '@angular/common';
 import {ProgressBar} from 'primeng/progressbar';
 import {MenuItem} from 'primeng/api';
 import {Menu} from 'primeng/menu';
+import {Checkbox} from 'primeng/checkbox';
+import {FormsModule} from '@angular/forms';
 
 @Component({
   selector: 'app-project-list-item',
@@ -13,7 +15,9 @@ import {Menu} from 'primeng/menu';
     DatePipe,
     ProgressBar,
     DecimalPipe,
-    Menu
+    Menu,
+    Checkbox,
+    FormsModule
   ],
   templateUrl: './project-list-item.component.html',
   styleUrl: './project-list-item.component.scss',
@@ -21,10 +25,13 @@ import {Menu} from 'primeng/menu';
 })
 export class ProjectListItemComponent implements OnInit {
   public readonly project = input.required<MinimalProject>();
+  public readonly selectionMode = input<boolean>(false);
+  public readonly isSelected = input<boolean>(false);
   public readonly selectProject = output<void>();
   public readonly editProject = output<void>();
   public readonly removeProject = output<void>();
   public readonly moveProject = output<void>();
+  public readonly toggleSelection = output<void>();
   protected readonly menuItems = signal<MenuItem[]>([]);
 
   protected readonly completionPercentage = computed(() => {
@@ -69,8 +76,13 @@ export class ProjectListItemComponent implements OnInit {
   }
 
   protected onCardClick(event: MouseEvent): void {
+    if (this.selectionMode()) {
+      this.toggleSelection.emit();
+      return;
+    }
+
     const target = event.target as HTMLElement;
-    if (target.closest('.project-actions') || target.closest('.p-menu')) {
+    if (target.closest('.project-actions') || target.closest('.p-menu') || target.closest('.selection-checkbox')) {
       return;
     }
     this.selectProject.emit();
