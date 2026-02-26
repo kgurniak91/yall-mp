@@ -1,0 +1,15 @@
+.select-wrapper {
+  p-select {
+    height: 2.25rem !important;
+  }
+
+  p-button ::ng-deep button {
+    height: 2.25rem !important;
+    width: 2.25rem !important;
+  }
+}
+
+.priority-list {
+  min-height: 50px;
+  background: var(--p-content-background);
+}

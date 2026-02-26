@@ -27,6 +27,22 @@
     </small>
   </p-fieldset>
 
+  <p-fieldset legend="Preferred Audio Languages" [toggleable]="false">
+    <app-language-priority-list [value]="globalSettingsStateService.preferredAudioLanguages()"
+                                (valueChange)="globalSettingsStateService.setPreferredAudioLanguages($event)"/>
+    <small class="block mt-2">
+      When a video contains multiple audio tracks, the app will try to auto-select the language based on this priority list.
+    </small>
+  </p-fieldset>
+
+  <p-fieldset legend="Preferred Subtitle Languages" [toggleable]="false">
+    <app-language-priority-list [value]="globalSettingsStateService.preferredSubtitleLanguages()"
+                                (valueChange)="globalSettingsStateService.setPreferredSubtitleLanguages($event)"/>
+    <small class="block mt-2">
+      When a video contains multiple subtitle tracks, the app will try to auto-select the language based on this priority list.
+    </small>
+  </p-fieldset>
+
   <p-fieldset legend="Keyboard Navigation" [toggleable]="false">
     <div class="flex flex-column gap-3">
       <!-- Option 1: Standard (Default) -->

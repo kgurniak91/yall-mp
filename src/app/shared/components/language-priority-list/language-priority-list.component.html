@@ -1,0 +1,41 @@
+<div class="flex flex-column gap-3">
+  <div class="flex align-items-center gap-2 select-wrapper">
+    <p-select [options]="availableOptions()"
+              [(ngModel)]="selectedToAdd"
+              optionLabel="label"
+              optionValue="value"
+              [filter]="true"
+              filterBy="label"
+              placeholder="Add language..."
+              appendTo="body"
+              class="flex-grow-1">
+    </p-select>
+    <p-button icon="fa-solid fa-plus" (onClick)="addLanguage()" [disabled]="!selectedToAdd()"></p-button>
+  </div>
+
+  <div class="priority-list border-1 surface-border border-round overflow-hidden">
+    @for (langCode of value(); track langCode; let i = $index) {
+      <div class="flex align-items-center justify-content-between p-2 surface-card surface-border"
+           [class.border-bottom-none]="$last"
+           [class.border-bottom-1]="!$last">
+        <div class="flex align-items-center gap-3">
+          <span class="font-bold text-primary w-1rem text-center">{{ i + 1 }}.</span>
+          <span>{{ getLanguageName(langCode) }}</span>
+        </div>
+
+        <div class="flex gap-1">
+          <p-button icon="fa-solid fa-arrow-up" [text]="true" severity="secondary" size="small"
+                    [disabled]="i === 0" (onClick)="move(i, -1)"></p-button>
+          <p-button icon="fa-solid fa-arrow-down" [text]="true" severity="secondary" size="small"
+                    [disabled]="i === value().length - 1" (onClick)="move(i, 1)"></p-button>
+          <p-button icon="fa-solid fa-trash" [text]="true" severity="danger" size="small"
+                    (onClick)="remove(langCode)"></p-button>
+        </div>
+      </div>
+    } @empty {
+      <div class="p-3 text-center text-gray-500 italic">
+        No preferences set
+      </div>
+    }
+  </div>
+</div>

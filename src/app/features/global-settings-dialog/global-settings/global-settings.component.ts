@@ -8,6 +8,9 @@ import {DEFAULT_GLOBAL_SETTINGS} from '../../../model/settings.types';
 import {DecimalPipe} from '@angular/common';
 import {InputSwitch} from 'primeng/inputswitch';
 import {RadioButton} from 'primeng/radiobutton';
+import {
+  LanguagePriorityListComponent
+} from '../../../shared/components/language-priority-list/language-priority-list.component';
 
 @Component({
   selector: 'app-global-settings',
@@ -18,7 +21,8 @@ import {RadioButton} from 'primeng/radiobutton';
     FormsModule,
     DecimalPipe,
     InputSwitch,
-    RadioButton
+    RadioButton,
+    LanguagePriorityListComponent
   ],
   templateUrl: './global-settings.component.html',
   styleUrl: './global-settings.component.scss',

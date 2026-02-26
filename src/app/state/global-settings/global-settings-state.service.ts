@@ -22,6 +22,8 @@ export class GlobalSettingsStateService {
   public readonly generateAudioPeaks = computed(() => this.appStateService.globalSettings().generateAudioPeaks);
   public readonly swapNavigationShortcuts = computed(() => this.appStateService.globalSettings().swapNavigationShortcuts);
   public readonly hardwareAcceleration = computed(() => this.appStateService.globalSettings().hardwareAcceleration);
+  public readonly preferredAudioLanguages = computed(() => this.appStateService.globalSettings().preferredAudioLanguages);
+  public readonly preferredSubtitleLanguages = computed(() => this.appStateService.globalSettings().preferredSubtitleLanguages);
   public readonly srtBackgroundColor = computed(() => `rgba(0, 0, 0, ${this.srtBackgroundOpacity()})`);
   public readonly settingsReloadTrigger = this._settingsReloadTrigger.asReadonly();
 
@@ -83,5 +85,13 @@ export class GlobalSettingsStateService {
 
   public setHardwareAcceleration(value: boolean): void {
     this.appStateService.updateGlobalSettings({hardwareAcceleration: value});
+  }
+
+  public setPreferredAudioLanguages(languages: string[]): void {
+    this.appStateService.updateGlobalSettings({preferredAudioLanguages: languages});
+  }
+
+  public setPreferredSubtitleLanguages(languages: string[]): void {
+    this.appStateService.updateGlobalSettings({preferredSubtitleLanguages: languages});
   }
 }

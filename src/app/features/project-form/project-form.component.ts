@@ -100,6 +100,10 @@ export class ProjectFormComponent implements OnInit {
       return false;
     }
 
+    if (this.audioTracks().length > 0 && this.selectedAudioTrackIndex() === null) {
+      return false;
+    }
+
     const subOption = this.selectedSubtitleOption();
 
     switch (subOption) {
@@ -236,10 +240,24 @@ export class ProjectFormComponent implements OnInit {
       this.videoWidth.set(metadata.videoWidth);
       this.videoHeight.set(metadata.videoHeight);
 
-      // Auto-select first audio track by default:
-      if (metadata.audioTracks.length > 0) {
-        this.selectedAudioTrackIndex.set(metadata.audioTracks[0].index);
+      const preferredAudio = this.globalSettingsStateService.preferredAudioLanguages();
+      let bestAudioIndex: number | null = null;
+
+      // Try to find match based on priority list
+      for (const code of preferredAudio) {
+        const match = metadata.audioTracks.find(t => t.languageCode === code);
+        if (match) {
+          bestAudioIndex = match.index;
+          break;
+        }
       }
+
+      // Fallback: If preference was not matched, default to the first track
+      if (bestAudioIndex === null && metadata.audioTracks.length > 0) {
+        bestAudioIndex = (metadata.audioTracks.length === 1) ? metadata.audioTracks[0].index : null;
+      }
+
+      this.selectedAudioTrackIndex.set(bestAudioIndex);
 
       if (companionPath) {
         this.selectedSubtitleOption.set('external');
@@ -247,13 +265,27 @@ export class ProjectFormComponent implements OnInit {
         this.existingSubtitleFileName.set(this.getBaseName(companionPath));
       } else {
         const supportedTracks = metadata.subtitleTracks.filter(t => t.isSupported);
+        const preferredSubs = this.globalSettingsStateService.preferredSubtitleLanguages();
+        let bestSubIndex: number | null = null;
 
-        if (supportedTracks.length === 1) {
+        // Try to find match based on priority list
+        for (const code of preferredSubs) {
+          const match = supportedTracks.find(t => t.languageCode === code);
+          if (match) {
+            bestSubIndex = match.index;
+            break;
+          }
+        }
+
+        if (bestSubIndex !== null) {
+          // Found a preferred embedded subtitle
           this.selectedSubtitleOption.set('embedded');
-          this.selectedEmbeddedSubtitleTrackIndex.set(supportedTracks[0].index);
+          this.selectedEmbeddedSubtitleTrackIndex.set(bestSubIndex);
         } else if (metadata.subtitleTracks.length > 0) {
           this.selectedSubtitleOption.set('embedded');
-          this.selectedEmbeddedSubtitleTrackIndex.set(null);
+          // Fallback: If only 1 supported track exists, select it.
+          // Otherwise if multiple tracks exist and none match preferences, leave it null so user must choose.
+          this.selectedEmbeddedSubtitleTrackIndex.set((supportedTracks.length === 1) ? supportedTracks[0].index : null);
         } else {
           this.selectedSubtitleOption.set('external');
         }
@@ -476,6 +508,25 @@ export class ProjectFormComponent implements OnInit {
       this.toastService.error('Please select a catalog');
       return;
     }
+
+    if (this.audioTracks().length > 0 && this.selectedAudioTrackIndex() === null) {
+      this.toastService.error('Pick correct option for audio track');
+      return;
+    }
+
     this.toastService.error('Select the media file and pick correct option for subtitles');
+  }
+
+  private findBestTrackIndex(tracks: MediaTrack[], preferredCodes: string[]): number | null {
+    if (tracks.length === 0) {
+      return null;
+    }
+
+    for (const code of preferredCodes) {
+      const match = tracks.find(t => t.languageCode === code);
+      if (match) return match.index;
+    }
+
+    return null;
   }
 }
