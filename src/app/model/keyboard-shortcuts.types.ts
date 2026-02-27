@@ -417,7 +417,7 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
     description: 'Hold to temporarily override playback speed (e.g., slow down)',
     displayKeys: ['Shift'],
     scope: KeyboardShortcutScope.Project,
-    type: ActionType.Continuous,
+    type: ActionType.SingleShot,
     group: KeyboardShortcutGroup.Playback
   },
   // --- Subtitle Tracks

@@ -57,7 +57,6 @@ export class MpvManager extends EventEmitter {
       '--ontop=no',
       '--force-window=yes',
       '--vd-lavc-threads=0',          // Use all available CPU cores for decoding
-      '--audio-buffer=3.0',           // Increase audio buffer to prevent underruns
       '--demuxer-max-bytes=150MiB',   // Increase demuxer cache
       '--demuxer-readahead-secs=20',  // Prefetch more data
       '--framedrop=vo',               // Drop frames visually if rendering is too slow to maintain sync
