@@ -13,7 +13,6 @@ import {DynamicDialogConfig, DynamicDialogRef} from 'primeng/dynamicdialog';
 import {FormsModule} from '@angular/forms';
 import {InputText} from 'primeng/inputtext';
 import {DatePipe} from '@angular/common';
-import {Divider} from 'primeng/divider';
 import {Button} from 'primeng/button';
 import {Tag} from 'primeng/tag';
 import {IconField} from 'primeng/iconfield';
@@ -36,7 +35,6 @@ const MAX_SEARCH_RESULTS = 20;
     FormsModule,
     InputText,
     DatePipe,
-    Divider,
     Button,
     Tag,
     IconField,
@@ -212,8 +210,19 @@ export class SearchSubtitlesDialogComponent implements OnInit, AfterViewInit {
 
   private scrollToClip(clipId: string) {
     const element = document.getElementById(`search-clip-${clipId}`);
-    if (element) {
-      element.scrollIntoView({block: 'center', behavior: 'smooth'});
+    const container = this.scrollContainer()?.nativeElement;
+
+    if (element && container) {
+      // Calculate positions relative to the viewport
+      const containerRect = container.getBoundingClientRect();
+      const elementRect = element.getBoundingClientRect();
+
+      // Calculate the exact target scroll position within the container
+      const scrollOffset = elementRect.top - containerRect.top + container.scrollTop;
+      const centerPosition = scrollOffset - (containerRect.height / 2) + (elementRect.height / 2);
+
+      // Scroll ONLY the inner list of results
+      container.scrollTo({top: centerPosition, behavior: 'smooth'});
     }
   }
 }

@@ -1520,13 +1520,12 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     };
 
     const dialogRef = this.dialogService.open(SearchSubtitlesDialogComponent, {
-      header: 'Find in Subtitles',
+      showHeader: false,
       width: 'clamp(20rem, 95vw, 60rem)',
+      height: '75vh',
       contentStyle: {
-        "max-height": "80vh",
+        "height": "100%",
         "overflow": "hidden",
-        "display": "flex",
-        "flex-direction": "column",
         "padding": "0"
       },
       modal: true,

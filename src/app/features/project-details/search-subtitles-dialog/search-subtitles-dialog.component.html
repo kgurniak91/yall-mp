@@ -1,5 +1,9 @@
-<div class="flex flex-column h-full gap-2">
-  <div class="p-3 flex-shrink-0 surface-0 z-1 border-bottom-1 surface-border">
+<div class="flex flex-column h-full w-full overflow-hidden surface-card">
+  <div class="flex align-items-center justify-content-between p-3 surface-border bg-white flex-shrink-0">
+    <span class="font-bold text-xl">Find in Subtitles</span>
+  </div>
+
+  <div class="p-3 pb-0 pt-0 flex-shrink-0 bg-white z-1">
     <p-iconfield>
       <p-inputicon class="fa-solid fa-search"/>
       <input pInputText
@@ -10,7 +14,7 @@
              placeholder="Search..."
              autofocus/>
     </p-iconfield>
-    <div class="mt-3 flex align-items-center justify-content-between">
+    <div class="mt-3 mb-3 flex align-items-center justify-content-between">
       <div class="text-sm text-gray-500 flex align-items-center gap-2">
         <i class="fa-solid fa-info-circle"></i>
         <span>Click on a search result to jump to the given subtitle</span>
@@ -21,58 +25,55 @@
     </div>
   </div>
 
-  <div class="flex-grow-1 min-h-0 relative">
-    <div #scrollContainer
-         class="w-full overflow-y-auto custom-scrollbar"
-         style="height: 50vh">
-      @if (filteredClips().length > 0) {
-        <div class="flex flex-column p-3 pt-0">
+  <div class="border-bottom-1 surface-border flex-shrink-0"></div>
 
-          @if (hasMoreAbove()) {
-            <div class="text-center py-2 text-gray-400">
-              <i class="fa-solid fa-ellipsis"></i>
-            </div>
-          }
+  <div #scrollContainer class="flex-grow-1 min-h-0 overflow-y-auto custom-scrollbar relative bg-white">
+    @if (filteredClips().length > 0) {
+      <div class="flex flex-column">
 
-          @for (item of filteredClips(); track item.clip.id) {
-            <div [id]="'search-clip-' + item.clip.id"
-                 class="search-result-item p-2 border-round cursor-pointer transition-colors flex align-items-center gap-3"
-                 [class.surface-100]="item.isCurrent"
-                 (click)="selectClip(item.clip)">
+        @if (hasMoreAbove()) {
+          <div class="text-center py-2 text-gray-400 border-bottom-1 surface-border">
+            <i class="fa-solid fa-ellipsis"></i>
+          </div>
+        }
 
-              <p-tag [value]="(item.clip.startTime * 1000 | date:'mm:ss.S') || ''"
-                     [severity]="item.isCurrent ? 'primary' : 'secondary'"
-                     styleClass="font-mono text-sm"></p-tag>
+        @for (item of filteredClips(); track item.clip.id) {
+          <div [id]="'search-clip-' + item.clip.id"
+               class="p-2 cursor-pointer transition-colors flex align-items-center gap-3 surface-border hover:surface-50"
+               [class.border-bottom-1]="!$last"
+               [class.surface-100]="item.isCurrent"
+               (click)="selectClip(item.clip)">
 
-              <div class="flex-grow-1 line-height-3 text-color"
-                   [class.font-italic]="item.isGap">
-                <span [class.text-500]="item.isGap" [innerHTML]="highlightMatch(item)"></span>
-              </div>
+            <p-tag [value]="(item.clip.startTime * 1000 | date:'mm:ss.S') || ''"
+                   [severity]="item.isCurrent ? 'primary' : 'secondary'"
+                   styleClass="font-mono text-sm"></p-tag>
 
-              <div class="text-primary text-sm">
-                <i class="fa-solid fa-arrow-right-to-bracket"></i>
-              </div>
+            <div class="flex-grow-1 line-height-3 text-color"
+                 [class.font-italic]="item.isGap">
+              <span [class.text-500]="item.isGap" [innerHTML]="highlightMatch(item)"></span>
             </div>
 
-            <p-divider styleClass="m-0"></p-divider>
-          }
-
-          @if (hasMoreBelow()) {
-            <div class="text-center py-2 text-gray-400">
-              <i class="fa-solid fa-ellipsis"></i>
+            <div class="text-primary text-sm">
+              <i class="fa-solid fa-arrow-right-to-bracket"></i>
             </div>
-          }
-        </div>
-      } @else {
-        <div class="flex flex-column align-items-center justify-content-center h-full text-gray-500 gap-3 py-6 text-center select-none">
-          <i class="fa-solid fa-skull text-4xl"></i>
-          <span class="text-xl">No matches found</span>
-        </div>
-      }
-    </div>
+          </div>
+        }
+
+        @if (hasMoreBelow()) {
+          <div class="text-center py-2 text-gray-400 border-top-1 surface-border">
+            <i class="fa-solid fa-ellipsis"></i>
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="flex flex-column align-items-center justify-content-center h-full text-gray-500 gap-3 text-center select-none">
+        <i class="fa-solid fa-skull text-4xl"></i>
+        <span class="text-xl">No matches found</span>
+      </div>
+    }
   </div>
 
-  <div class="flex align-items-center justify-content-end gap-2 p-3 mt-auto border-top-1 surface-border flex-shrink-0 bg-white z-1">
+  <div class="flex align-items-center justify-content-end gap-2 p-3 border-top-1 surface-border flex-shrink-0 bg-white z-1">
     <p-button label="Close"
               icon="fa-solid fa-xmark"
               severity="secondary"
