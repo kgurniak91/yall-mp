@@ -361,6 +361,16 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
     type: ActionType.SingleShot,
     group: KeyboardShortcutGroup.Subtitles
   },
+  {
+    action: KeyboardAction.OpenDictionary,
+    key: 'd',
+    ctrlKey: true,
+    description: 'Open Yomitan dictionary manually',
+    displayKeys: ['Ctrl', 'D'],
+    scope: KeyboardShortcutScope.Project,
+    type: ActionType.SingleShot,
+    group: KeyboardShortcutGroup.Subtitles
+  },
   // --- Project Scope - Application
   {
     action: KeyboardAction.ToggleSettings,

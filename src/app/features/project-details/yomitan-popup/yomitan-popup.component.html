@@ -1,4 +1,6 @@
-@if (canGoBack() || canGoForward()) {
+@let showNavbar = canGoBack() || canGoForward();
+
+@if (showNavbar) {
   <div class="nav-bar">
     <button class="nav-btn"
             [disabled]="!canGoBack()"
@@ -15,7 +17,7 @@
   </div>
 }
 
-<div class="result-wrapper">
+<div class="result-wrapper" [class.with-navbar]="showNavbar">
   @if (searchUrl()) {
     <webview #wv
              [src]="searchUrl()"

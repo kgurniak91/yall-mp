@@ -48,7 +48,7 @@ export class ProjectKeyboardShortcutsService implements OnDestroy {
   private readonly handleKeyDown = (event: KeyboardEvent): void => {
     const target = event.target as HTMLElement;
     // Ignore if user is typing in an input field
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'WEBVIEW' || target.isContentEditable) {
       return;
     }
 

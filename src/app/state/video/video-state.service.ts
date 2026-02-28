@@ -32,6 +32,7 @@ export class VideoStateService implements OnDestroy {
   private readonly _isVideoWindowVisible = signal(false);
   private readonly _isUserSeeking = signal(false);
   private readonly _findInSubtitlesRequest = signal<number | null>(null);
+  private readonly _openDictionaryRequest = signal<number | null>(null);
   private readonly saveTimeSubject = new Subject<number>();
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
@@ -70,6 +71,7 @@ export class VideoStateService implements OnDestroy {
   public readonly isVideoWindowVisible = this._isVideoWindowVisible.asReadonly();
   public readonly isUserSeeking = this._isUserSeeking.asReadonly();
   public readonly findInSubtitlesRequest = this._findInSubtitlesRequest.asReadonly();
+  public readonly openDictionaryRequest = this._openDictionaryRequest.asReadonly();
 
   constructor() {
     this.cleanupMpvListener = window.electronAPI.onMpvEvent((status) => {
@@ -262,6 +264,14 @@ export class VideoStateService implements OnDestroy {
 
   public clearFindInSubtitlesRequest(): void {
     this._findInSubtitlesRequest.set(null);
+  }
+
+  public requestOpenDictionary(): void {
+    this._openDictionaryRequest.set(Date.now());
+  }
+
+  public clearOpenDictionaryRequest(): void {
+    this._openDictionaryRequest.set(null);
   }
 
   public requestZoomIn(): void {

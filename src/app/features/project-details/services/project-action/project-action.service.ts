@@ -163,6 +163,9 @@ export class ProjectActionService {
       case KeyboardAction.ActivateSpeedOverride:
         this.videoStateService.setSpeedOverride(Boolean(payload));
         break;
+      case KeyboardAction.OpenDictionary:
+        this.videoStateService.requestOpenDictionary();
+        break;
     }
   }
 }

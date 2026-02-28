@@ -181,6 +181,11 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
             separator: true
           },
           {
+            label: 'Search in dictionary (Ctrl+D)',
+            icon: 'fa-solid fa-book',
+            command: () => this.headerCurrentProjectActionBridgeService.openDictionary()
+          },
+          {
             label: 'Find in subtitles (Ctrl+F)',
             icon: 'fa-solid fa-magnifying-glass',
             command: () => this.headerCurrentProjectActionBridgeService.searchInSubtitles()

@@ -52,6 +52,10 @@ export class HeaderCurrentProjectActionBridgeService {
     this._commandHistory()?.redo();
   }
 
+  public openDictionary(): void {
+    this._projectActionService()?.dispatch(KeyboardAction.OpenDictionary);
+  }
+
   public searchInSubtitles(): void {
     this._projectActionService()?.dispatch(KeyboardAction.FindInSubtitles);
   }

@@ -39,7 +39,7 @@ export class GlobalKeyboardShortcutsService implements OnDestroy {
     }
 
     const target = event.target as HTMLElement;
-    const isTyping = (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+    const isTyping = (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'WEBVIEW' || target.isContentEditable);
 
     // Identify if the pressed key combination matches any global shortcut
     const globalShortcut = this.keyboardShortcutsHelperService.getShortcutForEvent(event, KeyboardShortcutScope.Global);

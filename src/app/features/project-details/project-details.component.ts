@@ -489,6 +489,15 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       });
     });
 
+    effect(() => {
+      if (this.videoStateService.openDictionaryRequest()) {
+        untracked(() => {
+          this.subtitlesOverlay().openManualDictionary();
+        });
+        this.videoStateService.clearOpenDictionaryRequest();
+      }
+    });
+
     this.cleanupMpvReadyListener = window.electronAPI.onMpvManagerReady(() => {
       console.log('[ProjectDetails] Received mpv:managerReady signal!');
       this.isMpvReady.set(true);

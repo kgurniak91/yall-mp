@@ -67,7 +67,8 @@ export enum KeyboardAction {
   SwitchToTrack6 = 'SwitchToTrack6',
   SwitchToTrack7 = 'SwitchToTrack7',
   SwitchToTrack8 = 'SwitchToTrack8',
-  SwitchToTrack9 = 'SwitchToTrack9'
+  SwitchToTrack9 = 'SwitchToTrack9',
+  OpenDictionary = 'OpenDictionary'
 }
 
 export type KeyboardActionKey = keyof typeof KeyboardAction;

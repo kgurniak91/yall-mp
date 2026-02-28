@@ -120,7 +120,7 @@ export interface IElectronAPI {
   getYomitanSettingsUrl: () => Promise<string | null>;
   invokeExtension: (message: any) => Promise<any>;
   setYomitanLanguageFull: (languageIso: string) => Promise<any>;
-  showContextMenu: (options: { text: string }) => Promise<string | null>;
+  showContextMenu: (options: { text: string, allowNotes: boolean }) => Promise<string | null>;
   invokeExtensionReadyCheck: () => Promise<boolean>;
 }
 

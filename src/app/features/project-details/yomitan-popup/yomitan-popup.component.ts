@@ -12,6 +12,7 @@ import {
   viewChild
 } from '@angular/core';
 import {YomitanService} from '../../../core/services/yomitan/yomitan.service';
+import {ToastService} from '../../../shared/services/toast/toast.service';
 
 @Component({
   selector: 'app-yomitan-popup',
@@ -24,17 +25,19 @@ import {YomitanService} from '../../../core/services/yomitan/yomitan.service';
 })
 export class YomitanPopupComponent implements OnInit, OnDestroy {
   public readonly searchText = input.required<string>();
-  public readonly addToNotes = output<string>();
+  public readonly allowNotes = input<boolean>(true);
+  public readonly addToNotes = output<{term: string, text: string}>();
   public readonly close = output<void>();
   protected readonly searchUrl = signal<string | null>(null);
   protected readonly canGoBack = signal(false);
   protected readonly canGoForward = signal(false);
   private readonly webviewRef = viewChild('wv', {read: ElementRef});
   private readonly yomitanService = inject(YomitanService);
+  private readonly toastService = inject(ToastService);
 
   async ngOnInit() {
     const text = this.searchText();
-    if (!text) {
+    if (text == null) {
       return;
     }
 
@@ -44,39 +47,56 @@ export class YomitanPopupComponent implements OnInit, OnDestroy {
       console.error('Yomitan Extension ID not found.');
       return;
     }
+
     const encoded = encodeURIComponent(text);
     this.searchUrl.set(`chrome-extension://${extId}/search.html?query=${encoded}&type=terms&full-visible=true`);
   }
 
   ngOnDestroy() {
-    const wv = this.webviewRef()?.nativeElement;
-    if (wv) {
-      wv.removeEventListener('console-message', this.handleConsoleMessage);
-      wv.removeEventListener('context-menu', this.handleContextMenu);
-      wv.removeEventListener('new-window', this.handleNewWindow);
-      wv.removeEventListener('will-navigate', this.handleWillNavigate);
-      wv.removeEventListener('did-navigate', this.updateNavState);
-      wv.removeEventListener('did-navigate-in-page', this.updateNavState);
-    }
+    this.removeListeners();
   }
 
   onDomReady() {
     const wv = this.webviewRef()!.nativeElement as Electron.WebviewTag;
+    const isManualMode = this.searchText() === '';
+
+    if (isManualMode) {
+      wv.focus();
+    }
+
+    this.removeListeners();
 
     wv.insertCSS(`
-      #search-header, .search-header { display: none !important; }
-      #navigation-header { display: none !important; }
+      #navigation-header,
+      #intro,
+      .search-options,
+      #query-parser-container {
+        display: none !important;
+      }
+
       body {
         padding: 0 !important;
         margin: 0 !important;
         background-color: white !important;
         overflow-y: auto;
       }
+
       #content-body { padding: 10px !important; }
+
       summary, span.tag, span[data-sc-content="tag"] {
         user-select: none !important;
         cursor: pointer;
       }
+    `);
+
+    // Auto-focus input field if available
+    wv.executeJavaScript(`
+      setTimeout(() => {
+        const input = document.getElementById('search-textbox');
+        if (input) {
+          ${isManualMode ? 'input.focus();' : ''}
+        }
+      }, 100);
     `);
 
     wv.executeJavaScript(`
@@ -128,7 +148,8 @@ export class YomitanPopupComponent implements OnInit, OnDestroy {
           }
 
           if (text) {
-             console.log('YALL_SHORTCUT_ADD_NOTE:' + text);
+             const currentTerm = document.getElementById('search-textbox')?.value || '';
+             console.log('YALL_ADD_NOTE_JSON:' + JSON.stringify({ term: currentTerm, text: text }));
           }
         }
       });
@@ -176,10 +197,18 @@ export class YomitanPopupComponent implements OnInit, OnDestroy {
   };
 
   private handleConsoleMessage = (e: { message: string }) => {
-    if (e.message.startsWith('YALL_SHORTCUT_ADD_NOTE:')) {
-      const selection = e.message.substring('YALL_SHORTCUT_ADD_NOTE:'.length);
-      if (selection) {
-        this.addToNotes.emit(selection);
+    if (e.message.startsWith('YALL_ADD_NOTE_JSON:')) {
+      if (this.allowNotes()) {
+        try {
+          const data = JSON.parse(e.message.substring('YALL_ADD_NOTE_JSON:'.length));
+          if (data.text) {
+            this.addToNotes.emit({ term: data.term.trim(), text: data.text });
+          }
+        } catch (err) {
+          console.error('Failed to parse note data from webview', err);
+        }
+      } else {
+        this.toastService.info('Cannot add notes while in a gap');
       }
     }
 
@@ -192,12 +221,33 @@ export class YomitanPopupComponent implements OnInit, OnDestroy {
   private handleContextMenu = async (e: any) => {
     const params = e.params as Electron.ContextMenuParams;
     if (params.selectionText) {
-      const action = await window.electronAPI.showContextMenu({text: params.selectionText});
+      const action = await window.electronAPI.showContextMenu({
+        text: params.selectionText,
+        allowNotes: this.allowNotes()
+      });
+
       if (action === 'add-to-notes') {
-        this.addToNotes.emit(params.selectionText);
+        const wv = this.webviewRef()?.nativeElement as Electron.WebviewTag;
+        let currentTerm = '';
+        if (wv) {
+          currentTerm = await wv.executeJavaScript("document.getElementById('search-textbox')?.value || ''");
+        }
+        this.addToNotes.emit({ term: currentTerm.trim(), text: params.selectionText });
+      } else if (action === 'search-in-dictionary') {
+        this.searchInDictionary(params.selectionText);
       }
     }
   };
+
+  private async searchInDictionary(text: string) {
+    const wv = this.webviewRef()?.nativeElement as Electron.WebviewTag;
+    const extId = await this.yomitanService.getExtensionId();
+    if (wv && extId) {
+      const encoded = encodeURIComponent(text);
+      const newUrl = `chrome-extension://${extId}/search.html?query=${encoded}&type=terms&full-visible=true`;
+      wv.loadURL(newUrl);
+    }
+  }
 
   private handleNewWindow = (e: any) => {
     e.preventDefault();
@@ -210,4 +260,16 @@ export class YomitanPopupComponent implements OnInit, OnDestroy {
       window.electronAPI.openInSystemBrowser(e.url);
     }
   };
+
+  private removeListeners() {
+    const wv = this.webviewRef()?.nativeElement as Electron.WebviewTag;
+    if (wv) {
+      wv.removeEventListener('console-message', this.handleConsoleMessage);
+      wv.removeEventListener('context-menu', this.handleContextMenu);
+      wv.removeEventListener('new-window', this.handleNewWindow);
+      wv.removeEventListener('will-navigate', this.handleWillNavigate);
+      wv.removeEventListener('did-navigate', this.updateNavState);
+      wv.removeEventListener('did-navigate-in-page', this.updateNavState);
+    }
+  }
 }

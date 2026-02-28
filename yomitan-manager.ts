@@ -51,23 +51,32 @@ export class YomitanManager {
     ipcMain.handle('yomitan:get-extension-id', () => this.getExtensionId());
     ipcMain.handle('yomitan:set-language-full', (_, iso) => this.setLanguageFull(iso));
     ipcMain.handle('yomitan:invoke', (_, msg) => this.invokeExtension(msg));
-    ipcMain.handle('yomitan:show-context-menu', (event) => this.showContextMenu(event));
+    ipcMain.handle('yomitan:show-context-menu', (event, options) => this.showContextMenu(event, options));
     ipcMain.handle('yomitan:is-ready', () => this.isProxyReady);
   }
 
-  public async showContextMenu(event: Electron.IpcMainInvokeEvent): Promise<string | null> {
+  public async showContextMenu(event: Electron.IpcMainInvokeEvent, options: {
+    text: string,
+    allowNotes: boolean
+  }): Promise<string | null> {
     return new Promise((resolve) => {
-      const template: MenuItemConstructorOptions[] = [
-        {
+      const template: MenuItemConstructorOptions[] = [];
+
+      if (options.allowNotes) {
+        template.push({
           label: `Add to Notes`,
-          click: () => {
-            resolve('add-to-notes');
-          }
-        },
-        {type: 'separator'},
-        {role: 'copy'},
-        {role: 'selectAll'}
-      ];
+          click: () => resolve('add-to-notes')
+        });
+      }
+
+      template.push({
+        label: `Search in Dictionary`,
+        click: () => resolve('search-in-dictionary')
+      });
+
+      template.push({type: 'separator'});
+      template.push({role: 'copy'});
+      template.push({role: 'selectAll'});
 
       const menu = Menu.buildFromTemplate(template);
       const win = BrowserWindow.fromWebContents(event.sender);

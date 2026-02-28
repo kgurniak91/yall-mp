@@ -15,8 +15,11 @@
       }
     }
   }
-
 </div>
+
+@if (isManualDictionary()) {
+  <div class="manual-dictionary-backdrop"></div>
+}
 
 <!-- Yomitan Popup Overlay -->
 <!-- Using @for with track allows to force complete destruction and recreation of the component
@@ -33,6 +36,7 @@
        (wheel)="$event.stopPropagation()">
 
     <app-yomitan-popup [searchText]="term"
+                       [allowNotes]="canAddNotes()"
                        (close)="clearHighlightAndPopup()"
                        (addToNotes)="onAddToNotes($event)"/>
   </div>

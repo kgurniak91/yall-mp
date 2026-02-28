@@ -26,6 +26,7 @@ import {YomitanPopupComponent} from '../yomitan-popup/yomitan-popup.component';
 import {YomitanService} from '../../../core/services/yomitan/yomitan.service';
 import {NoteRequest} from './subtitles-overlay.types';
 import {DialogService} from 'primeng/dynamicdialog';
+import {ToastService} from '../../../shared/services/toast/toast.service';
 
 const FALLBACK_VIDEO_ASPECT_RATIO = 16 / 9;
 
@@ -51,7 +52,11 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   public readonly noteRequest = output<NoteRequest>();
   public readonly closeContextMenu = output<void>();
   public readonly popupShown = output<void>();
-  private readonly dialogService = inject(DialogService);
+
+  protected readonly isManualDictionary = signal(false);
+  protected readonly canAddNotes = computed(() => {
+    return !!this.currentClip()?.hasSubtitle;
+  });
 
   protected readonly shouldBeHidden = computed(() => {
     if (this.videoStateService.isUserSeeking()) {
@@ -90,22 +95,27 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   protected readonly videoStateService = inject(VideoStateService);
   protected readonly globalSettingsStateService = inject(GlobalSettingsStateService);
   protected readonly currentSearchTerm = signal<string | null>(null);
+
   protected readonly activeTerms = computed(() => {
     const term = this.currentSearchTerm();
-    return term ? [term] : [];
+    return term != null ? [term] : [];
   });
+
   protected readonly popupPosition = signal<{
     left: number,
     top?: number,
     bottom?: number,
     maxHeight: number
   } | null>(null);
+
   private readonly projectSettingsStateService = inject(ProjectSettingsStateService);
   private readonly subtitleContainer = viewChild.required<ElementRef<HTMLDivElement>>('subtitleContainer');
   private readonly subtitlesHighlighterService = inject(SubtitlesHighlighterService);
   private readonly tokenizationService = inject(TokenizationService);
   private readonly yomitanService = inject(YomitanService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly dialogService = inject(DialogService);
+  private readonly toastService = inject(ToastService);
   private readonly isInitialized = signal(false);
   private readonly isScaleApplied = signal(false);
   private assInstance: ASS | null = null;
@@ -144,7 +154,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
     effect((onCleanup) => {
       const clearState = () => {
         untracked(() => {
-          if (this.currentSearchTerm() || this.currentHighlight) {
+          if (this.currentSearchTerm() != null || this.currentHighlight) {
             this.clearHighlightAndPopup();
           }
         });
@@ -232,7 +242,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
           this.isInitialized.set(true);
 
           // Close offline dictionary popup on window resize
-          if (this.currentSearchTerm()) {
+          if (this.currentSearchTerm() != null) {
             this.clearHighlightAndPopup();
           }
         }
@@ -268,7 +278,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       debounce(data => {
         if (!data) {
           // If popup IS open, keep the 200ms sticky delay to allow moving mouse to popup
-          return this.currentSearchTerm() ? timer(200) : timer(0);
+          return this.currentSearchTerm() != null ? timer(200) : timer(0);
         }
 
         // Keyboard modifiers like CTRL are always instant
@@ -277,7 +287,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
         }
 
         // If a popup is ALREADY open, debounce (200ms) to allow moving mouse to the popup without accidentally triggering neighbors
-        if (this.currentSearchTerm()) {
+        if (this.currentSearchTerm() != null) {
           return timer(200);
         }
 
@@ -287,7 +297,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       switchMap(data => {
         if (!data) {
           // Only be "Sticky" if a popup is actually open
-          if (this.currentSearchTerm()) {
+          if (this.currentSearchTerm() != null) {
             return EMPTY;
           }
 
@@ -439,6 +449,33 @@ export class SubtitlesOverlayComponent implements OnDestroy {
     this.mutationObserver?.disconnect();
   }
 
+  public openManualDictionary() {
+    if (!this.isYomitanEnabled()) {
+      this.toastService.info('Please configure offline dictionaries first');
+      return;
+    }
+
+    if (this.isManualDictionary()) {
+      this.clearHighlightAndPopup();
+      return;
+    }
+
+    this.clearHighlightAndPopup();
+    this.currentSearchTerm.set(''); // Use empty string to signal manual generic mode
+    this.isManualDictionary.set(true);
+
+    // Center the popup on screen
+    const height = window.innerHeight * 0.6;
+    this.popupPosition.set({
+      left: window.innerWidth / 2,
+      top: window.innerHeight / 2 - height / 2,
+      bottom: undefined,
+      maxHeight: height
+    });
+
+    this.popupShown.emit();
+  }
+
   public showOfflinePopupFor(text: string, event: MouseEvent) {
     this.clearHighlightAndPopup();
     this.currentSearchTerm.set(text);
@@ -479,12 +516,11 @@ export class SubtitlesOverlayComponent implements OnDestroy {
     }
   }
 
-  onAddToNotes(noteContent: string) {
-    const searchTerm = this.currentSearchTerm();
-    if (searchTerm) {
+  onAddToNotes(noteData: { term: string, text: string }) {
+    if (noteData.term != null) {
       this.noteRequest.emit({
-        term: searchTerm,
-        text: noteContent
+        term: noteData.term,
+        text: noteData.text
       });
     }
   }
@@ -596,6 +632,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
     this.popupPosition.set(null);
     this.isWordHovered.set(false);
     this.lastLogicalHit = null;
+    this.isManualDictionary.set(false);
 
     const previousHighlight = this.currentHighlight;
     this.currentHighlight = null;
@@ -920,7 +957,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   }
 
   private handleMouseDown(event: MouseEvent): void {
-    const isPopupOpen = !!this.currentSearchTerm();
+    const isPopupOpen = this.currentSearchTerm() != null;
     const isMenuOpen = this.isContextMenuOpen();
 
     this.shouldPreventVideoToggle = isPopupOpen || isMenuOpen;
@@ -929,6 +966,11 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       this.closeContextMenu.emit();
       event.preventDefault();
       event.stopPropagation();
+      return;
+    }
+
+    // Abort interacting with subtitles if the manual dictionary is active
+    if (this.isManualDictionary()) {
       return;
     }
 
@@ -990,7 +1032,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
     }
 
     // Otherwise (user clicked away), close the popup if open
-    if (this.currentSearchTerm()) {
+    if (this.currentSearchTerm() != null) {
       this.clearHighlightAndPopup();
     }
   };
@@ -1059,7 +1101,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
         }
       }
     } else {
-      if (this.isContextMenuOpen() || this.projectSettingsStateService.useMpvSubtitles() || this.isHoverBlocked) {
+      if (this.isContextMenuOpen() || this.projectSettingsStateService.useMpvSubtitles() || this.isHoverBlocked || this.isManualDictionary()) {
         return;
       }
 
@@ -1172,7 +1214,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
 
   private handleKeyChange(event: KeyboardEvent): void {
     if (event.key === 'Escape') {
-      if (this.currentSearchTerm()) {
+      if (this.currentSearchTerm() != null) {
         event.preventDefault();
         event.stopPropagation();
         this.clearHighlightAndPopup();
