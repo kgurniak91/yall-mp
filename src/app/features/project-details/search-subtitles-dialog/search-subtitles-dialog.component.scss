@@ -10,3 +10,13 @@
   border-radius: 2px;
   color: inherit;
 }
+
+.load-more-btn {
+  cursor: pointer !important;
+  transition: background-color 0.2s, color 0.2s !important;
+
+  &:hover {
+    background-color: var(--p-surface-100) !important;
+    color: var(--p-primary-color) !important;
+  }
+}
