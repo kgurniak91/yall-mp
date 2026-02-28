@@ -343,6 +343,25 @@ export class AppStateService {
     this.deleteCatalog(catalogId);
   }
 
+  public moveProjectsToCatalog(projectIds: string[], catalogId: string): void {
+    this._appData.update(data => ({
+      ...data,
+      projects: data.projects.map(p => projectIds.includes(p.id) ? {...p, catalogId} : p)
+    }));
+
+    const current = this.currentProject();
+
+    projectIds.forEach(projectId => {
+      // If this project is currently loaded in detail view, update it fully
+      if (current && current.id === projectId) {
+        this.updatePartialProject(projectId, {catalogId});
+      } else {
+        // Otherwise perform a disk patch
+        this.storageService.updateProjectFields(projectId, {catalogId});
+      }
+    });
+  }
+
   public updateGlobalSettings(updates: Partial<GlobalSettings>): void {
     this._appData.update(currentData => ({
       ...currentData,

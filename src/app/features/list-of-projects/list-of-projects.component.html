@@ -24,6 +24,12 @@
             <div class="flex gap-2">
               @if (filteredProjects().length > 1) {
                 @if (selectionMode()) {
+                  <p-button label="Move Selected ({{selectedProjectIds().size}})"
+                            severity="primary"
+                            icon="fa-solid fa-folder-open"
+                            size="small"
+                            [disabled]="selectedProjectIds().size === 0"
+                            (onClick)="moveSelected()"/>
                   <p-button label="Delete Selected ({{selectedProjectIds().size}})"
                             severity="danger"
                             icon="fa-solid fa-trash"

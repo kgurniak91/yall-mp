@@ -97,6 +97,42 @@ export class ListOfProjectsComponent implements OnDestroy {
     });
   }
 
+  moveSelected() {
+    const ids = Array.from(this.selectedProjectIds());
+    if (ids.length === 0) {
+      return;
+    }
+
+    const restoreFocus = disableFocusInParentDialog();
+
+    const data: MoveProjectDialogData = {
+      currentCatalogId: this.activeCatalogId()
+    };
+
+    this.activeDialogRef = this.dialogService.open(MoveProjectDialogComponent, {
+      header: `Move ${ids.length} Projects`,
+      width: 'clamp(20rem, 95vw, 45rem)',
+      modal: true,
+      data
+    });
+
+    this.activeDialogRef.onClose.pipe(take(1)).subscribe((newCatalogId: string | undefined) => {
+      this.activeDialogRef = null;
+      scheduleRestoreFocus(restoreFocus);
+
+      if (newCatalogId === undefined) {
+        return;
+      }
+
+      if (newCatalogId !== this.activeCatalogId()) {
+        this.appStateService.moveProjectsToCatalog(ids, newCatalogId);
+        this.selectedProjectIds.set(new Set());
+        this.selectionMode.set(false);
+        this.toastService.success(`${ids.length} projects moved`);
+      }
+    });
+  }
+
   editProject(project: MinimalProject): void {
     this.router.navigate(['/project/edit', project.id]);
   }
