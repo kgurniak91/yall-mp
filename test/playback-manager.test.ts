@@ -132,6 +132,46 @@ describe('PlaybackManager', () => {
       expect((playbackManager as any).subtitlesVisible).toBe(true);
       expect(getLastStateUpdate()?.subtitlesVisible).toBe(true);
     });
+
+    it('should instantly apply new playback speeds when updated in settings without requiring a seek', () => {
+      // ARRANGE: Start paused in the middle of a subtitled clip with 1.0x speed
+      playbackManager = setupManager({subtitledClipSpeed: 1.0, gapSpeed: 2.0});
+      playbackManager.seek(15);
+      simulateSeekComplete(playbackManager);
+      playbackManager.pause();
+      vi.clearAllMocks();
+
+      // ACT: User changes the subtitled clip speed to 5.0x in settings
+      const newSettings = {...(playbackManager as any).settings, subtitledClipSpeed: 5.0};
+      playbackManager.updateSettings(newSettings);
+
+      // ASSERT 1: The new speed should be sent to MPV immediately
+      expect(mockMpvManager.setProperty).toHaveBeenCalledWith('speed', 5.0);
+
+      // ACT 2: User repeats the clip
+      playbackManager.repeat();
+      simulateSeekComplete(playbackManager);
+
+      // ASSERT 2: The player should still be respecting the 5.0x speed
+      expect(mockMpvManager.setProperty).toHaveBeenCalledWith('speed', 5.0);
+    });
+
+    it('should force a buffer flush (exact absolute seek) when speed is changed while paused to prevent audio bursts', () => {
+      // ARRANGE
+      playbackManager = setupManager({subtitledClipSpeed: 5.0, gapSpeed: 2.0});
+      playbackManager.seek(15);
+      simulateSeekComplete(playbackManager);
+      playbackManager.pause();
+      vi.clearAllMocks();
+
+      // ACT
+      const newSettings = {...(playbackManager as any).settings, subtitledClipSpeed: 1.0};
+      playbackManager.updateSettings(newSettings);
+
+      // ASSERT
+      expect(mockMpvManager.setProperty).toHaveBeenCalledWith('speed', 1.0);
+      expect(mockMpvManager.sendCommand).toHaveBeenCalledWith(['seek', 15, 'absolute', 'exact']);
+    });
   });
 
   describe('User Action: Playback Start', () => {

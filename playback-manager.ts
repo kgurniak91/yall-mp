@@ -179,16 +179,27 @@ export class PlaybackManager extends EventEmitter {
 
     const rendererChanged = oldSettings && oldSettings.useMpvSubtitles !== newSettings.useMpvSubtitles;
     const visibilityChanged = oldSettings && oldSettings.subtitlesVisible !== newSettings.subtitlesVisible;
+    const speedChanged = oldSettings && (
+      oldSettings.subtitledClipSpeed !== newSettings.subtitledClipSpeed ||
+      oldSettings.gapSpeed !== newSettings.gapSpeed ||
+      oldSettings.speedOverride !== newSettings.speedOverride
+    );
 
     if (visibilityChanged) {
       this.subtitlesVisible = newSettings.subtitlesVisible;
     }
 
-    if (rendererChanged || visibilityChanged) {
+    if (rendererChanged || visibilityChanged || speedChanged) {
       if (rendererChanged) {
         this.mpvSubtitlesHiddenDueToRenderer = false; // Reset this only on renderer change
       }
       this.applyClipTransitionSettings();
+
+      // Flush MPV audio buffer if speed was changed while paused to prevent audio bursts
+      if (speedChanged && this.isPaused) {
+        this.mpvManager.sendCommand(['seek', this.currentTime, 'absolute', 'exact']);
+      }
+
       this.notifyUI();
     }
   }
@@ -271,6 +282,11 @@ export class PlaybackManager extends EventEmitter {
     }
     this.isSpeedOverridden = isActive;
     this.applyClipTransitionSettings();
+
+    // Flush MPV audio buffer if speed override is toggled while paused
+    if (this.isPaused) {
+      this.mpvManager.sendCommand(['seek', this.currentTime, 'absolute', 'exact']);
+    }
   }
 
   private handleMpvEvent(status: any): void {
