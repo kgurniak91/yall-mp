@@ -28,6 +28,8 @@ export interface IElectronAPI {
   windowEscape: () => void;
   windowHandleDoubleClick: () => void;
   windowClose: () => void;
+  windowStartManualResize: (direction: string) => void;
+  windowStopManualResize: () => void;
   onWindowMaximizedStateChanged: (callback: (isMaximized: boolean) => void) => (() => void);
   onWindowFullScreenStateChanged: (callback: (isFullScreen: boolean) => void) => (() => void);
   windowUpdateDraggableZones: (shapes: { x: number, y: number, width: number, height: number }[]) => Promise<void>;

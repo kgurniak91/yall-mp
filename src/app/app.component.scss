@@ -33,3 +33,81 @@
     }
   }
 }
+
+.custom-resizer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 99999;
+
+  .edge, .corner {
+    position: absolute;
+    pointer-events: auto;
+  }
+
+  $size: 4px;
+
+  .top {
+    top: 0;
+    left: $size;
+    right: $size;
+    height: $size;
+    cursor: n-resize;
+  }
+
+  .bottom {
+    bottom: 0;
+    left: $size;
+    right: $size;
+    height: $size;
+    cursor: s-resize;
+  }
+
+  .left {
+    left: 0;
+    top: $size;
+    bottom: $size;
+    width: $size;
+    cursor: w-resize;
+  }
+
+  .right {
+    right: 0;
+    top: $size;
+    bottom: $size;
+    width: $size;
+    cursor: e-resize;
+  }
+
+  .top-left {
+    top: 0;
+    left: 0;
+    width: $size;
+    height: $size;
+    cursor: nw-resize;
+  }
+
+  .top-right {
+    top: 0;
+    right: 0;
+    width: $size;
+    height: $size;
+    cursor: ne-resize;
+  }
+
+  .bottom-left {
+    bottom: 0;
+    left: 0;
+    width: $size;
+    height: $size;
+    cursor: sw-resize;
+  }
+
+  .bottom-right {
+    bottom: 0;
+    right: 0;
+    width: $size;
+    height: $size;
+    cursor: se-resize;
+  }
+}

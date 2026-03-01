@@ -1,3 +1,15 @@
+<div class="custom-resizer">
+  <div class="edge top" (mousedown)="onResizeStart($event, 'n')"></div>
+  <div class="edge bottom" (mousedown)="onResizeStart($event, 's')"></div>
+  <div class="edge left" (mousedown)="onResizeStart($event, 'w')"></div>
+  <div class="edge right" (mousedown)="onResizeStart($event, 'e')"></div>
+
+  <div class="corner top-left" (mousedown)="onResizeStart($event, 'nw')"></div>
+  <div class="corner top-right" (mousedown)="onResizeStart($event, 'ne')"></div>
+  <div class="corner bottom-left" (mousedown)="onResizeStart($event, 'sw')"></div>
+  <div class="corner bottom-right" (mousedown)="onResizeStart($event, 'se')"></div>
+</div>
+
 <p-toast [position]="toastService.position()"
          hideTransitionOptions="0ms"
          showTransitionOptions="0ms">

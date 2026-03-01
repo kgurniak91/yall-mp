@@ -84,6 +84,10 @@ let isRestoring = false;
 let coreConfigToSave: CoreConfig | null = null;
 const projectsToSave = new Map<string, Project>();
 let showVideoTimeout: NodeJS.Timeout | null = null;
+let manualResizeInterval: NodeJS.Timeout | null = null;
+const MIN_WIDTH = 800;
+const MIN_HEIGHT = 600;
+
 let initialAppBounds: Electron.Rectangle | null = null;
 let pendingFilesToOpen: string[] = [];
 const DRAGGABLE_ZONE_PADDING = 3; // 3px on all sides
@@ -560,6 +564,10 @@ async function createWindow() {
   });
 
   mainWindow.on('closed', () => {
+    if (manualResizeInterval) {
+      clearInterval(manualResizeInterval);
+    }
+
     mpvManager?.stop();
     yomitanManager?.destroy();
 
@@ -797,6 +805,80 @@ if (!gotTheLock) {
       }
 
       isProgrammaticResize = false;
+    });
+
+    ipcMain.on('window:manual-resize-start', (event, direction) => {
+      if (manualResizeInterval || !mainWindow) {
+        return;
+      }
+
+      // Safety: Clear any existing intervals just in case
+      if (manualResizeInterval) {
+        clearInterval(manualResizeInterval);
+      }
+
+      let lastMouse = screen.getCursorScreenPoint();
+
+      manualResizeInterval = setInterval(() => {
+        if (!mainWindow) {
+          return;
+        }
+
+        const currentMouse = screen.getCursorScreenPoint();
+        const dx = currentMouse.x - lastMouse.x;
+        const dy = currentMouse.y - lastMouse.y;
+        lastMouse = currentMouse;
+
+        if (dx === 0 && dy === 0) {
+          return;
+        }
+
+        let {x, y, width, height} = mainWindow.getBounds();
+
+        // Right side
+        if (direction.includes('e')) {
+          width += dx;
+        }
+
+        // Left side (adjusts X and Width)
+        if (direction.includes('w')) {
+          if (width - dx >= MIN_WIDTH) {
+            x += dx;
+            width -= dx;
+          }
+        }
+
+        // Bottom side
+        if (direction.includes('s')) {
+          height += dy;
+        }
+
+        // Top side (adjusts Y and Height)
+        if (direction.includes('n')) {
+          if (height - dy >= MIN_HEIGHT) {
+            y += dy;
+            height -= dy;
+          }
+        }
+
+        // Final safety clamp
+        width = Math.max(width, MIN_WIDTH);
+        height = Math.max(height, MIN_HEIGHT);
+
+        mainWindow.setBounds({
+          x: Math.round(x),
+          y: Math.round(y),
+          width: Math.round(width),
+          height: Math.round(height)
+        });
+      }, 16); // ~60fps
+    });
+
+    ipcMain.on('window:manual-resize-stop', () => {
+      if (manualResizeInterval) {
+        clearInterval(manualResizeInterval);
+        manualResizeInterval = null;
+      }
     });
 
     ipcMain.on('window:toggle-fullscreen', () => {

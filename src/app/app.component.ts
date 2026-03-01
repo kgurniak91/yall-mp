@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, inject, OnInit} from '@angular/core';
+import {ChangeDetectionStrategy, Component, HostListener, inject, OnInit} from '@angular/core';
 import {RouterOutlet} from '@angular/router';
 import {Toast} from 'primeng/toast';
 import {ConfirmDialog} from 'primeng/confirmdialog';
@@ -30,6 +30,7 @@ export class AppComponent implements OnInit {
   protected readonly toastService = inject(ToastService);
   private readonly fileOpenIntentService = inject(FileOpenIntentService);
   private readonly yomitanService = inject(YomitanService);
+  private isResizing = false;
 
   constructor() {
     inject(GlobalKeyboardShortcutsService);
@@ -45,5 +46,20 @@ export class AppComponent implements OnInit {
     });
 
     this.yomitanService.ensureLanguagesLoaded();
+  }
+
+  protected onResizeStart(event: MouseEvent, direction: string): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isResizing = true;
+    window.electronAPI.windowStartManualResize(direction);
+  }
+
+  @HostListener('window:mouseup')
+  protected onGlobalMouseUp(): void {
+    if (this.isResizing) {
+      window.electronAPI.windowStopManualResize();
+      this.isResizing = false;
+    }
   }
 }

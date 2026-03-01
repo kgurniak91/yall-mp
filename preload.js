@@ -10,6 +10,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   windowEscape: () => ipcRenderer.send('window:escape'),
   windowHandleDoubleClick: () => ipcRenderer.send('window:handle-double-click'),
   windowClose: () => ipcRenderer.send('window:close'),
+  windowStartManualResize: (direction) => ipcRenderer.send('window:manual-resize-start', direction),
+  windowStopManualResize: () => ipcRenderer.send('window:manual-resize-stop'),
   onWindowMaximizedStateChanged: (callback) => {
     const subscription = (_event, value) => callback(value);
     ipcRenderer.on('window:maximized-state-changed', subscription);
