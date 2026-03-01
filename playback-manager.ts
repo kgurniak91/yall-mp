@@ -30,6 +30,7 @@ export class PlaybackManager extends EventEmitter {
   private isSeekForNavigation = false;
   private nextPlayerState: PlayerState | null = null;
   private isSpeedOverridden = false;
+  private currentAutoPauseToken: string = '';
 
   constructor(
     private mpvManager: MpvManager,
@@ -291,6 +292,12 @@ export class PlaybackManager extends EventEmitter {
 
   private handleMpvEvent(status: any): void {
     if (status.event === 'auto-pause-fired') {
+      const token = status.data;
+      if (token !== this.currentAutoPauseToken) {
+        console.log('[PlaybackManager] Ignored stale auto-pause event.');
+        return;
+      }
+
       // Manually snap the playhead to the end of the clip for visual accuracy
       const currentClip = this.clips[this.currentClipIndex];
       if (currentClip) {
@@ -462,7 +469,9 @@ export class PlaybackManager extends EventEmitter {
       return;
     }
 
-    this.mpvManager.setLuaAutoPause(clip.endTime);
+    // Generate a new token whenever the active clip context changes (seek, speed change, clip update)
+    this.currentAutoPauseToken = Math.random().toString(36).substring(2);
+    this.mpvManager.setLuaAutoPause(clip.endTime, this.currentAutoPauseToken);
   }
 
   private applySubtitleVisibilityForClip(): void {

@@ -62,7 +62,8 @@ describe('PlaybackManager', () => {
     const settings = (manager as any).settings;
     const shouldAutoPause = clip && clip.hasSubtitle && settings?.autoPauseAtEnd;
 
-    simulateMpvEvent(manager, {event: 'auto-pause-fired'});
+    const token = (manager as any).currentAutoPauseToken;
+    simulateMpvEvent(manager, {event: 'auto-pause-fired', data: token});
 
     // If auto-pause is disabled, the manager will trigger a seek to the next clip.
     // Simulate completion of that seek to reach the final expected state.
@@ -1046,7 +1047,8 @@ describe('PlaybackManager', () => {
         // Auto-pause-fired is triggered, which calls playClipAtIndex, which sets state to Transitioning.
         // Manually set current time to end so logic picks it up.
         (playbackManager as any).currentTime = 10;
-        simulateMpvEvent(playbackManager, {event: 'auto-pause-fired'});
+        const token = (playbackManager as any).currentAutoPauseToken;
+        simulateMpvEvent(playbackManager, {event: 'auto-pause-fired', data: token});
 
         // NOW the player should be in Transitioning state waiting for the seek to complete
         expect(getLastStateUpdate()?.playerState).toBe(PlayerState.Transitioning);
@@ -1073,7 +1075,8 @@ describe('PlaybackManager', () => {
         // Simulate being auto-paused at the end of subtitled Clip 1 (10s to 20s)
         (playbackManager as any).currentClipIndex = 1;
         (playbackManager as any).currentTime = 20;
-        simulateMpvEvent(playbackManager, {event: 'auto-pause-fired'});
+        const token = (playbackManager as any).currentAutoPauseToken;
+        simulateMpvEvent(playbackManager, {event: 'auto-pause-fired', data: token});
 
         // Verify pre-condition: Player is auto-paused because the clip ended
         expect(getLastStateUpdate()?.playerState).toBe(PlayerState.AutoPausedAtEnd);
@@ -1098,7 +1101,8 @@ describe('PlaybackManager', () => {
         // Auto-pause at end of subtitled Clip 1
         (playbackManager as any).currentClipIndex = 1;
         (playbackManager as any).currentTime = 20;
-        simulateMpvEvent(playbackManager, {event: 'auto-pause-fired'});
+        const token = (playbackManager as any).currentAutoPauseToken;
+        simulateMpvEvent(playbackManager, {event: 'auto-pause-fired', data: token});
 
         // Verify pre-condition: Player is auto-paused because the clip ended
         expect(getLastStateUpdate()?.playerState).toBe(PlayerState.AutoPausedAtEnd);
@@ -1123,7 +1127,8 @@ describe('PlaybackManager', () => {
         // Auto-pause at end of subtitled Clip 1 (10s-20s)
         (playbackManager as any).currentClipIndex = 1;
         (playbackManager as any).currentTime = 20;
-        simulateMpvEvent(playbackManager, {event: 'auto-pause-fired'});
+        const token = (playbackManager as any).currentAutoPauseToken;
+        simulateMpvEvent(playbackManager, {event: 'auto-pause-fired', data: token});
 
         // Verify pre-condition: Player is auto-paused because the clip ended
         expect(getLastStateUpdate()?.playerState).toBe(PlayerState.AutoPausedAtEnd);
@@ -1158,7 +1163,8 @@ describe('PlaybackManager', () => {
         (playbackManager as any).currentTime = 20;
 
         // ACT: The Lua script fires the boundary event
-        simulateMpvEvent(playbackManager, {event: 'auto-pause-fired'});
+        const token = (playbackManager as any).currentAutoPauseToken;
+        simulateMpvEvent(playbackManager, {event: 'auto-pause-fired', data: token});
 
         // ASSERT:
         // 1. The manager should have ignored the event (no unpause sent to MPV)
@@ -1192,7 +1198,8 @@ describe('PlaybackManager', () => {
         simulateMpvEvent(playbackManager, {event: 'property-change', name: 'pause', data: true});
 
         // Then the Lua script sends the trigger
-        simulateMpvEvent(playbackManager, {event: 'auto-pause-fired'});
+        const token = (playbackManager as any).currentAutoPauseToken;
+        simulateMpvEvent(playbackManager, {event: 'auto-pause-fired', data: token});
 
         // The playback manager enters transitioning state internally
         simulateSeekComplete(playbackManager);
@@ -1366,6 +1373,65 @@ describe('PlaybackManager', () => {
         // ASSERT: Respected the setting and stayed paused
         expect(mockMpvManager.setProperty).toHaveBeenCalledWith('pause', true);
         expect(getLastStateUpdate()?.playerState).toBe(PlayerState.AutoPausedAtStart);
+      });
+
+      it('should ignore stale auto-pause events if user has already initiated navigation to next clip', () => {
+        // ARRANGE: Listening Practice (Pause at End = true, Start = false)
+        // sub-1 is 10-20. sub-15 is 30-40.
+        playbackManager = setupManager({
+          autoPauseAtEnd: true,
+          autoPauseAtStart: false
+        }, 15); // Playing in sub-1
+
+        playbackManager.play();
+        vi.clearAllMocks();
+
+        // ACT 1: User navigates to next subtitled clip (sub-15 starts at 30)
+        // This sets state to Transitioning and updates index to the new clip.
+        // This ALSO generates a NEW token internally in playbackManager.
+        playbackManager.seek(30, true);
+
+        expect((playbackManager as any).playerState).toBe(PlayerState.Transitioning);
+
+        // ACT 2: Simulate delayed 'auto-pause-fired' event arriving from Lua
+        // Pass a DUMMY token to represent the OLD token from the previous clip.
+        simulateMpvEvent(playbackManager, {event: 'auto-pause-fired', data: 'old-stale-token'});
+
+        // ASSERT:
+        // The event should be ignored. State should NOT flip to AutoPausedAtEnd.
+        // It should remain Transitioning until the seek completes.
+        const lastUpdate = getLastStateUpdate();
+        expect(lastUpdate?.playerState).toBe(PlayerState.Transitioning);
+        expect(lastUpdate?.playerState).not.toBe(PlayerState.AutoPausedAtEnd);
+      });
+
+      it('should ignore stale auto-pause events even after transition to new clip is complete (Playing state)', () => {
+        // ARRANGE: Listening Practice
+        playbackManager = setupManager({autoPauseAtEnd: true});
+        playbackManager.play();
+
+        // ACT 1: Jump to next subtitled clip
+        playbackManager.seek(35, true);
+        simulateSeekComplete(playbackManager);
+
+        // Now state is Playing inside the new clip.
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.Playing);
+
+        // Clear mocks to isolate the next step
+        vi.clearAllMocks();
+
+        // ACT 2: Simulate stale 'auto-pause-fired' event arriving from the PREVIOUS clip.
+        simulateMpvEvent(playbackManager, {event: 'auto-pause-fired', data: 'STALE_TOKEN_ID'});
+
+        // ASSERT:
+        // Should NOT pause
+        expect(mockMpvManager.setProperty).not.toHaveBeenCalledWith('pause', true);
+
+        // Should NOT snap time back
+        expect(mockMpvManager.sendCommand).not.toHaveBeenCalledWith(expect.arrayContaining(['seek']));
+
+        // State should remain Playing (check internal state directly since no new update was emitted)
+        expect((playbackManager as any).playerState).toBe(PlayerState.Playing);
       });
     });
   });

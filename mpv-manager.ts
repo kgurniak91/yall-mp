@@ -131,7 +131,7 @@ export class MpvManager extends EventEmitter {
     this.mpv.on('status', (status: StatusObject) => {
       const prop = status.property as any;
       if (prop === 'user-data/auto-pause-fired') {
-        this.emit('status', {event: 'auto-pause-fired'});
+        this.emit('status', {event: 'auto-pause-fired', data: status.value});
       } else {
         this.emit('status', {
           event: 'property-change',
@@ -237,8 +237,8 @@ export class MpvManager extends EventEmitter {
     return this.mpv.hideSubtitles();
   }
 
-  public setLuaAutoPause(endTime: number): void {
-    this.mpv?.command('script-message', ['set-auto-pause', endTime.toString()]);
+  public setLuaAutoPause(endTime: number, token: string): void {
+    this.mpv?.command('script-message', ['set-auto-pause', endTime.toString(), token]);
   }
 
   private getMpvExecutablePath(): string {
