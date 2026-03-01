@@ -235,9 +235,17 @@ export class PlaybackManager extends EventEmitter {
     // Notify Lua script if index of clip changed OR boundaries of current clip changed
     const newClip = this.clips[this.currentClipIndex];
     const boundaryChanged = (newClip.startTime !== oldStartTime) || (newClip.endTime !== oldEndTime);
+    const typeChanged = Boolean(oldClip?.hasSubtitle) !== Boolean(newClip?.hasSubtitle);
 
-    if (indexChanged || boundaryChanged) {
+    if (indexChanged || typeChanged) {
       this.applyClipTransitionSettings();
+    } else if (boundaryChanged) {
+      // If only the boundary changed, refresh the auto-pause target but do NOT re-apply
+      // subtitle visibility or speed settings to avoid resetting manual user overrides.
+      if (this.userOverriddenClipId && oldClip && this.userOverriddenClipId === oldClip.id) {
+        this.userOverriddenClipId = newClip.id;
+      }
+      this.refreshLuaAutoPause();
     }
 
     // If user edited current clip boundaries when auto-paused, verify if playhead is still within boundaries and act accordingly

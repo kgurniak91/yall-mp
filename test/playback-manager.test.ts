@@ -548,6 +548,55 @@ describe('PlaybackManager', () => {
     });
   });
 
+  describe('Adjusting Clip Boundaries while Subtitles are Manually Overridden', () => {
+    it('should NOT reset manual subtitle visibility when extending the right boundary', () => {
+      playbackManager = setupManager({
+        useMpvSubtitles: true,
+        subtitleBehavior: SubtitleBehavior.ForceHide,
+        autoPauseAtEnd: true,
+        autoPauseAtStart: false
+      });
+
+      // Enter clip and manually toggle subs ON
+      playbackManager.seek(15);
+      simulateSeekComplete(playbackManager);
+      expect((playbackManager as any).subtitlesVisible).toBe(false); // ForceHide took effect
+
+      playbackManager.toggleSubtitles();
+      expect((playbackManager as any).subtitlesVisible).toBe(true);
+      vi.clearAllMocks();
+
+      // Simulate user extending the right boundary
+      const modifiedClips = cloneDeep(mockClips);
+      modifiedClips[1].endTime = 22;
+      modifiedClips[2].startTime = 22;
+      playbackManager.updateClips(modifiedClips);
+
+      // Subtitles should REMAIN visible. ForceHide should not re-trigger.
+      expect(mockMpvManager.hideSubtitles).not.toHaveBeenCalled();
+      expect((playbackManager as any).subtitlesVisible).toBe(true);
+    });
+
+    it('should preserve manual subtitle visibility override when extending the left boundary (ID change)', () => {
+      playbackManager = setupManager({useMpvSubtitles: true, subtitleBehavior: SubtitleBehavior.ForceHide});
+      playbackManager.seek(15);
+      simulateSeekComplete(playbackManager);
+      playbackManager.toggleSubtitles();
+      vi.clearAllMocks();
+
+      // Simulate user extending the left boundary (Causes clip ID to change because it's based on startTime)
+      const modifiedClips = cloneDeep(mockClips);
+      modifiedClips[1].startTime = 8;
+      modifiedClips[1].id = 'sub-8'; // ID changes!
+      modifiedClips[0].endTime = 8;
+      playbackManager.updateClips(modifiedClips);
+
+      // The manual override ID should migrate to the new ID silently.
+      expect(mockMpvManager.hideSubtitles).not.toHaveBeenCalled();
+      expect((playbackManager as any).subtitlesVisible).toBe(true);
+    });
+  });
+
   describe('PlaybackManager: Subtitle Behavior and Settings', () => {
 
     describe('Behavior at Start of Subtitle', () => {
