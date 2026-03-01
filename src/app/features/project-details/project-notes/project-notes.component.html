@@ -58,10 +58,10 @@
   </div>
 
   @if (lookupNotesView().length > 0) {
-    <p-accordion [multiple]="true" [(value)]="activeAccordionIndices">
+    <p-accordion [multiple]="true" [(value)]="activeAccordionTabs">
       @for (selectionGroup of lookupNotesView(); track selectionGroup.selection; let i = $index) {
         <div class="accordion-wrapper">
-          <p-accordion-panel [value]="i">
+          <p-accordion-panel [value]="selectionGroup.selection">
             <p-accordion-header>
               <div class="flex align-items-center justify-content-between w-full pr-3">
                 <p class="m-0 p-0 pr-6">
@@ -78,7 +78,7 @@
               </div>
             </p-accordion-header>
             <p-accordion-content>
-              @if (activeAccordionIndices().includes(i)) {
+              @if (activeAccordionTabs().includes(selectionGroup.selection)) {
                 <div class="notes-list-container">
                   @for (note of selectionGroup.notes; track note.originalIndex; let nIndex = $index) {
                     <div class="note-item flex align-items-start gap-2 py-3 pl-3 pr-2">

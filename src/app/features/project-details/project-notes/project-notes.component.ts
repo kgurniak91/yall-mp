@@ -66,7 +66,7 @@ export class ProjectNotesComponent {
   public readonly notesData = input<ProjectClipNotes | undefined>();
   public readonly notesChange = output<ProjectClipNotes>();
   protected readonly lookupNotesView = signal<SelectionGroupView[]>([]);
-  protected readonly activeAccordionIndices = signal<number[]>([]);
+  protected readonly activeAccordionTabs = signal<string[]>([]);
   protected readonly groupMenuItems = signal<MenuItem[]>([]);
   protected readonly noteMenuItems = signal<MenuItem[]>([]);
   protected readonly groupMenus = viewChildren<Menu>('groupMenu');
@@ -101,7 +101,7 @@ export class ProjectNotesComponent {
         // Only force expand after switching to a different clip
         if (this.initialExpandAll() && this.lastProcessedClipId !== clipId) {
           const view = this.lookupNotesView();
-          this.activeAccordionIndices.set(view.map((_, i) => i));
+          this.activeAccordionTabs.set(view.map(g => g.selection));
           this.lastProcessedClipId = clipId;
         }
       });
@@ -109,7 +109,7 @@ export class ProjectNotesComponent {
   }
 
   onAddManualNote(): void {
-    this.openNoteDialog('create', '', '', true);
+    this.openNoteDialog('create', '', '', true, undefined, true);
   }
 
   formatNoteText(text: string): string {
@@ -240,10 +240,9 @@ export class ProjectNotesComponent {
     this.openNoteDialog('edit', term, note.text, true, note.originalIndex);
   }
 
-  private syncAccordionIndices(oldView: SelectionGroupView[], newView: SelectionGroupView[]): void {
-    const openSelections = this.activeAccordionIndices().map(i => oldView[i].selection);
-    const newIndices = openSelections.map(sel => newView.findIndex(g => g.selection === sel)).filter(i => i !== -1);
-    this.activeAccordionIndices.set(newIndices);
+  private syncAccordionTabs(newView: SelectionGroupView[]): void {
+    const currentTabs = this.activeAccordionTabs();
+    this.activeAccordionTabs.set(currentTabs.filter(tab => newView.some(g => g.selection === tab)));
   }
 
   private onMoveGroup(index: number, direction: -1 | 1): void {
@@ -256,7 +255,7 @@ export class ProjectNotesComponent {
       return newView;
     });
 
-    this.syncAccordionIndices(oldView, this.lookupNotesView());
+    this.syncAccordionTabs(this.lookupNotesView());
     this.saveNotes();
   }
 
@@ -275,7 +274,7 @@ export class ProjectNotesComponent {
       return newView;
     });
 
-    this.syncAccordionIndices(oldView, this.lookupNotesView());
+    this.syncAccordionTabs(this.lookupNotesView());
     this.saveNotes();
   }
 
@@ -317,6 +316,7 @@ export class ProjectNotesComponent {
       message: 'Are you sure you want to delete all notes in this group?',
       accept: () => {
         this.lookupNotesView.update(view => view.filter(g => g.selection !== term));
+        this.syncAccordionTabs(this.lookupNotesView());
         this.saveNotes();
         this.toastService.success('Group deleted');
       }
@@ -348,7 +348,9 @@ export class ProjectNotesComponent {
   private buildNotesView(notes: ProjectClipNotes | undefined): void {
     if (!notes?.lookupNotes && !notes?.manualNote) {
       this.lookupNotesView.set([]);
-      this.activeAccordionIndices.set([]);
+      if (!this.initialExpandAll()) {
+        this.activeAccordionTabs.set([]);
+      }
       return;
     }
 
@@ -400,6 +402,10 @@ export class ProjectNotesComponent {
       return newView;
     });
 
+    this.activeAccordionTabs.update(tabs =>
+      tabs.map(t => t === oldTerm ? newTerm : t)
+    );
+
     this.saveNotes();
     this.toastService.success('Term renamed');
   }
@@ -409,7 +415,8 @@ export class ProjectNotesComponent {
     term: string,
     noteText: string,
     isTermEditable: boolean,
-    originalIndex?: number
+    originalIndex?: number,
+    forceExpand: boolean = false
   ): void {
     const restoreFocusability = disableFocusInParentDialog();
 
@@ -485,6 +492,12 @@ export class ProjectNotesComponent {
 
         return newView;
       });
+
+      if (forceExpand || mode === 'create') {
+        this.activeAccordionTabs.update(tabs =>
+          Array.from(new Set([...tabs, result.term]))
+        );
+      }
 
       this.saveNotes();
       this.toastService.success(mode === 'create' ? 'Note added' : 'Note updated');
