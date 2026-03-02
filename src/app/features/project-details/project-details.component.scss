@@ -12,7 +12,6 @@
   min-height: 0;
 }
 
-
 .video-area {
   flex-grow: 1;
   display: flex;
@@ -25,6 +24,14 @@
   app-video-controller {
     width: 100%;
     height: 100%;
+  }
+
+  &.hide-cursor {
+    cursor: none !important;
+
+    ::ng-deep * {
+      cursor: none !important;
+    }
   }
 }
 

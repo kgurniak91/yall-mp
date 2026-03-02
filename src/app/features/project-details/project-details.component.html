@@ -11,7 +11,12 @@
 }
 
 <div class="content-wrapper">
-  <div class="video-area" (click)="onVideoAreaClick()">
+  <div class="video-area"
+       [class.hide-cursor]="isCursorHidden()"
+       (mousemove)="resetCursorVisibility()"
+       (mousedown)="resetCursorVisibility()"
+       (mouseleave)="onVideoMouseLeave()"
+       (click)="onVideoAreaClick()">
     <app-video-controller #videoController (ready)="onPlayerReady()"/>
     <app-subtitles-overlay [currentClip]="clipsStateService.currentClipForAllTracks()"
                            [isYomitanEnabled]="isYomitanEnabled()"

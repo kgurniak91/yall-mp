@@ -3,6 +3,7 @@ import {
   Component,
   computed,
   effect,
+  HostListener,
   inject,
   OnDestroy,
   OnInit,
@@ -113,6 +114,7 @@ import {SubtitlesLookupStateService} from './services/subtitles-lookup-state/sub
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProjectDetailsComponent implements OnInit, OnDestroy {
+  protected readonly isCursorHidden = signal(false);
   protected readonly isYomitanEnabled = signal(false);
   protected readonly subtitlesAtCurrentTime = computed(() => this.clipsStateService.subtitlesAtCurrentTime());
 
@@ -341,6 +343,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   private clickTimeout: any = null;
   private lastSubtitledSourceIds: string[] = [];
   private unexportedClipWithNotesWarnTimeout: any = null;
+  private hideCursorTimeout: any;
 
   constructor() {
     inject(ProjectKeyboardShortcutsService); // start listening
@@ -613,6 +616,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     if (this.unexportedClipWithNotesWarnTimeout) {
       clearTimeout(this.unexportedClipWithNotesWarnTimeout);
     }
+    clearTimeout(this.hideCursorTimeout);
     this.activeDialogRef?.close();
     if (this.cleanupMpvReadyListener) {
       this.cleanupMpvReadyListener();
@@ -1134,6 +1138,65 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     } else {
       this.toastService.warn('No default lookup service is configured');
     }
+  }
+
+  protected resetCursorVisibility(): void {
+    this.showCursor();
+    this.scheduleCursorHide();
+  }
+
+  protected onVideoMouseLeave(): void {
+    this.showCursor();
+    clearTimeout(this.hideCursorTimeout);
+  }
+
+  @HostListener('window:keydown')
+  protected onGlobalKeyDown(): void {
+    this.showCursor();
+    if (this.isMouseOverVideo()) {
+      this.scheduleCursorHide();
+    }
+  }
+
+  private showCursor(): void {
+    if (this.isCursorHidden()) {
+      this.isCursorHidden.set(false);
+    }
+  }
+
+  private scheduleCursorHide(): void {
+    clearTimeout(this.hideCursorTimeout);
+    this.hideCursorTimeout = setTimeout(() => {
+      if (this.canHideCursor() && this.isMouseOverVideo()) {
+        this.isCursorHidden.set(true);
+      }
+    }, 2500);
+  }
+
+  private isMouseOverVideo(): boolean {
+    return !!document.querySelector('.video-area:hover');
+  }
+
+  private canHideCursor(): boolean {
+    // Check for open dynamic dialogs
+    if (this.dialogService.dialogComponentRefMap.size > 0) {
+      return false;
+    }
+
+    // Check for drawers (Settings/Notes)
+    if (this.projectSettingsStateService.isSettingsDrawerOpen() || this.projectSettingsStateService.isNotesDrawerOpen()) {
+      return false;
+    }
+
+    // Check for subtitles lookup window
+    if (this.subtitlesLookupStateService.isLookupWindowOpen()) {
+      return false;
+    }
+
+    // Check for visible PrimeNG overlays (Context Menus, Popovers, ConfirmDialogs)
+    const hasOverlay = !!document.querySelector('.p-overlay-mask, .p-contextmenu, .p-popover, .p-menu-overlay, .yomitan-popup-wrapper, .manual-dictionary-backdrop');
+
+    return !hasOverlay;
   }
 
   private executeLookup(service: SubtitleLookupService, text: string): void {
