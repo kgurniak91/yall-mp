@@ -12,6 +12,16 @@
                      [ngModel]="settings().autoPauseAtEnd"
                      (ngModelChange)="onSettingChange('autoPauseAtEnd', $event)"/>
     </div>
+    <p-divider/>
+    <div class="setting-item pb-0">
+      <label for="skip-gaps" class="font-semibold">Skip gaps (non-subtitled clips)</label>
+      <p-inputSwitch inputId="skip-gaps"
+                     [ngModel]="settings().skipGaps"
+                     (ngModelChange)="onSettingChange('skipGaps', $event)"/>
+    </div>
+    <small class="block mt-2 text-sm text-gray-600">
+      Automatically jump between subtitled clips, completely ignoring gaps between them.
+    </small>
   </p-fieldset>
 
   <p-fieldset legend="Subtitle Display" [toggleable]="false">

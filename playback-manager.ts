@@ -70,7 +70,7 @@ export class PlaybackManager extends EventEmitter {
 
   public play(): void {
     if (this.playerState === PlayerState.AutoPausedAtEnd) {
-      this.playClipAtIndex(this.currentClipIndex + 1);
+      this.playClipAtIndex(this.getNextClipIndex(this.currentClipIndex));
     } else {
       // If starting from a paused or idle state, re-apply settings to prevent race conditions.
       if (this.isPaused) {
@@ -304,16 +304,19 @@ export class PlaybackManager extends EventEmitter {
         this.currentTime = currentClip.endTime - 0.01;
       }
 
-      if (this.settings?.autoPauseAtEnd && currentClip?.hasSubtitle) {
+      const nextIndex = this.getNextClipIndex(this.currentClipIndex);
+      const noMoreSubtitles = this.settings?.skipGaps && nextIndex >= this.clips.length;
+
+      if ((this.settings?.autoPauseAtEnd && currentClip?.hasSubtitle) || noMoreSubtitles) {
         this.setPlayerState(PlayerState.AutoPausedAtEnd);
         this.notifyUI();
       } else {
         if (this.playerState === PlayerState.PausedByUser) {
           return;
         }
-
-        this.playClipAtIndex(this.currentClipIndex + 1);
+        this.playClipAtIndex(nextIndex);
       }
+
       return;
     }
 
@@ -404,6 +407,16 @@ export class PlaybackManager extends EventEmitter {
       // This must stay as Idle, not Ended, because it happens when mpv unloads the file completely during teardown:
       this.setPlayerState(PlayerState.Idle);
     }
+  }
+
+  private getNextClipIndex(currentIndex: number): number {
+    let nextIndex = currentIndex + 1;
+    if (this.settings?.skipGaps) {
+      while (nextIndex < this.clips.length && !this.clips[nextIndex].hasSubtitle) {
+        nextIndex++;
+      }
+    }
+    return nextIndex;
   }
 
   private playClipAtIndex(index: number): void {

@@ -15,6 +15,7 @@ export class ProjectSettingsStateService {
   public readonly autoPauseAtEnd = computed(() => this.settings().autoPauseAtEnd);
   public readonly subtitledClipSpeed = computed(() => this.settings().subtitledClipSpeed);
   public readonly gapSpeed = computed(() => this.settings().gapSpeed);
+  public readonly skipGaps = computed(() => this.settings().skipGaps);
   public readonly subtitleBehavior = computed(() => this.settings().subtitleBehavior);
   public readonly selectedAudioTrackIndex = computed(() => this.settings().selectedAudioTrackIndex);
   public readonly useMpvSubtitles = computed(() => this.settings().useMpvSubtitles);

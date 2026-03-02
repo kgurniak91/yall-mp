@@ -18,6 +18,7 @@ export interface ProjectSettings {
   autoPauseAtEnd: boolean;
   subtitledClipSpeed: number;
   gapSpeed: number;
+  skipGaps: boolean;
   speedOverride: number;
   subtitleBehavior: SubtitleBehavior;
   selectedAudioTrackIndex: number | null;
@@ -34,6 +35,7 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
   autoPauseAtEnd: false,
   subtitledClipSpeed: 1.0,
   gapSpeed: 2.0,
+  skipGaps: false,
   speedOverride: 0.5,
   subtitleBehavior: SubtitleBehavior.DoNothing,
   selectedAudioTrackIndex: null,

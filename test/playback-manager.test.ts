@@ -1436,6 +1436,91 @@ describe('PlaybackManager', () => {
     });
   });
 
+  describe('Skip Gaps Feature', () => {
+    const baseSettings = {
+      subtitledClipSpeed: 1.0,
+      gapSpeed: 2.0,
+      skipGaps: true,
+      autoPauseAtStart: false,
+      autoPauseAtEnd: false
+    };
+
+    it('should jump directly to the next subtitled clip when a clip ends', () => {
+      playbackManager = setupManager(baseSettings);
+      playbackManager.seek(15); // in sub-1 (index 1)
+      simulateSeekComplete(playbackManager);
+      playbackManager.play();
+      vi.clearAllMocks();
+
+      simulateEndOfClip(playbackManager, 20); // end of sub-1
+
+      // Should skip gap-2 (index 2) and jump to sub-15 (index 3)
+      expect(mockMpvManager.sendCommand).toHaveBeenCalledWith(['seek', 30, 'absolute']);
+      expect(getLastStateUpdate()).toEqual(expect.objectContaining({
+        currentClipIndex: 3,
+        playerState: PlayerState.Playing
+      }));
+    });
+
+    it('should remain glued to the end of the last subtitle and NOT enter Ended state if a trailing gap remains', () => {
+      // ARRANGE: A layout where a subtitled clip is followed by a trailing gap (e.g., credits)
+      const clipsWithTrailingGap: LightweightVideoClip[] = [
+        {id: 'sub-last', startTime: 0, endTime: 10, hasSubtitle: true},
+        {id: 'gap-credits', startTime: 10, endTime: 100, hasSubtitle: false}
+      ];
+
+      // Settings: Skip Gaps is ON, but Auto-Pause is OFF (Continuous play)
+      const settings = {
+        ...DEFAULT_PROJECT_SETTINGS,
+        skipGaps: true,
+        autoPauseAtEnd: false
+      };
+
+      const manager = new PlaybackManager(
+        mockMpvManager as unknown as MpvManager,
+        mockUiWindow as unknown as BrowserWindow
+      );
+
+      // Load at 5s (midway through the last subtitle)
+      manager.loadProject(clipsWithTrailingGap, settings, 5);
+      manager.play();
+      vi.clearAllMocks();
+
+      // ACT: Simulate the last subtitled clip ending at 10s
+      (manager as any).currentClipIndex = 0;
+      const token = (manager as any).currentAutoPauseToken;
+      (manager as any).handleMpvEvent({event: 'auto-pause-fired', data: token});
+
+      // ASSERT:
+      // The player should NOT seek (seeking to the end or into the gap is wrong)
+      expect(mockMpvManager.sendCommand).not.toHaveBeenCalledWith(expect.arrayContaining(['seek']));
+
+      // The player should NOT be in Ended state (because the video file itself hasn't ended)
+      expect((manager as any).playerState).not.toBe(PlayerState.Ended);
+
+      // The player should be AutoPausedAtEnd (staying at the 10s mark)
+      expect((manager as any).playerState).toBe(PlayerState.AutoPausedAtEnd);
+
+      // Verify UI was notified of the specific pause state
+      const lastUpdate = getLastStateUpdate();
+      expect(lastUpdate?.playerState).toBe(PlayerState.AutoPausedAtEnd);
+      expect(lastUpdate?.currentTime).toBeCloseTo(9.99); // Snapped to end
+    });
+
+    it('should correctly jump to next subtitled clip when resuming from AutoPausedAtEnd', () => {
+      playbackManager = setupManager({...baseSettings, autoPauseAtEnd: true});
+      (playbackManager as any).currentClipIndex = 1; // sub-1
+      simulateEndOfClip(playbackManager, 20);
+      vi.clearAllMocks();
+
+      playbackManager.play();
+
+      // Should skip gap-2 (index 2) and play sub-15 (index 3)
+      expect(mockMpvManager.sendCommand).toHaveBeenCalledWith(['seek', 30, 'absolute']);
+      expect((playbackManager as any).currentClipIndex).toBe(3);
+    });
+  });
+
   describe('Speed Override Feature', () => {
     beforeEach(() => {
       playbackManager = setupManager({
