@@ -4,6 +4,7 @@ import type {SubtitleData} from '../../../../shared/types/subtitle.type';
 import type {VideoClip} from '../video.types';
 
 export class DeleteSubtitledClipCommand implements Command {
+  public readonly label = 'Delete Subtitle';
   private originalSubtitles: SubtitleData[] = [];
   private originalRawAssContent?: string;
 

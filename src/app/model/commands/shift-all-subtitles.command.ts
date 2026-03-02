@@ -4,6 +4,7 @@ import {SubtitleData} from '../../../../shared/types/subtitle.type';
 import {cloneDeep} from 'lodash-es';
 
 export class ShiftAllSubtitlesCommand implements Command {
+  public readonly label = 'Global Time Shift';
   private readonly originalSubtitles: SubtitleData[];
   private readonly originalRawAssContent: string | undefined;
 

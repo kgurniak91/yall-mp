@@ -8,6 +8,8 @@ export interface ClipContent {
 }
 
 export class UpdateClipTextCommand implements Command {
+  public readonly label = 'Edit Subtitle Text';
+
   constructor(
     private clipsStateService: ClipsStateService,
     private projectId: string,

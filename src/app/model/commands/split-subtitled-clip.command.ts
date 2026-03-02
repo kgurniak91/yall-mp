@@ -4,6 +4,7 @@ import {SubtitleData} from '../../../../shared/types/subtitle.type';
 import {ProjectClipNotes} from '../project.types';
 
 export class SplitSubtitledClipCommand implements Command {
+  public readonly label = 'Split Clip';
   private originalSubtitles: SubtitleData[] | undefined;
   private newSubtitleIds: string[] | undefined;
   private originalRawAssContent: string | undefined;

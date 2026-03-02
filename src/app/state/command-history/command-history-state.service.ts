@@ -1,5 +1,6 @@
-import {computed, Injectable, signal} from '@angular/core';
+import {computed, inject, Injectable, signal} from '@angular/core';
 import {Command} from '../../model/commands/commands.types';
+import {ToastService} from '../../shared/services/toast/toast.service';
 
 export const MAX_HISTORY_SIZE = 100;
 
@@ -11,6 +12,7 @@ export class CommandHistoryStateService {
   private readonly redoStack = signal<Command[]>([]);
   private isProcessing = false;
   private actionQueue: (() => void)[] = [];
+  private readonly toastService = inject(ToastService);
 
   public execute(command: Command): void {
     // New user action arrived so it should clear any pending undo/redo actions and run immediately
@@ -39,6 +41,8 @@ export class CommandHistoryStateService {
       const commandToUndo = stack[stack.length - 1];
       commandToUndo.undo();
 
+      this.toastService.info(`Undone: ${commandToUndo.label}`);
+
       this.undoStack.set(stack.slice(0, -1));
       this.redoStack.update(redo => [commandToUndo, ...redo]);
     });
@@ -55,6 +59,8 @@ export class CommandHistoryStateService {
 
       const commandToRedo = stack[0];
       commandToRedo.execute();
+
+      this.toastService.info(`Redone: ${commandToRedo.label}`);
 
       this.redoStack.set(stack.slice(1));
       this.undoStack.update(undo => [...undo, commandToRedo]);

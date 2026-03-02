@@ -1,10 +1,13 @@
-import {createServiceFactory, SpectatorService} from '@ngneat/spectator';
+import {createServiceFactory, mockProvider, SpectatorService} from '@ngneat/spectator';
 import {CommandHistoryStateService, MAX_HISTORY_SIZE} from './command-history-state.service';
 import {Command} from '../../model/commands/commands.types';
+import {ToastService} from '../../shared/services/toast/toast.service';
 
 let testState: { counter: number };
 
 class MockCommand implements Command {
+  public readonly label = 'Mock Command Label';
+
   executeSpy = jasmine.createSpy('executeSpy').and.callFake(() => {
     testState.counter++;
   });
@@ -23,7 +26,10 @@ class MockCommand implements Command {
 }
 
 describe('CommandHistoryStateService', () => {
-  const createService = createServiceFactory(CommandHistoryStateService);
+  const createService = createServiceFactory({
+    service: CommandHistoryStateService,
+    providers: [mockProvider(ToastService)]
+  });
   let spectator: SpectatorService<CommandHistoryStateService>;
   let service: CommandHistoryStateService;
 

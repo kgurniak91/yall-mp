@@ -4,6 +4,7 @@ import {SubtitleData} from '../../../../shared/types/subtitle.type';
 import {cloneDeep} from 'lodash-es';
 
 export class UpdateClipTimesCommand implements Command {
+  public readonly label = 'Adjust Timing';
   private readonly originalSubtitles: SubtitleData[];
   private readonly newSubtitles: SubtitleData[];
   private readonly originalRawAssContent?: string;

@@ -3,6 +3,7 @@ import {ClipsStateService} from '../../state/clips/clips-state.service';
 import {SubtitleData} from '../../../../shared/types/subtitle.type';
 
 export class CreateSubtitledClipCommand implements Command {
+  public readonly label = 'Create Subtitle';
   private addedSubtitleId: string | undefined;
 
   constructor(

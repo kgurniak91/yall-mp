@@ -3,6 +3,7 @@ import {ClipsStateService} from '../../state/clips/clips-state.service';
 import type {SubtitleData} from '../../../../shared/types/subtitle.type';
 
 export class RemoveGapCommand implements Command {
+  public readonly label = 'Remove Gap';
   private originalFirstSubtitles: SubtitleData[] = [];
   private originalSecondSubtitles: SubtitleData[] = [];
 
