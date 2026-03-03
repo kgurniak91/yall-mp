@@ -1214,7 +1214,9 @@ if (!gotTheLock) {
       subtitleTracks: MediaTrack[],
       useMpvSubtitles: boolean,
       subtitlesVisible: boolean,
-      hardwareAcceleration: boolean
+      hardwareAcceleration: boolean,
+      volume: number,
+      isMuted: boolean
     ) => {
       if (!uiWindow || !mainWindow) {
         return;
@@ -1261,6 +1263,7 @@ if (!gotTheLock) {
 
       mpvManager = new MpvManager(videoWindow);
       playbackManager = new PlaybackManager(mpvManager, uiWindow);
+      playbackManager.setInitialVolumeState(volume, isMuted);
 
       playbackManager.on('repeat-seek-completed', () => {
         if (uiWindow && !uiWindow.isDestroyed()) {
@@ -1298,10 +1301,12 @@ if (!gotTheLock) {
 
       try {
         // Start MPV inside the child window's handle
-        await mpvManager.start(mediaPath, audioTrackIndex, subtitleSelection, subtitleTracks, useMpvSubtitles, subtitlesVisible, hardwareAcceleration);
+        await mpvManager.start(mediaPath, audioTrackIndex, subtitleSelection, subtitleTracks, useMpvSubtitles, subtitlesVisible, hardwareAcceleration, volume, isMuted);
         mpvManager.observeProperty('time-pos');
         mpvManager.observeProperty('duration');
         mpvManager.observeProperty('pause');
+        mpvManager.observeProperty('volume');
+        mpvManager.observeProperty('mute');
       } catch (error) {
         console.error('[Main Process] Critical error during MPV startup:', error);
         // Re-throw the error so the renderer process's Promise is rejected.
@@ -1485,6 +1490,8 @@ if (!gotTheLock) {
     ipcMain.on('playback:setSpeedOverride', (_, isActive: boolean) => {
       playbackManager?.setSpeedOverride(isActive);
     });
+    ipcMain.on('playback:setVolume', (_, volume: number) => playbackManager?.setVolume(volume));
+    ipcMain.on('playback:setMute', (_, mute: boolean) => playbackManager?.setMute(mute));
 
     ipcMain.handle('app:get-version', () => app.getVersion());
 

@@ -33,6 +33,8 @@ export class VideoStateService implements OnDestroy {
   private readonly _isUserSeeking = signal(false);
   private readonly _findInSubtitlesRequest = signal<number | null>(null);
   private readonly _openDictionaryRequest = signal<number | null>(null);
+  private readonly _volume = signal(100);
+  private readonly _isMuted = signal(false);
   private readonly saveTimeSubject = new Subject<number>();
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
@@ -72,8 +74,13 @@ export class VideoStateService implements OnDestroy {
   public readonly isUserSeeking = this._isUserSeeking.asReadonly();
   public readonly findInSubtitlesRequest = this._findInSubtitlesRequest.asReadonly();
   public readonly openDictionaryRequest = this._openDictionaryRequest.asReadonly();
+  public readonly volume = this._volume.asReadonly();
+  public readonly isMuted = this._isMuted.asReadonly();
 
   constructor() {
+    this._volume.set(this.appStateService.globalSettings().volume ?? 100);
+    this._isMuted.set(this.appStateService.globalSettings().isMuted ?? false);
+
     this.cleanupMpvListener = window.electronAPI.onMpvEvent((status) => {
       if (status.event === 'property-change' && status.name === 'duration') {
         this.setDuration(status.data);
@@ -85,6 +92,12 @@ export class VideoStateService implements OnDestroy {
       this._isPaused.set(update.isPaused);
       this._subtitlesVisible.set(update.subtitlesVisible);
       this._playerState.set(update.playerState);
+
+      if (this._volume() !== update.volume || this._isMuted() !== update.isMuted) {
+        this._volume.set(update.volume);
+        this._isMuted.set(update.isMuted);
+        this.appStateService.updateGlobalSettings({volume: update.volume, isMuted: update.isMuted});
+      }
 
       if (update.playerState !== PlayerState.Seeking && update.playerState !== PlayerState.Transitioning) {
         this._isUserSeeking.set(false);
@@ -252,6 +265,19 @@ export class VideoStateService implements OnDestroy {
 
   public setSpeedOverride(isActive: boolean): void {
     window.electronAPI.playbackSetSpeedOverride(isActive);
+  }
+
+  public setVolume(volume: number): void {
+    window.electronAPI.playbackSetVolume(volume);
+    this._volume.set(volume);
+    this.appStateService.updateGlobalSettings({volume});
+  }
+
+  public toggleMute(): void {
+    const newMute = !this._isMuted();
+    window.electronAPI.playbackSetMute(newMute);
+    this._isMuted.set(newMute);
+    this.appStateService.updateGlobalSettings({isMuted: newMute});
   }
 
   public requestAssRendererSync(): void {

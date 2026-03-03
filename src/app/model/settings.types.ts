@@ -64,6 +64,8 @@ export interface GlobalSettings {
   warnUnexportedNotes: boolean;
   preferredAudioLanguages: string[]; // Array of ISO codes (e.g., ['ja', 'en'])
   preferredSubtitleLanguages: string[]; // Array of ISO codes (e.g., ['ja', 'en'])
+  volume?: number;
+  isMuted?: boolean;
 }
 
 const DEFAULT_SEARCH_SUBTITLE_LOOKUP_SERVICES: SubtitleLookupService[] = [
@@ -158,7 +160,9 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   hardwareAcceleration: false,
   warnUnexportedNotes: true,
   preferredAudioLanguages: [],
-  preferredSubtitleLanguages: []
+  preferredSubtitleLanguages: [],
+  volume: 100,
+  isMuted: false
 };
 
 export enum BuiltInSettingsPreset {

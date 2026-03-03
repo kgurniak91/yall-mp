@@ -11,6 +11,8 @@ export interface PlaybackStateUpdate {
   currentTime: number;
   isPaused: boolean;
   subtitlesVisible: boolean;
+  volume: number;
+  isMuted: boolean;
 }
 
 export class PlaybackManager extends EventEmitter {
@@ -31,6 +33,8 @@ export class PlaybackManager extends EventEmitter {
   private nextPlayerState: PlayerState | null = null;
   private isSpeedOverridden = false;
   private currentAutoPauseToken: string = '';
+  private volume = 100;
+  private isMuted = false;
 
   constructor(
     private mpvManager: MpvManager,
@@ -38,6 +42,11 @@ export class PlaybackManager extends EventEmitter {
   ) {
     super();
     this.mpvManager.on('status', (status) => this.handleMpvEvent(status));
+  }
+
+  public setInitialVolumeState(volume: number, isMuted: boolean): void {
+    this.volume = volume;
+    this.isMuted = isMuted;
   }
 
   public get isPaused(): boolean {
@@ -290,6 +299,14 @@ export class PlaybackManager extends EventEmitter {
     }
   }
 
+  public setVolume(volume: number): void {
+    this.mpvManager.setProperty('volume', volume);
+  }
+
+  public setMute(mute: boolean): void {
+    this.mpvManager.setProperty('mute', mute);
+  }
+
   private handleMpvEvent(status: any): void {
     if (status.event === 'auto-pause-fired') {
       const token = status.data;
@@ -340,6 +357,18 @@ export class PlaybackManager extends EventEmitter {
         if (this.playerState === PlayerState.Playing) {
           this.setPlayerState(PlayerState.PausedBySystem);
         }
+      }
+
+      // Handle volume updates
+      if (status.name === 'volume' && status.data !== undefined) {
+        this.volume = status.data;
+        this.notifyUI();
+      }
+
+      // Handle mute updates
+      if (status.name === 'mute' && status.data !== undefined) {
+        this.isMuted = status.data;
+        this.notifyUI();
       }
 
       // Handle time updates
@@ -540,6 +569,8 @@ export class PlaybackManager extends EventEmitter {
         currentTime: this.currentTime,
         isPaused: this.isPaused,
         subtitlesVisible: this.subtitlesVisible,
+        volume: this.volume,
+        isMuted: this.isMuted,
       };
       this.uiWindow.webContents.send('playback:state-update', payload);
     }

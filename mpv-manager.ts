@@ -24,7 +24,9 @@ export class MpvManager extends EventEmitter {
     allSubtitleTracks: MediaTrack[],
     useMpvSubtitles: boolean,
     subtitlesVisible: boolean,
-    hardwareAcceleration: boolean
+    hardwareAcceleration: boolean,
+    volume: number,
+    isMuted: boolean
   ): Promise<void> {
     this.mediaPath = mediaPath;
 
@@ -62,6 +64,8 @@ export class MpvManager extends EventEmitter {
       '--framedrop=vo',               // Drop frames visually if rendering is too slow to maintain sync
       '--vd-lavc-fast',               // Allow optimizations that might slightly violate spec but improve speed
       '--sws-allow-zimg=no',          // Disable zimg (can be slow/buggy on old systems), fallback to swscale
+      `--volume=${volume}`,
+      `--mute=${isMuted ? 'yes' : 'no'}`,
     ];
 
     if (audioTrackIndex !== null) {

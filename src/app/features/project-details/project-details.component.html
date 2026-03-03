@@ -141,6 +141,34 @@
         </div>
       }
 
+      <p-button [icon]="'fa-solid ' + volumeIcon()"
+                [pTooltip]="volumeTooltip()"
+                tooltipStyleClass="tooltip-one-line"
+                tooltipPosition="top"
+                severity="secondary"
+                (click)="volumePopover.toggle($event)"/>
+
+      <p-popover #volumePopover appendTo="body">
+        <div class="flex align-items-center gap-2 p-0" style="width: 15rem">
+          <p-button [icon]="'fa-solid ' + volumeIcon()"
+                    [pTooltip]="videoStateService.isMuted() ? 'Unmute' : 'Mute'"
+                    tooltipPosition="top"
+                    severity="secondary"
+                    [text]="true"
+                    [rounded]="true"
+                    (onClick)="toggleMute()"/>
+          <p-slider [ngModel]="videoStateService.volume()"
+                    (ngModelChange)="onVolumeChange($event)"
+                    [min]="0"
+                    [max]="130"
+                    class="flex-1"
+                    styleClass="w-full"/>
+          <span class="text-sm font-mono text-right mx-2" style="width: 2rem;">
+            {{ videoStateService.volume() }}%
+          </span>
+        </div>
+      </p-popover>
+
       @let subtitlesVisible = videoStateService.subtitlesVisible();
       <p-button icon="{{subtitlesVisible ? 'fa-solid' : 'fa-regular'}} fa-closed-captioning"
                 [pTooltip]="(subtitlesVisible ? 'Hide subtitles' : 'Show subtitles') + ' (C)'"

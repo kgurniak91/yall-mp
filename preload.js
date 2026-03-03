@@ -71,8 +71,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // --- FFmpeg
   checkFFmpegAvailability: () => ipcRenderer.invoke('ffmpeg:check'),
   // --- MPV
-  mpvCreateViewport: (mediaPath, audioTrackIndex, subtitleSelection, subtitleTracks, useMpvSubtitles, subtitlesVisible, hardwareAcceleration) => ipcRenderer.invoke(
-    'mpv:createViewport', mediaPath, audioTrackIndex, subtitleSelection, subtitleTracks, useMpvSubtitles, subtitlesVisible, hardwareAcceleration
+  mpvCreateViewport: (mediaPath, audioTrackIndex, subtitleSelection, subtitleTracks, useMpvSubtitles, subtitlesVisible, hardwareAcceleration, volume, isMuted) => ipcRenderer.invoke(
+    'mpv:createViewport', mediaPath, audioTrackIndex, subtitleSelection, subtitleTracks, useMpvSubtitles, subtitlesVisible, hardwareAcceleration, volume, isMuted
   ),
   mpvFinishVideoResize: (rect) => ipcRenderer.invoke('mpv:finishVideoResize', rect),
   mpvCommand: (commandArray) => ipcRenderer.invoke('mpv:command', commandArray),
@@ -135,6 +135,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('playback:repeat-seek-completed', subscription);
   },
   playbackSetSpeedOverride: (isActive) => ipcRenderer.send('playback:setSpeedOverride', isActive),
+  playbackSetVolume: (volume) => ipcRenderer.send('playback:setVolume', volume),
+  playbackSetMute: (mute) => ipcRenderer.send('playback:setMute', mute),
   // --- Yomitan
   getYomitanExtensionId: () => ipcRenderer.invoke('yomitan:get-extension-id'),
   getYomitanSettingsUrl: () => ipcRenderer.invoke('yomitan:get-settings-url'),

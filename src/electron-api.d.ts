@@ -82,7 +82,9 @@ export interface IElectronAPI {
     subtitleTracks: MediaTrack[],
     useMpvSubtitles: boolean,
     subtitlesVisible: boolean,
-    hardwareAcceleration: boolean
+    hardwareAcceleration: boolean,
+    volume: number,
+    isMuted: boolean
   ) => Promise<void>;
   mpvFinishVideoResize: (rect: { x: number, y: number, width: number, height: number }) => Promise<void>;
   mpvCommand: (commandArray: any[]) => Promise<void>;
@@ -117,6 +119,8 @@ export interface IElectronAPI {
   onPlaybackStateUpdate: (callback: (update: PlaybackStateUpdate) => void) => (() => void);
   onRepeatSeekCompleted: (callback: () => void) => (() => void);
   playbackSetSpeedOverride: (isActive: boolean) => void;
+  playbackSetVolume: (volume: number) => void;
+  playbackSetMute: (mute: boolean) => void;
   // --- Yomitan
   getYomitanExtensionId: () => Promise<string | null>;
   getYomitanSettingsUrl: () => Promise<string | null>;

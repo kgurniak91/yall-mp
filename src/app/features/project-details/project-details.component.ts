@@ -76,6 +76,7 @@ import {SearchSubtitlesDialogData} from './search-subtitles-dialog/search-subtit
 import {SubtitleOffsetDialogComponent} from './subtitle-offset-dialog/subtitle-offset-dialog.component';
 import {SubtitleOffsetDialogData} from './subtitle-offset-dialog/subtitle-offset-dialog.types';
 import {SubtitlesLookupStateService} from './services/subtitles-lookup-state/subtitles-lookup-state.service';
+import {Slider} from 'primeng/slider';
 
 @Component({
   selector: 'app-project-details',
@@ -94,7 +95,8 @@ import {SubtitlesLookupStateService} from './services/subtitles-lookup-state/sub
     ContextMenu,
     DatePipe,
     OverlayBadgeModule,
-    ProjectNotesComponent
+    ProjectNotesComponent,
+    Slider
   ],
   templateUrl: './project-details.component.html',
   styleUrl: './project-details.component.scss',
@@ -163,6 +165,29 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       value: i,
       hasContent: content[i]
     }));
+  });
+
+  protected readonly volumeIcon = computed(() => {
+    if (this.videoStateService.isMuted() || this.videoStateService.volume() === 0) {
+      return 'fa-volume-xmark';
+    }
+
+    if (this.videoStateService.volume() < 33) {
+      return 'fa-volume-low';
+    }
+
+    if (this.videoStateService.volume() < 66) {
+      return 'fa-volume';
+    }
+
+    return 'fa-volume-high';
+  });
+
+  protected readonly volumeTooltip = computed(() => {
+    if (this.videoStateService.isMuted() || this.videoStateService.volume() === 0) {
+      return 'Volume (Muted)';
+    }
+    return `Volume (${this.videoStateService.volume()}%)`;
   });
 
   protected readonly hasNotesForCurrentClip = computed(() => {
@@ -593,6 +618,8 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     // Map absolute stream index to MPV relative audio track ID
     const audioTrackId = this.getMpvAudioTrackId(foundProject.audioTracks, foundProject.settings.selectedAudioTrackIndex);
     const hardwareAcceleration = this.globalSettingsStateService.hardwareAcceleration();
+    const volume = this.appStateService.globalSettings().volume ?? 100;
+    const isMuted = this.appStateService.globalSettings().isMuted ?? false;
 
     try {
       await window.electronAPI.mpvCreateViewport(
@@ -602,7 +629,9 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
         foundProject.subtitleTracks,
         foundProject.settings.useMpvSubtitles,
         foundProject.settings.subtitlesVisible,
-        hardwareAcceleration
+        hardwareAcceleration,
+        volume,
+        isMuted
       );
     } catch (e: any) {
       console.error('MPV failed to initialize unexpectedly', e);
@@ -731,6 +760,14 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
   redo(): void {
     this.actionService.dispatch(KeyboardAction.Redo);
+  }
+
+  toggleMute(): void {
+    this.videoStateService.toggleMute();
+  }
+
+  onVolumeChange(value: number): void {
+    this.videoStateService.setVolume(value);
   }
 
   async openAnkiExportDialog(instantExport: boolean): Promise<void> {
