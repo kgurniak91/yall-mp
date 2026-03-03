@@ -1023,7 +1023,7 @@ export class ClipsStateService implements OnDestroy {
     }, ADJUST_DEBOUNCE_MS);
   }
 
-  public validateGlobalShift(offset: number): ShiftValidationResult {
+  public validateGlobalTransform(offset: number, ratio: number): ShiftValidationResult {
     const subtitles = this._subtitles();
     const duration = this.videoStateService.duration();
 
@@ -1031,8 +1031,8 @@ export class ClipsStateService implements OnDestroy {
     let truncated = 0;
 
     for (const sub of subtitles) {
-      const newStart = sub.startTime + offset;
-      const newEnd = sub.endTime + offset;
+      const newStart = (sub.startTime * ratio) + offset;
+      const newEnd = (sub.endTime * ratio) + offset;
 
       if (newEnd <= 0 || newStart >= duration) {
         deleted++;
@@ -1051,17 +1051,17 @@ export class ClipsStateService implements OnDestroy {
     };
   }
 
-  public shiftAllSubtitles(offset: number): void {
+  public transformAllSubtitles(offset: number, ratio: number): void {
     const project = this.appStateService.currentProject();
     if (!project) {
       return;
     }
 
-    const command = new ShiftAllSubtitlesCommand(this, offset, project.rawAssContent);
+    const command = new ShiftAllSubtitlesCommand(this, offset, ratio, project.rawAssContent);
     this.commandHistoryStateService.execute(command);
   }
 
-  public performGlobalShift(offset: number): void {
+  public performGlobalTransform(offset: number, ratio: number): void {
     const project = this.appStateService.currentProject();
     if (!project) {
       return;
@@ -1071,9 +1071,9 @@ export class ClipsStateService implements OnDestroy {
     const duration = this.videoStateService.duration();
     const newSubtitles: SubtitleData[] = [];
 
-    const shiftAssSubsRecursively = (sub: AssSubtitleData): AssSubtitleData | null => {
-      const sStart = sub.startTime + offset;
-      const sEnd = sub.endTime + offset;
+    const transformAssSubsRecursively = (sub: AssSubtitleData): AssSubtitleData | null => {
+      const sStart = (sub.startTime * ratio) + offset;
+      const sEnd = (sub.endTime * ratio) + offset;
       if (sEnd <= 0 || sStart >= duration) {
         return null;
       }
@@ -1087,7 +1087,7 @@ export class ClipsStateService implements OnDestroy {
 
       if (newSub.sourceDialogues) {
         newSub.sourceDialogues = newSub.sourceDialogues
-          .map(child => shiftAssSubsRecursively(child))
+          .map(child => transformAssSubsRecursively(child))
           .filter((child): child is AssSubtitleData => child !== null);
       }
 
@@ -1096,13 +1096,13 @@ export class ClipsStateService implements OnDestroy {
 
     for (const sub of currentSubtitles) {
       if (sub.type === 'ass') {
-        const shifted = shiftAssSubsRecursively(sub as AssSubtitleData);
-        if (shifted) {
-          newSubtitles.push(shifted);
+        const transformed = transformAssSubsRecursively(sub as AssSubtitleData);
+        if (transformed) {
+          newSubtitles.push(transformed);
         }
       } else {
-        const sStart = sub.startTime + offset;
-        const sEnd = sub.endTime + offset;
+        const sStart = (sub.startTime * ratio) + offset;
+        const sEnd = (sub.endTime * ratio) + offset;
         if (sEnd <= 0 || sStart >= duration) {
           continue;
         }
@@ -1117,7 +1117,7 @@ export class ClipsStateService implements OnDestroy {
 
     const updates: Partial<Project> = {subtitles: newSubtitles};
     if (project.rawAssContent) {
-      updates.rawAssContent = this.assEditService.shiftAllTimings(project.rawAssContent, offset);
+      updates.rawAssContent = this.assEditService.transformAllTimings(project.rawAssContent, offset, ratio);
     }
 
     this.appStateService.updatePartialProject(this._projectId!, updates);

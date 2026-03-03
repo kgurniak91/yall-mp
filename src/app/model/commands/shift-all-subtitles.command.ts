@@ -4,13 +4,14 @@ import {SubtitleData} from '../../../../shared/types/subtitle.type';
 import {cloneDeep} from 'lodash-es';
 
 export class ShiftAllSubtitlesCommand implements Command {
-  public readonly label = 'Global Time Shift';
+  public readonly label = 'Global Subtitles Transform';
   private readonly originalSubtitles: SubtitleData[];
   private readonly originalRawAssContent: string | undefined;
 
   constructor(
     private clipsStateService: ClipsStateService,
     private offsetSeconds: number,
+    private ratio: number,
     rawAssContent?: string
   ) {
     this.originalSubtitles = cloneDeep(this.clipsStateService.getSubtitles());
@@ -18,7 +19,7 @@ export class ShiftAllSubtitlesCommand implements Command {
   }
 
   execute(): void {
-    this.clipsStateService.performGlobalShift(this.offsetSeconds);
+    this.clipsStateService.performGlobalTransform(this.offsetSeconds, this.ratio);
   }
 
   undo(): void {

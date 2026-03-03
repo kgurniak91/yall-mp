@@ -483,8 +483,8 @@ export class AssEditService {
     return -1;
   }
 
-  public shiftAllTimings(rawAssContent: string, offsetSeconds: number): string {
-    if (offsetSeconds === 0) {
+  public transformAllTimings(rawAssContent: string, offsetSeconds: number, ratio: number): string {
+    if (offsetSeconds === 0 && ratio === 1) {
       return rawAssContent;
     }
 
@@ -497,16 +497,16 @@ export class AssEditService {
     const startIdx = formatSpec.get('Start')!;
     const endIdx = formatSpec.get('End')!;
 
-    const shiftedLines = dialogueLines.map(line => {
+    const transformedLines = dialogueLines.map(line => {
       const parts = line.split(',');
       const oldStart = AssSubtitlesUtils.timeToSeconds(parts[startIdx]);
       const oldEnd = AssSubtitlesUtils.timeToSeconds(parts[endIdx]);
-      parts[startIdx] = AssSubtitlesUtils.formatTime(Math.max(0, oldStart + offsetSeconds));
-      parts[endIdx] = AssSubtitlesUtils.formatTime(Math.max(0, oldEnd + offsetSeconds));
+      parts[startIdx] = AssSubtitlesUtils.formatTime(Math.max(0, (oldStart * ratio) + offsetSeconds));
+      parts[endIdx] = AssSubtitlesUtils.formatTime(Math.max(0, (oldEnd * ratio) + offsetSeconds));
       return parts.join(',');
     });
 
-    return `${header}[Events]\n${formatLine}\n${shiftedLines.join('\r\n')}`;
+    return `${header}[Events]\n${formatLine}\n${transformedLines.join('\r\n')}`;
   }
 
   private getLeafSubtitles(sub: AssSubtitleData): AssSubtitleData[] {

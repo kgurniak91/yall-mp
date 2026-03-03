@@ -191,7 +191,7 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
             command: () => this.headerCurrentProjectActionBridgeService.searchInSubtitles()
           },
           {
-            label: 'Shift all subtitles',
+            label: 'Transform all subtitles',
             icon: 'fa-solid fa-clock-rotate-left',
             command: () => this.headerCurrentProjectActionBridgeService.openSubtitleOffsetDialog()
           },

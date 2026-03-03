@@ -1120,7 +1120,7 @@ Dialogue: 0,${gapStart},0:00:15.00,Default,,0,0,0,,This is a test
     });
   });
 
-  describe('shiftAllTimings', () => {
+  describe('transformAllTimings', () => {
     it('shifts multiple lines forward correctly including rounding rollover', () => {
       const dialogueLines = [
         'Dialogue: 0,0:00:04.51,0:00:05.33,Default,,0,0,0,,Line 1',
@@ -1130,7 +1130,7 @@ Dialogue: 0,${gapStart},0:00:15.00,Default,,0,0,0,,This is a test
 
       // 6666ms shift (6.666s)
       const offset = 6.666;
-      const result = service.shiftAllTimings(rawAssContent, offset);
+      const result = service.transformAllTimings(rawAssContent, offset, 1);
 
       // Line 1: 4.51 + 6.666 = 11.176 -> rounded 11.18
       // Line 1: 5.33 + 6.666 = 11.996 -> rounded 12.00 (ROLLOVER)
@@ -1144,8 +1144,39 @@ Dialogue: 0,${gapStart},0:00:15.00,Default,,0,0,0,,This is a test
       const dialogueLine = 'Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Text';
       const rawAssContent = assFileTemplate(dialogueLine);
 
-      const result = service.shiftAllTimings(rawAssContent, -5.0);
+      const result = service.transformAllTimings(rawAssContent, -5.0, 1);
       expect(result).toContain('Dialogue: 0,0:00:00.00,0:00:00.00,Default,,0,0,0,,Text');
+    });
+
+    it('correctly applies both ratio scaling and time shift to dialogue lines', () => {
+      const dialogueLine = 'Dialogue: 0,0:00:10.00,0:00:12.00,Default,,0,0,0,,Text';
+      const rawAssContent = assFileTemplate(dialogueLine);
+
+      // Scenario: Subtitles are twice as slow as the video (Ratio 0.5)
+      // and need a 1-second forward shift (Offset 1.0)
+      // Calculation for Start: (10.0 * 0.5) + 1.0 = 6.00
+      // Calculation for End:   (12.0 * 0.5) + 1.0 = 7.00
+      const offset = 1.0;
+      const ratio = 0.5;
+
+      const result = service.transformAllTimings(rawAssContent, offset, ratio);
+
+      expect(result).toContain('Dialogue: 0,0:00:06.00,0:00:07.00,Default,,0,0,0,,Text');
+      expect(result).not.toContain('0:00:10.00');
+    });
+
+    it('handles standard FPS conversion (23.976 -> 25)', () => {
+      const dialogueLine = 'Dialogue: 0,0:01:40.00,0:01:45.00,Default,,0,0,0,,Sync Test';
+      const rawAssContent = assFileTemplate(dialogueLine);
+
+      // Ratio for 23.976 to 25 fps
+      const ratio = 23.976 / 25;
+      const offset = 0;
+
+      const result = service.transformAllTimings(rawAssContent, offset, ratio);
+
+      // 100 seconds * (23.976/25) = 95.904 seconds -> 0:01:35.90
+      expect(result).toContain('0:01:35.90');
     });
   });
 });

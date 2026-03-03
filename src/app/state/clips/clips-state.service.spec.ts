@@ -2518,7 +2518,7 @@ Dialogue: 0:01:01.00,0:01:02.00,Default,Animating Text
     });
 
     it('performs a global shift and can be undone', () => {
-      service.shiftAllSubtitles(5.5); // Shift +5.5s
+      service.transformAllSubtitles(5.5, 1); // Shift +5.5s
 
       let subs = service.getSubtitles();
       expect(subs[0].startTime).toBe(15.5);
@@ -2535,11 +2535,11 @@ Dialogue: 0:01:01.00,0:01:02.00,Default,Animating Text
       // Move -12s: s1 (10-15) becomes (-2 to 3), so it is truncated.
       // Move -25s: s1 is completely deleted.
 
-      const result = service.validateGlobalShift(-12);
+      const result = service.validateGlobalTransform(-12, 1);
       expect(result.truncatedClips).toBe(1);
       expect(result.deletedClips).toBe(0);
 
-      const result2 = service.validateGlobalShift(-25);
+      const result2 = service.validateGlobalTransform(-25, 1);
       expect(result2.deletedClips).toBe(2);
     });
 
@@ -2547,13 +2547,43 @@ Dialogue: 0:01:01.00,0:01:02.00,Default,Animating Text
       // Shift by 988s:
       // s1 becomes 998 to 1003 -> Truncated at 1000
       // s2 becomes 1008 to 1013 -> Starts after video duration -> Deleted
-      service.shiftAllSubtitles(988);
+      service.transformAllSubtitles(988, 1);
 
       const subs = service.getSubtitles();
       expect(subs.length).withContext('Should have deleted s2 but kept truncated s1').toBe(1);
       expect(subs[0].id).toBe('s1');
       expect(subs[0].startTime).toBe(998);
       expect(subs[0].endTime).toBe(1000);
+    });
+  });
+
+  describe('Global Transform', () => {
+    beforeEach(() => {
+      projectState.subtitles = [
+        {type: 'srt', id: 's1', startTime: 10, endTime: 20, text: 'A', track: 0}
+      ];
+      service.setSubtitles(projectState.subtitles);
+      commandHistoryService.clearHistory(); // Ensure clean slate
+    });
+
+    it('performs a complex transform and can be undone', () => {
+      service.transformAllSubtitles(5.0, 0.5);
+
+      let subs = service.getSubtitles();
+      expect(subs[0].startTime).toBe(10); // (10 * 0.5) + 5 = 10
+      expect(subs[0].endTime).toBe(15);   // (20 * 0.5) + 5 = 15
+
+      commandHistoryService.undo();
+
+      subs = service.getSubtitles();
+      expect(subs[0].startTime).toBe(10);
+      expect(subs[0].endTime).toBe(20);
+    });
+
+    it('correctly reports data loss when scaling would push clips out of bounds', () => {
+      // Scale by 100x -> Clip at 20s becomes 2000s -> Deleted (Video duration is 1000s)
+      const result = service.validateGlobalTransform(0, 100);
+      expect(result.deletedClips).toBe(1);
     });
   });
 });

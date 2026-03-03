@@ -201,7 +201,8 @@ a.blue-link {
   color: #2563EB;
 }
 
-app-global-settings-dialog p-tabs {
+app-global-settings-dialog p-tabs,
+app-subtitle-offset-dialog p-tabs {
   height: 100%;
 
   p-tablist {

@@ -1,32 +1,69 @@
-<div class="flex flex-column gap-4">
-  <div class="text-color-secondary line-height-3">
-    Adjust the timing of all subtitles in the project simultaneously.
-    <br>
-    Enter value in <b>milliseconds</b> (1 second = 1000ms).
-  </div>
+<p-tabs value="0">
+  <p-tablist>
+    <p-tab value="0">Time Shift</p-tab>
+    <p-tab value="1">Frame Rate / Scale</p-tab>
+  </p-tablist>
+  <p-tabpanels>
+    <p-tabpanel value="0">
+      <div class="flex flex-column gap-4 pt-2">
+        <div class="text-color-secondary line-height-3">
+          Move all subtitles forward or backward.
+          Enter value in <b>milliseconds</b>.
+        </div>
 
-  <div class="flex flex-column gap-2">
-    <label for="offset-input" class="font-bold">Time Offset (ms)</label>
-    <p-inputNumber id="offset-input"
-                   [(ngModel)]="offsetMs"
-                   [showButtons]="true"
-                   buttonLayout="horizontal"
-                   placeholder="e.g., 500 or -200"
-                   [step]="50"
-                   incrementButtonClass="p-button-secondary"
-                   decrementButtonClass="p-button-secondary"
-                   incrementButtonIcon="fa-solid fa-plus"
-                   decrementButtonIcon="fa-solid fa-minus"
-                   [style]="{'width': '100%'}">
-    </p-inputNumber>
-
-    @if (offsetMs() !== null && offsetMs() !== 0) {
-      <div class="text-sm font-italic text-primary">
-        Equivalent to <b>{{ offsetSeconds() | number:'1.0-3' }}</b> seconds.
+        <div class="flex flex-column gap-2">
+          <label for="offset-input" class="font-bold">Time Offset (ms)</label>
+          <p-inputNumber id="offset-input"
+                         [(ngModel)]="offsetMs"
+                         [showButtons]="true"
+                         buttonLayout="horizontal"
+                         placeholder="e.g., 500 or -200"
+                         [step]="50"
+                         incrementButtonClass="p-button-secondary"
+                         decrementButtonClass="p-button-secondary"
+                         incrementButtonIcon="fa-solid fa-plus"
+                         decrementButtonIcon="fa-solid fa-minus"
+                         styleClass="w-full">
+          </p-inputNumber>
+        </div>
       </div>
-    }
-  </div>
+    </p-tabpanel>
 
+    <p-tabpanel value="1">
+      <div class="flex flex-column gap-4 pt-2">
+        <div class="text-color-secondary line-height-3">
+          Fix subtitles that drift over time by applying a scale factor.
+        </div>
+
+        <div class="flex flex-column gap-2">
+          <label class="font-bold">Common FPS Mismatches</label>
+          <p-select [options]="fpsPresets"
+                      [(ngModel)]="selectedFpsPreset"
+                      optionLabel="label"
+                      placeholder="Select a preset..."
+                      (ngModelChange)="onPresetChange($event)"
+                      appendTo="body">
+          </p-select>
+        </div>
+
+        <div class="flex flex-column gap-2">
+          <label for="ratio-input" class="font-bold">Manual Scale Factor</label>
+          <p-inputNumber id="ratio-input"
+                         [(ngModel)]="ratio"
+                         [minFractionDigits]="5"
+                         [maxFractionDigits]="5"
+                         [step]="0.001"
+                         [showButtons]="true"
+                         styleClass="w-full">
+          </p-inputNumber>
+          <small class="text-gray-500">1 = no scaling; &gt;1 = slower; &lt;1 = faster.</small>
+        </div>
+      </div>
+    </p-tabpanel>
+  </p-tabpanels>
+</p-tabs>
+
+<div class="pt-0 flex flex-column gap-4">
   @if (validation(); as res) {
     @if (res.deletedClips > 0 || res.truncatedClips > 0) {
       <p-message severity="warn" styleClass="w-full">
@@ -48,7 +85,7 @@
     <p-button label="Apply Offset"
               icon="fa-solid fa-clock-rotate-left"
               (click)="onApply()"
-              [disabled]="!offsetMs() || offsetMs() === 0"
+              [disabled]="isUnchanged()"
               data-primary-action/>
   </div>
 </div>

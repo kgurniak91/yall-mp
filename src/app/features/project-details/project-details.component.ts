@@ -1617,12 +1617,12 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
   private openSubtitleOffsetDialog(): void {
     const data: SubtitleOffsetDialogData = {
-      validate: (offset: number) => this.clipsStateService.validateGlobalShift(offset),
-      apply: (offset: number) => this.clipsStateService.shiftAllSubtitles(offset)
+      validate: (offset: number, ratio: number) => this.clipsStateService.validateGlobalTransform(offset, ratio),
+      apply: (offset: number, ratio: number) => this.clipsStateService.transformAllSubtitles(offset, ratio)
     };
 
     const dialogRef = this.dialogService.open(SubtitleOffsetDialogComponent, {
-      header: 'Shift All Subtitles',
+      header: 'Transform All Subtitles',
       width: 'clamp(20rem, 95vw, 40rem)',
       modal: true,
       data
