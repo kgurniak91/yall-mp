@@ -10,7 +10,6 @@ import {
   ViewEncapsulation
 } from '@angular/core';
 import {VideoStateService} from '../../../state/video/video-state.service';
-import {SeekType} from '../../../model/video.types';
 import {ClipsStateService} from '../../../state/clips/clips-state.service';
 import {VideoPlayerComponent} from '../video-player/video-player.component';
 
@@ -78,16 +77,14 @@ export class VideoControllerComponent implements OnDestroy {
     this.videoStateService.clearRepeatRequest();
   }
 
-  private handleSeek(request: { time: number; type: SeekType; isNavigation: boolean }): void {
-    let targetTime: number;
-    if (request.type === SeekType.Relative) {
-      const currentTime = this.videoStateService.currentTime();
-      targetTime = currentTime + request.time;
-    } else { // Absolute
-      targetTime = request.time;
-    }
+  private handleSeek(request: { time: number; isNavigation: boolean }): void {
+    let targetTime = request.time;
     const duration = this.videoStateService.duration();
-    targetTime = Math.max(0, Math.min(targetTime, duration - 0.01));
+    if (duration > 0) {
+      targetTime = Math.max(0, Math.min(targetTime, duration - 0.01));
+    } else {
+      targetTime = Math.max(0, targetTime);
+    }
 
     // Optimistic UI update
     this.videoStateService.setCurrentTime(targetTime);

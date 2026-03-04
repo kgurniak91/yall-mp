@@ -73,11 +73,6 @@ export enum KeyboardAction {
 
 export type KeyboardActionKey = keyof typeof KeyboardAction;
 
-export enum SeekType {
-  Absolute = 'Absolute',
-  Relative = 'Relative',
-}
-
 export enum SeekDirection {
   Previous = 'Previous',
   Next = 'Next',

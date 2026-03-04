@@ -214,13 +214,17 @@ export class PlaybackManager extends EventEmitter {
     }
   }
 
-  public updateClips(newClips: LightweightVideoClip[]): void {
+  public updateClips(newClips: LightweightVideoClip[], newTime?: number): void {
     const oldClip = this.clips[this.currentClipIndex];
     const oldStartTime = oldClip?.startTime;
     const oldEndTime = oldClip?.endTime;
     const oldClipIndex = this.currentClipIndex;
 
     this.clips = newClips;
+
+    if (newTime != null) {
+      this.currentTime = newTime;
+    }
 
     let newClipIndex: number;
     if (this.playerState === PlayerState.Ended) {
@@ -255,17 +259,19 @@ export class PlaybackManager extends EventEmitter {
 
     // Notify Lua script if index of clip changed OR boundaries of current clip changed
     const newClip = this.clips[this.currentClipIndex];
-    const boundaryChanged = (newClip.startTime !== oldStartTime) || (newClip.endTime !== oldEndTime);
+    const boundaryChanged = newClip ? (Math.abs(newClip.startTime - (oldStartTime ?? 0)) > 0.02 || Math.abs(newClip.endTime - (oldEndTime ?? 0)) > 0.02) : false;
     const typeChanged = Boolean(oldClip?.hasSubtitle) !== Boolean(newClip?.hasSubtitle);
+
+    // If the user had manually changed subtitled clip settings, preserve the override as long as he lands in a subtitled clip.
+    if (this.userOverriddenClipId && newClip?.hasSubtitle) {
+      if (boundaryChanged || indexChanged) {
+        this.userOverriddenClipId = newClip.id;
+      }
+    }
 
     if (indexChanged || typeChanged) {
       this.applyClipTransitionSettings();
     } else if (boundaryChanged) {
-      // If only the boundary changed, refresh the auto-pause target but do NOT re-apply
-      // subtitle visibility or speed settings to avoid resetting manual user overrides.
-      if (this.userOverriddenClipId && oldClip && this.userOverriddenClipId === oldClip.id) {
-        this.userOverriddenClipId = newClip.id;
-      }
       this.refreshLuaAutoPause();
     }
 

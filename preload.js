@@ -123,7 +123,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   playbackSeek: (time, isNavigation) => ipcRenderer.send('playback:seek', time, isNavigation),
   playbackLoadProject: (clips, settings, lastPlaybackTime) => ipcRenderer.invoke('playback:loadProject', clips, settings, lastPlaybackTime),
   playbackUpdateSettings: (settings) => ipcRenderer.send('playback:updateSettings', settings),
-  playbackUpdateClips: (clips) => ipcRenderer.send('playback:updateClips', clips),
+  playbackUpdateClips: (clips, currentTime) => ipcRenderer.send('playback:updateClips', clips, currentTime),
   onPlaybackStateUpdate: (callback) => {
     const subscription = (_event, value) => callback(value);
     ipcRenderer.on('playback:state-update', subscription);

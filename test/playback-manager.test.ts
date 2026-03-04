@@ -590,6 +590,68 @@ describe('PlaybackManager', () => {
   });
 
   describe('Adjusting Clip Boundaries while Subtitles are Manually Overridden', () => {
+    it('should preserve manual subtitle visibility override when shrinking right edge while auto-paused at end', () => {
+      playbackManager = setupManager({
+        useMpvSubtitles: true,
+        subtitleBehavior: SubtitleBehavior.ForceHide,
+        autoPauseAtEnd: true
+      });
+      playbackManager.seek(15);
+      simulateSeekComplete(playbackManager);
+      playbackManager.toggleSubtitles(); // Manual override ON
+      vi.clearAllMocks();
+
+      // Reach the end of the clip (20s)
+      (playbackManager as any).currentClipIndex = 1;
+      simulateEndOfClip(playbackManager, 20); // Time is now 19.99
+
+      // The override should still be active
+      expect((playbackManager as any).subtitlesVisible).toBe(true);
+      vi.clearAllMocks();
+
+      // Simulate shrinking the right edge to 18s.
+      // The frontend will snap the time to 17.99s.
+      const modifiedClips = cloneDeep(mockClips);
+      modifiedClips[1].endTime = 18;
+      modifiedClips[2].startTime = 18;
+
+      playbackManager.updateClips(modifiedClips, 17.99);
+
+      // Visibility should be preserved
+      expect(mockMpvManager.hideSubtitles).not.toHaveBeenCalled();
+      expect((playbackManager as any).subtitlesVisible).toBe(true);
+      expect((playbackManager as any).userOverriddenClipId).toBe('sub-1');
+    });
+
+    it('should preserve manual subtitle visibility override when a clip is split', () => {
+      playbackManager = setupManager({useMpvSubtitles: true, subtitleBehavior: SubtitleBehavior.ForceHide});
+      playbackManager.seek(15); // middle of sub-1 (10-20)
+      simulateSeekComplete(playbackManager);
+      playbackManager.toggleSubtitles(); // Manual override ON
+      vi.clearAllMocks();
+
+      // Simulate splitting the clip at 15s
+      const modifiedClips = cloneDeep(mockClips);
+      // original: gap-1(0-10), sub-1(10-20), gap-2(20-30)
+      // new: gap-1(0-10), sub-1(10-15), sub-15_new(15-20), gap-2(20-30)
+      modifiedClips.splice(2, 0, {
+        id: 'sub-15_new',
+        startTime: 15,
+        endTime: 20,
+        hasSubtitle: true
+      });
+      modifiedClips[1].endTime = 15;
+
+      // Update clips and pass newTime = 16 to simulate jumping into the right half
+      playbackManager.updateClips(modifiedClips, 16);
+
+      // The index changed from 1 to 2, but it's a split of the same logical clip.
+      // So it should preserve the manual override.
+      expect(mockMpvManager.hideSubtitles).not.toHaveBeenCalled();
+      expect((playbackManager as any).subtitlesVisible).toBe(true);
+      expect((playbackManager as any).userOverriddenClipId).toBe('sub-15_new');
+    });
+
     it('should NOT reset manual subtitle visibility when extending the right boundary', () => {
       playbackManager = setupManager({
         useMpvSubtitles: true,

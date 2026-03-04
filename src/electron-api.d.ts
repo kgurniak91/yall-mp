@@ -115,7 +115,7 @@ export interface IElectronAPI {
   playbackSeek: (time: number, isNavigation?: boolean) => void;
   playbackLoadProject: (clips: LightweightVideoClip[], settings: ProjectSettings, lastPlaybackTime: number) => Promise<void>;
   playbackUpdateSettings: (settings: ProjectSettings) => void;
-  playbackUpdateClips: (clips: LightweightVideoClip[]) => void;
+  playbackUpdateClips: (clips: LightweightVideoClip[], currentTime?: number) => void;
   onPlaybackStateUpdate: (callback: (update: PlaybackStateUpdate) => void) => (() => void);
   onRepeatSeekCompleted: (callback: () => void) => (() => void);
   playbackSetSpeedOverride: (isActive: boolean) => void;

@@ -1,5 +1,5 @@
 import {computed, DestroyRef, inject, Injectable, Injector, OnDestroy, Signal, signal} from '@angular/core';
-import {PlayerState, SeekType} from '../../model/video.types';
+import {PlayerState} from '../../model/video.types';
 import {AppStateService} from '../app/app-state.service';
 import {auditTime, debounceTime, filter, from, map, of, Subject} from 'rxjs';
 import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
@@ -11,7 +11,7 @@ export class VideoStateService implements OnDestroy {
   private readonly _duration = signal(0);
   private readonly _mediaPath = signal<string | null>(null);
   private readonly _subtitlesVisible = signal(true);
-  private readonly _seekRequest = signal<{ time: number; type: SeekType; isNavigation: boolean } | null>(null);
+  private readonly _seekRequest = signal<{ time: number; isNavigation: boolean } | null>(null);
   private readonly _seekCompleted = signal<number | null>(null);
   private readonly _playPauseRequest = signal<number | null>(null);
   private readonly _repeatRequest = signal<number | null>(null);
@@ -248,19 +248,19 @@ export class VideoStateService implements OnDestroy {
   }
 
   public seekRelative(time: number): void {
-    let targetTime = this.currentTime() + time;
-    const duration = this.duration();
-    targetTime = Math.max(0, Math.min(targetTime, duration - 0.01));
-
+    const targetTime = this.clampTime(this.currentTime() + time);
     this._isUserSeeking.set(true);
-    this._seekRequest.set({time, type: SeekType.Relative, isNavigation: false});
+    this.setCurrentTime(targetTime);
+    this._seekRequest.set({time: targetTime, isNavigation: false});
     this.saveCurrentPlaybackTime(targetTime);
   }
 
   public seekAbsolute(time: number, isNavigation: boolean = false): void {
+    const targetTime = this.clampTime(time);
     this._isUserSeeking.set(true);
-    this._seekRequest.set({time, type: SeekType.Absolute, isNavigation});
-    this.saveCurrentPlaybackTime(time);
+    this.setCurrentTime(targetTime);
+    this._seekRequest.set({time: targetTime, isNavigation});
+    this.saveCurrentPlaybackTime(targetTime);
   }
 
   public setSpeedOverride(isActive: boolean): void {
@@ -379,5 +379,14 @@ export class VideoStateService implements OnDestroy {
     ).subscribe((time) => {
       this.saveCurrentPlaybackTime(time);
     });
+  }
+
+  private clampTime(time: number): number {
+    const duration = this.duration();
+    if (duration > 0) {
+      return Math.max(0, Math.min(time, duration - 0.01));
+    } else {
+      return Math.max(0, time);
+    }
   }
 }

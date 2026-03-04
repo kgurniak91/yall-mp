@@ -15,6 +15,10 @@ $desktop-breakpoint: 66.5rem;
   @media (min-width: $desktop-breakpoint) {
     justify-content: center;
   }
+
+  p-button ::ng-deep button {
+    white-space: nowrap;
+  }
 }
 
 .new-project-container {
