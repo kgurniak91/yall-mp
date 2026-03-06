@@ -190,23 +190,23 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
     group: KeyboardShortcutGroup.Playback
   },
   {
-    action: KeyboardAction.PreviousMediaFile,
+    action: KeyboardAction.DecreasePlaybackSpeed,
     key: ',',
     ctrlKey: true,
-    description: 'Go to previous media file',
+    description: 'Decrease playback speed by 0.1x for current clip type',
     displayKeys: ['Ctrl', ','],
     scope: KeyboardShortcutScope.Project,
-    type: ActionType.SingleShot,
+    type: ActionType.Continuous,
     group: KeyboardShortcutGroup.Playback
   },
   {
-    action: KeyboardAction.NextMediaFile,
+    action: KeyboardAction.IncreasePlaybackSpeed,
     key: '.',
     ctrlKey: true,
-    description: 'Go to next media file',
+    description: 'Increase playback speed by 0.1x for current clip type',
     displayKeys: ['Ctrl', '.'],
     scope: KeyboardShortcutScope.Project,
-    type: ActionType.SingleShot,
+    type: ActionType.Continuous,
     group: KeyboardShortcutGroup.Playback
   },
   // --- Project Scope - Timeline

@@ -199,13 +199,13 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
             separator: true
           },
           {
-            label: 'Previous media file (Ctrl+,)',
+            label: 'Previous media file',
             icon: 'fa-solid fa-backward-step',
             disabled: !this.headerCurrentProjectActionBridgeService.canGoToPrevMedia(),
             command: () => this.headerCurrentProjectActionBridgeService.goToPreviousMediaFile()
           },
           {
-            label: 'Next media file (Ctrl+.)',
+            label: 'Next media file',
             icon: 'fa-solid fa-forward-step',
             disabled: !this.headerCurrentProjectActionBridgeService.canGoToNextMedia(),
             command: () => this.headerCurrentProjectActionBridgeService.goToNextMediaFile()

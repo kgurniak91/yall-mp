@@ -12,6 +12,7 @@ import {
 } from '../../../../core/services/keyboard-shortcuts-helper/keyboard-shortcuts-helper.service';
 import {ActionType} from '../../../../model/keyboard-shortcuts.types';
 import {FileOpenIntentService} from '../../../../core/services/file-open-intent/file-open-intent.service';
+import {ToastService} from '../../../../shared/services/toast/toast.service';
 
 export interface ActionPayload {
   action: KeyboardAction;
@@ -29,6 +30,7 @@ export class ProjectActionService {
   private fileOpenIntentService = inject(FileOpenIntentService);
   private readonly action$ = new Subject<ActionPayload>();
   private readonly destroyRef = inject(DestroyRef);
+  private readonly toastService = inject(ToastService);
 
   constructor() {
     // Handle Single-Shot Actions (UI clicks or Keyboard presses) with no throttling
@@ -49,6 +51,20 @@ export class ProjectActionService {
 
   public dispatch(action: KeyboardAction, payload?: any): void {
     this.action$.next({action, payload});
+  }
+
+  public goToNextMediaFile(): void {
+    const nextMediaFilePath = this.videoStateService.nextMediaPath();
+    if (nextMediaFilePath) {
+      this.fileOpenIntentService.openMedia(nextMediaFilePath);
+    }
+  }
+
+  public goToPreviousMediaFile(): void {
+    const prevMediaFilePath = this.videoStateService.prevMediaPath();
+    if (prevMediaFilePath) {
+      this.fileOpenIntentService.openMedia(prevMediaFilePath);
+    }
   }
 
   private executeAction({action, payload}: ActionPayload): void {
@@ -120,6 +136,12 @@ export class ProjectActionService {
       case KeyboardAction.Redo:
         this.commandHistoryStateService.redo();
         break;
+      case KeyboardAction.DecreasePlaybackSpeed:
+        this.adjustPlaybackSpeed(-0.1);
+        break;
+      case KeyboardAction.IncreasePlaybackSpeed:
+        this.adjustPlaybackSpeed(0.1);
+        break;
       case KeyboardAction.SplitClip:
         this.clipsStateService.splitClip();
         break;
@@ -145,18 +167,6 @@ export class ProjectActionService {
       case KeyboardAction.ZoomOut:
         this.videoStateService.requestZoomOut();
         break;
-      case KeyboardAction.NextMediaFile:
-        const nextMediaFilePath = this.videoStateService.nextMediaPath();
-        if (nextMediaFilePath) {
-          this.fileOpenIntentService.openMedia(nextMediaFilePath);
-        }
-        break;
-      case KeyboardAction.PreviousMediaFile:
-        const prevMediaFilePath = this.videoStateService.prevMediaPath();
-        if (prevMediaFilePath) {
-          this.fileOpenIntentService.openMedia(prevMediaFilePath);
-        }
-        break;
       case KeyboardAction.FindInSubtitles:
         this.videoStateService.requestFindInSubtitles();
         break;
@@ -166,6 +176,28 @@ export class ProjectActionService {
       case KeyboardAction.OpenDictionary:
         this.videoStateService.requestOpenDictionary();
         break;
+    }
+  }
+
+  private adjustPlaybackSpeed(delta: number): void {
+    const currentClip = this.clipsStateService.currentClip();
+    if (!currentClip) {
+      return;
+    }
+
+    const isSubtitled = currentClip.hasSubtitle;
+    const currentSettings = this.projectSettingsStateService.settings();
+
+    if (isSubtitled) {
+      const newSpeed = Math.max(0.1, Math.min(5.0, currentSettings.subtitledClipSpeed + delta));
+      const roundedSpeed = Math.round(newSpeed * 10) / 10;
+      this.projectSettingsStateService.setSettings({ subtitledClipSpeed: roundedSpeed });
+      this.toastService.info(`Subtitled clip speed: ${roundedSpeed.toFixed(1)}x`);
+    } else {
+      const newSpeed = Math.max(0.1, Math.min(5.0, currentSettings.gapSpeed + delta));
+      const roundedSpeed = Math.round(newSpeed * 10) / 10;
+      this.projectSettingsStateService.setSettings({ gapSpeed: roundedSpeed });
+      this.toastService.info(`Gap speed: ${roundedSpeed.toFixed(1)}x`);
     }
   }
 }

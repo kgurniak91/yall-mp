@@ -69,10 +69,10 @@ export class HeaderCurrentProjectActionBridgeService {
   }
 
   public goToNextMediaFile(): void {
-    this._projectActionService()?.dispatch(KeyboardAction.NextMediaFile);
+    this._projectActionService()?.goToNextMediaFile();
   }
 
   public goToPreviousMediaFile(): void {
-    this._projectActionService()?.dispatch(KeyboardAction.PreviousMediaFile);
+    this._projectActionService()?.goToPreviousMediaFile();
   }
 }
