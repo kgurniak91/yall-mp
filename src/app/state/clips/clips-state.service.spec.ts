@@ -1096,6 +1096,27 @@ Dialogue: 0,0:08:27.90,0:08:28.28,RomajiED,,0,0,0,,ki
       expect(videoStateService.seekAbsolute).toHaveBeenCalled();
       expect((videoStateService.seekAbsolute as jasmine.Spy).calls.mostRecent().args[0]).toBeCloseTo(newEndTime - 0.01);
     }));
+
+    it('should ignore adjustments if the current clip is a gap', fakeAsync(() => {
+      // ARRANGE: Timeline: Gap(0-10), Sub1(10-20), Gap(20-end)
+      // Set the playhead in the first gap (5s)
+      currentTimeSignal.set(5);
+      service.setCurrentClipByIndex(0); // Index 0 is gap-0
+      spectator.flushEffects();
+
+      expect(service.currentClip()?.hasSubtitle).toBe(false);
+
+      // ACT: Try to adjust the end boundary to the left
+      service.adjustCurrentClipBoundary('end', 'left');
+      tick(ADJUST_DEBOUNCE_MS);
+
+      // ASSERT: The service should have returned early. No seek should occur.
+      expect(videoStateService.seekAbsolute).not.toHaveBeenCalled();
+
+      // Ensure the gap clip boundaries were not modified
+      const gapClip = service.clips()[0];
+      expect(gapClip.endTime).toBe(10);
+    }));
   });
 
   describe('ASS Timing Adjustments', () => {

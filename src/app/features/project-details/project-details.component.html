@@ -68,7 +68,7 @@
                 severity="secondary"
                 pTooltip="Adjust Clip Start"
                 tooltipPosition="bottom"
-                [disabled]="isFirstClip()"/>
+                [disabled]="!canAdjustClip() || isFirstClip()"/>
 
       <p-popover #opStart>
         <div class="p-buttonset">
@@ -84,7 +84,7 @@
                 severity="secondary"
                 pTooltip="Adjust Clip End"
                 tooltipPosition="bottom"
-                [disabled]="isLastClip()"/>
+                [disabled]="!canAdjustClip() || isLastClip()"/>
 
       <p-popover #opEnd>
         <div class="p-buttonset">

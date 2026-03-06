@@ -241,6 +241,10 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     return this.clipsStateService.masterClipIndex() >= (clips.length - 1);
   });
 
+  protected canAdjustClip = computed(() => {
+    return !!this.clipsStateService.currentClip()?.hasSubtitle;
+  });
+
   protected isGoToPreviousSubtitledClipActionDisabled = computed(() => {
     const allClips = this.clipsStateService.clipsForAllTracks();
     const currentIndex = this.clipsStateService.masterClipIndex();

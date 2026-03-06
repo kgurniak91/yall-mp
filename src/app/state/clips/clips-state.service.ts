@@ -1128,7 +1128,9 @@ export class ClipsStateService implements OnDestroy {
 
   private performAdjust(boundary: 'start' | 'end', direction: 'left' | 'right'): void {
     const currentClip = this.currentClip();
-    if (!currentClip) return;
+    if (!currentClip || !currentClip.hasSubtitle) {
+      return;
+    }
 
     // Get a stable identifier for the clip BEFORE its properties (like ID/startTime) change.
     const sourceSubtitleIds = new Set(currentClip.sourceSubtitles.map(s => s.id));
