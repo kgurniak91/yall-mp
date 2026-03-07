@@ -1038,12 +1038,34 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   };
 
   private handleMouseMove(event: MouseEvent, isImmediate: boolean = false): void {
-    this.lastMouseEvent = event;
+    if (this.isSelecting()) {
+      event.preventDefault();
+    }
+
+    // Create a stable snapshot of the event to prevent Chromium from recycling it
+    const eventSnapshot = {
+      type: event.type,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      target: event.target,
+      button: event.button,
+      buttons: event.buttons,
+      ctrlKey: event.ctrlKey,
+      shiftKey: event.shiftKey,
+      altKey: event.altKey,
+      metaKey: event.metaKey,
+      preventDefault: () => {
+      },
+      stopPropagation: () => {
+      }
+    } as unknown as MouseEvent;
+
+    this.lastMouseEvent = eventSnapshot;
 
     // Immediate mode (e.g., for CTRL key updates) - bypasses throttling
     if (isImmediate) {
       this.clearPendingTimers();
-      this.processMouseMove(event, true);
+      this.processMouseMove(eventSnapshot, true);
       return;
     }
 
@@ -1056,7 +1078,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       if (this.rafId === null) {
         this.rafId = requestAnimationFrame(() => {
           this.rafId = null;
-          this.processMouseMove(event, false);
+          this.processMouseMove(eventSnapshot, false);
         });
       }
 
@@ -1074,7 +1096,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
 
     this.hoverTimeout = setTimeout(() => {
       this.hoverTimeout = null;
-      this.processMouseMove(event, false);
+      this.processMouseMove(eventSnapshot, false);
     }, 50);
   }
 
