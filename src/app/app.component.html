@@ -12,7 +12,8 @@
 
 <p-toast [position]="toastService.position()"
          hideTransitionOptions="0ms"
-         showTransitionOptions="0ms">
+         showTransitionOptions="0ms"
+         (onClose)="toastService.onToastClosed($event.message)">
   <ng-template pTemplate="message" let-message>
     <div class="flex align-items-center gap-3 w-full">
       @if (message.data?.type === 'daily-goal-reached') {

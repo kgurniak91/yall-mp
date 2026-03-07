@@ -1,5 +1,5 @@
 import {inject, Injectable, signal} from '@angular/core';
-import {MessageService} from 'primeng/api';
+import {MessageService, ToastMessageOptions} from 'primeng/api';
 
 export type ToastPosition =
   'top-right'
@@ -10,12 +10,15 @@ export type ToastPosition =
   | 'bottom-center'
   | 'center';
 
+const MAX_TOASTS = 5;
+
 @Injectable({
   providedIn: 'root'
 })
 export class ToastService {
   private readonly _position = signal<ToastPosition>('top-right');
   private readonly messageService = inject(MessageService);
+  private activeToasts = new Set<ToastMessageOptions>();
 
   public readonly position = this._position.asReadonly();
 
@@ -23,8 +26,12 @@ export class ToastService {
     this._position.set(position);
   }
 
+  public onToastClosed(message: ToastMessageOptions) {
+    this.activeToasts.delete(message);
+  }
+
   success(message: string = 'Saved successfully'): void {
-    this.messageService.add({
+    this.add({
       severity: 'success',
       summary: 'Success',
       detail: message
@@ -32,7 +39,7 @@ export class ToastService {
   }
 
   info(message: string): void {
-    this.messageService.add({
+    this.add({
       severity: 'info',
       summary: 'Information',
       detail: message
@@ -40,7 +47,7 @@ export class ToastService {
   }
 
   warn(message: string): void {
-    this.messageService.add({
+    this.add({
       severity: 'warn',
       summary: 'Warning',
       detail: message,
@@ -49,7 +56,7 @@ export class ToastService {
   }
 
   error(message: string = 'Unknown error'): void {
-    this.messageService.add({
+    this.add({
       severity: 'error',
       summary: 'Error',
       detail: message,
@@ -59,7 +66,7 @@ export class ToastService {
 
   dailyGoalProgress(templateName: string, current: number, target: number): void {
     const percent = Math.min(100, Math.round((current / target) * 100));
-    this.messageService.add({
+    this.add({
       severity: 'info',
       summary: 'Daily Goal Progress',
       detail: templateName,
@@ -69,12 +76,22 @@ export class ToastService {
   }
 
   dailyGoalReached(templateName: string, target: number): void {
-    this.messageService.add({
+    this.add({
       severity: 'success',
       summary: 'Daily Goal Reached! 🎉',
       detail: templateName,
       data: {type: 'daily-goal-reached', current: target, target, progressPercent: 100},
       life: 6000
     });
+  }
+
+  private add(message: ToastMessageOptions): void {
+    if (this.activeToasts.size >= MAX_TOASTS) {
+      this.messageService.clear();
+      this.activeToasts.clear();
+    }
+
+    this.messageService.add(message);
+    this.activeToasts.add(message);
   }
 }
