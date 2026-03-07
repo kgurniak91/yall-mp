@@ -1,6 +1,7 @@
 local target_end_time = nil
 local current_token = nil
 local has_fired_for_current_target = false
+local trigger_offset = 0.05
 
 mp.register_script_message("set-auto-pause", function(time, token)
   local t = tonumber(time)
@@ -19,14 +20,16 @@ mp.observe_property("time-pos", "number", function(_, time)
     return
   end
 
-  if time >= target_end_time then
+  if time >= (target_end_time - trigger_offset) then
     has_fired_for_current_target = true
 
     -- Pause immediately
     mp.set_property("pause", "yes")
 
-    -- Snap the internal MPV clock to the end (minus buffer)
-    mp.commandv("seek", target_end_time - 0.01, "absolute", "exact")
+    -- Snap the internal MPV clock to the end (minus buffer) if auto-pause happened too late
+    if time >= target_end_time then
+      mp.commandv("seek", target_end_time - trigger_offset, "absolute", "exact")
+    end
 
     -- Notify UI that the snap is done, returning the validation token
     mp.set_property("user-data/auto-pause-fired", current_token)
