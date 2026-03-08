@@ -1,7 +1,7 @@
 local target_end_time = nil
 local current_token = nil
 local has_fired_for_current_target = false
-local trigger_offset = 0.05
+local trigger_offset = 0.01
 
 mp.register_script_message("set-auto-pause", function(time, token)
   local t = tonumber(time)

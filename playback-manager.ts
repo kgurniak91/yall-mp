@@ -386,7 +386,7 @@ export class PlaybackManager extends EventEmitter {
         // Ignore minor updates from MPV when the player is already auto-paused
         if (this.playerState === PlayerState.AutoPausedAtEnd) {
           const currentClip = this.clips[this.currentClipIndex];
-          if (currentClip && Math.abs(status.data - currentClip.endTime) < 0.1) {
+          if (currentClip && Math.abs(status.data - currentClip.endTime) < 0.03) {
             return;
           }
         }
