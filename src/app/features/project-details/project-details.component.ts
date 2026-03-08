@@ -1193,8 +1193,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
   @HostListener('window:keydown')
   protected onGlobalKeyDown(): void {
-    this.showCursor();
-    if (this.isMouseOverVideo()) {
+    if (!this.isCursorHidden() && this.isMouseOverVideo()) {
       this.scheduleCursorHide();
     }
   }
