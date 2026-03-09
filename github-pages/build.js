@@ -76,6 +76,12 @@ const buildPages = async (layout, dataObj, langSubfolder = '') => {
 
     // Render page
     const outputPath = path.join(OUT_DIR, langSubfolder, `${page.name}.html`);
+
+    // Generate correct URLs for hreflang tags
+    const slug = (page.name === 'index') ? '' : `${page.name}.html`;
+    pageData.hreflang_en = `https://yallmp.com/${slug}`;
+    pageData.hreflang_pl = `https://yallmp.com/pl/${slug}`;
+
     await renderPage(layout, page.name, page.template, pageData, outputPath);
   }
 };

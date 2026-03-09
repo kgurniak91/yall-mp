@@ -25,6 +25,14 @@ Whether you are sentence mining, training listening comprehension, or practicing
 
 ---
 
+### Official Website & Download
+Get the latest installer for Windows, Linux, and macOS at the official website:
+**[Y'ALL Media Player - Free Language Learning Media Player](https://yallmp.com)**
+
+Alternatively, view the [GitHub release list](https://github.com/kgurniak91/yall-mp/releases).
+
+---
+
 ## ⚠️ Platform Status: Experimental Beta
 
 **Y'ALL MP is primarily developed and optimized for Windows.**

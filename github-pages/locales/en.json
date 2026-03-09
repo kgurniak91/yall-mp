@@ -2,7 +2,7 @@
   "lang": "en",
   "rootPath": "",
   "meta": {
-    "title": "Y'ALL Media Player",
+    "title": "Yet Another Language Learning Media Player",
     "description": "Free media player for language learning. Master listening comprehension and pronunciation, adjust subtitles, look up words, and export flashcards to Anki.",
     "keywords": "language learning, mpv, anki, immersion, sentence mining, subtitles, timeline, flashcards, pronunciation, listening comprehension, yomitan, offline dictionary",
     "og_type": "website",
@@ -11,8 +11,8 @@
     "canonical": "https://yallmp.com/"
   },
   "anki_meta": {
-    "title": "Y'ALL Media Player - Anki Integration",
-    "description": "Step-by-step tutorial on connecting Y'ALL Media Player with Anki. Learn how to export video clips, audio, and subtitles directly to flashcards using AnkiConnect.",
+    "title": "Yet Another Language Learning Media Player - Anki Integration",
+    "description": "Step-by-step tutorial on connecting Yet Another Language Learning Media Player (Y'ALL Media Player) with Anki. Learn how to export video clips, audio, and subtitles directly to flashcards using AnkiConnect.",
     "keywords": "language learning, mpv, anki, immersion, ankiconnect, sentence mining, flashcards, anki integration guide",
     "og_type": "article",
     "og_url": "https://yallmp.com/anki.html",
@@ -20,8 +20,8 @@
     "canonical": "https://yallmp.com/anki.html"
   },
   "dictionaries_meta": {
-    "title": "Y'ALL Media Player - Offline Dictionaries",
-    "description": "Step-by-step tutorial on configuring offline dictionaries in Y'ALL Media Player. Learn how to get instant dictionary definitions on subtitles hover via Yomitan browser extension.",
+    "title": "Yet Another Language Learning Media Player - Offline Dictionaries",
+    "description": "Step-by-step tutorial on configuring offline dictionaries in Yet Another Language Learning Media Player (Y'ALL Media Player). Learn how to get instant dictionary definitions on subtitles hover via Yomitan browser extension.",
     "keywords": "language learning, mpv, yomitan, immersion, offline dictionary guide, sentence mining, flashcards, anki",
     "og_type": "article",
     "og_url": "https://yallmp.com/dictionaries.html",
@@ -57,7 +57,7 @@
     "title_rotate_json": "[ \"movies\", \"TV shows\", \"audiobooks\", \"anime\", \"podcasts\", \"songs\" ]",
     "title_rotate_default": "media",
     "title_end": "into interactive learning materials!",
-    "description": "lets you master <b class=\"highlight\">vocabulary</b>, <b class=\"highlight\">listening comprehension</b> and <b class=\"highlight\">pronunciation</b> by turning any media into an&nbsp;interactive study&nbsp;session with integrated dictionary lookups, subtitles editing, Anki flashcard creation and more!",
+    "description": "is a free <b class=\"highlight\">language learning media player</b> that lets you master <b class=\"highlight\">vocabulary</b>, <b class=\"highlight\">listening comprehension</b> and <b class=\"highlight\">pronunciation</b> by turning any media into an&nbsp;interactive study&nbsp;session with integrated dictionary lookups, subtitles editing, Anki flashcard creation and more!",
     "btn_workflow": "How does it work?",
     "btn_download": "Download",
     "screenshot_alt": "Y'ALL MP Interface showing waveform timeline",
@@ -94,7 +94,7 @@
         "<b class=\"highlight\">Online lookup</b>: Click on any word to instantly open the built-in browser with your preferred preconfigured website.",
         "<b class=\"highlight\">Smart tokenization</b>: Advanced word boundary detection allows precise selection of words or phrases, even for languages without spaces like Japanese.",
         "<b class=\"highlight\">Precise control</b>: Hold CTRL to select specific characters or click-and-drag to select entire phrases.",
-        "<b class=\"highlight\">Zero-friction notes</b>: Highlight a word definition in the built-in browser or offline popup and save it directly to your card notes via the right-click context menu or a keyboard shortcut (CTRL+SHIFT+S) - no tedious copy-pasting required."
+        "<b class=\"highlight\">Zero-friction notes</b>: Highlight a word definition in the built-in browser or offline popup and save it directly to your card notes via the right-click context menu or a keyboard shortcut (Ctrl+S) - no tedious copy-pasting required."
       ],
       "note": "<a href=\"dictionaries.html\" class=\"text-link\">Click here for detailed offline dictionary setup guide &rarr;</a>"
     },

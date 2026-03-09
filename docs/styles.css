@@ -301,6 +301,7 @@ img, video {
   color: var(--text-main);
   max-width: 67rem;
   margin: 0 auto 2rem;
+  font-weight: normal;
 }
 
 .hero-actions {

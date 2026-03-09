@@ -2,7 +2,7 @@
   "lang": "pl",
   "rootPath": "../",
   "meta": {
-    "title": "Y'ALL Media Player",
+    "title": "Yet Another Language Learning Media Player",
     "description": "Darmowy odtwarzacz do nauki języków obcych. Opanuj rozumienie ze słuchu i wymowę, dostosuj napisy, sprawdzaj słowa w słowniku i eksportuj fiszki do Anki.",
     "keywords": "nauka języków, mpv, anki, immersja, sentence mining, napisy, oś czasu, fiszki, wymowa, rozumienie ze słuchu, yomitan, słowniki offline",
     "og_type": "website",
@@ -11,8 +11,8 @@
     "canonical": "https://yallmp.com/pl/"
   },
   "anki_meta": {
-    "title": "Y'ALL Media Player - integracja z Anki",
-    "description": "Poradnik krok po kroku jak połączyć Y'ALL Media Player z Anki. Dowiedz się jak eksportować klipy wideo, audio i napisy bezpośrednio do fiszek używając AnkiConnect.",
+    "title": "Yet Another Language Learning Media Player - integracja z Anki",
+    "description": "Poradnik krok po kroku jak połączyć Yet Another Language Learning Media Player (Y'ALL Media Player) z Anki. Dowiedz się jak eksportować klipy wideo, audio i napisy bezpośrednio do fiszek używając AnkiConnect.",
     "keywords": "nauka języków, mpv, anki, immersja, ankiconnect, sentence mining, fiszki, poradnik integracji anki",
     "og_type": "article",
     "og_url": "https://yallmp.com/pl/anki.html",
@@ -20,8 +20,8 @@
     "canonical": "https://yallmp.com/pl/anki.html"
   },
   "dictionaries_meta": {
-    "title": "Y'ALL Media Player - Słowniki",
-    "description": "Poradnik krok po kroku jak skonfigurować słowniki w Y'ALL Media Player. Dowiedz się jak uzyskać natychmiastowe definicje słownikowe po najechaniu kursorem na napisy za pomocą wtyczki Yomitan.",
+    "title": "Yet Another Language Learning Media Player - Słowniki",
+    "description": "Poradnik krok po kroku jak skonfigurować słowniki w Yet Another Language Learning Media Player (Y'ALL Media Player). Dowiedz się jak uzyskać natychmiastowe definicje słownikowe po najechaniu kursorem na napisy za pomocą wtyczki Yomitan.",
     "keywords": "nauka języków, mpv, yomitan, immersja, słowniki offline, sentence mining, fiszki, poradnik integracji słowników, anki",
     "og_type": "article",
     "og_url": "https://yallmp.com/dictionaries.html",
@@ -57,7 +57,7 @@
     "title_rotate_json": "[ \"filmy\", \"seriale\", \"audiobooki\", \"anime\", \"podcasty\", \"piosenki\" ]",
     "title_rotate_default": "media",
     "title_end": "w interaktywne materiały do nauki!",
-    "description": "pozwala opanować <b class=\"highlight\">słownictwo</b>, <b class=\"highlight\">rozumienie ze słuchu</b> oraz <b class=\"highlight\">wymowę</b>, zmieniając dowolny plik multimedialny w interaktywną sesję nauki ze zintegrowanymi słownikami, edycją napisów, tworzeniem fiszek w Anki i nie tylko!",
+    "description": "to darmowy odtwarzacz multimedialny do nauki języków obcych, który pozwala opanować <b class=\"highlight\">słownictwo</b>, <b class=\"highlight\">rozumienie ze słuchu</b> oraz <b class=\"highlight\">wymowę</b>, zmieniając dowolny plik multimedialny w interaktywną sesję nauki ze zintegrowanymi słownikami, edycją napisów, tworzeniem fiszek w Anki i nie tylko!",
     "btn_workflow": "Jak to działa?",
     "btn_download": "Pobierz",
     "screenshot_alt": "Interfejs Y'ALL MP pokazujący oś czasu z falą dźwiękową",
@@ -94,7 +94,7 @@
         "<b class=\"highlight\">Wyszukiwanie online</b>: Kliknij na dowolne słowo, aby otworzyć wbudowaną przeglądarkę z dowolną stroną www skonfigurowaną w ustawieniach.",
         "<b class=\"highlight\">Wykrywanie słów</b>: Zaawansowane wykrywanie granic słów pozwala na precyzyjne zaznaczanie fraz, nawet w językach bez spacji, takich jak japoński.",
         "<b class=\"highlight\">Precyzyjna kontrola</b>: Przytrzymaj CTRL, aby zaznaczać pojedyncze znaki, lub kliknij i przeciągnij myszką, by zaznaczać całe frazy.",
-        "<b class=\"highlight\">Notatki bez wysiłku</b>: Zaznacz definicję słowa we wbudowanej przeglądarce lub w słowniku i zapisz ją bezpośrednio do notatek za pomocą menu kontekstowego (prawy przycisk myszy) lub skrótu klawiszowego (CTRL+SHIFT+S) - bez żmudnego kopiowania i wklejania."
+        "<b class=\"highlight\">Notatki bez wysiłku</b>: Zaznacz definicję słowa we wbudowanej przeglądarce lub w słowniku i zapisz ją bezpośrednio do notatek za pomocą menu kontekstowego (prawy przycisk myszy) lub skrótu klawiszowego (Ctrl+S) - bez żmudnego kopiowania i wklejania."
       ],
       "note": "<a href=\"dictionaries.html\" class=\"text-link\">Kliknij tutaj, aby zobaczyć instrukcję konfiguracji słowników offline &rarr;</a>"
     },
