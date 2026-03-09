@@ -102,6 +102,12 @@ export class VideoStateService implements OnDestroy {
       if (update.playerState !== PlayerState.Seeking && update.playerState !== PlayerState.Transitioning) {
         this._isUserSeeking.set(false);
       }
+
+      if (update.playerState === PlayerState.AutoPausedAtEnd || update.playerState === PlayerState.AutoPausedAtStart) {
+        if (this._projectId) {
+          this.appStateService.updatePartialProject(this._projectId, {lastPlaybackTime: update.currentTime});
+        }
+      }
     });
 
     this.cleanupRepeatSeekListener = window.electronAPI.onRepeatSeekCompleted(() => {
