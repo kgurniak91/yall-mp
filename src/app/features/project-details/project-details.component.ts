@@ -471,15 +471,19 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       }
 
       untracked(() => {
-        if (this.unexportedClipWithNotesWarnTimeout) {
-          clearTimeout(this.unexportedClipWithNotesWarnTimeout);
-          this.unexportedClipWithNotesWarnTimeout = null;
+        const currentSourceIds = currentClip.hasSubtitle ? currentClip.sourceSubtitles.map(s => s.id) : [];
+
+        const movedToNewClip = (this.lastSubtitledSourceIds.length > 0) &&
+          !currentSourceIds.some(id => this.lastSubtitledSourceIds.includes(id));
+
+        if (movedToNewClip) {
+          if (this.unexportedClipWithNotesWarnTimeout) {
+            clearTimeout(this.unexportedClipWithNotesWarnTimeout);
+            this.unexportedClipWithNotesWarnTimeout = null;
+          }
         }
 
-        const currentSourceIds = currentClip.hasSubtitle ? currentClip.sourceSubtitles.map(s => s.id) : [];
-        const hasLeftLastClip = (this.lastSubtitledSourceIds.length > 0) && !currentSourceIds.some(id => this.lastSubtitledSourceIds.includes(id));
-
-        if (hasLeftLastClip && warnEnabled) {
+        if (movedToNewClip && warnEnabled) {
           const representativeId = this.lastSubtitledSourceIds[0];
           const lastNotes = project.notes?.[representativeId];
 
@@ -508,6 +512,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
             if (notesAreDifferent) {
               this.unexportedClipWithNotesWarnTimeout = setTimeout(() => {
                 this.toastService.warn('You moved past a clip with notes without exporting it to Anki');
+                this.unexportedClipWithNotesWarnTimeout = null;
               }, 250);
             }
           }
