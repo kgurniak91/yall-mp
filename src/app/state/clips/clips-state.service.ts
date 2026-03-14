@@ -626,7 +626,11 @@ export class ClipsStateService implements OnDestroy {
 
   public mergeSubtitles(
     gapClipId: string,
-    onMergeCallback?: (originalSubtitles: SubtitleData[]) => void
+    onMergeCallback?: (
+      originalSubtitles: SubtitleData[],
+      newMergedSubtitleId: string,
+      originalNotes: Record<string, ProjectClipNotes>
+    ) => void
   ): void {
     const project = this.appStateService.currentProject();
     if (!project) {
@@ -656,7 +660,21 @@ export class ClipsStateService implements OnDestroy {
       ...nextClip.sourceSubtitles
     ].map(s => cloneDeep(s));
 
-    onMergeCallback?.(originalSubtitles);
+    const sourceIds = originalSubtitles.map(s => s.id);
+    const currentProjectNotes = project.notes || {};
+    const originalNotesForUndo: Record<string, ProjectClipNotes> = {};
+
+    // Capture snapshot of original notes
+    sourceIds.forEach(id => {
+      if (currentProjectNotes[id]) {
+        originalNotesForUndo[id] = cloneDeep(currentProjectNotes[id]);
+      }
+    });
+
+    const aggregatedNotes = this.getAggregatedClipNotes(sourceIds, currentProjectNotes);
+
+    const newSubtitleId = uuidv4();
+    onMergeCallback?.(originalSubtitles, newSubtitleId, originalNotesForUndo);
 
     // Join text
     const leftText = prevClip.text || '';
@@ -669,21 +687,33 @@ export class ClipsStateService implements OnDestroy {
 
     const newSubtitle: SrtSubtitleData = {
       type: 'srt',
-      id: uuidv4(),
+      id: newSubtitleId,
       startTime: newStartTime,
       endTime: newEndTime,
       text: mergedText,
       track: this._activeTrack()
     };
 
-    const idsToRemove = new Set(originalSubtitles.map(s => s.id));
+    const idsToRemove = new Set(sourceIds);
 
     // Create new state
     const newSubtitlesState = this._subtitles().filter(s => !idsToRemove.has(s.id));
     newSubtitlesState.push(newSubtitle);
     newSubtitlesState.sort((a, b) => a.startTime - b.startTime);
 
-    this.appStateService.updatePartialProject(this._projectId!, {subtitles: newSubtitlesState});
+    // Swap notes to the new ID
+    const newProjectNotes = cloneDeep(currentProjectNotes);
+    sourceIds.forEach(id => delete newProjectNotes[id]);
+
+    const hasNotesToCopy = Object.keys(aggregatedNotes.lookupNotes || {}).length > 0 || aggregatedNotes.manualNote || aggregatedNotes.hint;
+    if (hasNotesToCopy) {
+      newProjectNotes[newSubtitleId] = cloneDeep(aggregatedNotes);
+    }
+
+    this.appStateService.updatePartialProject(this._projectId!, {
+      subtitles: newSubtitlesState,
+      notes: newProjectNotes
+    });
     this._subtitles.set(newSubtitlesState);
 
     // Resync: The playhead is inside what used to be the gap. It is now inside the new merged clip.
@@ -698,44 +728,73 @@ export class ClipsStateService implements OnDestroy {
     }
   }
 
-  public unmergeSubtitles(originalSubtitles: SubtitleData[]): void {
+  public unmergeSubtitles(
+    originalSubtitles: SubtitleData[],
+    mergedSubtitleId: string,
+    originalNotes: Record<string, ProjectClipNotes>
+  ): void {
     const project = this.appStateService.currentProject();
     if (!project) {
       return;
     }
 
-    // Find a subtitle that encompasses the range of originals and remove it
-    const minStart = Math.min(...originalSubtitles.map(s => s.startTime));
-    const maxEnd = Math.max(...originalSubtitles.map(s => s.endTime));
+    const performUnmerge = () => {
+      const currentSubtitles = this._subtitles();
+      let newSubtitlesState = currentSubtitles.filter(s => s.id !== mergedSubtitleId);
 
-    const currentSubtitles = this._subtitles();
-    const mergedSubIndex = currentSubtitles.findIndex(s =>
-      Math.abs(s.startTime - minStart) < 0.01 &&
-      Math.abs(s.endTime - maxEnd) < 0.01
-    );
+      // Add back originals
+      newSubtitlesState.push(...originalSubtitles);
+      newSubtitlesState.sort((a, b) => a.startTime - b.startTime);
 
-    let newSubtitlesState = [...currentSubtitles];
-    if (mergedSubIndex !== -1) {
-      newSubtitlesState.splice(mergedSubIndex, 1);
+      // Restore notes
+      const newProjectNotes = cloneDeep(project.notes || {});
+      delete newProjectNotes[mergedSubtitleId];
+      if (originalNotes) {
+        Object.entries(originalNotes).forEach(([id, note]) => {
+          newProjectNotes[id] = note;
+        });
+      }
+
+      this.appStateService.updatePartialProject(this._projectId!, {
+        subtitles: newSubtitlesState,
+        notes: newProjectNotes
+      });
+      this._subtitles.set(newSubtitlesState);
+
+      // Resync active clip
+      const currentTime = this.videoStateService.currentTime();
+      const newClipsArray = this.clipsForAllTracks();
+      const newCorrectIndex = newClipsArray.findIndex(c =>
+        currentTime >= c.startTime && currentTime < c.endTime
+      );
+
+      if (newCorrectIndex !== -1) {
+        this._masterClipIndex.set(newCorrectIndex);
+      }
+    };
+
+    // Check for note discrepancies
+    const currentMergedNotes = project.notes?.[mergedSubtitleId];
+    const aggregatedOriginalNotes = this.getAggregatedClipNotes(originalSubtitles.map(s => s.id), originalNotes);
+
+    const normalize = (n: ProjectClipNotes | undefined) => ({
+      lookupNotes: n?.lookupNotes && Object.keys(n.lookupNotes).length > 0 ? n.lookupNotes : undefined,
+      manualNote: n?.manualNote?.trim() || undefined,
+      hint: n?.hint?.trim() || undefined
+    });
+
+    if (!isEqual(normalize(currentMergedNotes), normalize(aggregatedOriginalNotes))) {
+      this.confirmationService.confirm({
+        ...DEFAULT_CONFIRMATION,
+        header: 'Notes Mismatch',
+        message: 'The notes in the merged clip have been modified. Unmerging will restore the original notes for each clip (from before the merge) and discard recent changes. Continue?',
+        accept: () => performUnmerge(),
+        reject: () => this.commandHistoryStateService.cancelLastUndo()
+      });
+      return;
     }
 
-    // Add back originals
-    newSubtitlesState.push(...originalSubtitles);
-    newSubtitlesState.sort((a, b) => a.startTime - b.startTime);
-
-    this.appStateService.updatePartialProject(this._projectId!, {subtitles: newSubtitlesState});
-    this._subtitles.set(newSubtitlesState);
-
-    // Resync active clip
-    const currentTime = this.videoStateService.currentTime();
-    const newClipsArray = this.clipsForAllTracks();
-    const newCorrectIndex = newClipsArray.findIndex(c =>
-      currentTime >= c.startTime && currentTime < c.endTime
-    );
-
-    if (newCorrectIndex !== -1) {
-      this._masterClipIndex.set(newCorrectIndex);
-    }
+    performUnmerge();
   }
 
   public createNewSubtitledClipAtCurrentTime(): void {

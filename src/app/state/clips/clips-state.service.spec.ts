@@ -2527,6 +2527,114 @@ Dialogue: 0:01:01.00,0:01:02.00,Default,Animating Text
       // Assert nothing changed
       expect(service.clips().filter(c => c.hasSubtitle).length).toBe(1);
     });
+
+    it('merges notes from both adjacent subtitles into the new merged clip', () => {
+      // Timeline: Gap(0-5), SubA(5-10), Gap(10-15), SubB(15-20)
+      const initialSubs: SrtSubtitleData[] = [
+        {type: 'srt', id: 's1', startTime: 5, endTime: 10, text: 'A', track: 0},
+        {type: 'srt', id: 's2', startTime: 15, endTime: 20, text: 'B', track: 0}
+      ];
+      service.setSubtitles(initialSubs);
+      projectState.subtitles = initialSubs;
+
+      const notes1: ProjectClipNotes = {manualNote: 'Note 1', lookupNotes: {'word': ['def1']}};
+      const notes2: ProjectClipNotes = {manualNote: 'Note 2', lookupNotes: {'word': ['def2'], 'other': ['def3']}};
+      projectState.notes = {'s1': notes1, 's2': notes2};
+
+      const gapClipId = 'gap-10'; // The ID generated for the gap between 10 and 15
+      const command = new MergeSubtitlesCommand(service, gapClipId);
+
+      // ACT
+      commandHistoryService.execute(command);
+
+      // ASSERT
+      const updateSpy = appStateService.updatePartialProject as jasmine.Spy;
+      expect(updateSpy).toHaveBeenCalled();
+
+      const updateArgs = updateSpy.calls.mostRecent().args[1];
+      const newSubtitles = updateArgs.subtitles as SrtSubtitleData[];
+      const newNotes = updateArgs.notes as Record<string, ProjectClipNotes>;
+
+      const mergedClip = newSubtitles.find(s => s.startTime === 5 && s.endTime === 20)!;
+
+      expect(newNotes[mergedClip.id].manualNote).toBe('Note 1'); // first wins
+      expect(newNotes[mergedClip.id].lookupNotes).toEqual({
+        'word': ['def1', 'def2'],
+        'other': ['def3']
+      });
+      expect(newNotes['s1']).toBeUndefined();
+      expect(newNotes['s2']).toBeUndefined();
+    });
+
+    it('warns user on undo if notes have diverged after merge', () => {
+      const initialSubs: SrtSubtitleData[] = [
+        {type: 'srt', id: 's1', startTime: 5, endTime: 10, text: 'A', track: 0},
+        {type: 'srt', id: 's2', startTime: 15, endTime: 20, text: 'B', track: 0}
+      ];
+      service.setSubtitles(initialSubs);
+      projectState.subtitles = initialSubs;
+
+      const notes1: ProjectClipNotes = {manualNote: 'Original'};
+      projectState.notes = {'s1': notes1};
+
+      const command = new MergeSubtitlesCommand(service, 'gap-10');
+      commandHistoryService.execute(command);
+
+      const updateSpy = appStateService.updatePartialProject as jasmine.Spy;
+      const updateArgs = updateSpy.calls.mostRecent().args[1];
+      const newSubtitles = updateArgs.subtitles as SrtSubtitleData[];
+      const mergedClip = newSubtitles.find(s => s.startTime === 5 && s.endTime === 20)!;
+
+      projectState.subtitles = newSubtitles;
+      projectState.notes = updateArgs.notes;
+      projectState.notes[mergedClip.id] = {manualNote: 'Modified'};
+
+      const confirmationService = spectator.inject(ConfirmationService);
+
+      commandHistoryService.undo();
+
+      expect(confirmationService.confirm).toHaveBeenCalled();
+      const confirmArgs = (confirmationService.confirm as unknown as jasmine.Spy).calls.mostRecent().args[0];
+      confirmArgs.accept();
+
+      const undoUpdateArgs = updateSpy.calls.mostRecent().args[1];
+      expect(undoUpdateArgs.notes['s1']).toEqual(notes1);
+      expect(undoUpdateArgs.notes[mergedClip.id]).toBeUndefined();
+    });
+
+    it('restores command to undo stack if user cancels unmerge confirmation dialog', () => {
+      const initialSubs: SrtSubtitleData[] = [
+        {type: 'srt', id: 's1', startTime: 5, endTime: 10, text: 'A', track: 0},
+        {type: 'srt', id: 's2', startTime: 15, endTime: 20, text: 'B', track: 0}
+      ];
+      service.setSubtitles(initialSubs);
+      projectState.subtitles = initialSubs;
+      projectState.notes = {'s1': {manualNote: 'Original'}};
+
+      const command = new MergeSubtitlesCommand(service, 'gap-10');
+      commandHistoryService.execute(command);
+
+      const updateArgs = (appStateService.updatePartialProject as jasmine.Spy).calls.mostRecent().args[1];
+      const newSubtitles = updateArgs.subtitles as SrtSubtitleData[];
+      const mergedClip = newSubtitles.find(s => s.startTime === 5 && s.endTime === 20)!;
+
+      projectState.subtitles = newSubtitles;
+      projectState.notes = updateArgs.notes;
+      projectState.notes[mergedClip.id] = {manualNote: 'Modified'};
+
+      const confirmationService = spectator.inject(ConfirmationService);
+      commandHistoryService.undo();
+
+      expect(commandHistoryService.canUndo()).toBe(false);
+      expect(commandHistoryService.canRedo()).toBe(true);
+
+      const confirmArgs = (confirmationService.confirm as unknown as jasmine.Spy).calls.mostRecent().args[0];
+      confirmArgs.reject();
+
+      expect(commandHistoryService.canUndo()).toBe(true);
+      expect(commandHistoryService.canRedo()).toBe(false);
+      expect(projectState.notes[mergedClip.id].manualNote).toBe('Modified');
+    });
   });
 
   describe('Global Shift', () => {
