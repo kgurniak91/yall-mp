@@ -22,8 +22,13 @@
                                      (selectCatalog)="onBreadcrumbSelect($event)"/>
 
             <div class="flex gap-2">
-              @if (filteredProjects().length > 1) {
+              @if (activeCatalogProjects().length > 1) {
                 @if (selectionMode()) {
+                  <p-button [label]="areAllSelected() ? 'Deselect All' : 'Select All'"
+                            [icon]="areAllSelected() ? 'fa-solid fa-square-minus' : 'fa-solid fa-square-check'"
+                            severity="secondary"
+                            size="small"
+                            (onClick)="toggleSelectAll()"/>
                   <p-button label="Move Selected ({{selectedProjectIds().size}})"
                             severity="primary"
                             icon="fa-solid fa-folder-open"
@@ -52,7 +57,7 @@
             </div>
           </div>
 
-          <p-dataView [value]="filteredProjects()">
+          <p-dataView [value]="activeCatalogProjects()">
             <ng-template #list let-projects>
               <div class="project-list-items">
                 @for (project of projects; track project.id) {

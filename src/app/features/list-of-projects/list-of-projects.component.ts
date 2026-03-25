@@ -42,9 +42,17 @@ import {DEFAULT_CONFIRMATION} from '../../shared/types/confirmation.types';
 export class ListOfProjectsComponent implements OnDestroy {
   protected readonly appStateService = inject(AppStateService);
   protected activeCatalogId = computed(() => this.appStateService.activeCatalogId());
-  protected filteredProjects = computed(() => {
+  protected activeCatalogProjects = computed(() => {
     const activeId = this.activeCatalogId();
     return this.appStateService.projects().filter(p => p.catalogId === activeId);
+  });
+  protected readonly areAllSelected = computed(() => {
+    const projects = this.activeCatalogProjects();
+    if (projects.length === 0) {
+      return false;
+    }
+    const currentSelection = this.selectedProjectIds();
+    return projects.every(p => currentSelection.has(p.id));
   });
   protected readonly selectionMode = signal(false);
   protected readonly selectedProjectIds = signal<Set<string>>(new Set());
@@ -79,6 +87,20 @@ export class ListOfProjectsComponent implements OnDestroy {
       else newSet.add(id);
       return newSet;
     });
+  }
+
+  toggleSelectAll() {
+    const filtered = this.activeCatalogProjects();
+    const currentSet = this.selectedProjectIds();
+    const newSet = new Set(currentSet);
+
+    if (this.areAllSelected()) {
+      filtered.forEach(p => newSet.delete(p.id));
+    } else {
+      filtered.forEach(p => newSet.add(p.id));
+    }
+
+    this.selectedProjectIds.set(newSet);
   }
 
   deleteSelected() {
