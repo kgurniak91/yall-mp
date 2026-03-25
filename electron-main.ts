@@ -1970,9 +1970,12 @@ async function handleAnkiBatchExport(request: AnkiBatchExportRequest) {
           break;
         case 'text':
           if (subtitleData.type === 'srt') {
-            finalFields[mapping.destination] = subtitleData.text;
+            finalFields[mapping.destination] = (subtitleData.text || '')
+              .replace(/\n/g, '<br>');
           } else { // 'ass'
-            finalFields[mapping.destination] = subtitleData.parts.map(p => p.text).join('\n');
+            finalFields[mapping.destination] = (subtitleData.parts || [])
+              .map(p => (p.text || '').replace(/\n/g, '<br>'))
+              .join('<br>');
           }
           break;
         case 'notes':
