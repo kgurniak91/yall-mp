@@ -876,8 +876,9 @@ Dialogue: 0,0:08:27.90,0:08:28.28,RomajiED,,0,0,0,,ki
       const subtitleClip = service.clips().find(c => c.hasSubtitle)!;
 
       // --- ACT 1: Shrink from the RIGHT edge ---
-      // Try to shrink the clip to 0.2s duration from the right.
-      service.updateClipTimesFromTimeline(subtitleClip.id, 10, 10.2);
+      // Try to shrink the clip below its minimum duration from the right.
+      const invalidEnd = 10 + (MIN_SUBTITLE_DURATION / 2);
+      service.updateClipTimesFromTimeline(subtitleClip.id, 10, invalidEnd);
 
       // --- ASSERT 1: The START time should be the anchor ---
       let clips = service.clips();
@@ -888,8 +889,9 @@ Dialogue: 0,0:08:27.90,0:08:28.28,RomajiED,,0,0,0,,ki
       // --- ACT 2: Shrink from the LEFT edge ---
       // Reset state for the second part of the test
       service.setSubtitles(initialSubs);
-      // Try to shrink the clip to 0.2s duration from the left.
-      service.updateClipTimesFromTimeline(subtitleClip.id, 14.8, 15);
+      // Try to shrink the clip below its minimum duration from the left.
+      const invalidStart = 15 - (MIN_SUBTITLE_DURATION / 2);
+      service.updateClipTimesFromTimeline(subtitleClip.id, invalidStart, 15);
 
       // --- ASSERT 2: The END time should be the anchor ---
       clips = service.clips();
@@ -1470,8 +1472,9 @@ ${initialLine}
     }));
 
     it('clamps the split point to respect minimum clip duration when splitting near the end', () => {
-      // ARRANGE: Set the playback time very close to the end of the clip (19.8s in a 15-20s clip)
-      videoStateService.setCurrentTime(19.8);
+      // ARRANGE: Set the playback time to force a clamp (halfway into the min duration boundary)
+      const splitTime = 20 - (MIN_SUBTITLE_DURATION / 2);
+      videoStateService.setCurrentTime(splitTime);
       const clipToSplit = service.clips().find(c => c.id === 'subtitle-15')!;
       const command = new SplitSubtitledClipCommand(service, clipToSplit.id, projectState.rawAssContent);
 
@@ -1496,8 +1499,9 @@ ${initialLine}
     });
 
     it('clamps the split point to respect minimum clip duration when splitting near the beginning', () => {
-      // ARRANGE: Set the playback time very close to the start of the clip (15.2s in a 15-20s clip)
-      videoStateService.setCurrentTime(15.2);
+      // ARRANGE: Set the playback time to force a clamp (halfway into the min duration boundary)
+      const splitTime = 15 + (MIN_SUBTITLE_DURATION / 2);
+      videoStateService.setCurrentTime(splitTime);
       const clipToSplit = service.clips().find(c => c.id === 'subtitle-15')!;
       const command = new SplitSubtitledClipCommand(service, clipToSplit.id, projectState.rawAssContent);
 
@@ -1581,9 +1585,9 @@ ${initialLine}
     }));
 
     it('sets the second new clip as active and preserves playhead position when splitting near the end (clamped)', fakeAsync(() => {
-      // ARRANGE: Split the 15-20s clip at 19.8s. The split point will be clamped to ~19.4s.
-      // Since the user cursor (19.8) is past the split point (19.4), assume they want to focus the new right clip.
-      videoStateService.setCurrentTime(19.8);
+      // ARRANGE: Split the 15-20s clip near the end to force a clamp
+      const splitTime = 20 - (MIN_SUBTITLE_DURATION / 2);
+      videoStateService.setCurrentTime(splitTime);
       const clipToSplit = service.clips().find(c => c.id === 'subtitle-15')!;
       const command = new SplitSubtitledClipCommand(service, clipToSplit.id, projectState.rawAssContent);
 
@@ -1604,9 +1608,9 @@ ${initialLine}
     }));
 
     it('sets the first new clip as active and preserves playhead position when splitting near the beginning (clamped)', fakeAsync(() => {
-      // ARRANGE: Split the 15-20s clip at 15.2s. The split point will be clamped to 15.5s.
-      // Since the user cursor (15.2) is before the split point (15.5), assume they want to focus the new left clip.
-      videoStateService.setCurrentTime(15.2);
+      // ARRANGE: Split the 15-20s clip near the beginning to force a clamp
+      const splitTime = 15 + (MIN_SUBTITLE_DURATION / 2);
+      videoStateService.setCurrentTime(splitTime);
       const clipToSplit = service.clips().find(c => c.id === 'subtitle-15')!;
       const command = new SplitSubtitledClipCommand(service, clipToSplit.id, projectState.rawAssContent);
 
