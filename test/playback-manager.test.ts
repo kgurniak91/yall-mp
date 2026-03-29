@@ -1769,4 +1769,170 @@ describe('PlaybackManager', () => {
       expect(mockMpvManager.hideSubtitles).not.toHaveBeenCalled();
     });
   });
+
+  describe('Cinema Mode', () => {
+    it('should force global Cinema Mode speed, ignoring subtitled and gap speeds', () => {
+      playbackManager = setupManager({subtitledClipSpeed: 1.0, gapSpeed: 2.5});
+      playbackManager.setCinemaMode({enabled: true, speed: 1.5});
+
+      // Check gap speed
+      playbackManager.seek(5);
+      simulateSeekComplete(playbackManager);
+      expect(mockMpvManager.setProperty).toHaveBeenCalledWith('speed', 1.5);
+
+      // Check subtitled clip speed
+      playbackManager.seek(15);
+      simulateSeekComplete(playbackManager);
+      expect(mockMpvManager.setProperty).toHaveBeenCalledWith('speed', 1.5);
+    });
+
+    it('should still allow Shift key (Speed Override) to bypass Cinema Mode speed', () => {
+      playbackManager = setupManager({speedOverride: 0.5});
+      playbackManager.setCinemaMode({enabled: true, speed: 1.5});
+
+      playbackManager.seek(15);
+      simulateSeekComplete(playbackManager);
+
+      playbackManager.setSpeedOverride(true);
+      expect(mockMpvManager.setProperty).toHaveBeenCalledWith('speed', 0.5);
+
+      playbackManager.setSpeedOverride(false);
+      expect(mockMpvManager.setProperty).toHaveBeenCalledWith('speed', 1.5);
+    });
+
+    it('should disable Lua auto-pauses entirely', () => {
+      playbackManager = setupManager({autoPauseAtEnd: true});
+      playbackManager.seek(15);
+      simulateSeekComplete(playbackManager);
+      vi.clearAllMocks();
+
+      playbackManager.setCinemaMode({enabled: true, speed: 1.0});
+
+      // Should explicitly disable the Lua hook
+      expect(mockMpvManager.setLuaAutoPause).toHaveBeenCalledWith(-1, '');
+    });
+
+    it('should ignore autoPauseAtStart and play continuously across boundaries', () => {
+      playbackManager = setupManager({autoPauseAtStart: true});
+      playbackManager.setCinemaMode({enabled: true, speed: 1.0});
+      playbackManager.play();
+      vi.clearAllMocks();
+
+      // Start in gap (0-10), hit end of gap (10s), crossing into a subtitled clip
+      (playbackManager as any).currentClipIndex = 0;
+      (playbackManager as any).currentTime = 10;
+
+      // Simulate normal boundary crossing (no Lua auto-pause token since it's disabled)
+      playbackManager.updateClips(cloneDeep(mockClips));
+
+      expect(mockMpvManager.setProperty).not.toHaveBeenCalledWith('pause', true);
+      expect(getLastStateUpdate()?.playerState).toBe(PlayerState.Playing);
+      expect((playbackManager as any).currentClipIndex).toBe(1); // Successfully moved to sub-1
+    });
+
+    it('should ignore skipGaps and play through them normally', () => {
+      playbackManager = setupManager({skipGaps: true});
+      playbackManager.setCinemaMode({enabled: true, speed: 1.0});
+      playbackManager.seek(15); // Start in sub-1
+      simulateSeekComplete(playbackManager);
+      playbackManager.play();
+      vi.clearAllMocks();
+
+      // Hit boundary of sub-1 (20s). Normally, skipGaps would jump to 30s.
+      (playbackManager as any).currentClipIndex = 1;
+      (playbackManager as any).currentTime = 20;
+      playbackManager.updateClips(cloneDeep(mockClips));
+
+      // Should NOT send a seek command. Should just roll into gap-2 at index 2.
+      expect(mockMpvManager.sendCommand).not.toHaveBeenCalledWith(expect.arrayContaining(['seek']));
+      expect((playbackManager as any).currentClipIndex).toBe(2);
+    });
+
+    it('should ignore SubtitleBehavior (ForceHide/ForceShow) and preserve current visibility state', () => {
+      playbackManager = setupManager({
+        useMpvSubtitles: true,
+        subtitlesVisible: true,
+        subtitleBehavior: SubtitleBehavior.ForceHide
+      });
+      playbackManager.setCinemaMode({enabled: true, speed: 1.0});
+
+      playbackManager.seek(15); // Seek into subtitled clip
+      vi.clearAllMocks(); // Clear the anti-flicker 'hideSubtitles' call from the initial seek
+
+      simulateSeekComplete(playbackManager);
+
+      // ForceHide should be ignored; subtitles should NOT be hidden again
+      expect(mockMpvManager.hideSubtitles).not.toHaveBeenCalled();
+      expect(getLastStateUpdate()?.subtitlesVisible).toBe(true);
+
+      // Even if user manually toggles them OFF, a transition shouldn't force them back
+      playbackManager.toggleSubtitles();
+      expect(getLastStateUpdate()?.subtitlesVisible).toBe(false);
+      vi.clearAllMocks();
+
+      // Transition to next clip
+      (playbackManager as any).currentClipIndex = 1;
+      (playbackManager as any).currentTime = 20;
+      playbackManager.updateClips(cloneDeep(mockClips));
+
+      expect(mockMpvManager.showSubtitles).not.toHaveBeenCalled();
+      expect(getLastStateUpdate()?.subtitlesVisible).toBe(false);
+    });
+
+    it('should flush MPV audio buffer when speed is changed via settings while paused in Cinema Mode', () => {
+      playbackManager = setupManager();
+      playbackManager.seek(15);
+      simulateSeekComplete(playbackManager);
+      playbackManager.pause();
+
+      playbackManager.setCinemaMode({enabled: true, speed: 1.5});
+      vi.clearAllMocks();
+
+      // Update speed while already in cinema mode
+      playbackManager.setCinemaMode({enabled: true, speed: 2.0});
+
+      expect(mockMpvManager.setProperty).toHaveBeenCalledWith('speed', 2.0);
+      expect(mockMpvManager.sendCommand).toHaveBeenCalledWith(['seek', 15, 'absolute', 'exact']);
+    });
+
+    it('should naturally advance currentClipIndex during continuous playback based on time-pos updates', () => {
+      playbackManager = setupManager();
+      playbackManager.setCinemaMode({enabled: true, speed: 1.0});
+
+      playbackManager.seek(8); // Start in gap-1 (0s to 10s)
+      simulateSeekComplete(playbackManager);
+      playbackManager.play();
+      vi.clearAllMocks();
+
+      expect((playbackManager as any).currentClipIndex).toBe(0);
+
+      // Simulate MPV ticking forward, still inside gap-1
+      simulateMpvEvent(playbackManager, {event: 'property-change', name: 'time-pos', data: 9.5});
+      expect((playbackManager as any).currentClipIndex).toBe(0); // Still 0
+
+      // Simulate MPV ticking across the boundary into sub-1 (10s to 20s)
+      simulateMpvEvent(playbackManager, {event: 'property-change', name: 'time-pos', data: 10.2});
+
+      // Index should have automatically updated without needing Lua's auto-pause token
+      expect((playbackManager as any).currentClipIndex).toBe(1);
+      expect(getLastStateUpdate()?.currentClipIndex).toBe(1);
+    });
+
+    it('should ignore autoPauseAtStart setting when navigating to a new clip via shortcut in Cinema Mode', () => {
+      // ARRANGE: Settings require pause at start, but Cinema Mode is ON
+      playbackManager = setupManager({autoPauseAtStart: true});
+      playbackManager.setCinemaMode({enabled: true, speed: 1.0});
+
+      // Seek to a new clip (index 3) using navigation (isNavigation = true)
+      // This bypasses normal playhead ticking and goes straight to the navigation logic
+      playbackManager.seek(30, true);
+      simulateSeekComplete(playbackManager);
+
+      // ASSERT:
+      // Even though autoPauseAtStart is true, Cinema Mode should force playback to continue.
+      expect(mockMpvManager.setProperty).not.toHaveBeenCalledWith('pause', true);
+      expect(getLastStateUpdate()?.playerState).toBe(PlayerState.Playing);
+      expect((playbackManager as any).currentClipIndex).toBe(3);
+    });
+  });
 });

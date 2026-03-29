@@ -176,10 +176,23 @@ export class ProjectActionService {
       case KeyboardAction.OpenDictionary:
         this.videoStateService.requestOpenDictionary();
         break;
+      case KeyboardAction.ToggleCinemaMode:
+        const currentMode = this.globalSettingsStateService.cinemaModeEnabled();
+        this.globalSettingsStateService.setCinemaModeEnabled(!currentMode);
+        this.toastService.info(`Cinema Mode ${!currentMode ? 'Enabled' : 'Disabled'}`);
+        break;
     }
   }
 
   private adjustPlaybackSpeed(delta: number): void {
+    // If Cinema Mode is enabled, route speed adjustments to the global cinema speed
+    if (this.globalSettingsStateService.cinemaModeEnabled()) {
+      const newSpeed = this.calculateNewSpeed(this.globalSettingsStateService.cinemaModeSpeed(), delta);
+      this.globalSettingsStateService.setCinemaModeSpeed(newSpeed);
+      this.toastService.info(`Cinema Mode speed: ${newSpeed.toFixed(1)}x`);
+      return;
+    }
+
     const currentClip = this.clipsStateService.currentClip();
     if (!currentClip) {
       return;
@@ -189,15 +202,18 @@ export class ProjectActionService {
     const currentSettings = this.projectSettingsStateService.settings();
 
     if (isSubtitled) {
-      const newSpeed = Math.max(0.1, Math.min(5.0, currentSettings.subtitledClipSpeed + delta));
-      const roundedSpeed = Math.round(newSpeed * 10) / 10;
-      this.projectSettingsStateService.setSettings({ subtitledClipSpeed: roundedSpeed });
-      this.toastService.info(`Subtitled clip speed: ${roundedSpeed.toFixed(1)}x`);
+      const newSpeed = this.calculateNewSpeed(currentSettings.subtitledClipSpeed, delta);
+      this.projectSettingsStateService.setSettings({subtitledClipSpeed: newSpeed});
+      this.toastService.info(`Subtitled clip speed: ${newSpeed.toFixed(1)}x`);
     } else {
-      const newSpeed = Math.max(0.1, Math.min(5.0, currentSettings.gapSpeed + delta));
-      const roundedSpeed = Math.round(newSpeed * 10) / 10;
-      this.projectSettingsStateService.setSettings({ gapSpeed: roundedSpeed });
-      this.toastService.info(`Gap speed: ${roundedSpeed.toFixed(1)}x`);
+      const newSpeed = this.calculateNewSpeed(currentSettings.gapSpeed, delta);
+      this.projectSettingsStateService.setSettings({gapSpeed: newSpeed});
+      this.toastService.info(`Gap speed: ${newSpeed.toFixed(1)}x`);
     }
+  }
+
+  private calculateNewSpeed(currentSpeed: number, delta: number): number {
+    const newSpeed = Math.max(0.1, Math.min(5.0, currentSpeed + delta));
+    return Math.round(newSpeed * 10) / 10;
   }
 }

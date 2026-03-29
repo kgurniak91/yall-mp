@@ -32,6 +32,8 @@ export class PlaybackManager extends EventEmitter {
   private isSeekForNavigation = false;
   private nextPlayerState: PlayerState | null = null;
   private isSpeedOverridden = false;
+  private cinemaModeEnabled = false;
+  private cinemaModeSpeed = 1.0;
   private currentAutoPauseToken: string = '';
   private volume = 100;
   private isMuted = false;
@@ -176,7 +178,9 @@ export class PlaybackManager extends EventEmitter {
       this.preSeekState = this.playerState;
     }
     this.setPlayerState(PlayerState.Transitioning);
-    this.mpvManager.setProperty('pause', true);
+    if (!this.cinemaModeEnabled) {
+      this.mpvManager.setProperty('pause', true);
+    }
 
     this.notifyUI();
 
@@ -313,6 +317,20 @@ export class PlaybackManager extends EventEmitter {
     this.mpvManager.setProperty('mute', mute);
   }
 
+  public setCinemaMode(options: { enabled: boolean; speed: number }): void {
+    const changed = this.cinemaModeEnabled !== options.enabled || this.cinemaModeSpeed !== options.speed;
+    this.cinemaModeEnabled = options.enabled;
+    this.cinemaModeSpeed = options.speed;
+
+    if (changed && this.isProjectLoaded) {
+      this.applyClipTransitionSettings();
+      // Flush audio buffer if speed was changed while paused
+      if (this.isPaused) {
+        this.mpvManager.sendCommand(['seek', this.currentTime, 'absolute', 'exact']);
+      }
+    }
+  }
+
   private handleMpvEvent(status: any): void {
     if (status.event === 'auto-pause-fired') {
       const token = status.data;
@@ -392,6 +410,19 @@ export class PlaybackManager extends EventEmitter {
         }
 
         this.currentTime = status.data;
+
+        // In Cinema Mode, the Lua auto-pause script is disabled - current clip needs to be updated manually
+        if (this.cinemaModeEnabled) {
+          const currentClip = this.clips[this.currentClipIndex];
+          if (currentClip && (this.currentTime >= currentClip.endTime || this.currentTime < currentClip.startTime)) {
+            const newIndex = this.clips.findIndex(c => this.currentTime >= c.startTime && this.currentTime < c.endTime);
+            if (newIndex !== -1 && newIndex !== this.currentClipIndex) {
+              this.currentClipIndex = newIndex;
+              this.applyClipTransitionSettings();
+            }
+          }
+        }
+
         this.notifyUI();
       }
     }
@@ -413,7 +444,7 @@ export class PlaybackManager extends EventEmitter {
           this.nextPlayerState = null;
         } else {
           const targetClip = this.clips[this.currentClipIndex];
-          const destinationRequiresPause = targetClip?.hasSubtitle && this.settings?.autoPauseAtStart;
+          const destinationRequiresPause = !this.cinemaModeEnabled && targetClip?.hasSubtitle && this.settings?.autoPauseAtStart;
 
           if (this.isSeekForNavigation) {
             // Jump to specific subtitled clip (e.g., CTRL + right arrow)
@@ -454,11 +485,13 @@ export class PlaybackManager extends EventEmitter {
 
   private getNextClipIndex(currentIndex: number): number {
     let nextIndex = currentIndex + 1;
-    if (this.settings?.skipGaps) {
+
+    if (this.settings?.skipGaps && !this.cinemaModeEnabled) {
       while (nextIndex < this.clips.length && !this.clips[nextIndex].hasSubtitle) {
         nextIndex++;
       }
     }
+
     return nextIndex;
   }
 
@@ -469,14 +502,16 @@ export class PlaybackManager extends EventEmitter {
     }
 
     this.setPlayerState(PlayerState.Transitioning);
-    this.mpvManager.setProperty('pause', true);
+    if (!this.cinemaModeEnabled) {
+      this.mpvManager.setProperty('pause', true);
+    }
 
     this.currentClipIndex = index;
     this.userOverriddenClipId = null;
     this.applyClipTransitionSettings();
 
     const clipToPlay = this.clips[this.currentClipIndex];
-    const shouldAutoPauseAtStart = clipToPlay.hasSubtitle && this.settings?.autoPauseAtStart;
+    const shouldAutoPauseAtStart = !this.cinemaModeEnabled && clipToPlay.hasSubtitle && this.settings?.autoPauseAtStart;
 
     // Determine the precise target time, nudging it slightly if auto-pausing at the start to make sure it's still within clip bounds:
     const targetTime = shouldAutoPauseAtStart ? (clipToPlay.startTime + 0.01) : clipToPlay.startTime;
@@ -515,13 +550,19 @@ export class PlaybackManager extends EventEmitter {
       return this.settings.speedOverride;
     }
 
-    // Priority 2: Context-aware speed
+    // Priority 2: Cinema Mode speed if enabled
+    if (this.cinemaModeEnabled) {
+      return this.cinemaModeSpeed;
+    }
+
+    // Priority 3: Context-aware speed
     return clip.hasSubtitle ? this.settings.subtitledClipSpeed : this.settings.gapSpeed;
   }
 
   private refreshLuaAutoPause(): void {
     const clip = this.clips[this.currentClipIndex];
-    if (!clip || !this.settings) {
+    if (!clip || !this.settings || this.cinemaModeEnabled) {
+      this.mpvManager.setLuaAutoPause(-1, '');
       return;
     }
 
@@ -536,7 +577,7 @@ export class PlaybackManager extends EventEmitter {
       return;
     }
 
-    if (this.userOverriddenClipId !== clip.id) {
+    if (!this.cinemaModeEnabled && this.userOverriddenClipId !== clip.id) {
       if (clip.hasSubtitle) {
         const behavior = this.settings.subtitleBehavior;
         if (behavior === SubtitleBehavior.ForceShow) {

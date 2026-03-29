@@ -53,6 +53,7 @@ export enum KeyboardAction {
   OpenHelpDialog = 'OpenHelpDialog',
   ToggleFullScreen = 'ToggleFullScreen',
   OpenGlobalSettings = 'OpenGlobalSettings',
+  ToggleCinemaMode = 'ToggleCinemaMode',
   CloseDialogOrEsc = 'CloseDialogOrEsc',
   ConfirmDialog = 'ConfirmDialog',
   AddNote = 'AddNote',

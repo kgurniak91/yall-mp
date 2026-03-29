@@ -24,6 +24,8 @@ export class GlobalSettingsStateService {
   public readonly hardwareAcceleration = computed(() => this.appStateService.globalSettings().hardwareAcceleration);
   public readonly preferredAudioLanguages = computed(() => this.appStateService.globalSettings().preferredAudioLanguages);
   public readonly preferredSubtitleLanguages = computed(() => this.appStateService.globalSettings().preferredSubtitleLanguages);
+  public readonly cinemaModeEnabled = computed(() => this.appStateService.globalSettings().cinemaModeEnabled);
+  public readonly cinemaModeSpeed = computed(() => this.appStateService.globalSettings().cinemaModeSpeed);
   public readonly srtBackgroundColor = computed(() => `rgba(0, 0, 0, ${this.srtBackgroundOpacity()})`);
   public readonly settingsReloadTrigger = this._settingsReloadTrigger.asReadonly();
 
@@ -93,5 +95,13 @@ export class GlobalSettingsStateService {
 
   public setPreferredSubtitleLanguages(languages: string[]): void {
     this.appStateService.updateGlobalSettings({preferredSubtitleLanguages: languages});
+  }
+
+  public setCinemaModeEnabled(value: boolean): void {
+    this.appStateService.updateGlobalSettings({cinemaModeEnabled: value});
+  }
+
+  public setCinemaModeSpeed(value: number): void {
+    this.appStateService.updateGlobalSettings({cinemaModeSpeed: value});
   }
 }

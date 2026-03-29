@@ -85,6 +85,10 @@
   p-button {
     border-right: 1px solid black !important;
   }
+
+  p-button.active-icon ::ng-deep button .p-button-icon {
+    color: var(--p-primary-color) !important;
+  }
 }
 
 

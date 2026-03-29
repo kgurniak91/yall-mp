@@ -27,6 +27,21 @@
     </small>
   </p-fieldset>
 
+  <p-fieldset legend="Cinema Mode" [toggleable]="false">
+    <div class="setting-item-column">
+      <label for="cinema-speed" class="font-semibold">
+        Cinema Mode Playback Speed ({{ globalSettingsStateService.cinemaModeSpeed() }}x)
+      </label>
+      <p-slider id="cinema-speed"
+                [ngModel]="globalSettingsStateService.cinemaModeSpeed()"
+                (ngModelChange)="globalSettingsStateService.setCinemaModeSpeed($event)"
+                [min]="0.1" [max]="5" [step]="0.1"/>
+      <small class="block mt-2">
+        This unified speed applies to the entire video when Cinema Mode is toggled on via the toolbar (or by pressing <b>M</b>).
+      </small>
+    </div>
+  </p-fieldset>
+
   <p-fieldset legend="Preferred Audio Languages" [toggleable]="false">
     <app-language-priority-list [value]="globalSettingsStateService.preferredAudioLanguages()"
                                 (valueChange)="globalSettingsStateService.setPreferredAudioLanguages($event)"/>

@@ -7,6 +7,16 @@
     </span>
   </p-message>
 
+  @if (globalSettingsStateService.cinemaModeEnabled()) {
+    <p-message severity="error" styleClass="w-full mb-4 block">
+      <p class="m-0 line-height-3">
+        <b>Cinema Mode</b> is currently active.
+        <br>
+        Settings for auto-pausing, clip and gap playback speeds, gap skipping, and subtitle behaviors are temporarily bypassed.
+      </p>
+    </p-message>
+  }
+
   <div class="settings-preset-fieldset">
     <app-settings-preset [settings]="settings()"
                          (settingsChange)="settingsChange.emit($event)"></app-settings-preset>

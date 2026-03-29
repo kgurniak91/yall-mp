@@ -87,7 +87,7 @@ export class CurrentProjectSettingsComponent {
     return `Track ${selectedIndex ?? 'Unknown'}`;
   });
 
-  private readonly globalSettingsStateService = inject(GlobalSettingsStateService);
+  protected readonly globalSettingsStateService = inject(GlobalSettingsStateService);
   private readonly dialogOrchestrationService = inject(DialogOrchestrationService);
   private readonly yomitanService = inject(YomitanService);
 

@@ -78,6 +78,7 @@ import {SubtitleOffsetDialogData} from './subtitle-offset-dialog/subtitle-offset
 import {SubtitlesLookupStateService} from './services/subtitles-lookup-state/subtitles-lookup-state.service';
 import {Slider} from 'primeng/slider';
 import {UnexportedNotesWarningService} from './services/unexported-notes-warning/unexported-notes-warning.service';
+import {InputSwitch} from 'primeng/inputswitch';
 
 @Component({
   selector: 'app-project-details',
@@ -97,7 +98,8 @@ import {UnexportedNotesWarningService} from './services/unexported-notes-warning
     DatePipe,
     OverlayBadgeModule,
     ProjectNotesComponent,
-    Slider
+    Slider,
+    InputSwitch
   ],
   templateUrl: './project-details.component.html',
   styleUrl: './project-details.component.scss',
@@ -289,6 +291,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     return `Please wait for ${thingsBeingLoaded.join(' and ')} to finish loading`;
   });
 
+  protected readonly globalSettingsStateService = inject(GlobalSettingsStateService);
   protected readonly commandHistoryStateService = inject(CommandHistoryStateService);
   protected readonly videoStateService = inject(VideoStateService);
   protected readonly ankiStateService = inject(AnkiStateService);
@@ -351,6 +354,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   private selectedSubtitleTextForMenu = '';
   private wasPlayingBeforeSettingsOpened = false;
   private wasSettingsDrawerOpened = false;
+  private settingsSnapshot: any = null;
   private readonly actionService = inject(ProjectActionService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -358,7 +362,6 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   private readonly fontInjectionService = inject(FontInjectionService);
   private readonly dialogService = inject(DialogService);
   private readonly toastService = inject(ToastService);
-  private readonly globalSettingsStateService = inject(GlobalSettingsStateService);
   private readonly dialogOrchestrationService = inject(DialogOrchestrationService);
   private readonly subtitlesHighlighterService = inject(SubtitlesHighlighterService);
   private readonly headerCurrentProjectActionBridgeService = inject(HeaderCurrentProjectActionBridgeService);
@@ -383,6 +386,12 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       this.commandHistoryStateService,
       this.actionService
     );
+
+    effect(() => {
+      const enabled = this.globalSettingsStateService.cinemaModeEnabled();
+      const speed = this.globalSettingsStateService.cinemaModeSpeed();
+      window.electronAPI.playbackSetCinemaMode({enabled, speed});
+    });
 
     effect(() => {
       const subtitlesVisible = this.videoStateService.subtitlesVisible();
@@ -711,6 +720,16 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
   onVolumeChange(value: number): void {
     this.videoStateService.setVolume(value);
+  }
+
+  toggleCinemaMode(enabled: boolean): void {
+    this.globalSettingsStateService.setCinemaModeEnabled(enabled);
+    this.toastService.info(`Cinema Mode ${enabled ? 'Enabled' : 'Disabled'}`);
+  }
+
+  openGlobalSettings(event: MouseEvent): void {
+    event.preventDefault();
+    this.dialogOrchestrationService.openGlobalSettingsDialog(GlobalSettingsTab.General);
   }
 
   async openAnkiExportDialog(instantExport: boolean): Promise<void> {
@@ -1235,15 +1254,43 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
         if (this.wasPlayingBeforeSettingsOpened) {
           window.electronAPI.playbackPause();
         }
+
+        // Capture snapshot of settings ignored by the Cinema Mode
+        const currentSettings = this.projectSettingsStateService.settings();
+        this.settingsSnapshot = {
+          autoPauseAtStart: currentSettings.autoPauseAtStart,
+          autoPauseAtEnd: currentSettings.autoPauseAtEnd,
+          subtitledClipSpeed: currentSettings.subtitledClipSpeed,
+          gapSpeed: currentSettings.gapSpeed,
+          skipGaps: currentSettings.skipGaps,
+          subtitleBehavior: currentSettings.subtitleBehavior
+        };
       }
     } else if (!isOpen && this.wasSettingsDrawerOpened) {
       // Restore default notification position
       this.toastService.setPosition('top-right');
 
+      // Check if user modified settings ignored by the Cinema Mode while it was active
+      if (this.globalSettingsStateService.cinemaModeEnabled() && this.settingsSnapshot) {
+        const currentSettings = this.projectSettingsStateService.settings();
+        const changed = currentSettings.autoPauseAtStart !== this.settingsSnapshot.autoPauseAtStart
+          || currentSettings.autoPauseAtEnd !== this.settingsSnapshot.autoPauseAtEnd
+          || currentSettings.subtitledClipSpeed !== this.settingsSnapshot.subtitledClipSpeed
+          || currentSettings.gapSpeed !== this.settingsSnapshot.gapSpeed
+          || currentSettings.skipGaps !== this.settingsSnapshot.skipGaps
+          || currentSettings.subtitleBehavior !== this.settingsSnapshot.subtitleBehavior;
+
+        if (changed) {
+          this.toastService.info('Some of the settings that were modified will only take effect when Cinema Mode is disabled');
+        }
+      }
+      this.settingsSnapshot = null;
+
       // Drawer is closing
       if (this.wasPlayingBeforeSettingsOpened) {
         window.electronAPI.playbackPlay();
       }
+
       this.wasPlayingBeforeSettingsOpened = false;
     }
 

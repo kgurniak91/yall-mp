@@ -75,6 +75,15 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
     group: KeyboardShortcutGroup.Global
   },
   {
+    action: KeyboardAction.ToggleCinemaMode,
+    key: 'm',
+    description: 'Toggle Cinema Mode (continuous raw playback)',
+    displayKeys: ['M'],
+    scope: KeyboardShortcutScope.Project,
+    type: ActionType.SingleShot,
+    group: KeyboardShortcutGroup.Playback
+  },
+  {
     action: KeyboardAction.CloseDialogOrEsc,
     key: 'Escape',
     description: 'Close active dialog, exit fullscreen, or minimize',

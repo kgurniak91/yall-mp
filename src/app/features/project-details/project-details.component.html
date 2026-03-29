@@ -141,6 +141,31 @@
         </div>
       }
 
+      <p-button icon="fa-solid fa-film"
+                [class.active-icon]="globalSettingsStateService.cinemaModeEnabled()"
+                pTooltip="Cinema Mode (M)"
+                tooltipStyleClass="tooltip-one-line"
+                tooltipPosition="top"
+                (click)="cinemaPopover.toggle($event)"/>
+
+      <p-popover #cinemaPopover appendTo="body">
+        <div class="flex flex-column gap-3 p-2" style="width: 20rem">
+          <div class="flex align-items-center justify-content-between">
+            <span class="font-bold">Cinema Mode</span>
+            <p-inputSwitch [ngModel]="globalSettingsStateService.cinemaModeEnabled()"
+                           (ngModelChange)="toggleCinemaMode($event)"/>
+          </div>
+          <p class="text-sm text-color-secondary m-0 line-height-3">
+            When enabled, the playback acts just like in any standard media player - it plays continuously using one unified playback speed, ignoring clip boundaries, auto-pauses, and automatic subtitle visibility changes.
+            <br><br>
+            <b>Tip:</b> Use this mode when you want to casually watch the video until an unknown word catches your attention, or when you have a tricky section of a video with lots of short subtitles that need to be carefully adjusted.
+          </p>
+          <a href="#" class="text-sm cursor-pointer" (click)="openGlobalSettings($event)">
+            Adjust Cinema Mode speed in Global Settings
+          </a>
+        </div>
+      </p-popover>
+
       <p-button [icon]="'fa-solid ' + volumeIcon()"
                 [pTooltip]="volumeTooltip()"
                 tooltipStyleClass="tooltip-one-line"

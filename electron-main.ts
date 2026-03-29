@@ -1486,6 +1486,9 @@ if (!gotTheLock) {
     ipcMain.on('playback:updateClips', (_, clips, currentTime) => {
       playbackManager?.updateClips(clips, currentTime);
     });
+    ipcMain.on('playback:setCinemaMode', (_, options) => {
+      playbackManager?.setCinemaMode(options);
+    });
     ipcMain.handle('playback:loadProject', (_, clips, settings, lastPlaybackTime) => playbackManager?.loadProject(clips, settings, lastPlaybackTime));
     ipcMain.on('playback:setSpeedOverride', (_, isActive: boolean) => {
       playbackManager?.setSpeedOverride(isActive);
