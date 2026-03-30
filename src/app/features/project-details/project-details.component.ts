@@ -349,7 +349,8 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   protected readonly isAnyContextMenuOpen = computed(() =>
     this.isSubtitlesContextMenuOpen() || this.isTimelineContextMenuOpen()
   );
-
+  protected readonly isPopoverOpen = computed(() => this.activePopovers().size > 0);
+  private readonly activePopovers = signal<Set<Popover>>(new Set());
   private readonly subtitlesOverlay = viewChild.required(SubtitlesOverlayComponent);
   private selectedSubtitleTextForMenu = '';
   private wasPlayingBeforeSettingsOpened = false;
@@ -797,8 +798,8 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   }
 
   onVideoAreaClick(): void {
-    if (this.isAnyContextMenuOpen()) {
-      this.hideAllContextMenus();
+    if (this.isAnyContextMenuOpen() || this.isPopoverOpen()) {
+      this.hideAllOverlays();
       return;
     }
 
@@ -827,9 +828,10 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     });
   }
 
-  protected hideAllContextMenus(): void {
+  protected hideAllOverlays(): void {
     this.timelineContextMenu()?.hide();
     this.subtitlesContextMenu()?.hide();
+    this.activePopovers().forEach((p: Popover) => p.hide());
   }
 
   onSubtitlesContextMenu(payload: { event: MouseEvent, text: string }): void {
@@ -921,6 +923,22 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
   onSubtitlesContextMenuHide(): void {
     this.isSubtitlesContextMenuOpen.set(false);
+  }
+
+  protected onPopoverShow(popover: Popover): void {
+    this.activePopovers.update(set => {
+      const newSet = new Set(set);
+      newSet.add(popover);
+      return newSet;
+    });
+  }
+
+  protected onPopoverHide(popover: Popover): void {
+    this.activePopovers.update(set => {
+      const newSet = new Set(set);
+      newSet.delete(popover);
+      return newSet;
+    });
   }
 
   onTimelineContextMenuHide(): void {

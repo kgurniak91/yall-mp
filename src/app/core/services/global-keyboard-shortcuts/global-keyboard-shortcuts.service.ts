@@ -213,7 +213,7 @@ export class GlobalKeyboardShortcutsService implements OnDestroy {
   }
 
   private isAnyMenuOpen(): boolean {
-    const selector = '.p-menu-overlay, .p-contextmenu, .p-connected-overlay, .p-overlay, .p-datepicker, .yomitan-popup-wrapper';
+    const selector = '.p-menu-overlay, .p-contextmenu, .p-connected-overlay, .p-overlay, .p-datepicker, .yomitan-popup-wrapper, .p-popover';
     const overlays = document.querySelectorAll(selector);
 
     for (let i = 0; i < overlays.length; i++) {
