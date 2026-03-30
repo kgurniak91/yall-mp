@@ -113,7 +113,15 @@ export interface IElectronAPI {
   playbackRepeat: () => void;
   playbackForceContinue: () => void;
   playbackSeek: (time: number, isNavigation?: boolean) => void;
-  playbackLoadProject: (clips: LightweightVideoClip[], settings: ProjectSettings, lastPlaybackTime: number) => Promise<void>;
+  playbackLoadProject: (
+    clips: LightweightVideoClip[],
+    settings: ProjectSettings,
+    lastPlaybackTime: number,
+    cinemaMode: {
+      enabled: boolean;
+      speed: number
+    }
+  ) => Promise<void>;
   playbackUpdateSettings: (settings: ProjectSettings) => void;
   playbackUpdateClips: (clips: LightweightVideoClip[], currentTime?: number) => void;
   playbackSetCinemaMode: (options: { enabled: boolean; speed: number }) => void;

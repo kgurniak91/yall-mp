@@ -433,7 +433,11 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
         this.hasFiredStartupSequence = true;
         const settings = this.projectSettingsStateService.settings();
         const lightweightClips = allClips.map((clip: VideoClip) => mapVideoClipToLightweight(clip));
-        window.electronAPI.playbackLoadProject(lightweightClips, settings, project.lastPlaybackTime);
+        const cinemaModeOptions = untracked(() => ({
+          enabled: this.globalSettingsStateService.cinemaModeEnabled(),
+          speed: this.globalSettingsStateService.cinemaModeSpeed()
+        }));
+        window.electronAPI.playbackLoadProject(lightweightClips, settings, project.lastPlaybackTime, cinemaModeOptions);
         this.startPlaybackSequence();
       }
     });

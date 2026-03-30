@@ -47,7 +47,7 @@ describe('PlaybackManager', () => {
   const setupManager = (settings: Partial<ProjectSettings> = {}, startTime = 0) => {
     const fullSettings = {...DEFAULT_PROJECT_SETTINGS, ...settings};
     const manager = new PlaybackManager(mockMpvManager as unknown as MpvManager, mockUiWindow as unknown as BrowserWindow);
-    manager.loadProject(cloneDeep(mockClips), fullSettings, startTime);
+    manager.loadProject(cloneDeep(mockClips), fullSettings, startTime, {enabled: false, speed: 1.0});
     return manager;
   };
 
@@ -96,7 +96,7 @@ describe('PlaybackManager', () => {
       const manager = new PlaybackManager(mockMpvManager as unknown as MpvManager, mockUiWindow as unknown as BrowserWindow);
       const settings = {...DEFAULT_PROJECT_SETTINGS, subtitledClipSpeed: 1.0, gapSpeed: 3.0};
       const lastPlaybackTime = 15; // A time inside the subtitled clip 'sub-1'
-      manager.loadProject(cloneDeep(mockClips), settings, lastPlaybackTime);
+      manager.loadProject(cloneDeep(mockClips), settings, lastPlaybackTime, {enabled: false, speed: 1.0});
 
       // Sanity check: no settings should have been applied during load
       expect(mockMpvManager.setProperty).not.toHaveBeenCalled();
@@ -462,7 +462,10 @@ describe('PlaybackManager', () => {
 
     beforeEach(() => {
       playbackManager = new PlaybackManager(mockMpvManager as unknown as MpvManager, mockUiWindow as unknown as BrowserWindow);
-      playbackManager.loadProject(JSON.parse(JSON.stringify(fourClipLayout)), {} as ProjectSettings, 0);
+      playbackManager.loadProject(JSON.parse(JSON.stringify(fourClipLayout)), {} as ProjectSettings, 0, {
+        enabled: false,
+        speed: 1.0
+      });
     });
 
     it('should correctly re-synchronize the active clip index if the playhead is now in a different clip', () => {
@@ -1544,7 +1547,7 @@ describe('PlaybackManager', () => {
       );
 
       // Load at 5s (midway through the last subtitle)
-      manager.loadProject(clipsWithTrailingGap, settings, 5);
+      manager.loadProject(clipsWithTrailingGap, settings, 5, {enabled: false, speed: 1.0});
       manager.play();
       vi.clearAllMocks();
 

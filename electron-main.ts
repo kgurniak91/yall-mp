@@ -1489,7 +1489,7 @@ if (!gotTheLock) {
     ipcMain.on('playback:setCinemaMode', (_, options) => {
       playbackManager?.setCinemaMode(options);
     });
-    ipcMain.handle('playback:loadProject', (_, clips, settings, lastPlaybackTime) => playbackManager?.loadProject(clips, settings, lastPlaybackTime));
+    ipcMain.handle('playback:loadProject', (_, clips, settings, lastPlaybackTime, cinemaMode) => playbackManager?.loadProject(clips, settings, lastPlaybackTime, cinemaMode));
     ipcMain.on('playback:setSpeedOverride', (_, isActive: boolean) => {
       playbackManager?.setSpeedOverride(isActive);
     });

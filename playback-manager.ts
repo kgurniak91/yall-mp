@@ -60,11 +60,21 @@ export class PlaybackManager extends EventEmitter {
     }
   }
 
-  public loadProject(clips: LightweightVideoClip[], settings: ProjectSettings, lastPlaybackTime: number): void {
+  public loadProject(
+    clips: LightweightVideoClip[],
+    settings: ProjectSettings,
+    lastPlaybackTime: number,
+    cinemaMode: {
+      enabled: boolean;
+      speed: number
+    }
+  ): void {
     this.isProjectLoaded = true;
     this.clips = clips;
     this.settings = settings;
     this.subtitlesVisible = settings.subtitlesVisible;
+    this.cinemaModeEnabled = cinemaMode.enabled;
+    this.cinemaModeSpeed = cinemaMode.speed;
 
     let initialClipIndex = this.clips.findIndex(
       (c) => lastPlaybackTime >= c.startTime && lastPlaybackTime < c.endTime
