@@ -1315,21 +1315,48 @@ export class ClipsStateService implements OnDestroy {
 
     const segments: Partial<VideoClip>[] = [];
 
-    // Create a raw segment for each time slice
+    // --- O(N log N) Sweep Line optimization ---
+
+    // Map original indices to guarantee 1:1 parity with the old .filter() order
+    const originalIndexMap = new Map<string, number>();
+    subtitles.forEach((s, i) => originalIndexMap.set(s.id, i));
+
+    const activeSubtitles = new Set<SubtitleData>();
+    let subIndex = 0;
+    const sortedSubsByStart = [...subtitles].sort((a, b) => a.startTime - b.startTime);
+
     for (let i = 0; i < sortedTimestamps.length - 1; i++) {
       const startTime = sortedTimestamps[i];
       const endTime = sortedTimestamps[i + 1];
 
-      if (endTime <= startTime) continue;
-
+      // Restoring the original midpoint epsilon logic for perfect mathematical parity
       const midPoint = startTime + 0.001;
-      const activeSubtitles = subtitles.filter(s => midPoint >= s.startTime && midPoint < s.endTime);
+
+      // Add subtitles that have started before or at the midpoint
+      while (subIndex < sortedSubsByStart.length && sortedSubsByStart[subIndex].startTime <= midPoint) {
+        activeSubtitles.add(sortedSubsByStart[subIndex]);
+        subIndex++;
+      }
+
+      // Remove subtitles that ended before or at the midpoint
+      for (const sub of activeSubtitles) {
+        if (sub.endTime <= midPoint) {
+          activeSubtitles.delete(sub);
+        }
+      }
+
+      if (endTime <= startTime) {
+        continue;
+      }
 
       segments.push({
         startTime,
         endTime,
-        hasSubtitle: activeSubtitles.length > 0,
-        sourceSubtitles: activeSubtitles
+        hasSubtitle: activeSubtitles.size > 0,
+        // Match the original array's .filter() order
+        sourceSubtitles: Array.from(activeSubtitles).sort((a, b) =>
+          originalIndexMap.get(a.id)! - originalIndexMap.get(b.id)!
+        )
       });
     }
 
@@ -1382,13 +1409,21 @@ export class ClipsStateService implements OnDestroy {
 
           // Create Set of existing IDs to avoid duplicates
           const existingIds = new Set(currentSegment.sourceSubtitles!.map(s => s.id));
-          // Add new source subtitles from next segment
+          let itemsAdded = false;
+
           nextSegment.sourceSubtitles!.forEach(sub => {
             if (!existingIds.has(sub.id)) {
               currentSegment.sourceSubtitles!.push(sub);
+              itemsAdded = true;
             }
           });
 
+          // Re-sort if appended anything
+          if (itemsAdded) {
+            currentSegment.sourceSubtitles!.sort((a, b) =>
+              originalIndexMap.get(a.id)! - originalIndexMap.get(b.id)!
+            );
+          }
         } else {
           // If content changes, push completed segment and start new one
           mergedSegments.push(currentSegment as VideoClip);
@@ -1450,7 +1485,8 @@ export class ClipsStateService implements OnDestroy {
       return originalClips;
     }
 
-    const updatedClips: VideoClip[] = JSON.parse(JSON.stringify(originalClips));
+    const updatedClips: VideoClip[] = [...originalClips];
+    updatedClips[clipIndex] = {...originalClips[clipIndex]};
     const targetClip = updatedClips[clipIndex];
     const oldStartTime = targetClip.startTime;
     const oldEndTime = targetClip.endTime;
@@ -1495,14 +1531,16 @@ export class ClipsStateService implements OnDestroy {
         for (let i = clipIndex - 1; i >= 0; i--) {
           const clip = updatedClips[i];
           if (clip.endTime > finalStartTime) {
-            clip.endTime = finalStartTime;
-            if (clip.startTime > clip.endTime) clip.startTime = clip.endTime;
+            updatedClips[i] = {...clip};
+            updatedClips[i].endTime = finalStartTime;
+            if (updatedClips[i].startTime > updatedClips[i].endTime) updatedClips[i].startTime = updatedClips[i].endTime;
           } else break;
         }
       } else { // Shrinking from the left (moving handle to the right)
         const prevClip = updatedClips[clipIndex - 1];
         if (prevClip && !targetClip.hasSubtitle) {
-          prevClip.endTime = finalStartTime;
+          updatedClips[clipIndex - 1] = {...prevClip};
+          updatedClips[clipIndex - 1].endTime = finalStartTime;
         }
       }
     }
@@ -1522,14 +1560,16 @@ export class ClipsStateService implements OnDestroy {
         for (let i = clipIndex + 1; i < updatedClips.length; i++) {
           const clip = updatedClips[i];
           if (clip.startTime < finalEndTime) {
-            clip.startTime = finalEndTime;
-            if (clip.endTime < clip.startTime) clip.endTime = clip.startTime;
+            updatedClips[i] = {...clip};
+            updatedClips[i].startTime = finalEndTime;
+            if (updatedClips[i].endTime < updatedClips[i].startTime) updatedClips[i].endTime = updatedClips[i].startTime;
           } else break;
         }
       } else { // Shrinking from the right (moving handle to the left)
         const nextClip = updatedClips[clipIndex + 1];
         if (nextClip && !targetClip.hasSubtitle) {
-          nextClip.startTime = finalEndTime;
+          updatedClips[clipIndex + 1] = {...nextClip};
+          updatedClips[clipIndex + 1].startTime = finalEndTime;
         }
       }
     }
@@ -1538,7 +1578,11 @@ export class ClipsStateService implements OnDestroy {
     targetClip.endTime = finalEndTime;
 
     // Recalculate duration for all touched clips to be safe
-    updatedClips.forEach(c => c.duration = c.endTime - c.startTime);
+    updatedClips.forEach((c, i) => {
+      if (updatedClips[i] !== originalClips[i]) {
+        c.duration = c.endTime - c.startTime;
+      }
+    });
 
     // Remove zero-duration clips
     return updatedClips.filter(c => c.duration > 0.001);
@@ -1555,6 +1599,7 @@ export class ClipsStateService implements OnDestroy {
 
     const updatedClips = this.calculateUpdatedClips(originalClips, clipId, newStartTime, newEndTime);
     const originalSubtitles = this._subtitles();
+    const originalSubtitlesMap = new Map(originalSubtitles.map(s => [s.id, s]));
     const changedSubtitles = new Map<string, { original: SubtitleData, updated: SubtitleData }>();
 
     // Helper to recursively update nested ASS dialogues
@@ -1575,16 +1620,18 @@ export class ClipsStateService implements OnDestroy {
       }
     };
 
+    const originalClipsMap = new Map(originalClips.map(c => [c.id, c]));
+
     updatedClips.forEach(updatedClip => {
       if (!updatedClip.hasSubtitle) {
         return;
       }
 
-      const originalClip = originalClips.find(oc => this.areVideoClipsEqual(oc, updatedClip));
+      const originalClip = originalClipsMap.get(updatedClip.id);
 
       if (originalClip && (Math.abs(originalClip.startTime - updatedClip.startTime) > 0.001 || Math.abs(originalClip.endTime - updatedClip.endTime) > 0.001)) {
         for (const sourceSub of updatedClip.sourceSubtitles) {
-          const originalSourceSub = originalSubtitles.find(s => s.id === sourceSub.id);
+          const originalSourceSub = originalSubtitlesMap.get(sourceSub.id);
           if (!originalSourceSub) {
             continue;
           }

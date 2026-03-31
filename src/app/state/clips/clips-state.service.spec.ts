@@ -2719,4 +2719,218 @@ Dialogue: 0:01:01.00,0:01:02.00,Default,Animating Text
       expect(result.deletedClips).toBe(1);
     });
   });
+
+  describe('Thorough Boundary & Invariant Regression Suite', () => {
+    beforeEach(() => {
+      commandHistoryService.clearHistory();
+      // Clear subtitles to reset state
+      service.setSubtitles([]);
+    });
+
+    it('preserves absolute boundaries of non-adjacent clips when a middle clip is adjusted', () => {
+      // ARRANGE: A(0-10), B(10-20), C(20-30), D(30-40)
+      const subs: SrtSubtitleData[] = [
+        {type: 'srt', id: 'A', startTime: 0, endTime: 10, text: 'A', track: 0},
+        {type: 'srt', id: 'B', startTime: 10, endTime: 20, text: 'B', track: 0},
+        {type: 'srt', id: 'C', startTime: 20, endTime: 30, text: 'C', track: 0},
+        {type: 'srt', id: 'D', startTime: 30, endTime: 40, text: 'D', track: 0}
+      ];
+      service.setSubtitles(subs);
+
+      // ACT: Adjust B (10-20) -> (10-25).
+      // This will shrink C to 25-30 if it's considered a "neighbor",
+      // but D (30-40) should be absolutely untouched.
+      const clipB = service.clips().find(c => c.sourceSubtitles.some(s => s.id === 'B'))!;
+      service.updateClipTimesFromTimeline(clipB.id, 10, 25);
+
+      // ASSERT
+      const clips = service.clips();
+      const a = clips.find(c => c.sourceSubtitles.some(s => s.id === 'A'))!;
+      const c = clips.find(c => c.sourceSubtitles.some(s => s.id === 'C'))!;
+      const d = clips.find(c => c.sourceSubtitles.some(s => s.id === 'D'))!;
+
+      expect(a.endTime).toBe(10);   // A unchanged
+      expect(c.startTime).toBe(25); // C is the immediate neighbor.
+      expect(c.endTime).toBe(30);   // D is NOT a neighbor, so D remains unchanged
+      expect(d.startTime).toBe(30);
+      expect(d.endTime).toBe(40);
+    });
+
+    it('maintains clip identity and content through multiple sequential splits', () => {
+      // ARRANGE: One long clip [0-20s]
+      const subs: SrtSubtitleData[] = [
+        {type: 'srt', id: 'orig', startTime: 0, endTime: 20, text: 'Long Text', track: 0}
+      ];
+      service.setSubtitles(subs);
+
+      // ACT: Split at 5s, then at 15s (original) / 10s (newly split part)
+      service.splitSubtitledClip('subtitle-0', 5); // Results in [0-5], [5-20]
+      const part2 = service.clips().filter(c => c.hasSubtitle)[1]; // [5-20]
+      service.splitSubtitledClip(part2.id, 10); // Results in [0-5], [5-10], [10-20]
+
+      // ASSERT
+      const clips = service.clips().filter(c => c.hasSubtitle);
+      expect(clips.length).toBe(3);
+      expect(clips[0].endTime).toBe(5);
+      expect(clips[1].startTime).toBe(5);
+      expect(clips[1].endTime).toBe(10);
+      expect(clips[2].startTime).toBe(10);
+      expect(clips[2].endTime).toBe(20);
+    });
+
+    it('correctly handles interlocking subtitles across tracks (Track 0 vs Track 1)', () => {
+      // ARRANGE: Track 0 (0-20), Track 1 (10-30)
+      const subs: SrtSubtitleData[] = [
+        {type: 'srt', id: 'T0', startTime: 0, endTime: 20, text: 'T0', track: 0},
+        {type: 'srt', id: 'T1', startTime: 10, endTime: 30, text: 'T1', track: 1}
+      ];
+      service.setSubtitles(subs);
+
+      // ACT: Move Track 0 End from 20 -> 15
+      const clipT0 = service.clipsForAllTracks().find(c => c.sourceSubtitles.some(s => s.id === 'T0'))!;
+      service.updateClipTimesFromTimeline(clipT0.id, 0, 15);
+
+      // ASSERT
+      const updatedT0 = service.getSubtitles().find(s => s.id === 'T0')!;
+      const updatedT1 = service.getSubtitles().find(s => s.id === 'T1')!;
+
+      expect(updatedT0.endTime).toBe(15);
+      expect(updatedT1.startTime).toBe(10); // T1 should NOT have moved, even though T0 shrank
+    });
+
+    it('enforces minimum clip duration during aggressive boundary dragging', () => {
+      // ARRANGE
+      const subs: SrtSubtitleData[] = [
+        {type: 'srt', id: 'sub', startTime: 10, endTime: 20, text: 'A', track: 0}
+      ];
+      service.setSubtitles(subs);
+      const clip = service.clips().find(c => c.hasSubtitle)!;
+
+      // ACT: Try to shrink to 0.05s (below MIN_SUBTITLE_DURATION of 0.1s)
+      service.updateClipTimesFromTimeline(clip.id, 10, 10.05);
+
+      // ASSERT
+      const updated = service.clips().find(c => c.hasSubtitle)!;
+      expect(updated.duration).toBeCloseTo(0.1);
+    });
+  });
+
+  describe('Sweep-line & Generation Invariants (Regression Suite)', () => {
+    function createSrt(id: string, start: number, end: number, text: string): SrtSubtitleData {
+      return {
+        id,
+        type: 'srt',
+        startTime: start,
+        endTime: end,
+        text,
+        splitGroupId: undefined
+      } as SrtSubtitleData;
+    }
+
+    function run(subtitles: SubtitleData[], duration = 30): VideoClip[] {
+      spyOn(service['videoStateService'], 'duration').and.returnValue(duration);
+      return service['generateClips'](subtitles);
+    }
+
+    it('correctly segments overlapping subtitles', () => {
+      const clips = run([
+        createSrt('A', 0, 10, 'A'),
+        createSrt('B', 5, 15, 'B'),
+      ], 15);
+
+      expect(clips.length).toBe(3);
+
+      expect(clips[0].startTime).toBe(0);
+      expect(clips[0].endTime).toBe(5);
+      expect(clips[0].sourceSubtitles.map(s => s.id)).toEqual(['A']);
+
+      expect(clips[1].startTime).toBe(5);
+      expect(clips[1].endTime).toBe(10);
+      expect(clips[1].sourceSubtitles.map(s => s.id)).toEqual(['A', 'B']);
+
+      expect(clips[2].startTime).toBe(10);
+      expect(clips[2].endTime).toBe(15);
+      expect(clips[2].sourceSubtitles.map(s => s.id)).toEqual(['B']);
+    });
+
+    it('covers full timeline without gaps or overlaps', () => {
+      const clips = run([
+        createSrt('A', 0, 10, 'A'),
+        createSrt('B', 10, 20, 'B'),
+        createSrt('C', 20, 30, 'C'),
+      ], 30);
+
+      for (let i = 0; i < clips.length - 1; i++) {
+        expect(clips[i].endTime).toBeCloseTo(clips[i + 1].startTime);
+      }
+
+      const totalDuration = clips.reduce((sum, c) => sum + c.duration, 0);
+      expect(totalDuration).toBeCloseTo(30);
+    });
+
+    it('preserves original subtitle order inside clips', () => {
+      const clips = run([
+        createSrt('A', 0, 10, 'A'),
+        createSrt('B', 0, 10, 'B'),
+        createSrt('C', 0, 10, 'C'),
+      ], 10);
+
+      expect(clips.length).toBe(1);
+      expect(clips[0].sourceSubtitles.map(s => s.id)).toEqual(['A', 'B', 'C']);
+    });
+
+    it('merges visually identical adjacent segments', () => {
+      const clips = run([
+        createSrt('A', 0, 5, 'same'),
+        createSrt('B', 5, 10, 'same'),
+      ], 10);
+
+      expect(clips.length).toBe(1);
+      expect(clips[0].startTime).toBe(0);
+      expect(clips[0].endTime).toBe(10);
+      expect(clips[0].text).toContain('same');
+    });
+
+    it('does not bleed subtitles across exact boundaries', () => {
+      const clips = run([
+        createSrt('A', 0, 10, 'A'),
+        createSrt('B', 10, 20, 'B'),
+      ], 20);
+
+      expect(clips.length).toBe(2);
+
+      expect(clips[0].sourceSubtitles.map(s => s.id)).toEqual(['A']);
+      expect(clips[1].sourceSubtitles.map(s => s.id)).toEqual(['B']);
+    });
+
+    it('filters out near-zero duration clips', () => {
+      const clips = run([
+        createSrt('A', 0, 10, 'A'),
+        createSrt('B', 10, 10.000001, 'B'),
+      ], 10.000001);
+
+      expect(clips.every(c => c.duration > 0.01)).toBeTrue();
+    });
+
+    it('handles multiple overlapping subtitles without breaking invariants', () => {
+      const subtitles: SubtitleData[] = [];
+      for (let i = 0; i < 5; i++) {
+        subtitles.push(createSrt(`S${i}`, i, i + 10, `T${i}`));
+      }
+
+      const clips = run(subtitles, 15);
+
+      // No gaps / overlaps
+      for (let i = 0; i < clips.length - 1; i++) {
+        expect(clips[i].endTime).toBeCloseTo(clips[i + 1].startTime);
+      }
+
+      // All clips valid
+      expect(clips.every(c => c.duration > 0.01)).toBeTrue();
+
+      // Ensure at least one clip contains multiple subtitles (valid but not overly strict)
+      const hasMulti = clips.some(c => c.sourceSubtitles.length > 1);
+      expect(hasMulti).toBeTrue();
+    });
+  });
 });
