@@ -440,5 +440,14 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
     group: KeyboardShortcutGroup.Playback
   },
   // --- Subtitle Tracks
+  {
+    action: KeyboardAction.RotateTracks,
+    key: '`',
+    description: 'Rotate active subtitle track',
+    displayKeys: ['~'],
+    scope: KeyboardShortcutScope.Project,
+    type: ActionType.SingleShot,
+    group: KeyboardShortcutGroup.Tracks
+  },
   ...SWITCH_TRACK_SHORTCUTS
 ];

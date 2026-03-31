@@ -181,7 +181,22 @@ export class ProjectActionService {
         this.globalSettingsStateService.setCinemaModeEnabled(!currentMode);
         this.toastService.info(`Cinema Mode ${!currentMode ? 'Enabled' : 'Disabled'}`);
         break;
+      case KeyboardAction.RotateTracks:
+        this.rotateTracks();
+        break;
     }
+  }
+
+  private rotateTracks(): void {
+    const totalTracks = this.clipsStateService.totalTracks();
+    if (totalTracks <= 1) {
+      return;
+    }
+
+    const currentTrack = this.clipsStateService.activeTrack();
+    const nextTrack = (currentTrack + 1) % totalTracks;
+
+    this.clipsStateService.setActiveTrack(nextTrack);
   }
 
   private adjustPlaybackSpeed(delta: number): void {

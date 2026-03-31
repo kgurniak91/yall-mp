@@ -153,6 +153,7 @@ export class ClipsStateService implements OnDestroy {
   public setActiveTrack(trackIndex: number): void {
     if (trackIndex >= 0 && trackIndex < this.totalTracks() && this._activeTrack() !== trackIndex) {
       this._activeTrack.set(trackIndex);
+      this.toastService.info(`Switched to track ${trackIndex + 1}`);
     }
   }
 
