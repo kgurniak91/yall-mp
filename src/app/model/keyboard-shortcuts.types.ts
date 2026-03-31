@@ -76,9 +76,9 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
   },
   {
     action: KeyboardAction.ToggleCinemaMode,
-    key: 'm',
-    description: 'Toggle Cinema Mode (continuous raw playback)',
-    displayKeys: ['M'],
+    key: 'x',
+    description: 'Toggle between Cinema and Study modes',
+    displayKeys: ['X'],
     scope: KeyboardShortcutScope.Project,
     type: ActionType.SingleShot,
     group: KeyboardShortcutGroup.Playback

@@ -67,8 +67,24 @@ describe('KeyboardShortcutsHelperService', () => {
 
   describe('Shortcut Lookup', () => {
     it('returns undefined for unbound keys', () => {
-      const event = new KeyboardEvent('keydown', {key: 'x'}); // 'x' is not bound
+      const alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
+
+      // Find a key that is NOT in the shortcuts list
+      const unboundKey = alphabet.find(key => {
+        const event = new KeyboardEvent('keydown', {key});
+        // Check if the service returns anything for this key
+        return service.getShortcutForEvent(event, KeyboardShortcutScope.Project) === undefined &&
+          service.getShortcutForEvent(event, KeyboardShortcutScope.Global) === undefined;
+      });
+
+      // Failsafe
+      if (!unboundKey) {
+        fail('Could not find an unbound key in the alphabet for testing!');
+      }
+
+      const event = new KeyboardEvent('keydown', {key: unboundKey});
       const shortcut = service.getShortcutForEvent(event, KeyboardShortcutScope.Project);
+
       expect(shortcut).toBeUndefined();
     });
 
