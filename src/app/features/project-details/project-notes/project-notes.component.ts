@@ -1,5 +1,6 @@
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   effect,
   inject,
@@ -71,10 +72,13 @@ export class ProjectNotesComponent {
   protected readonly noteMenuItems = signal<MenuItem[]>([]);
   protected readonly groupMenus = viewChildren<Menu>('groupMenu');
   protected readonly noteMenus = viewChildren<Menu>('noteMenu');
+
   private readonly dialogService = inject(DialogService);
   private readonly toastService = inject(ToastService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly appStateService = inject(AppStateService);
+  private readonly cdr = inject(ChangeDetectorRef);
+
   private currentNotes: ProjectClipNotes | undefined;
   private lastProcessedClipId: string | null = null;
 
@@ -168,6 +172,7 @@ export class ProjectNotesComponent {
     });
 
     this.groupMenuItems.set(items);
+    this.cdr.detectChanges(); // Sync model before menu evaluates toggle
     menu.toggle(event);
   }
 
@@ -225,6 +230,7 @@ export class ProjectNotesComponent {
     });
 
     this.noteMenuItems.set(items);
+    this.cdr.detectChanges(); // Sync model before menu evaluates toggle
     menu.toggle(event);
   }
 
@@ -455,6 +461,7 @@ export class ProjectNotesComponent {
 
       this.lookupNotesView.update(currentView => {
         const newView = cloneDeep(currentView);
+        let spliceIndex = -1; // Track where the group was before edit to maintain order
 
         // If editing and the term hasn't changed, just update the text in-place
         if (mode === 'edit' && term === result.term && originalIndex !== undefined) {
@@ -475,6 +482,7 @@ export class ProjectNotesComponent {
             newView[oldGroupIndex].notes = newView[oldGroupIndex].notes.filter(n => n.originalIndex !== originalIndex);
             if (newView[oldGroupIndex].notes.length === 0) {
               newView.splice(oldGroupIndex, 1);
+              spliceIndex = oldGroupIndex;
             } else {
               newView[oldGroupIndex].notes.forEach((n, i) => n.originalIndex = i);
             }
@@ -485,7 +493,14 @@ export class ProjectNotesComponent {
         let targetGroup = newView.find(g => g.selection === result.term);
         if (!targetGroup) {
           targetGroup = {selection: result.term, notes: []};
-          newView.push(targetGroup);
+
+          if (spliceIndex > -1) {
+            // Re-insert exactly where the emptied group used to be
+            newView.splice(spliceIndex, 0, targetGroup);
+          } else {
+            // Append to the end if no group was completely emptied
+            newView.push(targetGroup);
+          }
         }
 
         targetGroup.notes.push({text: result.noteText!, originalIndex: targetGroup.notes.length});
@@ -493,7 +508,8 @@ export class ProjectNotesComponent {
         return newView;
       });
 
-      if (forceExpand || mode === 'create') {
+      // Expand accordion if new, forced, OR if term was edited
+      if (forceExpand || mode === 'create' || term !== result.term) {
         this.activeAccordionTabs.update(tabs =>
           Array.from(new Set([...tabs, result.term]))
         );
