@@ -201,6 +201,15 @@ export class PlaybackManager extends EventEmitter {
     const oldSettings = this.settings;
     this.settings = newSettings;
 
+    if (oldSettings) {
+      if (oldSettings.autoPauseAtEnd && !newSettings.autoPauseAtEnd && this.playerState === PlayerState.AutoPausedAtEnd) {
+        this.setPlayerState(PlayerState.PausedByUser);
+      }
+      if (oldSettings.autoPauseAtStart && !newSettings.autoPauseAtStart && this.playerState === PlayerState.AutoPausedAtStart) {
+        this.setPlayerState(PlayerState.PausedByUser);
+      }
+    }
+
     const rendererChanged = oldSettings && oldSettings.useMpvSubtitles !== newSettings.useMpvSubtitles;
     const visibilityChanged = oldSettings && oldSettings.subtitlesVisible !== newSettings.subtitlesVisible;
     const speedChanged = oldSettings && (
@@ -349,6 +358,11 @@ export class PlaybackManager extends EventEmitter {
         return;
       }
 
+      if (this.playerState === PlayerState.Seeking || this.playerState === PlayerState.Transitioning) {
+        console.log('[PlaybackManager] Ignored auto-pause event during seek/transition.');
+        return;
+      }
+
       // Manually snap the playhead to the end of the clip for visual accuracy
       const currentClip = this.clips[this.currentClipIndex];
       if (currentClip) {
@@ -470,7 +484,23 @@ export class PlaybackManager extends EventEmitter {
             // Manual seek (e.g., right arrow, timeline click)
             // Preserve the playing/paused status from before the seek
             shouldResume = (this.preSeekState === PlayerState.Playing);
-            newState = shouldResume ? PlayerState.Playing : PlayerState.PausedByUser;
+
+            let resolvedState = shouldResume ? PlayerState.Playing : PlayerState.PausedByUser;
+
+            if (!shouldResume && !this.cinemaModeEnabled) {
+              if (targetClip && targetClip.hasSubtitle) {
+                const isAtEnd = Math.abs(this.currentTime - (targetClip.endTime - 0.01)) < 0.02;
+                const isAtStart = Math.abs(this.currentTime - (targetClip.startTime + 0.01)) < 0.02;
+
+                if (isAtEnd && this.settings?.autoPauseAtEnd) {
+                  resolvedState = PlayerState.AutoPausedAtEnd;
+                } else if (isAtStart && this.settings?.autoPauseAtStart) {
+                  resolvedState = PlayerState.AutoPausedAtStart;
+                }
+              }
+            }
+
+            newState = resolvedState;
           }
 
           this.isSeekForNavigation = false;

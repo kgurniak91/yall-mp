@@ -1773,6 +1773,224 @@ describe('PlaybackManager', () => {
     });
   });
 
+  describe('Boundary Adjustments Past Playhead (Race Conditions and State Restorations)', () => {
+    describe('Right Edge (End Boundary) Shrinking Past Playhead', () => {
+      it('should maintain AutoPausedAtEnd when auto-paused near end (Listening Practice)', () => {
+        // ARRANGE
+        playbackManager = setupManager({autoPauseAtEnd: true, autoPauseAtStart: false});
+        (playbackManager as any).currentClipIndex = 1;
+        simulateEndOfClip(playbackManager, 20); // Time snaps to 19.99
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.AutoPausedAtEnd);
+        vi.clearAllMocks();
+
+        // ACT
+        const modifiedClips = cloneDeep(mockClips);
+        modifiedClips[1].endTime = 18;
+        modifiedClips[2].startTime = 18;
+        playbackManager.updateClips(modifiedClips);
+
+        // Frontend snap seek (18 - 0.01 = 17.99)
+        playbackManager.seek(17.99);
+        const token = (playbackManager as any).currentAutoPauseToken;
+        simulateMpvEvent(playbackManager, {event: 'auto-pause-fired', data: token}); // Stale Lua event
+        simulateSeekComplete(playbackManager);
+
+        // ASSERT
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.AutoPausedAtEnd);
+        expect(mockMpvManager.setProperty).not.toHaveBeenCalledWith('pause', false);
+      });
+
+      it('should maintain PausedByUser when manually paused near end (Continuous Playback)', () => {
+        // ARRANGE
+        playbackManager = setupManager({autoPauseAtEnd: false, autoPauseAtStart: false});
+        playbackManager.seek(15);
+        simulateSeekComplete(playbackManager);
+        playbackManager.pause();
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.PausedByUser);
+        vi.clearAllMocks();
+
+        // ACT
+        const modifiedClips = cloneDeep(mockClips);
+        modifiedClips[1].endTime = 14;
+        modifiedClips[2].startTime = 14;
+        playbackManager.updateClips(modifiedClips);
+
+        playbackManager.seek(13.99); // Frontend snap seek
+        const token = (playbackManager as any).currentAutoPauseToken;
+        simulateMpvEvent(playbackManager, {event: 'auto-pause-fired', data: token}); // Stale Lua event
+        simulateSeekComplete(playbackManager);
+
+        // ASSERT
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.PausedByUser);
+        expect(mockMpvManager.setProperty).not.toHaveBeenCalledWith('pause', false);
+      });
+
+      it('should downgrade to PausedByUser and NOT resume when switching settings before resize', () => {
+        // ARRANGE
+        playbackManager = setupManager({autoPauseAtEnd: true, autoPauseAtStart: false});
+        (playbackManager as any).currentClipIndex = 1;
+        simulateEndOfClip(playbackManager, 20);
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.AutoPausedAtEnd);
+        vi.clearAllMocks();
+
+        // ACT 1: Switch to Continuous Playback
+        const newSettings = {...(playbackManager as any).settings, autoPauseAtEnd: false};
+        playbackManager.updateSettings(newSettings);
+
+        // Assert downgrade was successful
+        expect((playbackManager as any).playerState).toBe(PlayerState.PausedByUser);
+
+        // ACT 2: Resize
+        const modifiedClips = cloneDeep(mockClips);
+        modifiedClips[1].endTime = 15;
+        modifiedClips[2].startTime = 15;
+        playbackManager.updateClips(modifiedClips);
+
+        playbackManager.seek(14.99); // Frontend snap seek
+        const token = (playbackManager as any).currentAutoPauseToken;
+        simulateMpvEvent(playbackManager, {event: 'auto-pause-fired', data: token}); // Stale Lua event
+        simulateSeekComplete(playbackManager);
+
+        // ASSERT
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.PausedByUser);
+        expect(mockMpvManager.setProperty).not.toHaveBeenCalledWith('pause', false);
+      });
+
+      it('should RESUME playback when actively playing (Continuous Playback)', () => {
+        // ARRANGE
+        playbackManager = setupManager({autoPauseAtEnd: false, autoPauseAtStart: false});
+        playbackManager.seek(15);
+        simulateSeekComplete(playbackManager);
+        playbackManager.play();
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.Playing);
+        vi.clearAllMocks();
+
+        // ACT
+        const modifiedClips = cloneDeep(mockClips);
+        modifiedClips[1].endTime = 14;
+        modifiedClips[2].startTime = 14;
+        playbackManager.updateClips(modifiedClips);
+
+        playbackManager.seek(13.99); // Frontend snap seek
+        const token = (playbackManager as any).currentAutoPauseToken;
+        simulateMpvEvent(playbackManager, {event: 'auto-pause-fired', data: token}); // Stale Lua event
+        simulateSeekComplete(playbackManager);
+
+        // ASSERT
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.Playing);
+        expect(mockMpvManager.setProperty).toHaveBeenCalledWith('pause', false);
+      });
+    });
+
+    describe('Left Edge (Start Boundary) Shrinking Past Playhead', () => {
+      it('should maintain AutoPausedAtStart when auto-paused near beginning (Speaking Practice)', () => {
+        // ARRANGE
+        playbackManager = setupManager({autoPauseAtEnd: true, autoPauseAtStart: true});
+        playbackManager.seek(10.01, true); // isNavigation = true triggers AutoPausedAtStart
+        simulateSeekComplete(playbackManager);
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.AutoPausedAtStart);
+        vi.clearAllMocks();
+
+        // ACT
+        const modifiedClips = cloneDeep(mockClips);
+        modifiedClips[1].startTime = 12;
+        modifiedClips[0].endTime = 12;
+        playbackManager.updateClips(modifiedClips);
+
+        // Frontend snap seek (12 + 0.01 = 12.01)
+        playbackManager.seek(12.01);
+        const token = (playbackManager as any).currentAutoPauseToken;
+        simulateMpvEvent(playbackManager, {event: 'auto-pause-fired', data: token}); // Stale Lua event
+        simulateSeekComplete(playbackManager);
+
+        // ASSERT
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.AutoPausedAtStart);
+        expect(mockMpvManager.setProperty).not.toHaveBeenCalledWith('pause', false);
+      });
+
+      it('should maintain PausedByUser when manually paused near beginning (Continuous Playback)', () => {
+        // ARRANGE
+        playbackManager = setupManager({autoPauseAtEnd: false, autoPauseAtStart: false});
+        playbackManager.seek(11);
+        simulateSeekComplete(playbackManager);
+        playbackManager.pause();
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.PausedByUser);
+        vi.clearAllMocks();
+
+        // ACT
+        const modifiedClips = cloneDeep(mockClips);
+        modifiedClips[1].startTime = 12;
+        modifiedClips[0].endTime = 12;
+        playbackManager.updateClips(modifiedClips);
+
+        playbackManager.seek(12.01); // Frontend snap seek
+        const token = (playbackManager as any).currentAutoPauseToken;
+        simulateMpvEvent(playbackManager, {event: 'auto-pause-fired', data: token}); // Stale Lua event
+        simulateSeekComplete(playbackManager);
+
+        // ASSERT
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.PausedByUser);
+        expect(mockMpvManager.setProperty).not.toHaveBeenCalledWith('pause', false);
+      });
+
+      it('should downgrade to PausedByUser and NOT resume when switching settings before resize', () => {
+        // ARRANGE
+        playbackManager = setupManager({autoPauseAtEnd: false, autoPauseAtStart: true});
+        playbackManager.seek(10.01, true);
+        simulateSeekComplete(playbackManager);
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.AutoPausedAtStart);
+        vi.clearAllMocks();
+
+        // ACT 1: Switch to Continuous Playback
+        const newSettings = {...(playbackManager as any).settings, autoPauseAtStart: false};
+        playbackManager.updateSettings(newSettings);
+
+        // Assert downgrade was successful
+        expect((playbackManager as any).playerState).toBe(PlayerState.PausedByUser);
+
+        // ACT 2: Resize
+        const modifiedClips = cloneDeep(mockClips);
+        modifiedClips[1].startTime = 12;
+        modifiedClips[0].endTime = 12;
+        playbackManager.updateClips(modifiedClips);
+
+        playbackManager.seek(12.01); // Frontend snap seek
+        const token = (playbackManager as any).currentAutoPauseToken;
+        simulateMpvEvent(playbackManager, {event: 'auto-pause-fired', data: token}); // Stale Lua event
+        simulateSeekComplete(playbackManager);
+
+        // ASSERT
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.PausedByUser);
+        expect(mockMpvManager.setProperty).not.toHaveBeenCalledWith('pause', false);
+      });
+
+      it('should RESUME playback when actively playing (Continuous Playback)', () => {
+        // ARRANGE
+        playbackManager = setupManager({autoPauseAtEnd: false, autoPauseAtStart: false});
+        playbackManager.seek(11);
+        simulateSeekComplete(playbackManager);
+        playbackManager.play();
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.Playing);
+        vi.clearAllMocks();
+
+        // ACT
+        const modifiedClips = cloneDeep(mockClips);
+        modifiedClips[1].startTime = 12;
+        modifiedClips[0].endTime = 12;
+        playbackManager.updateClips(modifiedClips);
+
+        playbackManager.seek(12.01); // Frontend snap seek
+        const token = (playbackManager as any).currentAutoPauseToken;
+        simulateMpvEvent(playbackManager, {event: 'auto-pause-fired', data: token}); // Stale Lua event
+        simulateSeekComplete(playbackManager);
+
+        // ASSERT
+        expect(getLastStateUpdate()?.playerState).toBe(PlayerState.Playing);
+        expect(mockMpvManager.setProperty).toHaveBeenCalledWith('pause', false);
+      });
+    });
+  });
+
   describe('Cinema Mode', () => {
     it('should force global Cinema Mode speed, ignoring subtitled and gap speeds', () => {
       playbackManager = setupManager({subtitledClipSpeed: 1.0, gapSpeed: 2.5});
