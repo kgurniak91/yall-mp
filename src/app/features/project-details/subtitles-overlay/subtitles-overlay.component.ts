@@ -542,12 +542,19 @@ export class SubtitlesOverlayComponent implements OnDestroy {
 
     if (hasYomitanResult) {
       const matchLength = yomitanResult.result.originalTextLength;
+      const fullText = node.textContent || '';
 
       highlightStart = scanStart;
-      highlightEnd = scanStart + matchLength;
+      let end = scanStart + matchLength;
 
-      const fullText = node.textContent || '';
-      const matchedText = fullText.substring(scanStart, scanStart + matchLength);
+      const trailingPunctuation = /[.!?,;:]+$/;
+      const match = fullText.substring(scanStart, end).match(trailingPunctuation);
+      if (match) {
+        end -= match[0].length;
+      }
+      highlightEnd = end;
+
+      const matchedText = fullText.substring(scanStart, highlightEnd);
 
       this.currentSearchTerm.set(matchedText);
 
