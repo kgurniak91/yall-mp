@@ -99,29 +99,20 @@
         <p-overlaybadge badgeSize="small"
                         severity="info"
                         [pTooltip]="trackDropdownTooltip()"
-                        [tooltipDisabled]="isTrackTooltipDisabled()"
                         tooltipStyleClass="tooltip-one-line"
                         [badgeDisabled]="!hasParallelClipsAtCurrentTime()">
-          <p-dropdown #tracksDropdown
-                      [options]="trackOptions()"
-                      [ngModel]="clipsStateService.activeTrack()"
-                      [tabindex]="-1"
-                      (onChange)="onTrackChange($event.value)"
-                      class="tracks-dropdown"
-                      optionLabel="label"
-                      optionValue="value">
-            <ng-template let-option pTemplate="item">
-              <div class="track-option"
-                   [pTooltip]="option.hasContent ? 'Contains Parallel Subtitle' : undefined"
-                   tooltipStyleClass="tooltip-one-line"
-                   tooltipPosition="right">
-                <span>{{ option.label }}</span>
-                @if (option.hasContent) {
-                  <div class="content-indicator ml-2"></div>
-                }
-              </div>
-            </ng-template>
-          </p-dropdown>
+          <p-button icon="fa-solid fa-layer-group"
+                    [label]="'Track ' + (clipsStateService.activeTrack() + 1)"
+                    class="track-selection-button"
+                    severity="secondary"
+                    size="small"
+                    (onClick)="trackMenu.toggle($event)" />
+
+          <p-menu #trackMenu
+                  styleClass="tracks-menu"
+                  [model]="trackMenuItems()"
+                  [popup]="true"
+                  appendTo="body" />
         </p-overlaybadge>
       }
     </div>

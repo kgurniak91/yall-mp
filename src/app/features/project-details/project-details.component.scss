@@ -89,6 +89,17 @@
   p-button.active-icon ::ng-deep button .p-button-icon {
     color: var(--p-primary-color) !important;
   }
+
+  p-button.track-selection-button {
+    border-right: none !important;
+
+    ::ng-deep button {
+      width: fit-content !important;
+      padding-left: 0.75rem !important;
+      padding-right: 0.75rem !important;
+      color: var(--app-text-secondary) !important;
+    }
+  }
 }
 
 
@@ -102,55 +113,9 @@ app-timeline-editor {
   }
 }
 
-:host p-dropdown.tracks-dropdown {
-  &:focus {
-    outline: none !important;
-  }
-
-  ::ng-deep {
-    background-color: var(--app-surface) !important;
-    border-radius: 0 !important;
-    border: 0 !important;
-    padding: 0;
-    margin: 0;
-    outline: none !important;
-    width: 7.6rem !important;
-
-    .p-select-label, .p-iconwrapper {
-      color: var(--app-text-secondary) !important;
-    }
-
-    .p-select-overlay {
-      background-color: var(--app-surface) !important;
-
-      .p-select-list-container {
-        max-height: 7rem !important;
-      }
-
-      .p-select-option:not(.p-select-option-selected) {
-        color: var(--app-text-secondary) !important;
-
-        &:hover, &.p-focus {
-          background-color: var(--app-surface-hover) !important;
-        }
-      }
-
-      .content-indicator {
-        background-color: var(--p-badge-info-background);
-        width: 0.65rem;
-        height: 0.65rem;
-        border-radius: 50%;
-        border: 1px solid black;
-        display: inline-block;
-        box-sizing: border-box;
-      }
-    }
-  }
-
-  .track-option {
-    display: flex;
-    white-space: nowrap;
-    align-items: center;
+:host p-menu.tracks-menu ::ng-deep {
+  p-badge {
+    height: 1rem !important;
   }
 }
 

@@ -172,7 +172,7 @@ p-badge {
   white-space: nowrap;
 }
 
-p-badge.default-lookup-service-badge {
+p-badge.menu-badge {
   min-width: auto !important;
 }
 
@@ -230,7 +230,14 @@ p-splitter * {
 }
 
 p-contextmenu .p-contextmenu-item.p-focus .p-contextmenu-item-content p-badge,
-p-contextmenu .p-contextmenu-item .p-contextmenu-item-content:hover p-badge {
+p-contextmenu .p-contextmenu-item .p-contextmenu-item-content:hover p-badge,
+.p-menu-overlay .p-menu-list .p-menu-item:hover p-badge
+{
   background: var(--p-badge-primary-color) !important;
   color: var(--p-badge-primary-background) !important;
+}
+
+.p-menu-overlay.tracks-menu p-badge {
+  height: 1rem !important;
+  line-height: initial !important;
 }

@@ -34,7 +34,7 @@ import {ClipContent, UpdateClipTextCommand} from '../../model/commands/update-cl
 import {take} from 'rxjs';
 import {ToastService} from '../../shared/services/toast/toast.service';
 import type {DialogSubtitlePart, SubtitleData} from '../../../../shared/types/subtitle.type';
-import {Dropdown, DropdownModule} from 'primeng/dropdown';
+import {DropdownModule} from 'primeng/dropdown';
 import {FormsModule} from '@angular/forms';
 import {AnkiStateService} from '../../state/anki/anki-state.service';
 import {ExportToAnkiDialogComponent} from './export-to-anki-dialog/export-to-anki-dialog.component';
@@ -79,6 +79,7 @@ import {SubtitlesLookupStateService} from './services/subtitles-lookup-state/sub
 import {Slider} from 'primeng/slider';
 import {UnexportedNotesWarningService} from './services/unexported-notes-warning/unexported-notes-warning.service';
 import {InputSwitch} from 'primeng/inputswitch';
+import {Menu} from 'primeng/menu';
 
 @Component({
   selector: 'app-project-details',
@@ -99,7 +100,8 @@ import {InputSwitch} from 'primeng/inputswitch';
     OverlayBadgeModule,
     ProjectNotesComponent,
     Slider,
-    InputSwitch
+    InputSwitch,
+    Menu
   ],
   templateUrl: './project-details.component.html',
   styleUrl: './project-details.component.scss',
@@ -135,9 +137,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     const trackBooleans = Array(this.clipsStateService.totalTracks()).fill(false);
 
     for (const sub of activeSubs) {
-      if (sub.track !== activeTrack) {
-        trackBooleans[sub.track] = true;
-      }
+      trackBooleans[sub.track] = true;
     }
     return trackBooleans;
   });
@@ -161,14 +161,22 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     }
   });
 
-  protected readonly trackOptions = computed(() => {
-    const indexes = this.trackIndexes();
+  protected readonly trackMenuItems = computed<MenuItem[]>(() => {
+    const trackIndexes = this.trackIndexes();
     const content = this.trackHasContent();
-    return indexes.map(i => ({
-      label: `Track ${i + 1}`,
-      value: i,
-      hasContent: content[i]
-    }));
+
+    return trackIndexes.map((trackIndex: number) => {
+      const isCurrentTrack = (trackIndex === this.clipsStateService.activeTrack());
+      const hasContent = content[trackIndex];
+
+      return {
+        label: `Track ${trackIndex + 1}`,
+        command: () => this.onTrackChange(trackIndex),
+        icon: isCurrentTrack ? 'fa-regular fa-circle-dot' : 'fa-regular fa-circle',
+        badge: hasContent ? 'Has Content' : undefined,
+        badgeStyleClass: 'menu-badge'
+      };
+    });
   });
 
   protected readonly volumeIcon = computed(() => {
@@ -340,8 +348,6 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   protected readonly subtitlesContextMenu = viewChild.required<ContextMenu>('subtitlesContextMenu');
   protected readonly timelineContextMenu = viewChild.required<ContextMenu>('timelineContextMenu');
   protected readonly timelineEditor = viewChild.required<TimelineEditorComponent>('timelineEditor');
-  protected readonly tracksDropdown = viewChild<Dropdown>('tracksDropdown');
-  protected readonly isTrackTooltipDisabled = signal(false);
   protected readonly subtitlesMenuItems = signal<MenuItem[]>([]);
   protected readonly timelineMenuItems = signal<MenuItem[]>([]);
   protected readonly isSubtitlesContextMenuOpen = signal(false);
@@ -817,15 +823,6 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
   protected onTrackChange(trackIndex: number): void {
     this.clipsStateService.setActiveTrack(trackIndex);
-    this.isTrackTooltipDisabled.set(true);
-
-    setTimeout(() => {
-      const dropdownNativeEl = this.tracksDropdown()?.el?.nativeElement;
-      if (dropdownNativeEl?.contains(document.activeElement)) {
-        (document.activeElement as HTMLElement).blur();
-        this.isTrackTooltipDisabled.set(false);
-      }
-    });
   }
 
   protected hideAllOverlays(): void {
@@ -876,7 +873,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
         label: service.name,
         icon: (type === 'search') ? 'fa-solid fa-globe' : 'fa-solid fa-microchip',
         badge: isDefault ? 'Default' : undefined,
-        badgeStyleClass: 'default-lookup-service-badge',
+        badgeStyleClass: 'menu-badge',
         command: () => this.executeLookup(service, this.selectedSubtitleTextForMenu)
       };
 
