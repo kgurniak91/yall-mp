@@ -78,8 +78,8 @@ import {SubtitleOffsetDialogData} from './subtitle-offset-dialog/subtitle-offset
 import {SubtitlesLookupStateService} from './services/subtitles-lookup-state/subtitles-lookup-state.service';
 import {Slider} from 'primeng/slider';
 import {UnexportedNotesWarningService} from './services/unexported-notes-warning/unexported-notes-warning.service';
-import {InputSwitch} from 'primeng/inputswitch';
 import {Menu} from 'primeng/menu';
+import {SelectButton} from 'primeng/selectbutton';
 
 @Component({
   selector: 'app-project-details',
@@ -100,8 +100,8 @@ import {Menu} from 'primeng/menu';
     OverlayBadgeModule,
     ProjectNotesComponent,
     Slider,
-    InputSwitch,
-    Menu
+    Menu,
+    SelectButton
   ],
   templateUrl: './project-details.component.html',
   styleUrl: './project-details.component.scss',
@@ -125,6 +125,16 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   protected readonly isCursorHidden = signal(false);
   protected readonly isYomitanEnabled = signal(false);
   protected readonly subtitlesAtCurrentTime = computed(() => this.clipsStateService.subtitlesAtCurrentTime());
+  protected readonly modeOptions = [
+    {label: 'Study', value: false, icon: 'fa-solid fa-graduation-cap'},
+    {label: 'Cinema', value: true, icon: 'fa-solid fa-film'}
+  ];
+
+  protected readonly cinemaTooltip = computed(() =>
+    this.globalSettingsStateService.cinemaModeEnabled()
+      ? 'Switch to Study Mode (X)'
+      : 'Switch to Cinema Mode (X)'
+  );
 
   protected readonly trackIndexes = computed(() => {
     const count = this.clipsStateService.totalTracks();
@@ -735,7 +745,6 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
   toggleCinemaMode(enabled: boolean): void {
     this.globalSettingsStateService.setCinemaModeEnabled(enabled);
-    this.toastService.info(`Cinema Mode ${enabled ? 'Enabled' : 'Disabled'}`);
   }
 
   openGlobalSettings(event: MouseEvent): void {

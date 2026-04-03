@@ -1,6 +1,7 @@
 import {computed, inject, Injectable, signal} from '@angular/core';
 import {AppStateService} from '../app/app-state.service';
 import {ProjectSettings, SubtitleLookupBrowserType, SubtitleLookupService} from '../../model/settings.types';
+import {ToastService} from '../../shared/services/toast/toast.service';
 
 @Injectable({
   providedIn: 'root'
@@ -28,6 +29,7 @@ export class GlobalSettingsStateService {
   public readonly cinemaModeSpeed = computed(() => this.appStateService.globalSettings().cinemaModeSpeed);
   public readonly srtBackgroundColor = computed(() => `rgba(0, 0, 0, ${this.srtBackgroundOpacity()})`);
   public readonly settingsReloadTrigger = this._settingsReloadTrigger.asReadonly();
+  private readonly toastService = inject(ToastService);
 
   public notifySettingsChanged(): void {
     this._settingsReloadTrigger.update(v => v + 1);
@@ -97,8 +99,9 @@ export class GlobalSettingsStateService {
     this.appStateService.updateGlobalSettings({preferredSubtitleLanguages: languages});
   }
 
-  public setCinemaModeEnabled(value: boolean): void {
-    this.appStateService.updateGlobalSettings({cinemaModeEnabled: value});
+  public setCinemaModeEnabled(cinemaModeEnabled: boolean): void {
+    this.appStateService.updateGlobalSettings({cinemaModeEnabled});
+    this.toastService.info(`Switched to ${cinemaModeEnabled ? 'Cinema' : 'Study'} Mode`);
   }
 
   public setCinemaModeSpeed(value: number): void {

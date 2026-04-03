@@ -179,7 +179,6 @@ export class ProjectActionService {
       case KeyboardAction.ToggleCinemaMode:
         const currentMode = this.globalSettingsStateService.cinemaModeEnabled();
         this.globalSettingsStateService.setCinemaModeEnabled(!currentMode);
-        this.toastService.info(`Cinema Mode ${!currentMode ? 'Enabled' : 'Disabled'}`);
         break;
       case KeyboardAction.RotateTracks:
         this.rotateTracks();
