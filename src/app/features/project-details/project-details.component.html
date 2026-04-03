@@ -132,6 +132,24 @@
         </div>
       }
 
+      <p-button icon="fa-solid fa-gauge-high"
+                [pTooltip]="speedTooltipContent"
+                tooltipStyleClass="tooltip-one-line"
+                tooltipPosition="top"
+                severity="secondary"
+                [text]="true"
+                class="speed-indicator-button"
+                (click)="$event.stopPropagation()"/>
+
+      <ng-template #speedTooltipContent>
+        <div class="flex flex-column gap-1 white-space-nowrap text-center">
+          <div class="text-base">
+            Current Speed: <b>{{ speedTooltip().value }}</b>
+          </div>
+          <div class="opacity-80 text-sm">({{ speedTooltip().reason }})</div>
+        </div>
+      </ng-template>
+
       @let cinemaModeEnabled = globalSettingsStateService.cinemaModeEnabled();
       <p-button [icon]="cinemaModeEnabled ? 'fa-solid fa-film' : 'fa-solid fa-graduation-cap'"
                 [class.active-icon]="cinemaModeEnabled"

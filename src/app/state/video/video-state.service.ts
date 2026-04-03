@@ -35,6 +35,7 @@ export class VideoStateService implements OnDestroy {
   private readonly _openDictionaryRequest = signal<number | null>(null);
   private readonly _volume = signal(100);
   private readonly _isMuted = signal(false);
+  private readonly _isSpeedOverridden = signal(false);
   private readonly saveTimeSubject = new Subject<number>();
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
@@ -76,6 +77,7 @@ export class VideoStateService implements OnDestroy {
   public readonly openDictionaryRequest = this._openDictionaryRequest.asReadonly();
   public readonly volume = this._volume.asReadonly();
   public readonly isMuted = this._isMuted.asReadonly();
+  public readonly isSpeedOverridden = this._isSpeedOverridden.asReadonly();
 
   constructor() {
     this._volume.set(this.appStateService.globalSettings().volume ?? 100);
@@ -270,6 +272,7 @@ export class VideoStateService implements OnDestroy {
   }
 
   public setSpeedOverride(isActive: boolean): void {
+    this._isSpeedOverridden.set(isActive);
     window.electronAPI.playbackSetSpeedOverride(isActive);
   }
 

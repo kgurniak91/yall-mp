@@ -154,3 +154,11 @@ app-timeline-editor {
 .mode-description {
   min-height: 13.125rem;
 }
+
+.speed-indicator-button {
+  cursor: default !important;
+  ::ng-deep button {
+    pointer-events: none !important;
+    color: var(--app-text-secondary) !important;
+  }
+}

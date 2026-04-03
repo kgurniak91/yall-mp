@@ -136,6 +136,32 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       : 'Switch to Cinema Mode (X)'
   );
 
+  protected readonly speedTooltip = computed(() => {
+    const settings = this.projectSettingsStateService.settings();
+    const currentClip = this.clipsStateService.currentClip();
+    const isCinema = this.globalSettingsStateService.cinemaModeEnabled();
+    const isOverridden = this.videoStateService.isSpeedOverridden();
+
+    let activeSpeed: number;
+    let reason: string;
+
+    if (isOverridden) {
+      activeSpeed = settings.speedOverride;
+      reason = 'Momentary Override Speed';
+    } else if (isCinema) {
+      activeSpeed = this.globalSettingsStateService.cinemaModeSpeed();
+      reason = 'Cinema Mode Speed';
+    } else {
+      activeSpeed = currentClip?.hasSubtitle ? settings.subtitledClipSpeed : settings.gapSpeed;
+      reason = currentClip?.hasSubtitle ? 'Subtitled Clip Speed' : 'Gap Speed';
+    }
+
+    return {
+      value: activeSpeed.toFixed(1) + 'x',
+      reason
+    };
+  });
+
   protected readonly trackIndexes = computed(() => {
     const count = this.clipsStateService.totalTracks();
     return Array.from({length: count}, (_, i) => i);
