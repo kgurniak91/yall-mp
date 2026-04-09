@@ -84,7 +84,7 @@
     },
     "feature_playback": {
       "title": "Optimized playback",
-      "desc_html": "<p>Don't waste your time watching scenery - focus on the dialogue.<br><b><span class=\"highlight\">Y'ALL</span> <span class=\"highlight\">M</span>edia <span class=\"highlight\">P</span>layer</b> treats media as a consecutive playlist of two distinct clip types: <b>Subtitled Clips</b> and <b>Gaps</b> between them.</p><p>Increase the <b>Gaps</b> speed to fast-forward the silence automatically and get faster to <b>Subtitled Clips</b> which can be played at normal speed. You can also skip the <b>Gaps</b> altogether and just jump to the nearest <b>Subtitled Clip</b>.</p><p>Transform a ~40-minute episode into ~30 minutes of pure, high-density input.</p>"
+      "desc_html": "<p>Don't waste your time watching scenery - focus on the dialogue.<br><b><span class=\"highlight\">Y'ALL</span> <span class=\"highlight\">M</span>edia <span class=\"highlight\">P</span>layer</b> treats media as a consecutive playlist of two distinct clip types: <b>Subtitled Clips</b> and <b>Gaps</b> between them.</p><p>Increase the <b>Gaps</b> speed to fast-forward the silence automatically and get faster to <b>Subtitled Clips</b> which can be played at normal speed. You can also skip the <b>Gaps</b> altogether and just jump to the nearest <b>Subtitled Clip</b>.</p><p>Transform a ~40-minute episode into ~30 minutes of pure, high-density input.</p><p>Want to just chill? Toggle <b class=\"highlight\">Cinema Mode</b> (shortcut <b class=\"highlight\">X</b>) to override these settings and watch your media continuously at a normal pace without any interruptions.</p>"
     },
     "feature_dict": {
       "title": "Instant dictionary lookups",
@@ -92,6 +92,7 @@
       "list": [
         "<b class=\"highlight\">Zero-latency popups</b>: Hover over any word to instantly see its definition in the offline dictionary powered by bundled <a class=\"highlight\" href=\"https://github.com/yomidevs/yomitan\" target=\"_blank\">Yomitan</a> extension.",
         "<b class=\"highlight\">Online lookup</b>: Click on any word to instantly open the built-in browser with your preferred preconfigured website.",
+        "<b class=\"highlight\">AI integration</b>: Send selected text directly to AI chatbots like ChatGPT, Gemini, or DeepL with customizable prompt prefixes (e.g., \"Explain the nuance of this sentence:\").",
         "<b class=\"highlight\">Smart tokenization</b>: Advanced word boundary detection allows precise selection of words or phrases, even for languages without spaces like Japanese.",
         "<b class=\"highlight\">Precise control</b>: Hold CTRL to select specific characters or click-and-drag to select entire phrases.",
         "<b class=\"highlight\">Zero-friction notes</b>: Highlight a word definition in the built-in browser or offline popup and save it directly to your card notes via the right-click context menu or a keyboard shortcut (Ctrl+S) - no tedious copy-pasting required."
@@ -100,7 +101,7 @@
     },
     "feature_anki": {
       "title": "Anki integration",
-      "desc_html": "<p>Found a sentence worth remembering? Press <b class=\"highlight\">E</b> to export it to <a class=\"highlight\" href=\"https://apps.ankiweb.net/\" target=\"_blank\">Anki</a> and remember it forever.</p><p>The player automatically extracts the <b>audio</b>, captures a <b>screenshot</b>, <b>looped animation</b> or <b>entire video clip</b>, grabs the <b>text</b> with your <b>notes</b>, and sends a high-quality flashcard directly to <a class=\"highlight\" href=\"https://apps.ankiweb.net/\" target=\"_blank\">Anki</a> via <a class=\"highlight\" href=\"https://ankiweb.net/shared/info/2055492159\" target=\"_blank\">AnkiConnect</a>.</p><p><a href=\"anki.html\" class=\"text-link\">Click here for detailed Anki integration instructions &rarr;</a></p>"
+      "desc_html": "<p>Found a sentence worth remembering? Press <b class=\"highlight\">E</b> to export it to <a class=\"highlight\" href=\"https://apps.ankiweb.net/\" target=\"_blank\">Anki</a> and remember it forever.</p><p>The player automatically extracts the <b>audio</b>, captures a <b>screenshot</b>, <b>looped animation</b> or <b>entire video clip</b>, grabs the <b>text</b> with your <b>notes</b>, and sends a high-quality flashcard directly to <a class=\"highlight\" href=\"https://apps.ankiweb.net/\" target=\"_blank\">Anki</a> via <a class=\"highlight\" href=\"https://ankiweb.net/shared/info/2055492159\" target=\"_blank\">AnkiConnect</a>.</p><p>Use the <b class=\"highlight\">Instant Export</b> feature (Ctrl+E) to bypass the dialog window and create flashcards instantly without interrupting your workflow.</p><p><a href=\"anki.html\" class=\"text-link\">Click here for detailed Anki integration instructions &rarr;</a></p>"
     },
     "feature_presets": {
       "title": "Settings presets",
@@ -113,7 +114,7 @@
     },
     "feature_progress": {
       "title": "Progress tracking",
-      "desc_html": "<p>Every media file is treated as a separate project. The app remembers last playback position, timeline adjustments, and your manual notes, so you can pick up exactly where you left off and track progress.</p><p>This transforms media from a fleeting stream of content into a concrete list of sentences to be learned.</p>"
+      "desc_html": "<p>Every media file is treated as a separate project. Organize your media library using custom hierarchical <b class=\"highlight\">catalogs</b>.</p><p>The app remembers your last playback position, timeline adjustments, and manual notes, so you can pick up exactly where you left off. This transforms media from a fleeting stream of content into a concrete list of sentences to be learned.</p>"
     }
   },
   "download": {
@@ -169,7 +170,7 @@
     },
     {
       "q": "Why is the playback stuttering sometimes?",
-      "a": "<b>Y'ALL Media Player</b> isn't designed for regular, continuous playback of media, like conventional media players.<br><br>Instead, it creates a playlist of clips, that are played on by one, with different settings, depending whether they have subtitles or not.<br><br>The moment of switching clips takes time, which may seem like stuttering, but it's negligible once you start using one of the preconfigured learning modes (listening or speaking practice), because they auto-pause after each subtitled clip, awaiting for your explicit action to continue playback."
+      "a": "<b>Y'ALL Media Player</b> isn't designed for regular, continuous playback of media by default. In <b class=\"highlight\">Study Mode</b>, it creates a playlist of clips that are played one by one, with different settings depending on whether they have subtitles or not.<br><br>The moment of switching clips takes a fraction of a second, which may seem like stuttering, but it's negligible once you start using one of the preconfigured learning modes (like listening or speaking practice), because they auto-pause after each subtitled clip, awaiting your explicit action.<br><br>If you want to watch a movie casually without any stuttering or pauses, simply press <b class=\"highlight\">X</b> or click the icon on the toolbar to switch to <b class=\"highlight\">Cinema Mode</b>. This will play the video smoothly from start to finish."
     }
   ],
   "anki": {
