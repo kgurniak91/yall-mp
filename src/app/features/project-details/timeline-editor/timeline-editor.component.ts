@@ -177,7 +177,8 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
     }
 
     if (!this.wavesurfer && duration > 0 && container) {
-      this.initializeWaveSurfer(audioPeaks, duration, container);
+      const processedAudioPeaks = this.processAudioPeaks(audioPeaks, duration);
+      this.initializeWaveSurfer(processedAudioPeaks, duration, container);
     }
 
     if (!this.isWaveSurferReady() || !this.wsRegions || clips.length === 0) {
@@ -233,7 +234,7 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
     this.wavesurfer.setTime(currentTime);
   });
 
-  private initializeWaveSurfer(audioPeaks: number[][] | undefined, duration: number, container: HTMLElement) {
+  private initializeWaveSurfer(processedAudioPeaks: number[][], duration: number, container: HTMLElement) {
     this.wavesurfer = WaveSurfer.create({
       container,
       waveColor: '#ccc',
@@ -245,7 +246,7 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
       autoCenter: true,
       // Prevent wavesurfer from interacting with media, because the player is driven externally
       media: undefined,
-      peaks: audioPeaks || [[0]],
+      peaks: processedAudioPeaks,
       duration: duration,
       height: 85
     });
@@ -256,6 +257,39 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
 
     // Manually trigger ready state since 'ready' event doesn't fire with pre-decoded peaks
     this.handleWaveSurferReady();
+  }
+
+  /**
+   * Fixes progressive audio-waveform drift in VBR/CBR MP3s caused by duration
+   * discrepancies between the FFmpeg decoder and MPV demuxer by padding or trimming
+   * the peaks array to perfectly match the player's timeline duration.
+   */
+  private processAudioPeaks(audioPeaks: number[][] | undefined, duration: number): number[][] {
+    if (!audioPeaks || audioPeaks.length === 0 || !audioPeaks[0] || duration <= 0) {
+      return [[0]];
+    }
+
+    const PIXELS_PER_SECOND = 20; // Must be strictly consistent with the value set for the audiowaveform via `--pixels-per-second` in electron-main.ts
+    const POINTS_PER_SECOND = (PIXELS_PER_SECOND * 2); // audiowaveform outputs min/max pairs for each pixel, so 20 pixels/sec * 2 = 40 data points/sec
+
+    // Calculate expected length and ensure it's an even number (complete min/max pairs)
+    let expectedLength = Math.round(duration * POINTS_PER_SECOND);
+    if (expectedLength % 2 !== 0) {
+      expectedLength += 1;
+    }
+
+    let channel0 = [...audioPeaks[0]];
+
+    if (channel0.length < expectedLength) {
+      // Pad with zeros to prevent stretching
+      const padding = new Array(expectedLength - channel0.length).fill(0);
+      channel0 = channel0.concat(padding);
+    } else if (channel0.length > expectedLength) {
+      // Trim excess to prevent squeezing
+      channel0 = channel0.slice(0, expectedLength);
+    }
+
+    return [channel0];
   }
 
   private setupWsRegionsEventListeners() {
