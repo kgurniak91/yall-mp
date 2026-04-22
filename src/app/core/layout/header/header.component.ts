@@ -237,7 +237,8 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
       });
     }
 
-    menu.push({
+    menu.push(
+      {
         separator: true
       },
       {
@@ -249,7 +250,16 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
         label: 'Help & About (F1)',
         icon: 'fa-solid fa-circle-question',
         command: () => this.dialogOrchestrationService.openHelpDialog()
-      });
+      },
+      {
+        separator: true
+      },
+      {
+        label: 'Exit (Alt+F4)',
+        icon: 'fa-solid fa-power-off',
+        command: () => this.onCloseClicked()
+      },
+    );
 
     return menu;
   }

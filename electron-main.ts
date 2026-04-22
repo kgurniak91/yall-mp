@@ -256,6 +256,15 @@ function blockDefaultBrowserShortcuts(event: Electron.Event, input: Electron.Inp
   const key = input.key.toLowerCase();
   const isModifier = input.control || input.meta; // Ctrl on Win/Linux, Cmd on Mac
 
+  // Intercept Alt+F4 to ensure it closes the main window, not just the focused child window
+  if (input.alt && key === 'f4') {
+    event.preventDefault();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.close();
+    }
+    return;
+  }
+
   // Block app reloading
   if ((isModifier && key === 'r') || key === 'f5') {
     event.preventDefault();
@@ -904,7 +913,9 @@ if (!gotTheLock) {
     });
 
     ipcMain.on('window:close', () => {
-      mainWindow?.close();
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.close();
+      }
     });
 
     ipcMain.on('window:update-draggable-zones', (_, rects: Rectangle[]) => {
