@@ -38,9 +38,8 @@ export class ProjectKeyboardShortcutsService implements OnDestroy {
       this.activeKeys.delete(code);
 
       // Detect release of the speed override key
-      const shortcut = this.keyboardShortcutsHelperService.getShortcutForEvent(event, KeyboardShortcutScope.Project);
-      if (shortcut?.action === KeyboardAction.ActivateSpeedOverride) {
-        this.actionService.dispatch(shortcut.action, false);
+      if (event.key === 'Shift') {
+        this.actionService.dispatch(KeyboardAction.ActivateSpeedOverride, false);
       }
     }
   };
