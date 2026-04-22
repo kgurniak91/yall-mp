@@ -160,6 +160,21 @@ async function main() {
     console.log(`   audiowaveform found, skipping.`);
   }
 
+  // --- PRUNE UNUSED FFPROBE BINARIES ---
+  const ffprobeBinDir = path.join(__dirname, '..', 'node_modules', 'ffprobe-static', 'bin');
+  if (fs.existsSync(ffprobeBinDir)) {
+    const platforms = ['darwin', 'linux', 'win32'];
+    for (const p of platforms) {
+      if (p !== platform) {
+        const pDir = path.join(ffprobeBinDir, p);
+        if (fs.existsSync(pDir)) {
+          fs.rmSync(pDir, {recursive: true, force: true});
+          console.log(`   🗑️  Pruned unused ffprobe binary for ${p}`);
+        }
+      }
+    }
+  }
+
   console.log(`\n🎉 All dependencies ready.\n`);
 }
 
