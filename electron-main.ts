@@ -27,6 +27,9 @@ import {
 import {YomitanManager} from './yomitan-manager';
 import {LEGACY_TO_YOMITAN_ISO_MAP} from './shared/types/yomitan';
 
+let customExecutables: { mpv?: string, ffmpeg?: string, ffprobe?: string, audiowaveform?: string } = {};
+let isFfmpegPathsInitialized = false;
+
 // Data isolation for development purposes only to avoid corrupting real study data on the local machine
 if (!app.isPackaged) {
   const userDataPath = path.join(app.getPath('appData'), 'yall-mp-dev');
@@ -93,20 +96,36 @@ let pendingFilesToOpen: string[] = [];
 const DRAGGABLE_ZONE_PADDING = 3; // 3px on all sides
 
 async function ensureFFmpegPaths(): Promise<void> {
-  if (ffmpegPath) {
+  if (isFfmpegPathsInitialized) {
     return;
   }
 
-  console.log('Initializing FFmpeg/FFprobe paths for the first time...');
-  const ffmpegStatic = (await import('ffmpeg-static')).default;
-  const ffprobeStatic = (await import('ffprobe-static')).default;
+  isFfmpegPathsInitialized = true;
 
-  if (ffmpegStatic) {
+  console.log('Initializing FFmpeg/FFprobe paths for the first time...');
+
+  const fsLib = require('fs');
+  ffmpegPath = customExecutables.ffmpeg && fsLib.existsSync(customExecutables.ffmpeg) ? customExecutables.ffmpeg : '';
+  ffprobePath = customExecutables.ffprobe && fsLib.existsSync(customExecutables.ffprobe) ? customExecutables.ffprobe : '';
+
+  if (!ffmpegPath) {
+    const ffmpegStatic = (await import('ffmpeg-static')).default;
+    if (ffmpegStatic) {
+      ffmpegPath = ffmpegStatic.replace('app.asar', 'app.asar.unpacked');
+    }
+  }
+
+  if (!ffprobePath) {
+    const ffprobeStatic = (await import('ffprobe-static')).default;
+    if (ffprobeStatic && ffprobeStatic.path) {
+      ffprobePath = ffprobeStatic.path.replace('app.asar', 'app.asar.unpacked');
+    }
+  }
+
+  if (ffmpegPath && ffprobePath) {
     isFFmpegAvailable = true;
-    ffmpegPath = ffmpegStatic.replace('app.asar', 'app.asar.unpacked');
-    ffprobePath = ffprobeStatic.path.replace('app.asar', 'app.asar.unpacked');
   } else {
-    console.warn('ffmpeg-static binary not found. Media features will be disabled.');
+    console.warn('FFmpeg or FFprobe binaries not found. Media features will be disabled.');
   }
 }
 
@@ -676,6 +695,21 @@ if (!gotTheLock) {
   });
 
   app.whenReady().then(async () => {
+    try {
+      const configStr = await fs.readFile(APP_DATA_PATH, 'utf-8');
+      const config = JSON.parse(configStr);
+      if (config?.globalSettings) {
+        customExecutables = {
+          mpv: config.globalSettings.customMpvPath,
+          ffmpeg: config.globalSettings.customFfmpegPath,
+          ffprobe: config.globalSettings.customFfprobePath,
+          audiowaveform: config.globalSettings.customAudiowaveformPath
+        };
+      }
+    } catch (e) {
+      console.warn("[Main] Could not read custom executable paths on startup", e);
+    }
+
     app.on('web-contents-created', (_, contents) => {
       contents.setWindowOpenHandler(({url}) => {
         if (url.startsWith('http:') || url.startsWith('https:')) {
@@ -731,6 +765,14 @@ if (!gotTheLock) {
 
     ipcMain.handle('core-config:save', (_, coreConfig) => {
       coreConfigToSave = coreConfig;
+      if (coreConfig?.globalSettings) {
+        customExecutables = {
+          mpv: coreConfig.globalSettings.customMpvPath,
+          ffmpeg: coreConfig.globalSettings.customFfmpegPath,
+          ffprobe: coreConfig.globalSettings.customFfprobePath,
+          audiowaveform: coreConfig.globalSettings.customAudiowaveformPath
+        };
+      }
       processSaveQueue();
     });
 
@@ -1273,6 +1315,7 @@ if (!gotTheLock) {
       uiWindow.setParentWindow(videoWindow);
 
       mpvManager = new MpvManager(videoWindow);
+      mpvManager.customMpvPath = customExecutables.mpv;
       playbackManager = new PlaybackManager(mpvManager, uiWindow);
       playbackManager.setInitialVolumeState(volume, isMuted);
 
@@ -2736,25 +2779,32 @@ async function generateAudioPeaks(projectId: string, mediaPath: string, audioTra
   await ensureFFmpegPaths();
 
   const platform = process.platform;
-  let audiowaveformPath: string | undefined;
 
-  if (platform === 'win32') {
-    // On Windows, use the downloaded binary
-    const basePath = app.isPackaged ? process.resourcesPath : app.getAppPath();
-    audiowaveformPath = path.join(basePath, 'electron-resources', 'windows', 'audiowaveform.exe');
-  } else {
-    // On macOS/Linux, try to resolve absolute path
-    try {
-      audiowaveformPath = require('child_process').execSync('which audiowaveform').toString().trim();
-    } catch (e) {
-      // Fallback: Check common install locations manually
-      const commonPaths = [
-        '/usr/bin/audiowaveform',
-        '/usr/local/bin/audiowaveform',
-        '/opt/homebrew/bin/audiowaveform'
-      ];
-      const fs = require('fs');
-      audiowaveformPath = commonPaths.find(p => fs.existsSync(p));
+  // Check user path override first
+  const fsLib = require('fs');
+  let audiowaveformPath: string | undefined = customExecutables.audiowaveform && fsLib.existsSync(customExecutables.audiowaveform)
+    ? customExecutables.audiowaveform
+    : undefined;
+
+  if (!audiowaveformPath) {
+    if (platform === 'win32') {
+      // On Windows, use the downloaded binary
+      const basePath = app.isPackaged ? process.resourcesPath : app.getAppPath();
+      audiowaveformPath = path.join(basePath, 'electron-resources', 'windows', 'audiowaveform.exe');
+    } else {
+      // On macOS/Linux, try to resolve absolute path
+      try {
+        audiowaveformPath = require('child_process').execSync('which audiowaveform').toString().trim();
+      } catch (e) {
+        // Fallback: Check common install locations manually
+        const commonPaths = [
+          '/usr/bin/audiowaveform',
+          '/usr/local/bin/audiowaveform',
+          '/opt/homebrew/bin/audiowaveform'
+        ];
+        const fs = require('fs');
+        audiowaveformPath = commonPaths.find(p => fs.existsSync(p));
+      }
     }
   }
 

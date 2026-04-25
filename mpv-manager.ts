@@ -11,6 +11,7 @@ const TIME_UPDATE_FPS = 10;
 
 export class MpvManager extends EventEmitter {
   public mediaPath: string = '';
+  public customMpvPath?: string;
   private mpv: Mpv | null = null;
 
   constructor(private win: BrowserWindow) {
@@ -246,6 +247,12 @@ export class MpvManager extends EventEmitter {
   }
 
   private getMpvExecutablePath(): string {
+    if (this.customMpvPath && fs.existsSync(this.customMpvPath)) {
+      return this.customMpvPath;
+    } else if (this.customMpvPath) {
+      console.warn(`[MpvManager] Custom MPV path invalid: ${this.customMpvPath}. Falling back to default.`);
+    }
+
     const platform = process.platform;
 
     // On Windows, use the downloaded binary

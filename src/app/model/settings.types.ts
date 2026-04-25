@@ -68,6 +68,10 @@ export interface GlobalSettings {
   isMuted?: boolean;
   cinemaModeEnabled: boolean;
   cinemaModeSpeed: number;
+  customMpvPath?: string;
+  customFfmpegPath?: string;
+  customFfprobePath?: string;
+  customAudiowaveformPath?: string;
 }
 
 const DEFAULT_SEARCH_SUBTITLE_LOOKUP_SERVICES: SubtitleLookupService[] = [
@@ -166,8 +170,21 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   volume: 100,
   isMuted: false,
   cinemaModeEnabled: false,
-  cinemaModeSpeed: 1.0
+  cinemaModeSpeed: 1.0,
+  customMpvPath: '',
+  customFfmpegPath: '',
+  customFfprobePath: '',
+  customAudiowaveformPath: ''
 };
+
+export enum CustomPath {
+  customMpvPath = 'MPV Player',
+  customFfmpegPath = 'FFmpeg',
+  customFfprobePath = 'FFprobe',
+  customAudiowaveformPath = 'Audiowaveform',
+}
+
+export type CustomPathKey = keyof typeof CustomPath;
 
 export enum BuiltInSettingsPreset {
   CONTINUOUS = 'CONTINUOUS',

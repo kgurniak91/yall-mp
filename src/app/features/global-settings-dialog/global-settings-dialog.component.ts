@@ -16,6 +16,7 @@ import {
   OfflineDictionariesSettingsComponent
 } from './offline-dictionaries-settings/offline-dictionaries-settings.component';
 import {SettingsPresetComponent} from '../../shared/components/settings-preset/settings-preset.component';
+import {AdvancedSettingsComponent} from './advanced-settings/advanced-settings.component';
 
 @Component({
   selector: 'app-global-settings-dialog',
@@ -31,7 +32,8 @@ import {SettingsPresetComponent} from '../../shared/components/settings-preset/s
     AnkiSettingsComponent,
     SubtitlesLookupSettingsComponent,
     OfflineDictionariesSettingsComponent,
-    SettingsPresetComponent
+    SettingsPresetComponent,
+    AdvancedSettingsComponent
   ],
   templateUrl: './global-settings-dialog.component.html',
   styleUrl: './global-settings-dialog.component.scss',

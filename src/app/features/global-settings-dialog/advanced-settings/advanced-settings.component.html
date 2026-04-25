@@ -1,0 +1,33 @@
+<p-message severity="warn" styleClass="w-full mb-4">
+  <div class="m-0 line-height-3">
+    <b>Warning:</b> These settings are for advanced users. Providing invalid paths will break media playback and extraction.
+    <br>Changes require you to <b>restart the application</b> to take full effect.
+  </div>
+</p-message>
+
+<p-fieldset legend="Custom Executable Paths" [toggleable]="false">
+  <p class="text-sm text-gray-500 mb-4 mt-0">
+    Leave the inputs empty to use the bundled binaries (Windows) or system defaults (Linux/macOS).
+  </p>
+
+  <div class="flex flex-column gap-4">
+    @for (exe of customExecutables; track exe.key) {
+      <div class="flex flex-column gap-1">
+        <label class="font-bold">{{ exe.label }}</label>
+        <div class="flex gap-2 w-full">
+          <input pInputText class="flex-1"
+                 [class.ng-invalid]="pathErrors()[exe.key]"
+                 [class.ng-dirty]="pathErrors()[exe.key]"
+                 [ngModel]="globalSettingsStateService[exe.key]()"
+                 (ngModelChange)="onPathChange(exe.key, $event)"
+                 placeholder="Default"/>
+          <p-button icon="fa-solid fa-folder-open" severity="secondary" (onClick)="browseCustomExe(exe.key)"/>
+        </div>
+
+        @if (pathErrors()[exe.key]) {
+          <small class="text-red-500 font-bold mt-1">File not found. The app will fall back to the default executable.</small>
+        }
+      </div>
+    }
+  </div>
+</p-fieldset>

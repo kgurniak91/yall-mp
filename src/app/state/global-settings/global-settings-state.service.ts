@@ -1,6 +1,11 @@
 import {computed, inject, Injectable, signal} from '@angular/core';
 import {AppStateService} from '../app/app-state.service';
-import {ProjectSettings, SubtitleLookupBrowserType, SubtitleLookupService} from '../../model/settings.types';
+import {
+  CustomPathKey,
+  ProjectSettings,
+  SubtitleLookupBrowserType,
+  SubtitleLookupService
+} from '../../model/settings.types';
 import {ToastService} from '../../shared/services/toast/toast.service';
 
 @Injectable({
@@ -27,6 +32,10 @@ export class GlobalSettingsStateService {
   public readonly preferredSubtitleLanguages = computed(() => this.appStateService.globalSettings().preferredSubtitleLanguages);
   public readonly cinemaModeEnabled = computed(() => this.appStateService.globalSettings().cinemaModeEnabled);
   public readonly cinemaModeSpeed = computed(() => this.appStateService.globalSettings().cinemaModeSpeed);
+  public readonly customMpvPath = computed(() => this.appStateService.globalSettings().customMpvPath || '');
+  public readonly customFfmpegPath = computed(() => this.appStateService.globalSettings().customFfmpegPath || '');
+  public readonly customFfprobePath = computed(() => this.appStateService.globalSettings().customFfprobePath || '');
+  public readonly customAudiowaveformPath = computed(() => this.appStateService.globalSettings().customAudiowaveformPath || '');
   public readonly srtBackgroundColor = computed(() => `rgba(0, 0, 0, ${this.srtBackgroundOpacity()})`);
   public readonly settingsReloadTrigger = this._settingsReloadTrigger.asReadonly();
   private readonly toastService = inject(ToastService);
@@ -106,5 +115,9 @@ export class GlobalSettingsStateService {
 
   public setCinemaModeSpeed(value: number): void {
     this.appStateService.updateGlobalSettings({cinemaModeSpeed: value});
+  }
+
+  public setCustomPath(key: CustomPathKey, path: string): void {
+    this.appStateService.updateGlobalSettings({[key]: path});
   }
 }
