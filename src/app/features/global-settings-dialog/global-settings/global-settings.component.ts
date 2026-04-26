@@ -11,6 +11,7 @@ import {RadioButton} from 'primeng/radiobutton';
 import {
   LanguagePriorityListComponent
 } from '../../../shared/components/language-priority-list/language-priority-list.component';
+import {SelectButton} from 'primeng/selectbutton';
 
 @Component({
   selector: 'app-global-settings',
@@ -22,7 +23,8 @@ import {
     DecimalPipe,
     InputSwitch,
     RadioButton,
-    LanguagePriorityListComponent
+    LanguagePriorityListComponent,
+    SelectButton
   ],
   templateUrl: './global-settings.component.html',
   styleUrl: './global-settings.component.scss',
@@ -32,6 +34,11 @@ export class GlobalSettingsComponent {
   protected readonly globalSettingsStateService = inject(GlobalSettingsStateService);
   protected readonly MIN_SRT_FONT_SIZE = 1;
   protected readonly MAX_SRT_FONT_SIZE = 80;
+  protected readonly themeOptions = [
+    {label: 'System (Auto)', value: 'system'},
+    {label: 'Light', value: 'light'},
+    {label: 'Dark', value: 'dark'}
+  ];
 
   onSrtFontSizeChange(fontSize: number): void {
     let newFontSize: number;

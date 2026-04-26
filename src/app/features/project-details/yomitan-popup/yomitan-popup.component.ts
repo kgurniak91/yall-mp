@@ -77,7 +77,6 @@ export class YomitanPopupComponent implements OnInit, OnDestroy {
       body {
         padding: 0 !important;
         margin: 0 !important;
-        background-color: white !important;
         overflow-y: auto;
       }
 

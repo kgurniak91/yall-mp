@@ -1,6 +1,7 @@
-import {computed, inject, Injectable, signal} from '@angular/core';
+import {computed, DestroyRef, effect, inject, Injectable, signal} from '@angular/core';
 import {AppStateService} from '../app/app-state.service';
 import {
+  AppTheme,
   CustomPathKey,
   ProjectSettings,
   SubtitleLookupBrowserType,
@@ -36,9 +37,32 @@ export class GlobalSettingsStateService {
   public readonly customFfmpegPath = computed(() => this.appStateService.globalSettings().customFfmpegPath || '');
   public readonly customFfprobePath = computed(() => this.appStateService.globalSettings().customFfprobePath || '');
   public readonly customAudiowaveformPath = computed(() => this.appStateService.globalSettings().customAudiowaveformPath || '');
+  public readonly theme = computed(() => this.appStateService.globalSettings().theme ?? 'system');
   public readonly srtBackgroundColor = computed(() => `rgba(0, 0, 0, ${this.srtBackgroundOpacity()})`);
   public readonly settingsReloadTrigger = this._settingsReloadTrigger.asReadonly();
   private readonly toastService = inject(ToastService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  constructor() {
+    const matchMedia = window.matchMedia('(prefers-color-scheme: dark)');
+    const mediaQueryHandler = (e: MediaQueryListEvent) => this.applyDarkClass(this.theme(), e.matches);
+
+    effect(() => {
+      const theme = this.theme();
+      window.electronAPI.appSetTheme(theme);
+      this.applyDarkClass(theme, matchMedia.matches);
+    });
+
+    matchMedia.addEventListener('change', mediaQueryHandler);
+
+    this.destroyRef.onDestroy(() => {
+      matchMedia.removeEventListener('change', mediaQueryHandler);
+    });
+  }
+
+  public setTheme(theme: AppTheme): void {
+    this.appStateService.updateGlobalSettings({theme});
+  }
 
   public notifySettingsChanged(): void {
     this._settingsReloadTrigger.update(v => v + 1);
@@ -119,5 +143,14 @@ export class GlobalSettingsStateService {
 
   public setCustomPath(key: CustomPathKey, path: string): void {
     this.appStateService.updateGlobalSettings({[key]: path});
+  }
+
+  private applyDarkClass(theme: AppTheme, isSystemDark: boolean): void {
+    const isDark = (theme === 'dark') || (theme === 'system' && isSystemDark);
+    if (isDark) {
+      document.documentElement.classList.add('app-dark');
+    } else {
+      document.documentElement.classList.remove('app-dark');
+    }
   }
 }

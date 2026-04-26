@@ -21,6 +21,7 @@ export interface ParsedSubtitlesData {
 export interface IElectronAPI {
   // --- App
   getAppVersion: () => Promise<string>;
+  appSetTheme: (theme: 'system' | 'light' | 'dark') => void;
   // --- Window control
   windowMinimize: () => void;
   windowToggleMaximize: () => void;

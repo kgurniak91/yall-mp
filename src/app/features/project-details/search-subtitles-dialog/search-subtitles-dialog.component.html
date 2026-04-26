@@ -1,9 +1,9 @@
 <div class="flex flex-column h-full w-full overflow-hidden surface-card">
-  <div class="flex align-items-center justify-content-between p-3 surface-border bg-white flex-shrink-0">
+  <div class="flex align-items-center justify-content-between p-3 surface-border surface-0 flex-shrink-0">
     <span class="font-bold text-xl">Find in Subtitles</span>
   </div>
 
-  <div class="p-3 pb-0 pt-0 flex-shrink-0 bg-white z-1">
+  <div class="p-3 pb-0 pt-0 flex-shrink-0 surface-0 z-1">
     <p-iconfield>
       <p-inputicon class="fa-solid fa-search"/>
       <input pInputText
@@ -27,7 +27,7 @@
 
   <div class="border-bottom-1 surface-border flex-shrink-0"></div>
 
-  <div #scrollContainer class="flex-grow-1 min-h-0 overflow-y-auto custom-scrollbar relative bg-white">
+  <div #scrollContainer class="flex-grow-1 min-h-0 overflow-y-auto custom-scrollbar relative surface-0">
     @if (filteredClips().length > 0) {
       <div class="flex flex-column">
 
@@ -43,9 +43,9 @@
 
         @for (item of filteredClips(); track item.clip.id) {
           <div [id]="'search-clip-' + item.clip.id"
-               class="p-2 cursor-pointer transition-colors flex align-items-center gap-3 surface-border hover:surface-50"
+               class="p-2 cursor-pointer transition-colors flex align-items-center gap-3 surface-border search-result-item"
                [class.border-bottom-1]="!$last"
-               [class.surface-100]="item.isCurrent"
+               [class.is-current]="item.isCurrent"
                (click)="selectClip(item.clip)">
 
             <p-tag [value]="(item.clip.startTime * 1000 | date:'mm:ss.S') || ''"
@@ -81,7 +81,7 @@
     }
   </div>
 
-  <div class="flex align-items-center justify-content-end gap-2 p-3 border-top-1 surface-border flex-shrink-0 bg-white z-1">
+  <div class="flex align-items-center justify-content-end gap-2 p-3 border-top-1 surface-border flex-shrink-0 surface-0 z-1">
     <p-button label="Close"
               icon="fa-solid fa-xmark"
               severity="secondary"

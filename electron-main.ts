@@ -1,4 +1,16 @@
-import {app, BrowserWindow, dialog, ipcMain, Menu, Rectangle, screen, session, shell, WebContentsView} from 'electron';
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  Menu,
+  nativeTheme,
+  Rectangle,
+  screen,
+  session,
+  shell,
+  WebContentsView
+} from 'electron';
 import path from 'path';
 import os from 'os';
 import {promises as fs, statSync} from 'fs';
@@ -1551,6 +1563,10 @@ if (!gotTheLock) {
     ipcMain.on('playback:setMute', (_, mute: boolean) => playbackManager?.setMute(mute));
 
     ipcMain.handle('app:get-version', () => app.getVersion());
+
+    ipcMain.on('app:set-theme', (_, theme: 'system' | 'light' | 'dark') => {
+      nativeTheme.themeSource = theme;
+    });
 
     ipcMain.handle('app:get-pending-files', () => {
       const files = [...pendingFilesToOpen];

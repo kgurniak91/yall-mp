@@ -3,6 +3,7 @@ const {contextBridge, ipcRenderer, webUtils} = require('electron');
 contextBridge.exposeInMainWorld('electronAPI', {
   // --- App
   getAppVersion: () => ipcRenderer.invoke('app:get-version'),
+  appSetTheme: (theme) => ipcRenderer.send('app:set-theme', theme),
   // --- Window control
   windowMinimize: () => ipcRenderer.send('window:minimize'),
   windowToggleMaximize: () => ipcRenderer.send('window:toggle-maximize'),

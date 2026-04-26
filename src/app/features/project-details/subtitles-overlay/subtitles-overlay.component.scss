@@ -73,6 +73,7 @@
   transform: translateX(-50%); // Center horizontally relative to 'left' coordinate
   display: flex;
   flex-direction: column;
+  background: transparent;
 }
 
 .manual-dictionary-backdrop {

@@ -13,6 +13,8 @@ export enum SubtitleLookupBrowserType {
   System = 'System'
 }
 
+export type AppTheme = 'system' | 'light' | 'dark';
+
 export interface ProjectSettings {
   autoPauseAtStart: boolean;
   autoPauseAtEnd: boolean;
@@ -72,6 +74,7 @@ export interface GlobalSettings {
   customFfmpegPath?: string;
   customFfprobePath?: string;
   customAudiowaveformPath?: string;
+  theme?: AppTheme;
 }
 
 const DEFAULT_SEARCH_SUBTITLE_LOOKUP_SERVICES: SubtitleLookupService[] = [
@@ -174,7 +177,8 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   customMpvPath: '',
   customFfmpegPath: '',
   customFfprobePath: '',
-  customAudiowaveformPath: ''
+  customAudiowaveformPath: '',
+  theme: 'system'
 };
 
 export enum CustomPath {

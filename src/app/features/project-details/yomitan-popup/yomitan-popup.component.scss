@@ -4,10 +4,7 @@ $navbarHeight: 2.5rem;
   display: block;
   width: 450px;
   height: 500px;
-  background: white;
-  border: 1px solid #ccc;
   border-radius: 6px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
   overflow: hidden;
   pointer-events: auto !important;
 }
@@ -63,5 +60,23 @@ webview {
   &:disabled {
     opacity: 0.4;
     cursor: default;
+  }
+}
+
+:host-context(.app-dark) {
+  .nav-bar {
+    background: var(--p-surface-800);
+    border-bottom-color: var(--p-surface-700);
+  }
+
+  .nav-btn {
+    background: var(--p-surface-900);
+    border-color: var(--p-surface-600);
+    color: var(--p-text-color-secondary);
+
+    &:hover:not(:disabled) {
+      background-color: var(--p-surface-700);
+      color: var(--p-text-color);
+    }
   }
 }

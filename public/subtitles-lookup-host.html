@@ -4,6 +4,26 @@
   <meta charset="UTF-8">
   <title>Subtitles Lookup</title>
   <style>
+    :root {
+      --bg-color: #ffffff;
+      --text-color: #000000;
+      --error-bg: #f3f4f6;
+      --error-border: #d1d5db;
+      --error-text: #374151;
+      --error-hint: #4b5563;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #1e1e1e;
+        --text-color: #ceced1;
+        --error-bg: #2d2d2d;
+        --error-border: #4a4a4a;
+        --error-text: #ceced1;
+        --error-hint: #9ca3af;
+      }
+    }
+
     body {
       margin: 0;
       font-family: Roboto, Helvetica, Arial, sans-serif;
@@ -11,7 +31,8 @@
       display: flex;
       flex-direction: column;
       height: 100vh;
-      background-color: #ffffff;
+      background-color: var(--bg-color);
+      color: var(--text-color);
     }
 
     #title-bar {
@@ -69,7 +90,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      background-color: #ffffff;
+      background-color: var(--bg-color);
       z-index: 10;
     }
 
@@ -259,7 +280,7 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      background-color: #ffffff;
+      background-color: var(--bg-color);
       z-index: 20;
       padding: 2rem;
       text-align: center;
@@ -278,8 +299,8 @@
     }
 
     .error-details {
-      background-color: #f3f4f6;
-      border: 1px solid #d1d5db;
+      background-color: var(--error-bg);
+      border: 1px solid var(--error-border);
       border-radius: 0.5rem;
       padding: 1rem;
       width: 100%;
@@ -287,12 +308,12 @@
       word-break: break-all;
       margin-bottom: 1.5rem;
       font-family: monospace;
-      color: #374151;
+      color: var(--error-text);
     }
 
     .error-hint {
       font-size: 1rem;
-      color: #4b5563;
+      color: var(--error-hint);
       line-height: 1.5;
     }
   </style>

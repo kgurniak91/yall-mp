@@ -1,4 +1,20 @@
 <div class="settings-container">
+  <p-fieldset legend="Appearance" [toggleable]="false">
+    <div class="setting-item-column">
+      <label for="app-theme" class="font-semibold mb-2">Application Theme</label>
+      <p-selectButton id="app-theme"
+                      [options]="themeOptions"
+                      [ngModel]="globalSettingsStateService.theme()"
+                      (ngModelChange)="globalSettingsStateService.setTheme($event)"
+                      optionLabel="label"
+                      optionValue="value"/>
+      <small class="block mt-2 text-gray-500">
+        Controls the theme for menus, popovers, and dialog overlays.
+        The main player interface is permanently styled in Dark Mode.
+      </small>
+    </div>
+  </p-fieldset>
+
   <p-fieldset legend="Playback Control" [toggleable]="false">
     <div class="setting-item">
       <label for="seek-seconds">Seek Amount (seconds)</label>

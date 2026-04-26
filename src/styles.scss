@@ -231,8 +231,7 @@ p-splitter * {
 
 p-contextmenu .p-contextmenu-item.p-focus .p-contextmenu-item-content p-badge,
 p-contextmenu .p-contextmenu-item .p-contextmenu-item-content:hover p-badge,
-.p-menu-overlay .p-menu-list .p-menu-item:hover p-badge
-{
+.p-menu-overlay .p-menu-list .p-menu-item:hover p-badge {
   background: var(--p-badge-primary-color) !important;
   color: var(--p-badge-primary-background) !important;
 }
@@ -240,4 +239,20 @@ p-contextmenu .p-contextmenu-item .p-contextmenu-item-content:hover p-badge,
 .p-menu-overlay.tracks-menu p-badge {
   height: 1rem !important;
   line-height: initial !important;
+}
+
+.app-dark {
+  --p-togglebutton-checked-color: #ffffff !important;
+  --p-tree-node-selected-color: #ffffff !important;
+  --p-tree-node-icon-selected-color: #ffffff !important;
+  --p-tree-node-toggle-button-selected-hover-background: #ffffff !important;
+  --p-select-option-selected-color: #ffffff !important;
+  --p-select-option-selected-focus-color: #ffffff !important;
+  --p-message-error-color: #ffffff !important;
+  --p-button-text-secondary-hover-background: #f8fafc !important;
+  --p-button-text-danger-hover-background: #fef2f2 !important;
+
+  .text-gray-400, .text-gray-500, .text-gray-600, .text-500, .text-600 {
+    color: var(--p-text-color-secondary) !important;
+  }
 }

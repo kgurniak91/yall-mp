@@ -39,11 +39,18 @@ export const appConfig: ApplicationConfig = {
               800: '{blue.800}',
               900: '{blue.900}',
               950: '{blue.950}'
+            },
+            colorScheme: {
+              dark: {
+                primary: {
+                  contrastColor: '#ffffff'
+                }
+              }
             }
           }
         }),
         options: {
-          darkModeSelector: false
+          darkModeSelector: '.app-dark'
         }
       },
       ripple: true

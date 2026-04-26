@@ -26,6 +26,14 @@
   }
 }
 
+:host-context(.app-dark) :host p-accordion ::ng-deep {
+  p-accordion-header {
+    &:not(:hover) {
+      background-color: var(--p-surface-800) !important;
+    }
+  }
+}
+
 .header-menu-overlay {
   position: absolute;
   right: 3rem;
