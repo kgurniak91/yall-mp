@@ -25,6 +25,8 @@ const INITIAL_ZOOM = 80;
 const MIN_ZOOM = 20;
 const MAX_ZOOM = 1000;
 const ZOOM_FACTOR = 1.2;
+/** Minimum time between two wheel-driven zoom steps (see onWheel). */
+const WHEEL_ZOOM_INTERVAL_MS = 80;
 
 /** Share of bars that must fit below full height; the rest are clipped at the top. */
 const WAVEFORM_DISPLAY_PERCENTILE = 0.99;
@@ -78,6 +80,7 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
   private inactiveSubtitleBg!: string;
   private gapBg!: string;
   private mustIgnoreNextScroll = false;
+  private lastWheelZoomAt = 0;
   private readonly keyHandler = (e: KeyboardEvent) => this.handleKey(e);
 
   constructor() {
@@ -131,9 +134,25 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   public onWheel(event: WheelEvent): void {
-    if (!this.wavesurfer || event.shiftKey) return;
+    if (!this.wavesurfer) return;
+
+    // Sideways gestures (trackpad two-finger swipe, tilt wheel) and shift+wheel scroll
+    // the timeline; leave them to the browser. Before this check, a sideways swipe on a
+    // trackpad was read as "zoom out" (deltaY is 0), so the timeline shrank to fit the
+    // window and its scrollbar disappeared.
+    if (event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
+
     event.preventDefault();
+    if (event.deltaY === 0) return;
     this.hideContextMenuRequested.emit();
+
+    // A trackpad swipe delivers dozens of small wheel events per gesture, a mouse wheel
+    // one event per notch. Limiting to one zoom step per interval keeps a swipe from
+    // jumping straight to the minimum or maximum zoom, without changing mouse behaviour.
+    const now = performance.now();
+    if (now - this.lastWheelZoomAt < WHEEL_ZOOM_INTERVAL_MS) return;
+    this.lastWheelZoomAt = now;
+
     if (event.deltaY < 0) {
       this.zoomIn();
     } else {
