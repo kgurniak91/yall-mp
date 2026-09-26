@@ -1,6 +1,7 @@
 @if (nativeWindowChrome) {
-  <!-- macOS: slim title strip under the system traffic lights. Menu items are in the menu bar. -->
-  <div class="mac-title-strip">
+  <!-- macOS: title strip overlay, shown only while the pointer is at the top edge (like an
+       auto-hidden Dock); the traffic lights follow it. Menu items are in the menu bar. -->
+  <div class="mac-title-strip" [class.visible]="stripVisible()" (mouseleave)="onStripMouseLeave()">
     <span class="mac-title" [pTooltip]="isProjectDetailsView() ? mediaFileName() : ''" tooltipPosition="bottom">
       {{ windowTitle() }}
     </span>

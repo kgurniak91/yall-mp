@@ -103,6 +103,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // macOS native window chrome (see NATIVE_MAC_CHROME in electron-main.ts).
   nativeWindowChrome: process.argv.includes('--yall-native-chrome'),
   windowSetTitle: (title) => ipcRenderer.send('window:set-title', title),
+  windowSetButtonsVisible: (visible) => ipcRenderer.send('window:set-buttons-visible', visible),
   onMenuAction: (callback) => {
     const subscription = (_event, action) => callback(action);
     ipcRenderer.on('menu:action', subscription);

@@ -109,6 +109,8 @@ export interface IElectronAPI {
   /** True when the window uses the system title strip and menu bar (macOS). */
   nativeWindowChrome: boolean;
   windowSetTitle: (title: string) => void;
+  /** macOS: show or hide the traffic lights (they follow the auto-hidden title strip). */
+  windowSetButtonsVisible: (visible: boolean) => void;
   /** Items of the macOS menu bar; the header component performs them. */
   onMenuAction: (callback: (action: MenuAction) => void) => (() => void);
   /** macOS media keys (F8 play/pause, F7/F9 previous/next) routed through mpv. */

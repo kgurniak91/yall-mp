@@ -27,6 +27,11 @@ import {
 import {LogoComponent} from '../../../shared/components/logo/logo.component';
 import {DEFAULT_CONFIRMATION} from '../../../shared/types/confirmation.types';
 
+// macOS title strip auto-hide (see onPointerMove).
+const STRIP_HEIGHT_PX = 28; // MAC_TITLE_STRIP_HEIGHT in electron-main.ts
+const STRIP_REVEAL_ZONE_PX = 4;
+const STRIP_HIDE_DELAY_MS = 350;
+
 @Component({
   selector: 'app-header',
   imports: [
@@ -55,6 +60,10 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
   protected readonly windowTitle = computed(() =>
     this.isProjectDetailsView() ? (this.currentProject()?.mediaFileName || 'Loading media...') : "Y'ALL Media Player"
   );
+  /** macOS: the title strip (and the traffic lights) show only while the pointer is at the top edge. */
+  protected readonly stripVisible = signal(false);
+  private stripHideTimer: ReturnType<typeof setTimeout> | undefined;
+  private readonly stripPointerHandler = (event: MouseEvent) => this.onPointerMove(event.clientY);
   protected readonly currentUrl = signal<string>('');
   protected readonly currentProject = computed(() => this.computeCurrentProject());
   protected readonly mediaFileName = computed(() => this.currentProject()?.mediaFileName || 'Loading media...');
@@ -85,7 +94,45 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
       effect(() => {
         window.electronAPI.windowSetTitle(this.windowTitle());
       });
+      effect(() => {
+        window.electronAPI.windowSetButtonsVisible(this.stripVisible());
+      });
+      document.addEventListener('mousemove', this.stripPointerHandler);
     }
+  }
+
+  /** Reveal zone: the top few pixels of the window; hide once the pointer is clearly below the strip. */
+  private onPointerMove(clientY: number): void {
+    if (this.isFullScreen()) {
+      return; // macOS shows its own menu bar on top-edge hover in full screen.
+    }
+    if (clientY <= STRIP_REVEAL_ZONE_PX) {
+      this.showStrip();
+    } else if (clientY > STRIP_HEIGHT_PX && this.stripVisible()) {
+      this.hideStripSoon();
+    }
+  }
+
+  protected onStripMouseLeave(): void {
+    this.hideStripSoon();
+  }
+
+  private showStrip(): void {
+    if (this.stripHideTimer !== undefined) {
+      clearTimeout(this.stripHideTimer);
+      this.stripHideTimer = undefined;
+    }
+    this.stripVisible.set(true);
+  }
+
+  private hideStripSoon(): void {
+    if (this.stripHideTimer !== undefined) {
+      return;
+    }
+    this.stripHideTimer = setTimeout(() => {
+      this.stripHideTimer = undefined;
+      this.stripVisible.set(false);
+    }, STRIP_HIDE_DELAY_MS);
   }
 
   ngOnInit() {
@@ -140,6 +187,10 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     if (this.cleanupMenuActionListener) {
       this.cleanupMenuActionListener();
+    }
+    document.removeEventListener('mousemove', this.stripPointerHandler);
+    if (this.stripHideTimer !== undefined) {
+      clearTimeout(this.stripHideTimer);
     }
   }
 

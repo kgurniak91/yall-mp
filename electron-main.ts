@@ -529,6 +529,10 @@ async function createWindow() {
       webPreferences: {...uiWebPreferences, additionalArguments: NATIVE_CHROME_RENDERER_ARGS},
     });
     mainWindow = uiWindow;
+    if (NATIVE_MAC_CHROME && process.platform === 'darwin') {
+      // The traffic lights appear together with the auto-hidden title strip (header.component.ts).
+      uiWindow.setWindowButtonVisibility(false);
+    }
     NativeViewVideoSurface.attachBackdrop(uiWindow);
   } else {
     mainWindow = new BrowserWindow({
@@ -863,7 +867,9 @@ async function createWindow() {
   const indexPath = path.join(__dirname, './dist/yall-mp/browser/index.html');
   uiWindow.loadFile(indexPath);
 
-  if (isDev) {
+  // Dev builds open DevTools unless YALL_DEVTOOLS=0 (DevTools also paints a "W x H" size
+  // readout in the page corner during window resizes).
+  if (isDev && process.env['YALL_DEVTOOLS'] !== '0') {
     uiWindow.webContents.once('devtools-opened', () => {
       if (uiWindow && !uiWindow.isDestroyed()) {
         uiWindow.focus();
@@ -1181,6 +1187,12 @@ if (!gotTheLock) {
 
     ipcMain.on('window:set-title', (_, title: string) => {
       mainWindow?.setTitle(title || "Y'ALL Media Player");
+    });
+
+    ipcMain.on('window:set-buttons-visible', (_, visible: boolean) => {
+      if (NATIVE_MAC_CHROME && process.platform === 'darwin' && mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.setWindowButtonVisibility(visible);
+      }
     });
 
     ipcMain.on('window:close', () => {

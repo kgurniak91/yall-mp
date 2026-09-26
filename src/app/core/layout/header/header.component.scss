@@ -6,15 +6,26 @@
 // macOS native window chrome: the strip is the window's title bar. The traffic
 // lights are drawn by the system over its left end; the whole strip drags the window.
 .mac-title-strip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 28px; // MAC_TITLE_STRIP_HEIGHT in electron-main.ts
+  z-index: 10000;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100%;
   padding: 0 5rem; // keep the title clear of the traffic lights on either side
   background-color: var(--app-bg);
   border-bottom: 1px solid var(--app-border);
   -webkit-app-region: drag;
   user-select: none;
+  transform: translateY(-100%);
+  transition: transform 150ms ease-out;
+
+  &.visible {
+    transform: none;
+  }
 
   .mac-title {
     font: 500 13px/1 -apple-system, BlinkMacSystemFont, var(--app-font-family), sans-serif;

@@ -18,17 +18,6 @@
 
 :root {
   --app-header-height: 2.5rem;
-}
-
-// macOS native window chrome (class set by HeaderComponent): the header is a 28 px
-// title strip (see MAC_TITLE_STRIP_HEIGHT in electron-main.ts) and disappears in
-// native full screen together with the traffic lights.
-html.native-window-chrome {
-  --app-header-height: 28px;
-
-  &.window-fullscreen {
-    --app-header-height: 0px;
-  }
   --app-bg: #1e1e1e;
   --app-surface-dark: #242424;
   --app-surface: #2a2a2a;
@@ -56,6 +45,23 @@ html.native-window-chrome {
   --p-splitter-color: var(--app-text) !important;
   --p-tree-padding: 0 !important;
   --p-tree-background: transparent !important;
+}
+
+// macOS native window chrome (class set by HeaderComponent). The title strip is an
+// overlay that slides in when the pointer reaches the top edge (like an auto-hidden
+// Dock), so the page starts at the very top. The surfaces are black so the window
+// blends into a dark desktop.
+html.native-window-chrome {
+  --app-header-height: 0px;
+  --app-bg: #000000;
+  --app-surface-dark: #000000;
+  --app-surface: #0a0a0a;
+  --app-surface-hover: #262626;
+  --app-border: #2a2a2a;
+
+  .toolbar {
+    background-color: #000000 !important;
+  }
 }
 
 html, body {
