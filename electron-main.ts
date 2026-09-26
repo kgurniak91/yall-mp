@@ -1988,6 +1988,7 @@ async function handleAnkiBatchExport(request: AnkiBatchExportRequest) {
       audioArgs.push(
         '-vn',                                    // No video
         '-acodec', 'libmp3lame',                  // Use MP3 codec
+        '-ac', '2',                               // Downmix surround (5.1 etc.) to stereo
         '-q:a', '2',                              // Audio quality (VBR)
         audioPath
       );
@@ -2044,6 +2045,7 @@ async function handleAnkiBatchExport(request: AnkiBatchExportRequest) {
           '-b:v', '0',                              // Must be 0 when using CRF
           '-vf', 'scale=-2:480',                    // Scale to 480p height to keep size down
           '-c:a', 'libopus',                        // Opus audio codec
+          '-ac', '2',                               // Downmix surround to stereo: libopus rejects 5.1(side) without a mapping family
           '-b:a', '96k',                            // Audio bitrate
           videoPath
         );
