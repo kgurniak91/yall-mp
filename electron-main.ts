@@ -29,6 +29,12 @@ import {
   mergeIdenticalConsecutiveSubtitles,
   mergeKaraokeSubtitles
 } from './shared/utils/subtitle-parsing';
+import {
+  buildLoudnormApplyFilter,
+  buildLoudnormMeasureFilter,
+  LoudnormMeasurement,
+  parseLoudnormMeasurement
+} from './shared/utils/audio-loudness';
 import {PlaybackManager} from './playback-manager';
 import type fontkit from 'fontkit';
 import {
@@ -1969,6 +1975,20 @@ async function handleAnkiBatchExport(request: AnkiBatchExportRequest) {
   }
 
   try {
+    // Audio and video clips share one loudness measurement (same clip, same track).
+    let audioFilter = buildLoudnormApplyFilter(null);
+    if (requiredMediaTypes.has('audio') || (hasRealVideoStream && requiredMediaTypes.has('video'))) {
+      const clipAudioArgs = [
+        '-ss', subtitleData.startTime.toString(),
+        '-to', subtitleData.endTime.toString(),
+        '-i', mediaPath,
+      ];
+      if (audioTrackIndex != null) {
+        clipAudioArgs.push('-map', `0:${audioTrackIndex}`);
+      }
+      audioFilter = buildLoudnormApplyFilter(await measureClipLoudness(clipAudioArgs));
+    }
+
     if (requiredMediaTypes.has('audio')) {
       const audioPath = path.join(tempDir, `${uniqueBatchId}.mp3`);
       generatedFiles.push(audioPath);
@@ -1988,7 +2008,7 @@ async function handleAnkiBatchExport(request: AnkiBatchExportRequest) {
       audioArgs.push(
         '-vn',                                    // No video
         '-acodec', 'libmp3lame',                  // Use MP3 codec
-        '-ac', '2',                               // Downmix surround (5.1 etc.) to stereo
+        '-af', audioFilter,                       // Downmix surround (5.1 etc.) to stereo, then normalize loudness
         '-q:a', '2',                              // Audio quality (VBR)
         audioPath
       );
@@ -2045,7 +2065,7 @@ async function handleAnkiBatchExport(request: AnkiBatchExportRequest) {
           '-b:v', '0',                              // Must be 0 when using CRF
           '-vf', 'scale=-2:480',                    // Scale to 480p height to keep size down
           '-c:a', 'libopus',                        // Opus audio codec
-          '-ac', '2',                               // Downmix surround to stereo: libopus rejects 5.1(side) without a mapping family
+          '-af', audioFilter,                       // Downmix surround to stereo (libopus rejects 5.1(side) without a mapping family), then normalize loudness
           '-b:a', '96k',                            // Audio bitrate
           videoPath
         );
@@ -2170,7 +2190,27 @@ async function handleAnkiBatchExport(request: AnkiBatchExportRequest) {
   };
 }
 
-function runFFmpeg(args: string[]): Promise<void> {
+/**
+ * Measurement pass for loudness normalization: decodes the clip's audio once
+ * without writing a file. Returns null (no normalization) when it fails or the
+ * clip is silent, so an export never fails because of this step.
+ */
+async function measureClipLoudness(inputArgs: string[]): Promise<LoudnormMeasurement | null> {
+  try {
+    const stderr = await runFFmpeg([...inputArgs, '-vn', '-af', buildLoudnormMeasureFilter(), '-f', 'null', '-']);
+    const measurement = parseLoudnormMeasurement(stderr);
+    if (!measurement) {
+      console.warn('[Anki] Loudness measurement unavailable for this clip; exporting without normalization.');
+    }
+    return measurement;
+  } catch (error) {
+    console.warn('[Anki] Loudness measurement failed; exporting without normalization.', error);
+    return null;
+  }
+}
+
+/** Runs ffmpeg; resolves with its stderr (ffmpeg prints filter reports there). */
+function runFFmpeg(args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
     const process = spawn(ffmpegPath, args);
 
@@ -2181,7 +2221,7 @@ function runFFmpeg(args: string[]): Promise<void> {
 
     process.on('close', (code) => {
       if (code === 0) {
-        resolve();
+        resolve(errorOutput);
       } else {
         console.error(`FFmpeg exited with code ${code}`);
         console.error('FFmpeg stderr:', errorOutput);
@@ -2927,7 +2967,9 @@ async function generateAudioPeaks(projectId: string, mediaPath: string, audioTra
       '-i', '-',
       '--output-format', 'json',
       '--pixels-per-second', '20',
-      '--bits', '8'
+      // 16-bit so that quiet sources (e.g. a 5.1 downmix, which ffmpeg scales down to
+      // avoid clipping) keep enough resolution once the timeline stretches them.
+      '--bits', '16'
     ];
 
     const ffmpegProcess = spawn(ffmpegPath, ffmpegArgs);
@@ -2976,7 +3018,7 @@ async function generateAudioPeaks(projectId: string, mediaPath: string, audioTra
         try {
           const waveformData = JSON.parse(jsonData);
           const rawPeaks = waveformData.data;
-          const scale = waveformData.bits === 8 ? 128 : 32768; // Output is 8-bit, so scale will be 128
+          const scale = waveformData.bits === 8 ? 128 : 32768;
           const normalizedPeaks: number[] = rawPeaks.map((p: number) => p / scale);
 
           const peaks = [normalizedPeaks];

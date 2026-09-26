@@ -26,6 +26,28 @@ const MIN_ZOOM = 20;
 const MAX_ZOOM = 1000;
 const ZOOM_FACTOR = 1.2;
 
+/** Share of bars that must fit below full height; the rest are clipped at the top. */
+const WAVEFORM_DISPLAY_PERCENTILE = 0.99;
+
+/**
+ * Stretches the waveform so that it fills the timeline's height. Quiet sources
+ * (a surround downmix, a low-level recording) otherwise show as a thin line.
+ * Scaling to a high percentile rather than the single loudest bar keeps speech
+ * readable when the file contains a few very loud moments.
+ */
+export function scalePeaksToDisplay(peaks: number[]): number[] {
+  if (peaks.length === 0) {
+    return [];
+  }
+  const magnitudes = peaks.map(Math.abs).sort((a, b) => a - b);
+  const index = Math.min(magnitudes.length - 1, Math.floor(magnitudes.length * WAVEFORM_DISPLAY_PERCENTILE));
+  const reference = magnitudes[index];
+  if (!(reference > 0)) {
+    return [...peaks];
+  }
+  return peaks.map(p => Math.max(-1, Math.min(1, p / reference)));
+}
+
 @Component({
   selector: 'app-timeline-editor',
   imports: [
@@ -278,7 +300,7 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
       expectedLength += 1;
     }
 
-    let channel0 = [...audioPeaks[0]];
+    let channel0 = scalePeaksToDisplay(audioPeaks[0]);
 
     if (channel0.length < expectedLength) {
       // Pad with zeros to prevent stretching
