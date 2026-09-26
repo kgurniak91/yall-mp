@@ -15,7 +15,10 @@ export interface PlaybackStateUpdate {
   isMuted: boolean;
 }
 
+const DEBUG_TRANSITIONS = !!process.env['YALL_DEBUG_TRANSITIONS'];
+
 export class PlaybackManager extends EventEmitter {
+  private transitionStartedAt = 0;
   private clips: LightweightVideoClip[] = [];
   private settings: ProjectSettings | null = null;
   private currentClipIndex = -1;
@@ -357,6 +360,11 @@ export class PlaybackManager extends EventEmitter {
         console.log('[PlaybackManager] Ignored stale auto-pause event.');
         return;
       }
+      if (DEBUG_TRANSITIONS) {
+        this.transitionStartedAt = Date.now();
+        const clip = this.clips[this.currentClipIndex];
+        console.log(`[Transition] auto-pause fired at clip ${this.currentClipIndex} (${clip?.hasSubtitle ? 'subtitle' : 'gap'}, end=${clip?.endTime?.toFixed(3)})`);
+      }
 
       if (this.playerState === PlayerState.Seeking || this.playerState === PlayerState.Transitioning) {
         console.log('[PlaybackManager] Ignored auto-pause event during seek/transition.');
@@ -516,6 +524,10 @@ export class PlaybackManager extends EventEmitter {
 
         this.mpvManager.setProperty('pause', !shouldResume);
         this.setPlayerState(newState, true);
+        if (DEBUG_TRANSITIONS && this.transitionStartedAt) {
+          console.log(`[Transition] +${Date.now() - this.transitionStartedAt}ms seek finished, resume=${shouldResume}`);
+          this.transitionStartedAt = 0;
+        }
       }
     } else if (status.event === 'end-file') {
       // This must stay as Idle, not Ended, because it happens when mpv unloads the file completely during teardown:
@@ -558,6 +570,9 @@ export class PlaybackManager extends EventEmitter {
     this.currentTime = targetTime;
     this.notifyUI();
 
+    if (DEBUG_TRANSITIONS) {
+      console.log(`[Transition] +${Date.now() - this.transitionStartedAt}ms seek to ${targetTime.toFixed(3)} (clip ${index}, ${clipToPlay.hasSubtitle ? 'subtitle' : 'gap'}, speed ${this.getTargetSpeedForClip(clipToPlay)})`);
+    }
     this.mpvManager.sendCommand(['seek', targetTime, 'absolute']);
 
     if (shouldAutoPauseAtStart) {

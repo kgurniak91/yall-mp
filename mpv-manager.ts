@@ -265,6 +265,7 @@ export class MpvManager extends EventEmitter {
 
     this.mpv.on('started', () => {
       this.emit('status', {event: 'playback-restart'});
+      this.logDecoderOnce();
     });
 
     this.mpv.on('stopped', () => {
@@ -280,6 +281,28 @@ export class MpvManager extends EventEmitter {
       console.error(`[MpvManager] MPV process crashed.`);
       this.emit('error', err);
     });
+  }
+
+  private decoderLogged = false;
+
+  /** One log line saying which video decoder mpv ended up with (hardware or software). */
+  private async logDecoderOnce(): Promise<void> {
+    if (this.decoderLogged || !this.mpv) {
+      return;
+    }
+    this.decoderLogged = true;
+    try {
+      const [hwdec, codec, width, height, fps] = await Promise.all([
+        this.mpv.getProperty('hwdec-current').catch(() => 'unknown'),
+        this.mpv.getProperty('video-codec').catch(() => 'unknown'),
+        this.mpv.getProperty('video-params/w').catch(() => '?'),
+        this.mpv.getProperty('video-params/h').catch(() => '?'),
+        this.mpv.getProperty('container-fps').catch(() => '?'),
+      ]);
+      console.log(`[MpvManager] Video: ${codec}, ${width}x${height} @ ${fps} fps, hwdec: ${hwdec || 'no (software decoding)'}`);
+    } catch (e) {
+      // Diagnostics only.
+    }
   }
 
   public sendCommand(command: any[]): Promise<any> {
