@@ -42,6 +42,9 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
   protected readonly isMaximized = signal(false);
   protected readonly isFullScreen = signal(false);
   protected readonly isMenuOpen = signal(false);
+  // On macOS the window is dragged through CSS drag regions (see header.component.scss);
+  // elsewhere the main process punches the drag zones through the UI window instead.
+  protected readonly usesCssDragRegions = window.electronAPI?.platform === 'darwin';
   protected readonly currentUrl = signal<string>('');
   protected readonly currentProject = computed(() => this.computeCurrentProject());
   protected readonly mediaFileName = computed(() => this.currentProject()?.mediaFileName || 'Loading media...');

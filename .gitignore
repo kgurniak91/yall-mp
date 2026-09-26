@@ -50,6 +50,10 @@ electron-main.js
 electron-main.js.map
 mpv-manager.js
 mpv-manager.js.map
+mpv-embed.js
+mpv-embed.js.map
+video-surface.js
+video-surface.js.map
 playback-manager.js
 playback-manager.js.map
 yomitan-manager.js
@@ -61,6 +65,9 @@ yomitan-manager.js.map
 /src/app/model/*.js
 /src/app/model/*.js.map
 /electron-resources
+
+# Native add-on build output (macOS)
+/native/mpv-embed/build
 
 # Generated License Files
 public/licenses.json

@@ -20,6 +20,7 @@ export interface ParsedSubtitlesData {
 
 export interface IElectronAPI {
   // --- App
+  platform: NodeJS.Platform;
   getAppVersion: () => Promise<string>;
   appSetTheme: (theme: 'system' | 'light' | 'dark') => void;
   // --- Window control

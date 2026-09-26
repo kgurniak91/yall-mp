@@ -38,6 +38,17 @@ import {
 } from './src/app/model/video.types';
 import {YomitanManager} from './yomitan-manager';
 import {LEGACY_TO_YOMITAN_ISO_MAP} from './shared/types/yomitan';
+import {ChildWindowVideoSurface, NativeViewVideoSurface, VideoSurface} from './video-surface';
+import {getMpvEmbedLoadError, isMpvEmbedPlatform, probeMpvEmbed} from './mpv-embed';
+
+// Window layout differs per platform (see video-surface.ts):
+//  - Windows/Linux: black host window (mainWindow) + transparent video window that a
+//    separate mpv process draws into + transparent UI window on top (uiWindow).
+//  - macOS: mpv has no `--wid` support, so libmpv paints into a native view placed
+//    underneath the UI window's web view. The UI window is then the only window
+//    (mainWindow === uiWindow) and the video never needs to be hidden while moving.
+const USE_NATIVE_VIDEO_SURFACE = isMpvEmbedPlatform();
+const SINGLE_WINDOW = USE_NATIVE_VIDEO_SURFACE;
 
 let customExecutables: { mpv?: string, ffmpeg?: string, ffprobe?: string, audiowaveform?: string } = {};
 let isFfmpegPathsInitialized = false;
@@ -78,7 +89,7 @@ let mpvManager: MpvManager | null = null;
 let yomitanManager: YomitanManager | null = null;
 let mainWindow: BrowserWindow | null = null;
 let uiWindow: BrowserWindow | null = null;
-let videoWindow: BrowserWindow | null = null;
+let videoSurface: VideoSurface | null = null;
 let subtitlesLookupWindow: BrowserWindow | null = null;
 let subtitlesLookupView: WebContentsView | null = null;
 let currentSubtitlesLookupContext: { clipSubtitleId: string; originalSelection: string; } | null = null;
@@ -188,6 +199,11 @@ function subtractRect(rect: Rectangle, hole: Rectangle): Rectangle[] {
 }
 
 function updateUiWindowShape() {
+  if (SINGLE_WINDOW) {
+    // Nothing underneath to punch holes to; the header uses CSS drag regions instead.
+    return;
+  }
+
   if (!uiWindow || !mainWindow || mainWindow.isFullScreen()) {
     uiWindow?.setShape([]);
     return;
@@ -240,7 +256,7 @@ function tryShowVideoWindowAndNotifyUI() {
     return;
   }
 
-  if (!isRestoring && isInitialResizeComplete && hasRequestedInitialSeek && videoWindow && !videoWindow.isDestroyed() && uiWindow && mainWindow) {
+  if (!isRestoring && isInitialResizeComplete && hasRequestedInitialSeek && videoSurface && !videoSurface.isDestroyed() && uiWindow && mainWindow) {
     console.log('[Main Process] All startup conditions met. Showing video window and notifying UI.');
     isVideoWindowVisible = true;
 
@@ -347,25 +363,55 @@ async function createWindow() {
     height: initialHeight
   };
 
-  mainWindow = new BrowserWindow({
-    ...initialAppBounds,
-    transparent: false,
-    backgroundColor: '#000000',
-    frame: false,
-    show: false,
-  });
+  const uiWebPreferences: Electron.WebPreferences = {
+    nodeIntegration: false,
+    contextIsolation: true,
+    preload: path.join(__dirname, 'preload.js'),
+    webviewTag: true
+  };
+
+  if (SINGLE_WINDOW) {
+    // macOS: one transparent window. The native video view (and a black
+    // backdrop) sit underneath its web view, so the UI page shows the video
+    // through its transparent video area, as it does with the video window elsewhere.
+    uiWindow = new BrowserWindow({
+      ...initialAppBounds,
+      transparent: true,
+      frame: false,
+      show: false,
+      webPreferences: uiWebPreferences,
+    });
+    mainWindow = uiWindow;
+    NativeViewVideoSurface.attachBackdrop(uiWindow);
+  } else {
+    mainWindow = new BrowserWindow({
+      ...initialAppBounds,
+      transparent: false,
+      backgroundColor: '#000000',
+      frame: false,
+      show: false,
+    });
+
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+      if (input.key === 'Escape' && input.type === 'keyDown') {
+        event.preventDefault();
+        handleWindowEscape();
+        return;
+      }
+
+      blockDefaultBrowserShortcuts(event, input);
+    });
+
+    uiWindow = new BrowserWindow({
+      ...initialAppBounds,
+      transparent: true,
+      frame: false,
+      parent: mainWindow,
+      webPreferences: uiWebPreferences,
+    });
+  }
 
   const isDev = !app.isPackaged;
-
-  mainWindow.webContents.on('before-input-event', (event, input) => {
-    if (input.key === 'Escape' && input.type === 'keyDown') {
-      event.preventDefault();
-      handleWindowEscape();
-      return;
-    }
-
-    blockDefaultBrowserShortcuts(event, input);
-  });
 
   mainWindow.on('focus', () => {
     // Failsafe: If the window gets focus (e.g., returning from Win+D) and is stuck in the restoring state, force a sync to reveal the UI.
@@ -375,30 +421,19 @@ async function createWindow() {
       syncWindowGeometry();
     }
 
-    // Defer focus transfer to next iteration of the event loop, after the current event loop phase completes.
-    // This allows mainWindow to settle its focus state, preventing swallowed keyboard inputs during the transition.
-    setImmediate(() => {
-      if (uiWindow && !uiWindow.isDestroyed()) {
-        uiWindow.focus();
-      }
-    });
+    if (!SINGLE_WINDOW) {
+      // Defer focus transfer to next iteration of the event loop, after the current event loop phase completes.
+      // This allows mainWindow to settle its focus state, preventing swallowed keyboard inputs during the transition.
+      setImmediate(() => {
+        if (uiWindow && !uiWindow.isDestroyed()) {
+          uiWindow.focus();
+        }
+      });
+    }
 
     if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed() && subtitlesLookupWindow.isVisible()) {
       subtitlesLookupWindow.hide();
     }
-  });
-
-  uiWindow = new BrowserWindow({
-    ...initialAppBounds,
-    transparent: true,
-    frame: false,
-    parent: mainWindow,
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js'),
-      webviewTag: true
-    },
   });
 
   uiWindow.webContents.on('before-input-event', (event, input) => {
@@ -410,9 +445,15 @@ async function createWindow() {
       return;
     }
 
+    if (SINGLE_WINDOW) {
+      // The video view is inside the window and follows it; the renderer's
+      // ResizeObserver re-fits the video rectangle after a resize.
+      return;
+    }
+
     // If the main window is minimized, absolutely enforce that children are hidden too.
     if (mainWindow.isMinimized()) {
-      if (videoWindow && !videoWindow.isDestroyed() && videoWindow.isVisible()) {
+      if (videoSurface && !videoSurface.isDestroyed() && videoSurface.isVisible()) {
         safeHideVideoWindow();
         safeHideUiWindow();
       }
@@ -423,7 +464,7 @@ async function createWindow() {
     }
 
     // Hide video window immediately during movement to prevent visual desync
-    if (!isRestoring && videoWindow && !videoWindow.isDestroyed() && videoWindow.isVisible()) {
+    if (!isRestoring && videoSurface && !videoSurface.isDestroyed() && videoSurface.isVisible()) {
       safeHideVideoWindow();
     }
 
@@ -444,8 +485,8 @@ async function createWindow() {
     };
 
     uiWindow.setBounds(sanitizedBounds);
-    if (videoWindow && !videoWindow.isDestroyed()) {
-      videoWindow.setBounds(sanitizedBounds);
+    if (videoSurface && !videoSurface.isDestroyed()) {
+      videoSurface.followHost(sanitizedBounds);
     }
 
     isProgrammaticResize = false;
@@ -457,7 +498,7 @@ async function createWindow() {
 
     showVideoTimeout = setTimeout(() => {
       // Re-verify state before showing: if the user minimized the app during this 250ms delay, do NOT show the video.
-      if (!isRestoring && videoWindow && !videoWindow.isDestroyed() && mainWindow && !mainWindow.isMinimized() && isVideoWindowVisible) {
+      if (!isRestoring && videoSurface && !videoSurface.isDestroyed() && mainWindow && !mainWindow.isMinimized() && isVideoWindowVisible) {
         safeShowVideoWindow();
         safeShowUiWindow(); // Ensure UI comes back with video
         setMainWindowLoadingState(false);
@@ -508,7 +549,7 @@ async function createWindow() {
 
   uiWindow.on('resize', () => {
     // If this resize was caused by code, ignore it to prevent a loop.
-    if (isProgrammaticResize || !mainWindow || !uiWindow) {
+    if (isProgrammaticResize || !mainWindow || !uiWindow || mainWindow === uiWindow) {
       return;
     }
     // Otherwise, a user resized the UI window. Force the main window to match it.
@@ -574,34 +615,38 @@ async function createWindow() {
     }
   });
 
-  mainWindow.on('minimize', () => {
-    isRestoring = true;
-    setMainWindowLoadingState(true);
-    safeHideVideoWindow();
-    safeHideUiWindow();
-  });
+  if (!SINGLE_WINDOW) {
+    // Separate video/UI windows lag behind the host during the minimize/restore
+    // animation, so they are hidden until the host has settled.
+    mainWindow.on('minimize', () => {
+      isRestoring = true;
+      setMainWindowLoadingState(true);
+      safeHideVideoWindow();
+      safeHideUiWindow();
+    });
 
-  mainWindow.on('restore', () => {
-    // Ensure video and UI remain hidden during restore animation (OS might try to restore children automatically)
-    safeHideVideoWindow();
-    safeHideUiWindow();
+    mainWindow.on('restore', () => {
+      // Ensure video and UI remain hidden during restore animation (OS might try to restore children automatically)
+      safeHideVideoWindow();
+      safeHideUiWindow();
 
-    // Tell UI to show spinner immediately (reusing the resize event logic)
-    if (uiWindow && !uiWindow.isDestroyed()) {
-      uiWindow.webContents.send('mpv:mainWindowMovedOrResized');
-    }
-
-    // Wait for OS window animation to finish
-    setTimeout(() => {
-      // Check state again after the timeout. If the user minimized in the meantime, abort.
-      if (!mainWindow || mainWindow.isMinimized()) {
-        return;
+      // Tell UI to show spinner immediately (reusing the resize event logic)
+      if (uiWindow && !uiWindow.isDestroyed()) {
+        uiWindow.webContents.send('mpv:mainWindowMovedOrResized');
       }
 
-      isRestoring = false;
-      syncWindowGeometry(); // Handles showing the video and UI properly
-    }, 250);
-  });
+      // Wait for OS window animation to finish
+      setTimeout(() => {
+        // Check state again after the timeout. If the user minimized in the meantime, abort.
+        if (!mainWindow || mainWindow.isMinimized()) {
+          return;
+        }
+
+        isRestoring = false;
+        syncWindowGeometry(); // Handles showing the video and UI properly
+      }, 250);
+    });
+  }
 
   mainWindow.on('closed', () => {
     if (manualResizeInterval) {
@@ -609,10 +654,11 @@ async function createWindow() {
     }
 
     mpvManager?.stop();
+    videoSurface?.destroy();
     yomitanManager?.destroy();
 
     // Child windows are destroyed automatically when the parent is closed, no need to close them explicitly.
-    videoWindow = null;
+    videoSurface = null;
     uiWindow = null;
     mainWindow = null;
 
@@ -623,10 +669,12 @@ async function createWindow() {
   mainWindow.on('ready-to-show', () => {
     if (uiWindow && mainWindow) {
       mainWindow.show();
-      uiWindow.showInactive();
-      updateUiWindowShape();
-      uiWindow.hide();
-      uiWindow.showInactive();
+      if (!SINGLE_WINDOW) {
+        uiWindow.showInactive();
+        updateUiWindowShape();
+        uiWindow.hide();
+        uiWindow.showInactive();
+      }
       uiWindow.webContents.send('window:maximized-state-changed', mainWindow.isMaximizable());
 
       if (!isDev) {
@@ -660,8 +708,10 @@ async function createWindow() {
     updateUiWindowShape();
   });
 
-  const draggableHostPath = path.join(__dirname, './dist/yall-mp/browser/draggable-host.html');
-  mainWindow.loadFile(draggableHostPath);
+  if (!SINGLE_WINDOW) {
+    const draggableHostPath = path.join(__dirname, './dist/yall-mp/browser/draggable-host.html');
+    mainWindow.loadFile(draggableHostPath);
+  }
 
   const indexPath = path.join(__dirname, './dist/yall-mp/browser/index.html');
   uiWindow.loadFile(indexPath);
@@ -706,6 +756,22 @@ if (!gotTheLock) {
     }
   });
 
+  // macOS delivers "Open with" / drag-onto-Dock files through this event rather
+  // than argv. It can fire before the window exists, so queue until the UI asks.
+  app.on('open-file', (event, filePath) => {
+    event.preventDefault();
+    const files = getFilesFromArgv([filePath]);
+    if (files.length === 0) {
+      return;
+    }
+    if (uiWindow && !uiWindow.isDestroyed() && uiWindow.webContents.isLoading() === false) {
+      uiWindow.webContents.send('app:open-files', files);
+      uiWindow.focus();
+    } else {
+      pendingFilesToOpen.push(...files);
+    }
+  });
+
   app.whenReady().then(async () => {
     try {
       const configStr = await fs.readFile(APP_DATA_PATH, 'utf-8');
@@ -738,7 +804,7 @@ if (!gotTheLock) {
 
     await checkSystemDependencies();
     ensureProjectsDirExists();
-    pendingFilesToOpen = getFilesFromArgv(process.argv); // Handle "Open with"
+    pendingFilesToOpen.push(...getFilesFromArgv(process.argv)); // Handle "Open with" (macOS files arrive via 'open-file' instead)
 
     ipcMain.handle('dialog:openFile', (_, options) => handleFileOpen(options));
     ipcMain.handle('subtitle:parse', (_, projectId, filePath) => handleSubtitleParse(projectId, filePath));
@@ -1296,37 +1362,31 @@ if (!gotTheLock) {
         // Ensure state is reset to hidden when recreating the viewport
         uiWindow.webContents.send('mpv:video-visibility-change', false);
       }
-      videoWindow?.close();
       mpvManager?.stop();
+      videoSurface?.destroy();
 
-      // Create a new, borderless, independent window.
-      videoWindow = new BrowserWindow({
-        frame: false,
-        show: false,
-        skipTaskbar: true,
-        transparent: true,
-        resizable: false,
-        focusable: false,
-        parent: mainWindow,
-      });
+      if (USE_NATIVE_VIDEO_SURFACE) {
+        // macOS: libmpv paints into a native view inside the UI window.
+        videoSurface = new NativeViewVideoSurface(mainWindow);
+      } else {
+        // Create a new, borderless, independent window for mpv to draw into.
+        const childSurface = new ChildWindowVideoSurface(mainWindow, (event, input) => {
+          // Failsafe listener: even though the video window is not focusable, if it somehow gets input, handle ESC.
+          if (input.key === 'Escape' && input.type === 'keyDown') {
+            event.preventDefault();
+            handleWindowEscape();
+            return;
+          }
 
-      videoWindow.setIgnoreMouseEvents(true);
+          blockDefaultBrowserShortcuts(event, input);
+        });
+        videoSurface = childSurface;
 
-      // Failsafe listener: even though focusable is false for videoWindow, if it somehow gets input, handle ESC.
-      videoWindow.webContents.on('before-input-event', (event, input) => {
-        if (input.key === 'Escape' && input.type === 'keyDown') {
-          event.preventDefault();
-          handleWindowEscape();
-          return;
-        }
+        // uiWindow is the child of the video window to always be on top and prevent stacking order issues:
+        uiWindow.setParentWindow(childSurface.window);
+      }
 
-        blockDefaultBrowserShortcuts(event, input);
-      });
-
-      // uiWindow is the child of videoWindow to always be on top and prevent stacking order issues:
-      uiWindow.setParentWindow(videoWindow);
-
-      mpvManager = new MpvManager(videoWindow);
+      mpvManager = new MpvManager(videoSurface);
       mpvManager.customMpvPath = customExecutables.mpv;
       playbackManager = new PlaybackManager(mpvManager, uiWindow);
       playbackManager.setInitialVolumeState(volume, isMuted);
@@ -1386,7 +1446,7 @@ if (!gotTheLock) {
       width: number,
       height: number
     }) => {
-      if (!videoWindow || !mainWindow || !mpvManager) {
+      if (!videoSurface || videoSurface.isDestroyed() || !mainWindow || !mpvManager) {
         console.error('[Main Process] Resize called but a window is missing!');
         return;
       }
@@ -1400,8 +1460,9 @@ if (!gotTheLock) {
           // Property unavailable, ignore and treat as null (audio-only mode)
         }
 
+        // Video rectangle relative to the window's content area; the surface
+        // translates it to screen coordinates if it is a separate window.
         let finalBounds: Electron.Rectangle;
-        const [parentX, parentY] = mainWindow.getPosition();
 
         if (videoAspectRatio && videoAspectRatio > 0) {
           // Perform the aspect ratio calculation.
@@ -1418,22 +1479,22 @@ if (!gotTheLock) {
           const offsetY = (containerRect.height - newHeight) / 2;
 
           finalBounds = {
-            x: parentX + Math.round(containerRect.x) + Math.round(offsetX),
-            y: parentY + Math.round(containerRect.y) + Math.round(offsetY),
+            x: Math.round(containerRect.x) + Math.round(offsetX),
+            y: Math.round(containerRect.y) + Math.round(offsetY),
             width: Math.round(newWidth),
             height: Math.round(newHeight),
           };
         } else {
           finalBounds = {
-            x: parentX + Math.round(containerRect.x),
-            y: parentY + Math.round(containerRect.y),
+            x: Math.round(containerRect.x),
+            y: Math.round(containerRect.y),
             width: Math.round(containerRect.width),
             height: Math.round(containerRect.height),
           };
         }
 
-        // Set the final bounds on the video window.
-        videoWindow.setBounds(finalBounds);
+        // Set the final bounds on the video surface.
+        videoSurface.setVideoBounds(finalBounds);
 
         if (!isInitialResizeComplete) {
           console.log('[Main Process] Initial resize is complete.');
@@ -1476,7 +1537,7 @@ if (!gotTheLock) {
       playbackManager = null;
 
       // Reset UI parent window
-      if (uiWindow && !uiWindow.isDestroyed() && mainWindow && !mainWindow.isDestroyed()) {
+      if (!SINGLE_WINDOW && uiWindow && !uiWindow.isDestroyed() && mainWindow && !mainWindow.isDestroyed()) {
         uiWindow.setParentWindow(mainWindow);
       }
 
@@ -1488,14 +1549,14 @@ if (!gotTheLock) {
       subtitlesLookupView = null;
 
       return new Promise<void>((resolve) => {
-        // Defer the destruction of the videoWindow to the NEXT macrotask.
+        // Defer the destruction of the video surface to the NEXT macrotask.
         // This guarantees that the re-parenting command above has been fully processed by Electron.
         setTimeout(() => {
-          if (videoWindow && !videoWindow.isDestroyed()) {
-            videoWindow.close();
+          if (videoSurface && !videoSurface.isDestroyed()) {
+            videoSurface.destroy();
           }
-          videoWindow = null;
-          console.log('[Main Process] Deferred videoWindow cleanup complete.');
+          videoSurface = null;
+          console.log('[Main Process] Deferred video surface cleanup complete.');
           resolve();
         }, 50);
       });
@@ -1681,8 +1742,15 @@ if (!gotTheLock) {
       console.log('[Main] Lookup session data cleared.');
     });
 
-    // Disable the default menu bar and its associated shortcuts
-    Menu.setApplicationMenu(null);
+    if (process.platform === 'darwin') {
+      // On macOS the standard edit shortcuts (Cmd+C/V/X/A/Z) and Cmd+Q only work
+      // through the application menu, so keep a minimal one without View/Window
+      // items that would reintroduce reload or zoom shortcuts.
+      Menu.setApplicationMenu(Menu.buildFromTemplate([{role: 'appMenu'}, {role: 'editMenu'}]));
+    } else {
+      // Disable the default menu bar and its associated shortcuts
+      Menu.setApplicationMenu(null);
+    }
 
     createWindow();
 
@@ -2950,9 +3018,8 @@ function getFilesFromArgv(argv: string[]): string[] {
 }
 
 function safeHideVideoWindow() {
-  if (videoWindow && !videoWindow.isDestroyed()) {
-    videoWindow.setOpacity(0);
-    videoWindow.hide();
+  if (videoSurface && !videoSurface.isDestroyed()) {
+    videoSurface.hide();
     if (uiWindow && !uiWindow.isDestroyed()) {
       uiWindow.webContents.send('mpv:video-visibility-change', false);
     }
@@ -2960,9 +3027,8 @@ function safeHideVideoWindow() {
 }
 
 function safeShowVideoWindow() {
-  if (videoWindow && !videoWindow.isDestroyed()) {
-    videoWindow.setOpacity(1);
-    videoWindow.showInactive();
+  if (videoSurface && !videoSurface.isDestroyed()) {
+    videoSurface.show();
     if (uiWindow && !uiWindow.isDestroyed()) {
       uiWindow.webContents.send('mpv:video-visibility-change', true);
     }
@@ -3010,42 +3076,76 @@ function setMainWindowLoadingState(isLoading: boolean) {
   });
 }
 
+/**
+ * Finds an executable the way the app will actually run it. Apps started from
+ * Finder or a desktop launcher do not inherit the shell's PATH, so Homebrew's
+ * and other common install directories are checked explicitly.
+ */
+function resolveExecutable(name: string, customPath?: string): string | null {
+  const fsLib = require('fs');
+  if (customPath && fsLib.existsSync(customPath)) {
+    return customPath;
+  }
+
+  try {
+    const resolved = require('child_process').execSync(`which ${name}`, {stdio: ['ignore', 'pipe', 'ignore']}).toString().trim();
+    if (resolved && fsLib.existsSync(resolved)) {
+      return resolved;
+    }
+  } catch (e) {
+    // Not on PATH (common for GUI apps); fall through to the known locations.
+  }
+
+  const directories = ['/opt/homebrew/bin', '/usr/local/bin', '/opt/local/bin', '/usr/bin', '/sw/bin'];
+  for (const dir of directories) {
+    const candidate = path.join(dir, name);
+    if (fsLib.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
 async function checkSystemDependencies() {
   // Only check on non-Windows platforms because Windows bundles its own binaries
   if (process.platform === 'win32') {
     return;
   }
 
-  const dependencies = [
-    {
-      name: 'mpv',
-      installCmd: process.platform === 'darwin' ? 'brew install mpv' : 'sudo apt install mpv'
-    },
-    {
-      name: 'audiowaveform',
-      installCmd: process.platform === 'darwin' ? 'brew tap bbc/audiowaveform && brew install audiowaveform' : 'See https://github.com/bbc/audiowaveform'
-    }
-  ];
-
   const missing: string[] = [];
 
-  for (const dep of dependencies) {
-    try {
-      await new Promise<void>((resolve, reject) => {
-        // Try to run with "--version" flag to see if dependency exists
-        const check = spawn(dep.name, ['--version']);
-        check.on('error', () => reject()); // Error means command not found
-        check.on('close', (code) => {
-          if (code === 0) {
-            resolve();
-          } else {
-            reject();
-          }
-        });
-      });
-    } catch (e) {
-      missing.push(`${dep.name}\n   (Install: ${dep.installCmd})`);
+  if (USE_NATIVE_VIDEO_SURFACE) {
+    // macOS plays video through libmpv loaded into the app (see native/mpv-embed).
+    const probe = probeMpvEmbed();
+    if (!probe.ok) {
+      const addonError = getMpvEmbedLoadError();
+      if (addonError) {
+        missing.push(`Y'ALL MP native video add-on\n   (${addonError.message})`);
+      } else {
+        missing.push(`libmpv (part of mpv)\n   (Install: brew install mpv)\n   ${probe.error ?? ''}`.trimEnd());
+      }
+    } else {
+      console.log(`[Main] libmpv ${probe.apiVersion} found at ${probe.path}`);
     }
+  } else {
+    const mpvPath = resolveExecutable('mpv', customExecutables.mpv);
+    const ok = mpvPath !== null && await new Promise<boolean>((resolve) => {
+      // Try to run with "--version" flag to see if dependency works
+      const check = spawn(mpvPath, ['--version']);
+      check.on('error', () => resolve(false));
+      check.on('close', (code) => resolve(code === 0));
+    });
+    if (!ok) {
+      missing.push(`mpv\n   (Install: sudo apt install mpv)`);
+    }
+  }
+
+  const audiowaveformPath = resolveExecutable('audiowaveform', customExecutables.audiowaveform);
+  if (!audiowaveformPath) {
+    const installCmd = process.platform === 'darwin'
+      ? 'brew tap bbc/audiowaveform && brew install audiowaveform'
+      : 'See https://github.com/bbc/audiowaveform';
+    missing.push(`audiowaveform\n   (Install: ${installCmd})`);
   }
 
   if (missing.length > 0) {

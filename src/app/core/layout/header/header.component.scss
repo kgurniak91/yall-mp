@@ -88,6 +88,22 @@ p-button.window-control:hover ::ng-deep button .p-button-icon {
   }
 }
 
+// macOS: the same zones that are punched through the UI window on Windows/Linux
+// (the drag handle and the empty header space right of the last filename) drag
+// the window natively. Interactive children opt out again.
+.header-wrapper.css-drag-regions {
+  .menu-wrapper,
+  .drag-handle {
+    -webkit-app-region: drag;
+  }
+
+  .menu-button-wrapper,
+  .filename,
+  .window-controls-wrapper {
+    -webkit-app-region: no-drag;
+  }
+}
+
 .menu-backdrop {
   position: fixed;
   inset: 0; // shorthand for top: 0, right: 0, bottom: 0, left: 0

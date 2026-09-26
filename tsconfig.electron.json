@@ -12,6 +12,8 @@
   "include": [
     "electron-main.ts",
     "mpv-manager.ts",
+    "mpv-embed.ts",
+    "video-surface.ts",
     "src/custom-typings.d.ts",
     "playback-manager.ts",
     "yomitan-manager.ts",

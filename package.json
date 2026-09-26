@@ -23,10 +23,11 @@
     "electron:watch:build": "npm run generate:licenses && concurrently \"ng build --watch --configuration=electron\" \"tsc --watch --project tsconfig.electron.json\"",
     "electron:watch:run": "nodemon",
     "package:win": "npm run electron:build && electron-builder --win",
-    "package:mac": "npm run electron:build && electron-builder --mac",
+    "package:mac": "npm run build:native && npm run electron:build && electron-builder --mac",
     "package:linux": "npm run electron:build && electron-builder --linux",
     "build:github-pages": "node github-pages/build.js",
-    "postinstall": "node scripts/download-dependencies.js && npm run generate:licenses"
+    "build:native": "node scripts/build-native.js",
+    "postinstall": "node scripts/download-dependencies.js && npm run generate:licenses && node scripts/build-native.js --optional"
   },
   "build": {
     "appId": "com.yall-mp.app",
@@ -42,13 +43,16 @@
       "dist/yall-mp/browser/**/*",
       "electron-main.js",
       "mpv-manager.js",
+      "mpv-embed.js",
+      "video-surface.js",
       "playback-manager.js",
       "yomitan-manager.js",
       "shared/**/*.js",
       "src/app/model/**/*.js",
       "preload.js",
       "subtitles-lookup-host-preload.js",
-      "subtitles-lookup-preload.js"
+      "subtitles-lookup-preload.js",
+      "native/mpv-embed/build/Release/*.node"
     ],
     "extraResources": [
       {
@@ -58,7 +62,8 @@
     ],
     "asarUnpack": [
       "**/node_modules/ffmpeg-static/**",
-      "**/node_modules/ffprobe-static/**"
+      "**/node_modules/ffprobe-static/**",
+      "native/mpv-embed/build/Release/*.node"
     ],
     "removePackageScripts": true,
     "win": {
@@ -134,6 +139,15 @@
       "target": "dmg",
       "icon": "build/icon.icns",
       "artifactName": "${productName} v${version}.${ext}",
+      "extraResources": [
+        {
+          "from": "mpv",
+          "to": "mpv",
+          "filter": [
+            "**/*.lua"
+          ]
+        }
+      ],
       "fileAssociations": [
         {
           "ext": [
@@ -252,6 +266,8 @@
     "lodash-es": "^4.17.21",
     "mustache": "^4.2.0",
     "ng-mocks": "^14.13.5",
+    "node-addon-api": "^8.9.2",
+    "node-gyp": "^11.5.0",
     "nodemon": "^3.1.10",
     "primeflex": "^4.0.0",
     "primeng": "^19.1.3",
