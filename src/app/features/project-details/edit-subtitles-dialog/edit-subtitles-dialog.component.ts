@@ -96,6 +96,15 @@ export class EditSubtitlesDialogComponent implements OnInit {
     this.ref.close();
   }
 
+  /**
+   * Enter inside a text box saves and closes. Without this the textarea inserts a line
+   * break; Shift+Enter still does that (the binding only matches a plain Enter).
+   */
+  protected onEnterKey(event: Event): void {
+    event.preventDefault();
+    this.save();
+  }
+
   protected save(): void {
     if (!this.formValidationService.isFormValid(this.form)) {
       return;

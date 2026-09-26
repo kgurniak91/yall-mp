@@ -1,5 +1,6 @@
 <div class="dialog-content">
-  <form [formGroup]="form">
+  <!-- Enter saves and closes; Shift+Enter keeps the browser's line break. -->
+  <form [formGroup]="form" (keydown.enter)="onEnterKey($event)">
     @if (data.type === 'srt') {
       <textarea pTextarea formControlName="text" [autoResize]="false" rows="3"></textarea>
       <app-form-control-error [control]="form.get('text')"></app-form-control-error>
@@ -56,4 +57,5 @@
               (click)="save()"
               data-primary-action/>
   </div>
+  <small class="shortcut-hint">Enter: save · Shift+Enter: line break</small>
 </div>

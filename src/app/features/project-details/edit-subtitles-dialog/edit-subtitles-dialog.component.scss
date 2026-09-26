@@ -15,3 +15,8 @@ textarea {
   justify-content: flex-end;
   gap: 1rem;
 }
+
+.shortcut-hint {
+  color: var(--app-text-secondary);
+  text-align: right;
+}
