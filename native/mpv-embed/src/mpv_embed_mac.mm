@@ -410,10 +410,13 @@ void refreshMetricsAsync(const std::shared_ptr<Session>& session)
         refreshMetricsOnMain(session);
         return;
     }
+    // Blocks capture C++ references by reference, not by value: `session` is
+    // the caller's variable and may be gone when the block runs. Copy it.
+    std::shared_ptr<Session> keep = session;
     dispatch_async(dispatch_get_main_queue(), ^{
-        refreshMetricsOnMain(session);
-        session->redrawRequested.store(true);
-        scheduleRender(session);
+        refreshMetricsOnMain(keep);
+        keep->redrawRequested.store(true);
+        scheduleRender(keep);
     });
 }
 
@@ -543,13 +546,14 @@ void renderSoftware(const std::shared_ptr<Session>& session)
     }
 
     id frame = CFBridgingRelease(image);
+    std::shared_ptr<Session> keep = session; // see refreshMetricsAsync
     dispatch_async(dispatch_get_main_queue(), ^{
-        if (!session->videoView || !session->videoView.layer) {
+        if (!keep->videoView || !keep->videoView.layer) {
             return;
         }
-        session->videoView.layer.contents = frame;
-        session->videoView.layer.contentsScale = scale;
-        session->videoView.layer.contentsGravity = kCAGravityResize;
+        keep->videoView.layer.contents = frame;
+        keep->videoView.layer.contentsScale = scale;
+        keep->videoView.layer.contentsGravity = kCAGravityResize;
     });
     session->renderedFrames.fetch_add(1);
 }
@@ -562,22 +566,23 @@ void scheduleRender(const std::shared_ptr<Session>& session)
     if (session->renderScheduled.exchange(true)) {
         return;
     }
+    std::shared_ptr<Session> keep = session; // see refreshMetricsAsync
     dispatch_async(session->renderQueue, ^{
         // Clear the flag before rendering so an update that arrives while we
         // draw schedules one more pass instead of being lost.
-        session->renderScheduled.store(false);
-        if (!session->running.load()) {
+        keep->renderScheduled.store(false);
+        if (!keep->running.load()) {
             return;
         }
-        if (session->backingChanged.exchange(false)) {
+        if (keep->backingChanged.exchange(false)) {
             // Display scale changed (window moved to another screen). Refresh
             // on main and redraw; this frame still uses the previous size.
-            refreshMetricsAsync(session);
+            refreshMetricsAsync(keep);
         }
-        if (session->renderer == Renderer::OpenGL) {
-            renderOpenGL(session);
+        if (keep->renderer == Renderer::OpenGL) {
+            renderOpenGL(keep);
         } else {
-            renderSoftware(session);
+            renderSoftware(keep);
         }
     });
 }
@@ -730,7 +735,12 @@ bool createOpenGLView(const std::shared_ptr<Session>& session)
         GLint swapInterval = 1;
         [context setValues:&swapInterval forParameter:NSOpenGLContextParameterSwapInterval];
         [session->baseView addSubview:view];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+        // NSOpenGLView attaches its context itself once it is in a window; the
+        // explicit call only makes the drawable valid immediately.
         [context setView:view];
+#pragma clang diagnostic pop
 
         session->glPixelFormat = pixelFormat;
         session->glContext = context;
