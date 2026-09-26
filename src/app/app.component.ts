@@ -28,6 +28,8 @@ import {PrimeTemplate} from 'primeng/api';
 })
 export class AppComponent implements OnInit {
   protected readonly toastService = inject(ToastService);
+  /** macOS native window chrome: the system resizes the window, so no custom edges. */
+  protected readonly nativeWindowChrome = window.electronAPI?.nativeWindowChrome === true;
   private readonly fileOpenIntentService = inject(FileOpenIntentService);
   private readonly yomitanService = inject(YomitanService);
   private isResizing = false;

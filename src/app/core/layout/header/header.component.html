@@ -1,3 +1,11 @@
+@if (nativeWindowChrome) {
+  <!-- macOS: slim title strip under the system traffic lights. Menu items are in the menu bar. -->
+  <div class="mac-title-strip">
+    <span class="mac-title" [pTooltip]="isProjectDetailsView() ? mediaFileName() : ''" tooltipPosition="bottom">
+      {{ windowTitle() }}
+    </span>
+  </div>
+} @else {
 <div class="header-wrapper" [class.css-drag-regions]="usesCssDragRegions">
   <div #menuWrapper class="menu-wrapper">
     <div class="menu-button-wrapper">
@@ -84,4 +92,5 @@
 
 @if (isMenuOpen()) {
   <div class="menu-backdrop" (click)="projectMenu.hide()"></div>
+}
 }

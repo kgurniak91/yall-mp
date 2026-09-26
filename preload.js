@@ -98,6 +98,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('mpv:managerReady', subscription);
     return () => ipcRenderer.removeListener('mpv:managerReady', subscription);
   },
+  // macOS native window chrome (see NATIVE_MAC_CHROME in electron-main.ts).
+  nativeWindowChrome: process.argv.includes('--yall-native-chrome'),
+  windowSetTitle: (title) => ipcRenderer.send('window:set-title', title),
+  onMenuAction: (callback) => {
+    const subscription = (_event, action) => callback(action);
+    ipcRenderer.on('menu:action', subscription);
+    return () => ipcRenderer.removeListener('menu:action', subscription);
+  },
   onMediaKey: (callback) => {
     const subscription = (_event, action) => callback(action);
     ipcRenderer.on('playback:media-key', subscription);

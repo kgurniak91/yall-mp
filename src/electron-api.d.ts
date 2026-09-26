@@ -6,6 +6,12 @@ import {SubtitleData} from '../shared/types/subtitle.type';
 import {MediaMetadata, MediaTrack} from '../shared/types/media.type';
 import {PlaybackStateUpdate} from '../playback-manager';
 
+export type MenuAction =
+  | 'new-project' | 'project-list' | 'edit-project' | 'delete-project'
+  | 'previous-media' | 'next-media'
+  | 'undo' | 'redo' | 'find-subtitles' | 'dictionary' | 'transform-subtitles'
+  | 'settings' | 'help';
+
 export interface FontData {
   fontFamily: string;
   dataUri: string;
@@ -98,6 +104,11 @@ export interface IElectronAPI {
   onMpvEvent: (callback: (status: any) => void) => (() => void);
   onMainWindowMovedOrResized: (callback: () => void) => (() => void);
   onMpvManagerReady: (callback: () => void) => (() => void);
+  /** True when the window uses the system title strip and menu bar (macOS). */
+  nativeWindowChrome: boolean;
+  windowSetTitle: (title: string) => void;
+  /** Items of the macOS menu bar; the header component performs them. */
+  onMenuAction: (callback: (action: MenuAction) => void) => (() => void);
   /** macOS media keys (F8 play/pause, F7/F9 previous/next) routed through mpv. */
   onMediaKey: (callback: (action: 'play-pause' | 'next' | 'previous') => void) => (() => void);
   onMpvInitialSeekComplete: (callback: () => void) => (() => void);

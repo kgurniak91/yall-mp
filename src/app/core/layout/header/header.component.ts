@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   ElementRef,
   inject,
   OnDestroy,
@@ -10,6 +11,7 @@ import {
   signal,
   viewChild
 } from '@angular/core';
+import type {MenuAction} from '../../../../electron-api';
 import {ConfirmationService, MenuItem} from 'primeng/api';
 import {NavigationEnd, NavigationStart, Router} from '@angular/router';
 import {AppStateService} from '../../../state/app/app-state.service';
@@ -45,14 +47,23 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
   // On macOS the window is dragged through CSS drag regions (see header.component.scss);
   // elsewhere the main process punches the drag zones through the UI window instead.
   protected readonly usesCssDragRegions = window.electronAPI?.platform === 'darwin';
+  /**
+   * macOS native window chrome: the header is a title strip, the window buttons are the
+   * system's, and the menu lives in the menu bar (see NATIVE_MAC_CHROME in electron-main.ts).
+   */
+  protected readonly nativeWindowChrome = window.electronAPI?.nativeWindowChrome === true;
+  protected readonly windowTitle = computed(() =>
+    this.isProjectDetailsView() ? (this.currentProject()?.mediaFileName || 'Loading media...') : "Y'ALL Media Player"
+  );
   protected readonly currentUrl = signal<string>('');
   protected readonly currentProject = computed(() => this.computeCurrentProject());
   protected readonly mediaFileName = computed(() => this.currentProject()?.mediaFileName || 'Loading media...');
   protected readonly subtitleFileName = computed(() => this.currentProject()?.subtitleFileName || 'Loading subtitles...');
   protected readonly menuItems = computed<MenuItem[]>(() => this.computeMenuItems());
   protected readonly lastFilename = viewChild<ElementRef<HTMLDivElement>>('lastFilename');
-  protected readonly menuWrapper = viewChild.required<ElementRef<HTMLDivElement>>('menuWrapper');
-  protected readonly dragHandle = viewChild.required<ElementRef<HTMLDivElement>>('dragHandle');
+  // Absent with the macOS native window chrome (see the template).
+  protected readonly menuWrapper = viewChild<ElementRef<HTMLDivElement>>('menuWrapper');
+  protected readonly dragHandle = viewChild<ElementRef<HTMLDivElement>>('dragHandle');
   private readonly router = inject(Router);
   private readonly appStateService = inject(AppStateService);
   private readonly confirmationService = inject(ConfirmationService);
@@ -62,10 +73,27 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
   private resizeDebounceTimer: any;
   private cleanupMaximizedListener: (() => void) | null = null;
   private cleanupFullScreenListener: (() => void) | null = null;
+  private cleanupMenuActionListener: (() => void) | null = null;
+
+  constructor() {
+    if (this.nativeWindowChrome) {
+      document.documentElement.classList.add('native-window-chrome');
+      effect(() => {
+        // The strip is the title bar; in native full screen it goes away with the traffic lights.
+        document.documentElement.classList.toggle('window-fullscreen', this.isFullScreen());
+      });
+      effect(() => {
+        window.electronAPI.windowSetTitle(this.windowTitle());
+      });
+    }
+  }
 
   ngOnInit() {
     this.cleanupMaximizedListener = window.electronAPI.onWindowMaximizedStateChanged((isMaximized: boolean) => this.isMaximized.set(isMaximized));
     this.cleanupFullScreenListener = window.electronAPI.onWindowFullScreenStateChanged((isFullScreen: boolean) => this.isFullScreen.set(isFullScreen));
+    if (this.nativeWindowChrome) {
+      this.cleanupMenuActionListener = window.electronAPI.onMenuAction((action) => this.performMenuAction(action));
+    }
 
     this.router.events.pipe(
       filter((event): event is NavigationStart => event instanceof NavigationStart)
@@ -90,10 +118,14 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit() {
+    const menuWrapper = this.menuWrapper();
+    if (!menuWrapper) {
+      return; // macOS native window chrome: no drag zones to report.
+    }
     this.resizeObserver = new ResizeObserver(() => {
       this.updateDraggableShapes();
     });
-    this.resizeObserver.observe(this.menuWrapper().nativeElement);
+    this.resizeObserver.observe(menuWrapper.nativeElement);
     this.updateDraggableShapes();
   }
 
@@ -105,6 +137,57 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     if (this.cleanupFullScreenListener) {
       this.cleanupFullScreenListener();
+    }
+    if (this.cleanupMenuActionListener) {
+      this.cleanupMenuActionListener();
+    }
+  }
+
+  /** The macOS menu bar's items do exactly what the header menu's items do. */
+  private performMenuAction(action: MenuAction): void {
+    const project = this.currentProject();
+    switch (action) {
+      case 'new-project':
+        this.router.navigate(['/project/new']);
+        break;
+      case 'project-list':
+        this.router.navigate(['/projects']);
+        break;
+      case 'edit-project':
+        if (project) {
+          this.router.navigate(['/project/edit', project.id]);
+        }
+        break;
+      case 'delete-project':
+        this.deleteProject();
+        break;
+      case 'previous-media':
+        this.headerCurrentProjectActionBridgeService.goToPreviousMediaFile();
+        break;
+      case 'next-media':
+        this.headerCurrentProjectActionBridgeService.goToNextMediaFile();
+        break;
+      case 'undo':
+        this.headerCurrentProjectActionBridgeService.undo();
+        break;
+      case 'redo':
+        this.headerCurrentProjectActionBridgeService.redo();
+        break;
+      case 'find-subtitles':
+        this.headerCurrentProjectActionBridgeService.searchInSubtitles();
+        break;
+      case 'dictionary':
+        this.headerCurrentProjectActionBridgeService.openDictionary();
+        break;
+      case 'transform-subtitles':
+        this.headerCurrentProjectActionBridgeService.openSubtitleOffsetDialog();
+        break;
+      case 'settings':
+        this.dialogOrchestrationService.openGlobalSettingsDialog();
+        break;
+      case 'help':
+        this.dialogOrchestrationService.openHelpDialog();
+        break;
     }
   }
 
@@ -270,7 +353,10 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
   private updateDraggableShapes(isMinimal: boolean = false) {
     clearTimeout(this.resizeDebounceTimer);
     this.resizeDebounceTimer = setTimeout(() => {
-      const dragHandleEl = this.dragHandle().nativeElement;
+      const dragHandleEl = this.dragHandle()?.nativeElement;
+      if (!dragHandleEl) {
+        return;
+      }
       const dragHandleRect = dragHandleEl.getBoundingClientRect();
 
       // Start with the permanent drag handle, which is always present

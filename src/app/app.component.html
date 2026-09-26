@@ -1,3 +1,4 @@
+@if (!nativeWindowChrome) {
 <div class="custom-resizer">
   <div class="edge top" (mousedown)="onResizeStart($event, 'n')"></div>
   <div class="edge bottom" (mousedown)="onResizeStart($event, 's')"></div>
@@ -9,6 +10,7 @@
   <div class="corner bottom-left" (mousedown)="onResizeStart($event, 'sw')"></div>
   <div class="corner bottom-right" (mousedown)="onResizeStart($event, 'se')"></div>
 </div>
+}
 
 <p-toast [position]="toastService.position()"
          hideTransitionOptions="0ms"

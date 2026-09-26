@@ -55,6 +55,18 @@ import {getMpvEmbedLoadError, isMpvEmbedPlatform, probeMpvEmbed} from './mpv-emb
 //    (mainWindow === uiWindow) and the video never needs to be hidden while moving.
 const USE_NATIVE_VIDEO_SURFACE = isMpvEmbedPlatform();
 const SINGLE_WINDOW = USE_NATIVE_VIDEO_SURFACE;
+/**
+ * macOS: native window chrome instead of the app-drawn header. The window keeps
+ * the system traffic lights, the header becomes a slim title strip with the media
+ * file name, and the header's menu items live in the menu bar. Set
+ * YALL_CLASSIC_HEADER=1 to get the app-drawn header back without rebuilding.
+ */
+const NATIVE_MAC_CHROME = process.env['YALL_CLASSIC_HEADER'] !== '1'
+  && (SINGLE_WINDOW || process.env['YALL_FORCE_NATIVE_CHROME'] === '1'); // the latter: renderer-side testing on Linux
+/** Passed to the renderer so that the header knows which chrome to draw (see preload.js). */
+const NATIVE_CHROME_RENDERER_ARGS = NATIVE_MAC_CHROME ? ['--yall-native-chrome'] : [];
+/** Height of the macOS title strip; must match --app-header-height in styles.scss. */
+const MAC_TITLE_STRIP_HEIGHT = 28;
 
 let customExecutables: { mpv?: string, ffmpeg?: string, ffprobe?: string, audiowaveform?: string } = {};
 let isFfmpegPathsInitialized = false;
@@ -156,6 +168,92 @@ async function ensureFFmpegPaths(): Promise<void> {
   } else {
     console.warn('FFmpeg or FFprobe binaries not found. Media features will be disabled.');
   }
+}
+
+/** Actions the macOS menu bar sends to the renderer (handled in header.component.ts). */
+type MenuAction =
+  | 'new-project' | 'project-list' | 'edit-project' | 'delete-project'
+  | 'previous-media' | 'next-media'
+  | 'undo' | 'redo' | 'find-subtitles' | 'dictionary' | 'transform-subtitles'
+  | 'settings' | 'help';
+
+function sendMenuAction(action: MenuAction): void {
+  if (uiWindow && !uiWindow.isDestroyed()) {
+    uiWindow.webContents.send('menu:action', action);
+  }
+}
+
+/**
+ * macOS menu bar carrying the items of the app-drawn header's menu. Only items
+ * with no existing app shortcut get an accelerator: the app handles Ctrl+Z, Ctrl+F
+ * and friends itself, and a menu accelerator would also fire while typing in a
+ * dialog. Standard roles keep the native text editing shortcuts.
+ */
+function buildMacMenuTemplate(): Electron.MenuItemConstructorOptions[] {
+  const item = (label: string, action: MenuAction, accelerator?: string): Electron.MenuItemConstructorOptions =>
+    ({label, accelerator, click: () => sendMenuAction(action)});
+
+  return [
+    {
+      label: app.name,
+      submenu: [
+        {role: 'about'},
+        {type: 'separator'},
+        item('Settings…', 'settings', 'Command+,'),
+        {type: 'separator'},
+        {role: 'services'},
+        {type: 'separator'},
+        {role: 'hide'},
+        {role: 'hideOthers'},
+        {role: 'unhide'},
+        {type: 'separator'},
+        {role: 'quit'},
+      ],
+    },
+    {
+      label: 'File',
+      submenu: [
+        item('New Project…', 'new-project', 'Command+N'),
+        item('Project List', 'project-list'),
+        item('Edit Current Project…', 'edit-project'),
+        {type: 'separator'},
+        item('Previous Media File', 'previous-media'),
+        item('Next Media File', 'next-media'),
+        {type: 'separator'},
+        item('Delete Current Project…', 'delete-project'),
+        {type: 'separator'},
+        {role: 'close'},
+      ],
+    },
+    {
+      label: 'Edit',
+      submenu: [
+        {role: 'undo'},
+        {role: 'redo'},
+        {type: 'separator'},
+        {role: 'cut'},
+        {role: 'copy'},
+        {role: 'paste'},
+        {role: 'selectAll'},
+        {type: 'separator'},
+        item('Undo Project Change', 'undo'),
+        item('Redo Project Change', 'redo'),
+        {type: 'separator'},
+        item('Find in Subtitles…', 'find-subtitles'),
+        item('Search in Dictionary…', 'dictionary'),
+        item('Transform All Subtitles…', 'transform-subtitles'),
+      ],
+    },
+    {
+      label: 'View',
+      submenu: [{role: 'togglefullscreen'}],
+    },
+    {role: 'windowMenu'},
+    {
+      role: 'help',
+      submenu: [item('Help & About', 'help')],
+    },
+  ];
 }
 
 function subtractRect(rect: Rectangle, hole: Rectangle): Rectangle[] {
@@ -383,9 +481,16 @@ async function createWindow() {
     uiWindow = new BrowserWindow({
       ...initialAppBounds,
       transparent: true,
-      frame: false,
       show: false,
-      webPreferences: uiWebPreferences,
+      ...(NATIVE_MAC_CHROME
+        ? {
+          // Titled window without a title bar: the page fills the window and macOS
+          // draws the traffic lights over its top strip (and rounds the corners).
+          titleBarStyle: 'hidden' as const,
+          trafficLightPosition: {x: 12, y: (MAC_TITLE_STRIP_HEIGHT - 12) / 2},
+        }
+        : {frame: false}),
+      webPreferences: {...uiWebPreferences, additionalArguments: NATIVE_CHROME_RENDERER_ARGS},
     });
     mainWindow = uiWindow;
     NativeViewVideoSurface.attachBackdrop(uiWindow);
@@ -413,7 +518,7 @@ async function createWindow() {
       transparent: true,
       frame: false,
       parent: mainWindow,
-      webPreferences: uiWebPreferences,
+      webPreferences: {...uiWebPreferences, additionalArguments: NATIVE_CHROME_RENDERER_ARGS},
     });
   }
 
@@ -1036,6 +1141,10 @@ if (!gotTheLock) {
 
     ipcMain.on('window:escape', () => {
       handleWindowEscape();
+    });
+
+    ipcMain.on('window:set-title', (_, title: string) => {
+      mainWindow?.setTitle(title || "Y'ALL Media Player");
     });
 
     ipcMain.on('window:close', () => {
@@ -1766,7 +1875,9 @@ if (!gotTheLock) {
       console.log('[Main] Lookup session data cleared.');
     });
 
-    if (process.platform === 'darwin') {
+    if (NATIVE_MAC_CHROME && process.platform === 'darwin') {
+      Menu.setApplicationMenu(Menu.buildFromTemplate(buildMacMenuTemplate()));
+    } else if (process.platform === 'darwin') {
       // On macOS the standard edit shortcuts (Cmd+C/V/X/A/Z) and Cmd+Q only work
       // through the application menu, so keep a minimal one. The View menu holds only
       // the full-screen item (its native action is what fn+F / Ctrl+Cmd+F trigger);

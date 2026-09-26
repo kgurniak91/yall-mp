@@ -1,5 +1,28 @@
 :host {
   height: var(--app-header-height);
+  overflow: hidden;
+}
+
+// macOS native window chrome: the strip is the window's title bar. The traffic
+// lights are drawn by the system over its left end; the whole strip drags the window.
+.mac-title-strip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 0 5rem; // keep the title clear of the traffic lights on either side
+  background-color: var(--app-bg);
+  border-bottom: 1px solid var(--app-border);
+  -webkit-app-region: drag;
+  user-select: none;
+
+  .mac-title {
+    font: 500 13px/1 -apple-system, BlinkMacSystemFont, var(--app-font-family), sans-serif;
+    color: var(--app-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 
 .header-wrapper {

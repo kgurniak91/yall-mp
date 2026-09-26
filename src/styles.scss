@@ -18,6 +18,17 @@
 
 :root {
   --app-header-height: 2.5rem;
+}
+
+// macOS native window chrome (class set by HeaderComponent): the header is a 28 px
+// title strip (see MAC_TITLE_STRIP_HEIGHT in electron-main.ts) and disappears in
+// native full screen together with the traffic lights.
+html.native-window-chrome {
+  --app-header-height: 28px;
+
+  &.window-fullscreen {
+    --app-header-height: 0px;
+  }
   --app-bg: #1e1e1e;
   --app-surface-dark: #242424;
   --app-surface: #2a2a2a;
