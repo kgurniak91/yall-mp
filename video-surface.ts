@@ -36,12 +36,6 @@ export interface EmbeddedMpvInfo {
 export interface VideoSurface extends MpvHost {
   readonly kind: VideoSurfaceKind;
 
-  /**
-   * True when the surface is a separate OS window that lags behind the host
-   * window during moves/resizes and therefore has to be hidden meanwhile.
-   */
-  readonly hidesDuringHostMove: boolean;
-
   /** Video rectangle in DIPs, relative to the host window's content area. */
   setVideoBounds(rect: Rectangle): void;
 
@@ -63,7 +57,6 @@ export interface VideoSurface extends MpvHost {
 
 export class ChildWindowVideoSurface implements VideoSurface {
   public readonly kind: VideoSurfaceKind = 'child-window';
-  public readonly hidesDuringHostMove = true;
   public readonly window: BrowserWindow;
 
   constructor(private readonly host: BrowserWindow, onBeforeInput: (event: Electron.Event, input: Electron.Input) => void) {
@@ -141,7 +134,6 @@ export class ChildWindowVideoSurface implements VideoSurface {
 
 export class NativeViewVideoSurface implements VideoSurface {
   public readonly kind: VideoSurfaceKind = 'native-view';
-  public readonly hidesDuringHostMove = false;
 
   private readonly embed: MpvEmbedBinding;
   private sessionId: number | null = null;

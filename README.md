@@ -43,7 +43,7 @@ Because this application relies on complex window management (transparent UI ove
 |:------------|:-------------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Windows** | ✅&nbsp;**Stable**        | Fully supported. Recommended experience.                                                                                                                                |
 | **Linux**   | 🧪&nbsp;**Experimental** | **Known Issues:** Window stacking (Z-order) bugs on certain Window Managers (e.g., Lubuntu/LXQt, some Wayland compositors). The video may obscure the UI or vice-versa. |
-| **macOS**   | 🧪&nbsp;**Experimental** | **Untested:** Requires manual terminal commands to run (see installation instructions). Stacking issues may occur.                                                      |
+| **macOS**   | 🧪&nbsp;**Experimental** | Uses a different video path than Windows/Linux: mpv has no `--wid` support on macOS, so libmpv is loaded into the app and paints into a native view underneath the UI (no window stacking). Tested on macOS 26 (Apple silicon). Requires Homebrew's `mpv` and a terminal command to run (see installation instructions). |
 
 ### 🤝 Call for Contributors
 
@@ -140,12 +140,14 @@ sudo chmod +x ./<filename>.AppImage
 
 ### 🍎 macOS
 
-1. **Install mpv:**
+1. **Install mpv** (the package also contains `libmpv`, which the app loads directly):
    See official instructions: [https://mpv.io/installation/](https://mpv.io/installation/)
 
 ```bash
 brew install mpv
 ```
+
+> The app looks for `libmpv.2.dylib` in `/opt/homebrew/lib` (Apple silicon), `/usr/local/lib` (Intel) and `/opt/local/lib` (MacPorts). Another location can be given with the `YALL_LIBMPV_PATH` environment variable. mpv 0.40 or newer is recommended.
 
 2. **Install audiowaveform:**
    [https://github.com/bbc/audiowaveform/releases](https://github.com/bbc/audiowaveform/releases)
@@ -166,13 +168,13 @@ Visit the [main page](https://yallmp.com) or [release list](https://github.com/k
 ### macOS Users (Important)
 This application is not code-signed (which requires a paid Apple Developer account). To run it, you must remove the quarantine attribute after dragging the app to your Applications folder:
 
-1.  Drag `<filename>.dmg` to your **Applications** folder.
+1.  Open `<filename>.dmg` and drag **Y'ALL Media Player.app** to your **Applications** folder.
 2.  Open **Terminal**.
 3.  Run:
     ```bash
-    xattr -cr "/Applications/<filename>.dmg"
+    xattr -cr "/Applications/Y'ALL Media Player.app"
     ```
-4.  Launch the app.
+4.  Launch the app. It needs Homebrew's `mpv` and `audiowaveform` (see [System Requirements](#system-requirements)); if they are missing, the app says so at startup.
 
 ---
 
@@ -182,6 +184,7 @@ This application is not code-signed (which requires a paid Apple Developer accou
 *   **Node.js** (v22+ recommended)
 *   **npm**
 *   **System Dependencies:** Ensure you have installed the requirements listed in the [System Requirements](#system-requirements) section above.
+*   **macOS only:** the Xcode Command Line Tools (`xcode-select --install`). `npm install` compiles the small native add-on in `native/mpv-embed` that embeds libmpv; see [native/mpv-embed/README.md](native/mpv-embed/README.md). It can be rebuilt with `npm run build:native`.
 
 ### Setup
 
@@ -221,6 +224,12 @@ To run in development mode with hot-reloading (Angular + Electron):
     npm run electron:watch:run -- --no-sandbox
     ```
 
+    On macOS:
+
+    ```bash
+    npm run electron:watch:run
+    ```
+
 ### Testing
 
 *   **Angular Tests (Karma):** `npm run test:angular`
@@ -248,6 +257,7 @@ The output files will be located in the `dist_electron` folder.
 
 **Media & Processing**
 *   **[Node-MPV](https://github.com/j-holub/Node-MPV):** Node.js wrapper for controlling the MPV player instance via IPC.
+*   **[libmpv](https://mpv.io/) (macOS):** loaded into the app by the `native/mpv-embed` add-on and rendered through the mpv render API, because macOS has no `--wid` window embedding.
 *   **[Audiowaveform](https://github.com/bbc/audiowaveform):** C++ program used to generate waveform JSON data from audio streams.
 *   **[FFmpeg Static](https://www.npmjs.com/package/ffmpeg-static):** Bundled FFmpeg binary for extracting audio/video clips for Anki export.
 
