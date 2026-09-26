@@ -225,7 +225,7 @@ export interface ExecutableInUse {
   path: string | null;
   version: string | null;
   /** ffmpeg only */
-  hardwareEncoder?: boolean;
+  hardwareDecoder?: boolean;
   av1Decoder?: 'dav1d' | 'libaom' | 'none';
   /** macOS: Homebrew's build is not installed (the bundled one is in use). */
   homebrewMissing?: boolean;
@@ -286,7 +286,7 @@ async function describeExecutablesInUse(): Promise<Record<string, ExecutableInUs
       child.on('close', () => resolve(out));
       child.on('error', () => resolve(''));
     });
-    result['customFfmpegPath'].hardwareEncoder = caps.hevcVideoToolbox;
+    result['customFfmpegPath'].hardwareDecoder = caps.videoToolboxDecode;
     result['customFfmpegPath'].av1Decoder = /^\s*V[^\s]*\s+libdav1d\s/m.test(decoders) ? 'dav1d'
       : (/^\s*V[^\s]*\s+libaom-av1\s/m.test(decoders) ? 'libaom' : 'none');
     result['customFfmpegPath'].homebrewMissing = process.platform === 'darwin'
@@ -2201,7 +2201,8 @@ async function handleAnkiBatchExport(request: AnkiBatchExportRequest) {
   }
 
   const {subtitleData, mediaPath, exportTime, hint, notes, suspend, targets, audioTrackIndex} = request;
-  const videoQuality = Math.min(100, Math.max(1, Math.round(request.videoQuality ?? VIDEO_CLIP_VT_QUALITY)));
+  const videoQuality = Math.min(100, Math.max(1, Math.round(request.videoQuality ?? VIDEO_CLIP_QUALITY)));
+  const videoCrf = qualityToVp9Crf(videoQuality);
   const videoMaxHeight = Math.max(240, Math.round(request.videoMaxHeight ?? VIDEO_CLIP_MAX_HEIGHT));
   const tempDir = os.tmpdir();
   const uniqueBatchId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -2316,44 +2317,34 @@ async function handleAnkiBatchExport(request: AnkiBatchExportRequest) {
       }
 
       if (requiredMediaTypes.has('video')) {
-        const useHardwareEncoder = caps.hevcVideoToolbox;
-        const videoPath = path.join(tempDir, `${uniqueBatchId}.${useHardwareEncoder ? 'mp4' : 'webm'}`);
+        // WebM/VP9 + Opus: the one combination every Anki player handles. Anki desktop shows
+        // <video> through Qt WebEngine, which ships only the royalty-free codecs (no H.264,
+        // HEVC or AAC), and AnkiMobile/AnkiDroid play VP9 too. There is no VP9 hardware
+        // encoder on any Mac, so libvpx runs on all cores in its realtime mode, which at a
+        // lower CRF matches the slow "good" mode's quality in a fraction of the time
+        // (measured: SSIM 0.9969 vs 0.9970, 2.1 s vs 11.6 s for 5 s of 1080p on 2 cores).
+        const videoPath = path.join(tempDir, `${uniqueBatchId}.webm`);
         generatedFiles.push(videoPath);
         jobs.push(timed('video', async () => {
           const videoArgs = [...clipInputArgs()];
           if (audioTrackIndex != null) {
             videoArgs.push('-map', '0:v:0', '-map', `0:${audioTrackIndex}`);
           }
-          if (useHardwareEncoder) {
-            // macOS: the chip's video encoder. Near-instant, so the clip keeps the source
-            // resolution up to 1080p at a high constant quality (see VIDEO_CLIP_MAX_HEIGHT /
-            // VIDEO_CLIP_VT_QUALITY). MP4/HEVC plays on Anki desktop, AnkiMobile and AnkiDroid.
-            videoArgs.push(
-              '-c:v', 'hevc_videotoolbox',
-              '-q:v', String(videoQuality),             // constant quality, 1-100 (Global settings -> Anki)
-              '-tag:v', 'hvc1',                         // the HEVC tag Apple players expect
-              '-pix_fmt', 'yuv420p',                    // 8-bit for compatibility (10-bit sources are converted)
-              '-vf', `scale=w=-2:h=min(${videoMaxHeight}\\,ih-mod(ih\\,2))`, // \\, keeps the commas inside min()
-              '-c:a', caps.aacAudioToolbox ? 'aac_at' : 'aac',
-              '-b:a', '192k',
-              '-af', audioFilter,                       // Downmix to stereo, then normalize loudness
-              '-movflags', '+faststart',
-            );
-          } else {
-            videoArgs.push(
-              '-c:v', 'libvpx-vp9',                     // VP9 video codec
-              '-crf', '32',                             // Constant Rate Factor for VP9
-              '-b:v', '0',                              // Must be 0 when using CRF
-              '-deadline', 'realtime',                  // Fastest encoder mode: several times faster than the default
-              '-cpu-used', '8',                         //   at a slightly larger file, which does not matter for a card
-              '-row-mt', '1',                           // Use all cores
-              '-vf', 'scale=-2:480',                    // Scale to 480p height to keep size down
-              '-c:a', 'libopus',                        // Opus audio codec
-              '-af', audioFilter,                       // Downmix surround to stereo (libopus rejects 5.1(side) without a mapping family), then normalize loudness
-              '-b:a', '96k',                            // Audio bitrate
-            );
-          }
-          videoArgs.push(videoPath);
+          videoArgs.push(
+            '-c:v', 'libvpx-vp9',                     // VP9 video codec
+            '-crf', String(videoCrf),                 // constant quality from the Quality setting (Global settings -> Anki)
+            '-b:v', '0',                              // Must be 0 when using CRF
+            '-deadline', 'realtime',                  // Fast encoder mode (see above)
+            '-cpu-used', '6',
+            '-row-mt', '1',                           // Use all cores
+            '-tile-columns', '2',
+            '-pix_fmt', 'yuv420p',                    // 8-bit for compatibility (10-bit sources are converted)
+            '-vf', `scale=w=-2:h=min(${videoMaxHeight}\\,ih-mod(ih\\,2))`, // \\, keeps the commas inside min(); keeps the source resolution up to the Maximum resolution setting
+            '-c:a', 'libopus',                        // Opus audio codec
+            '-af', audioFilter,                       // Downmix surround to stereo (libopus rejects 5.1(side) without a mapping family), then normalize loudness
+            '-b:a', '128k',                           // Audio bitrate
+            videoPath
+          );
           await runFFmpeg(videoArgs);
           timings.push(`video file ${await fileSizeMb(videoPath)}`);
           const storedName = await storeMediaFileInAnki(videoPath);
@@ -2481,14 +2472,17 @@ async function handleAnkiBatchExport(request: AnkiBatchExportRequest) {
   };
 }
 
-/** Video cards on macOS, defaults when the request carries no setting (Global settings -> Anki). */
+/** Video cards, defaults when the request carries no setting (Global settings -> Anki). */
 const VIDEO_CLIP_MAX_HEIGHT = 1080;  // source resolution up to this height (1080 = Full HD)
-const VIDEO_CLIP_VT_QUALITY = 70;    // VideoToolbox HEVC constant quality, 1 (worst) to 100 (best)
+const VIDEO_CLIP_QUALITY = 70;       // quality 1 (worst) to 100 (best); 70 -> VP9 CRF 26
+
+/** Quality 1-100 -> VP9 CRF 63 (worst) .. 10 (best); 70 -> 26, 50 -> 37, 90 -> 15. */
+function qualityToVp9Crf(quality: number): number {
+  return Math.round(63 - 53 * (quality - 1) / 99);
+}
 
 interface FfmpegCapabilities {
-  hevcVideoToolbox: boolean;   // hardware HEVC encoder (macOS)
   videoToolboxDecode: boolean; // hardware decoding (macOS)
-  aacAudioToolbox: boolean;    // Apple's AAC encoder
   svtAv1: boolean;             // fast AV1 software encoder
 }
 
@@ -2508,11 +2502,8 @@ async function getFfmpegCapabilities(): Promise<FfmpegCapabilities> {
   });
   const [encoders, hwaccels] = await Promise.all([run(['-encoders']), run(['-hwaccels'])]);
   const hasEncoder = (name: string) => new RegExp(`^\\s*[VAS][^\\s]*\\s+${name}\\s`, 'm').test(encoders);
-  const onMac = process.platform === 'darwin';
   ffmpegCapabilities = {
-    hevcVideoToolbox: onMac && hasEncoder('hevc_videotoolbox'),
-    videoToolboxDecode: onMac && /^\s*videotoolbox\s*$/m.test(hwaccels),
-    aacAudioToolbox: onMac && hasEncoder('aac_at'),
+    videoToolboxDecode: process.platform === 'darwin' && /^\s*videotoolbox\s*$/m.test(hwaccels),
     svtAv1: hasEncoder('libsvtav1'),
   };
   console.log('[Anki] ffmpeg capabilities:', JSON.stringify(ffmpegCapabilities));

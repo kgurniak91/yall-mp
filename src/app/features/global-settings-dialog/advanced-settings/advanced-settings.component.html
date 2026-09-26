@@ -34,7 +34,7 @@
             @if (inUse.path) {
               In use: <code>{{ inUse.path }}</code>@if (inUse.version) {, version {{ inUse.version }}}
               @if (exe.key === 'customFfmpegPath') {
-                · hardware video encoder: <b>{{ inUse.hardwareEncoder ? 'yes' : 'no' }}</b>
+                · hardware video decoder: <b>{{ inUse.hardwareDecoder ? 'yes' : 'no' }}</b>
                 · AV1 decoder: <b>{{ inUse.av1Decoder === 'dav1d' ? 'dav1d (fast)' : inUse.av1Decoder === 'libaom' ? 'libaom (slow)' : 'none' }}</b>
               }
             } @else {

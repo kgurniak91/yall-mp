@@ -59,8 +59,8 @@ export interface GlobalSettings {
   subtitleLookupBrowserType: SubtitleLookupBrowserType;
   ankiSuspendNewCardsByDefault: boolean;
   ankiInstantExport: boolean;
-  ankiVideoQuality: number;      // Video card quality when the hardware (VideoToolbox) encoder is used: 1-100
-  ankiVideoMaxHeight: number;    // Video card resolution cap in pixels of height (e.g. 1080), hardware path only
+  ankiVideoQuality: number;      // Video card quality 1-100 (mapped to the VP9 CRF)
+  ankiVideoMaxHeight: number;    // Video card resolution cap in pixels of height (e.g. 1080)
   generateAudioPeaks: boolean;
   timelineHeightPx: number; // Height of the timeline strip; adjustable by dragging its top edge
   swapNavigationShortcuts: boolean;
