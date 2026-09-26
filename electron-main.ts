@@ -151,6 +151,21 @@ async function ensureFFmpegPaths(): Promise<void> {
   ffmpegPath = customExecutables.ffmpeg && fsLib.existsSync(customExecutables.ffmpeg) ? customExecutables.ffmpeg : '';
   ffprobePath = customExecutables.ffprobe && fsLib.existsSync(customExecutables.ffprobe) ? customExecutables.ffprobe : '';
 
+  if (process.platform === 'darwin') {
+    // Prefer Homebrew's ffmpeg when installed: it is newer than the bundled 6.0 build and
+    // includes dav1d, the fast multi-core AV1 decoder (the bundled build decodes AV1 with
+    // libaom, several times slower). A custom path in the settings still wins.
+    const brewFfmpeg = ['/opt/homebrew/bin/ffmpeg', '/usr/local/bin/ffmpeg'].find(p => fsLib.existsSync(p));
+    const brewFfprobe = ['/opt/homebrew/bin/ffprobe', '/usr/local/bin/ffprobe'].find(p => fsLib.existsSync(p));
+    if (!ffmpegPath && brewFfmpeg) {
+      ffmpegPath = brewFfmpeg;
+      console.log(`[FFmpeg] Using Homebrew ffmpeg: ${brewFfmpeg}`);
+    }
+    if (!ffprobePath && brewFfprobe) {
+      ffprobePath = brewFfprobe;
+    }
+  }
+
   if (!ffmpegPath) {
     const ffmpegStatic = (await import('ffmpeg-static')).default;
     if (ffmpegStatic) {
@@ -2149,135 +2164,160 @@ async function handleAnkiBatchExport(request: AnkiBatchExportRequest) {
   }
 
   try {
+    const caps = await getFfmpegCapabilities();
+    const clipInputArgs = (): string[] => {
+      const args: string[] = [];
+      if (caps.videoToolboxDecode) {
+        // Hardware decoding for H.264/HEVC/ProRes sources; ffmpeg falls back to software
+        // by itself for codecs the hardware path does not cover (AV1 on this ffmpeg).
+        args.push('-hwaccel', 'videotoolbox');
+      }
+      args.push('-ss', subtitleData.startTime.toString(), '-to', subtitleData.endTime.toString(), '-i', mediaPath);
+      return args;
+    };
+    const audioMapArgs = audioTrackIndex != null ? ['-map', `0:${audioTrackIndex}`] : [];
+    const timings: string[] = [];
+    const timed = async <T>(label: string, job: () => Promise<T>): Promise<T> => {
+      const startedAt = Date.now();
+      const result = await job();
+      timings.push(`${label} ${((Date.now() - startedAt) / 1000).toFixed(2)} s`);
+      return result;
+    };
+    const fileSizeMb = async (filePath: string): Promise<string> => {
+      const {size} = await fs.stat(filePath).catch(() => ({size: 0}));
+      return `${(size / 1048576).toFixed(1)} MB`;
+    };
+
     // Audio and video clips share one loudness measurement (same clip, same track).
     let audioFilter = buildLoudnormApplyFilter(null);
     if (requiredMediaTypes.has('audio') || (hasRealVideoStream && requiredMediaTypes.has('video'))) {
-      const clipAudioArgs = [
-        '-ss', subtitleData.startTime.toString(),
-        '-to', subtitleData.endTime.toString(),
-        '-i', mediaPath,
-      ];
-      if (audioTrackIndex != null) {
-        clipAudioArgs.push('-map', `0:${audioTrackIndex}`);
-      }
-      audioFilter = buildLoudnormApplyFilter(await measureClipLoudness(clipAudioArgs));
+      const clipAudioArgs = ['-ss', subtitleData.startTime.toString(), '-to', subtitleData.endTime.toString(), '-i', mediaPath, ...audioMapArgs];
+      audioFilter = buildLoudnormApplyFilter(await timed('measure', () => measureClipLoudness(clipAudioArgs)));
     }
+
+    // The media files are independent of each other: produce them at the same time.
+    const jobs: Promise<void>[] = [];
 
     if (requiredMediaTypes.has('audio')) {
       const audioPath = path.join(tempDir, `${uniqueBatchId}.mp3`);
       generatedFiles.push(audioPath);
-
-      const audioArgs = [
-        '-ss', subtitleData.startTime.toString(), // Start time
-        '-to', subtitleData.endTime.toString(),   // End time
-        '-i', mediaPath                           // Input file
-      ];
-
-      if (audioTrackIndex != null) {
-        audioArgs.push(
-          '-map', `0:${audioTrackIndex}`          // Audio track index
-        );
-      }
-
-      audioArgs.push(
-        '-vn',                                    // No video
-        '-acodec', 'libmp3lame',                  // Use MP3 codec
-        '-af', audioFilter,                       // Downmix surround (5.1 etc.) to stereo, then normalize loudness
-        '-q:a', '2',                              // Audio quality (VBR)
-        audioPath
-      );
-
-      await runFFmpeg(audioArgs);
-
-      const storedName = await storeMediaFileInAnki(audioPath);
-      if (storedName) {
-        mediaCache.set('audio', `[sound:${storedName}]`);
-      }
+      jobs.push(timed('audio', async () => {
+        await runFFmpeg([
+          '-ss', subtitleData.startTime.toString(), '-to', subtitleData.endTime.toString(), '-i', mediaPath,
+          ...audioMapArgs,
+          '-vn',                                    // No video
+          '-acodec', 'libmp3lame',                  // Use MP3 codec
+          '-af', audioFilter,                       // Downmix surround (5.1 etc.) to stereo, then normalize loudness
+          '-q:a', '2',                              // Audio quality (VBR)
+          audioPath
+        ]);
+        const storedName = await storeMediaFileInAnki(audioPath);
+        if (storedName) {
+          mediaCache.set('audio', `[sound:${storedName}]`);
+        }
+      }));
     }
 
     if (hasRealVideoStream) {
       if (requiredMediaTypes.has('screenshot')) {
         const imagePath = path.join(tempDir, `${uniqueBatchId}.jpg`);
         generatedFiles.push(imagePath);
-
-        const imageArgs = [
-          '-ss', exportTime.toString(), // Go to the start time of the clip
-          '-i', mediaPath,              // Input file
-          '-vframes', '1',              // Take just one frame
-          '-q:v', '2',                  // Image quality
-          imagePath
-        ];
-
-        await runFFmpeg(imageArgs);
-
-        const storedName = await storeMediaFileInAnki(imagePath);
-        if (storedName) {
-          mediaCache.set('screenshot', `<img src="${storedName}">`);
-        }
+        jobs.push(timed('screenshot', async () => {
+          await runFFmpeg([
+            ...(caps.videoToolboxDecode ? ['-hwaccel', 'videotoolbox'] : []),
+            '-ss', exportTime.toString(), // Go to the start time of the clip
+            '-i', mediaPath,              // Input file
+            '-vframes', '1',              // Take just one frame
+            '-q:v', '2',                  // Image quality
+            imagePath
+          ]);
+          const storedName = await storeMediaFileInAnki(imagePath);
+          if (storedName) {
+            mediaCache.set('screenshot', `<img src="${storedName}">`);
+          }
+        }));
       }
 
       if (requiredMediaTypes.has('video')) {
-        const videoPath = path.join(tempDir, `${uniqueBatchId}.webm`);
+        const useHardwareEncoder = caps.hevcVideoToolbox;
+        const videoPath = path.join(tempDir, `${uniqueBatchId}.${useHardwareEncoder ? 'mp4' : 'webm'}`);
         generatedFiles.push(videoPath);
-
-        const videoArgs = [
-          '-ss', subtitleData.startTime.toString(), // Start time
-          '-to', subtitleData.endTime.toString(),   // End time
-          '-i', mediaPath,                          // Input file
-        ];
-
-        if (audioTrackIndex != null) {
-          videoArgs.push(
-            '-map', '0:v:0',                        // Video track index
-            '-map', `0:${audioTrackIndex}`          // Audio track index
-          );
-        }
-
-        videoArgs.push(
-          '-c:v', 'libvpx-vp9',                     // VP9 video codec
-          '-crf', '32',                             // Constant Rate Factor for VP9
-          '-b:v', '0',                              // Must be 0 when using CRF
-          '-vf', 'scale=-2:480',                    // Scale to 480p height to keep size down
-          '-c:a', 'libopus',                        // Opus audio codec
-          '-af', audioFilter,                       // Downmix surround to stereo (libopus rejects 5.1(side) without a mapping family), then normalize loudness
-          '-b:a', '96k',                            // Audio bitrate
-          videoPath
-        );
-
-        await runFFmpeg(videoArgs);
-
-        const storedName = await storeMediaFileInAnki(videoPath);
-        if (storedName) {
-          mediaCache.set('video', `<video controls playsinline autoplay src="${storedName}"></video>`);
-        }
+        jobs.push(timed('video', async () => {
+          const videoArgs = [...clipInputArgs()];
+          if (audioTrackIndex != null) {
+            videoArgs.push('-map', '0:v:0', '-map', `0:${audioTrackIndex}`);
+          }
+          if (useHardwareEncoder) {
+            // macOS: the chip's video encoder. Near-instant, so the clip keeps the source
+            // resolution up to 1080p at a high constant quality (see VIDEO_CLIP_MAX_HEIGHT /
+            // VIDEO_CLIP_VT_QUALITY). MP4/HEVC plays on Anki desktop, AnkiMobile and AnkiDroid.
+            videoArgs.push(
+              '-c:v', 'hevc_videotoolbox',
+              '-q:v', String(VIDEO_CLIP_VT_QUALITY),   // constant quality, 1-100
+              '-tag:v', 'hvc1',                         // the HEVC tag Apple players expect
+              '-pix_fmt', 'yuv420p',                    // 8-bit for compatibility (10-bit sources are converted)
+              '-vf', `scale=w=-2:h=min(${VIDEO_CLIP_MAX_HEIGHT}\,ih-mod(ih\,2))`,
+              '-c:a', caps.aacAudioToolbox ? 'aac_at' : 'aac',
+              '-b:a', '192k',
+              '-af', audioFilter,                       // Downmix to stereo, then normalize loudness
+              '-movflags', '+faststart',
+            );
+          } else {
+            videoArgs.push(
+              '-c:v', 'libvpx-vp9',                     // VP9 video codec
+              '-crf', '32',                             // Constant Rate Factor for VP9
+              '-b:v', '0',                              // Must be 0 when using CRF
+              '-deadline', 'realtime',                  // Fastest encoder mode: several times faster than the default
+              '-cpu-used', '8',                         //   at a slightly larger file, which does not matter for a card
+              '-row-mt', '1',                           // Use all cores
+              '-vf', 'scale=-2:480',                    // Scale to 480p height to keep size down
+              '-c:a', 'libopus',                        // Opus audio codec
+              '-af', audioFilter,                       // Downmix surround to stereo (libopus rejects 5.1(side) without a mapping family), then normalize loudness
+              '-b:a', '96k',                            // Audio bitrate
+            );
+          }
+          videoArgs.push(videoPath);
+          await runFFmpeg(videoArgs);
+          timings.push(`video file ${await fileSizeMb(videoPath)}`);
+          const storedName = await storeMediaFileInAnki(videoPath);
+          if (storedName) {
+            mediaCache.set('video', `<video controls playsinline autoplay src="${storedName}"></video>`);
+          }
+        }));
       }
 
       if (requiredMediaTypes.has('animation')) {
         const avifPath = path.join(tempDir, `${uniqueBatchId}.avif`);
         generatedFiles.push(avifPath);
-
-        const avifArgs = [
-          '-ss', subtitleData.startTime.toString(),
-          '-to', subtitleData.endTime.toString(),
-          '-i', mediaPath,
-          '-vf', 'scale=-2:480,fps=15', // Resize to 480p height and reduce framerate to keep the file size small
-          '-c:v', 'libaom-av1',         // AV1 video codec
-          '-crf', '35',                 // Constant Rate Factor for AV1
-          '-b:v', '0',                  // Must be 0 when using CRF
-          '-cpu-used', '8',             // Maximum speed in the range of 0-8 (8 is fastest - crucial for UX as AV1 is slow)
-          '-row-mt', '1',               // Enable row-based multi-threading to utilize all CPU cores
-          '-an',                        // No audio
-          avifPath
-        ];
-
-        await runFFmpeg(avifArgs);
-
-        const storedName = await storeMediaFileInAnki(avifPath);
-        if (storedName) {
-          mediaCache.set('animation', `<img src="${storedName}">`);
-        }
+        jobs.push(timed('animation', async () => {
+          const avifArgs = [
+            ...clipInputArgs(),
+            '-vf', 'scale=-2:480,fps=15', // Resize to 480p height and reduce framerate to keep the file size small
+          ];
+          if (caps.svtAv1) {
+            // SVT-AV1 is several times faster than libaom at this size.
+            avifArgs.push('-c:v', 'libsvtav1', '-preset', '10', '-crf', '35');
+          } else {
+            avifArgs.push(
+              '-c:v', 'libaom-av1',         // AV1 video codec
+              '-crf', '35',                 // Constant Rate Factor for AV1
+              '-b:v', '0',                  // Must be 0 when using CRF
+              '-cpu-used', '8',             // Maximum speed in the range of 0-8 (8 is fastest - crucial for UX as AV1 is slow)
+              '-row-mt', '1',               // Enable row-based multi-threading to utilize all CPU cores
+            );
+          }
+          avifArgs.push('-an', avifPath);   // No audio
+          await runFFmpeg(avifArgs);
+          const storedName = await storeMediaFileInAnki(avifPath);
+          if (storedName) {
+            mediaCache.set('animation', `<img src="${storedName}">`);
+          }
+        }));
       }
     }
+
+    await Promise.all(jobs);
+    console.log(`[Anki] media for "${subtitleData.id}": ${timings.join(' | ')}`);
   } catch (error: any) {
     console.error('Anki media generation failed:', error);
     // Cleanup files that might have been created before failure
@@ -2364,6 +2404,45 @@ async function handleAnkiBatchExport(request: AnkiBatchExportRequest) {
   };
 }
 
+/** Video cards on macOS: source resolution up to this height (1080 = Full HD). */
+const VIDEO_CLIP_MAX_HEIGHT = 1080;
+/** VideoToolbox HEVC constant quality, 1 (worst) to 100 (best); ~70 is a high setting. */
+const VIDEO_CLIP_VT_QUALITY = 70;
+
+interface FfmpegCapabilities {
+  hevcVideoToolbox: boolean;   // hardware HEVC encoder (macOS)
+  videoToolboxDecode: boolean; // hardware decoding (macOS)
+  aacAudioToolbox: boolean;    // Apple's AAC encoder
+  svtAv1: boolean;             // fast AV1 software encoder
+}
+
+let ffmpegCapabilities: FfmpegCapabilities | null = null;
+
+/** What the ffmpeg in use can do, probed once (`ffmpeg -encoders`, `ffmpeg -hwaccels`). */
+async function getFfmpegCapabilities(): Promise<FfmpegCapabilities> {
+  if (ffmpegCapabilities) {
+    return ffmpegCapabilities;
+  }
+  const run = (args: string[]): Promise<string> => new Promise((resolve) => {
+    const child = spawn(ffmpegPath, ['-hide_banner', ...args]);
+    let out = '';
+    child.stdout.on('data', (d) => out += d.toString());
+    child.on('close', () => resolve(out));
+    child.on('error', () => resolve(''));
+  });
+  const [encoders, hwaccels] = await Promise.all([run(['-encoders']), run(['-hwaccels'])]);
+  const hasEncoder = (name: string) => new RegExp(`^\\s*[VAS][^\\s]*\\s+${name}\\s`, 'm').test(encoders);
+  const onMac = process.platform === 'darwin';
+  ffmpegCapabilities = {
+    hevcVideoToolbox: onMac && hasEncoder('hevc_videotoolbox'),
+    videoToolboxDecode: onMac && /^\s*videotoolbox\s*$/m.test(hwaccels),
+    aacAudioToolbox: onMac && hasEncoder('aac_at'),
+    svtAv1: hasEncoder('libsvtav1'),
+  };
+  console.log('[Anki] ffmpeg capabilities:', JSON.stringify(ffmpegCapabilities));
+  return ffmpegCapabilities;
+}
+
 /**
  * Measurement pass for loudness normalization: decodes the clip's audio once
  * without writing a file. Returns null (no normalization) when it fails or the
@@ -2387,6 +2466,15 @@ async function measureClipLoudness(inputArgs: string[]): Promise<LoudnormMeasure
 function runFFmpeg(args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
     const process = spawn(ffmpegPath, args);
+
+    // Below-normal priority: when the player and an export both want the CPU, playback wins.
+    try {
+      if (process.pid) {
+        os.setPriority(process.pid, 10);
+      }
+    } catch {
+      // Not critical.
+    }
 
     let errorOutput = '';
     process.stderr.on('data', (data) => {
