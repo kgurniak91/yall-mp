@@ -284,32 +284,11 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
       audioTrackIndex: project.settings.selectedAudioTrackIndex
     };
 
-    try {
-      const result = await window.electronAPI.exportAnkiCardBatch(batchRequest);
-
-      if (result.successCount > 0) {
-        const countText = (result.successCount === 1) ? 'card' : 'cards';
-        this.toastService.success(`Successfully created ${result.successCount} Anki ${countText}`);
-
-        for (const target of targets) {
-          this.ankiService.processDailyGoalProgress(target.template.id, 1);
-        }
-
-        const subtitleId = this.data.subtitleData.id;
-        this.appStateService.addAnkiExportToHistory(this.data.project.id, subtitleId);
-
-        this.ref.close(true);
-      } else {
-        this.toastService.error(result.error || 'Failed to export to Anki');
-        this.revealDialog();
-      }
-    } catch (e: any) {
-      this.toastService.error(e.message || 'An error occurred during export to Anki');
-      console.error(e);
-      this.revealDialog();
-    } finally {
-      this.isExporting.set(false);
-    }
+    // Media extraction and note creation can take several seconds. Hand the
+    // request to the service and close the dialog now so playback resumes
+    // immediately; the outcome arrives as a toast.
+    this.ankiService.exportInBackground(batchRequest, this.data.project.id, this.data.subtitleData.id);
+    this.ref.close(true);
   }
 
   private generateFormattedNotes(notes: ProjectClipNotes | undefined): string {

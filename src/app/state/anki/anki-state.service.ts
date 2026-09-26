@@ -1,5 +1,5 @@
 import {computed, inject, Injectable, signal} from '@angular/core';
-import {AnkiCardTemplate, AnkiConnectStatus} from '../../model/anki.types';
+import {AnkiBatchExportRequest, AnkiCardTemplate, AnkiConnectStatus} from '../../model/anki.types';
 import {AppStateService} from '../app/app-state.service';
 import {ToastService} from '../../shared/services/toast/toast.service';
 
@@ -18,6 +18,8 @@ export class AnkiStateService {
   readonly isAnkiExportAvailable = signal(false);
   readonly ankiGlobalTags = computed(() => this.appStateService.ankiSettings().tags);
   readonly progressTracker = computed(() => this.appStateService.ankiSettings().progressTracker || {});
+  /** Number of exports currently running in the background (media extraction + AnkiConnect). */
+  readonly pendingExportCount = signal(0);
   private readonly appStateService = inject(AppStateService);
   private readonly toastService = inject(ToastService);
 
@@ -185,6 +187,37 @@ export class AnkiStateService {
         }
       };
       this.appStateService.updateAnkiSettings({progressTracker: newProgressTracker});
+    }
+  }
+
+  /**
+   * Runs an export without blocking the caller: the media clips are extracted
+   * and the notes created while playback carries on. Results arrive as toasts;
+   * on success the clip is marked as exported and daily goals are updated.
+   */
+  async exportInBackground(request: AnkiBatchExportRequest, projectId: string, subtitleId: string): Promise<void> {
+    this.pendingExportCount.update(count => count + 1);
+
+    try {
+      const result = await window.electronAPI.exportAnkiCardBatch(request);
+
+      if (result.successCount > 0) {
+        const countText = (result.successCount === 1) ? 'card' : 'cards';
+        this.toastService.success(`Successfully created ${result.successCount} Anki ${countText}`);
+
+        for (const target of request.targets) {
+          this.processDailyGoalProgress(target.template.id, 1);
+        }
+
+        this.appStateService.addAnkiExportToHistory(projectId, subtitleId);
+      } else {
+        this.toastService.error(result.error || 'Failed to export to Anki');
+      }
+    } catch (e: any) {
+      this.toastService.error(e?.message || 'An error occurred during export to Anki');
+      console.error(e);
+    } finally {
+      this.pendingExportCount.update(count => Math.max(0, count - 1));
     }
   }
 

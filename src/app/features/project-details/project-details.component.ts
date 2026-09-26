@@ -828,7 +828,11 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       data
     });
 
-    this.watchDialogPlaybackState(dialogRef);
+    // An instant export shows nothing to interact with (the export itself runs
+    // in the background), so playback keeps going. The one exception is the
+    // duplicate-export confirmation, which needs an answer.
+    const alreadyExported = (data.project.ankiExportHistory || []).includes(subtitleForExport.id);
+    this.watchDialogPlaybackState(dialogRef, !instantExport || alreadyExported);
   }
 
   onAnkiTagsChange(ankiTags: string[]) {
@@ -1711,11 +1715,11 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     this.watchDialogPlaybackState(dialogRef);
   }
 
-  private watchDialogPlaybackState(ref: DynamicDialogRef): void {
+  private watchDialogPlaybackState(ref: DynamicDialogRef, pausePlayback: boolean = true): void {
     this.activeDialogRef?.close(); // Close any already open dialog
     this.activeDialogRef = ref;
 
-    const wasPlaying = this.clipsStateService.isPlaying();
+    const wasPlaying = pausePlayback && this.clipsStateService.isPlaying();
     if (wasPlaying) {
       window.electronAPI.playbackPause();
     }
