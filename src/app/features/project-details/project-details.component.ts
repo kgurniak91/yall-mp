@@ -1548,6 +1548,18 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     this.appStateService.updatePartialProject(project.id, {notes: newProjectNotes});
   }
 
+  /** Settings drawer: rebuild the timeline waveform from the media file. */
+  protected regenerateWaveform(): void {
+    const project = this.project();
+    if (!project) {
+      return;
+    }
+    this.videoStateService.setTimelineLoading(true);
+    // Clearing the peaks makes the timeline wait for the new ones (and rebuild once they arrive).
+    this.appStateService.updateEntireProject(project.id, {audioPeaks: undefined});
+    this.generateAudioPeaksInBackground(project.id, project.mediaPath);
+  }
+
   private generateAudioPeaksInBackground(projectId: string, mediaPath: string): void {
     console.log('[ProjectDetails] No waveform peaks found. Generating new waveform peaks in the background...');
 

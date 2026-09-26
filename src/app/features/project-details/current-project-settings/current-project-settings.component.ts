@@ -52,6 +52,7 @@ export class CurrentProjectSettingsComponent {
   public readonly projectId = input.required<string>();
   public readonly ankiTagsChange = output<string[]>();
   public readonly settingsChange = output<ProjectSettings>();
+  public readonly regenerateWaveform = output<void>();
 
   protected readonly subtitlesLanguageOptions = computed(() => {
     const fromYomitan = this.yomitanService.supportedLanguages().map(l => ({

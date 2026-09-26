@@ -256,3 +256,31 @@ p-contextmenu .p-contextmenu-item .p-contextmenu-item-content:hover p-badge,
     color: var(--p-text-color-secondary) !important;
   }
 }
+
+// Timeline scrollbar on macOS (class set by TimelineEditorComponent). The system's overlay
+// scrollbar is invisible until something scrolls; a styled scrollbar is always laid out
+// and its thumb is shown while the pointer is over the timeline. The rules live here
+// because the scroll container is inside wavesurfer's shadow DOM (reached via ::part),
+// outside the component's style encapsulation.
+app-timeline-editor.hover-scrollbar {
+  ::part(scroll)::-webkit-scrollbar {
+    height: 10px;
+    background-color: transparent;
+  }
+
+  ::part(scroll)::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    border-radius: 5px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  &:hover ::part(scroll)::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.35);
+  }
+
+  ::part(scroll)::-webkit-scrollbar-thumb:hover,
+  ::part(scroll)::-webkit-scrollbar-thumb:active {
+    background-color: rgba(255, 255, 255, 0.6);
+  }
+}

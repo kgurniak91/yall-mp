@@ -104,6 +104,25 @@
     </p-fieldset>
   }
 
+  <p-fieldset legend="Timeline Waveform" [toggleable]="false">
+    <div class="setting-item-column">
+      <p-button label="Regenerate waveform"
+                icon="fa-solid fa-wave-square"
+                severity="secondary"
+                [disabled]="!globalSettingsStateService.generateAudioPeaks()"
+                (onClick)="regenerateWaveform.emit()"/>
+      <small class="block">
+        @if (globalSettingsStateService.generateAudioPeaks()) {
+          Rebuilds the waveform from the media file. Use it after the audio track changed
+          or when the waveform was made by an older version of the app.
+        } @else {
+          Waveform generation is turned off in the
+          <a href="#" (click)="openGlobalSettings($event)">global settings</a>.
+        }
+      </small>
+    </div>
+  </p-fieldset>
+
   @if (isAssProject()) {
     <p-fieldset legend="Subtitles Renderer" [toggleable]="false">
       <div class="setting-item-column gap-4">

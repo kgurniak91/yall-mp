@@ -25,8 +25,28 @@ const INITIAL_ZOOM = 80;
 const MIN_ZOOM = 20;
 const MAX_ZOOM = 1000;
 const ZOOM_FACTOR = 1.2;
-/** Minimum time between two wheel-driven zoom steps (see onWheel). */
-const WHEEL_ZOOM_INTERVAL_MS = 80;
+
+// Wheel/trackpad gesture handling (see onWheel).
+/** Wheel events closer together than this belong to the same gesture. */
+const WHEEL_GESTURE_GAP_MS = 150;
+/** Movement (px) a gesture needs before it is classified as sideways or vertical. */
+const WHEEL_AXIS_LOCK_PX = 3;
+/** A single event moving at least this much is a mouse-wheel notch: one full zoom step. */
+const WHEEL_NOTCH_PX = 40;
+/** Vertical travel per zoom step for continuous devices (trackpad swipe or pinch). */
+const WHEEL_PIXELS_PER_ZOOM_STEP = 100;
+/** Zoom steps one trackpad swipe (including its momentum) may apply at most. */
+const WHEEL_MAX_SWIPE_STEPS = 8;
+
+interface WheelGesture {
+  axis: 'scroll' | 'zoom' | null;
+  lastAt: number;
+  dx: number;
+  dy: number;
+  notchSteps: number;
+  swipeSteps: number;
+  zoomAtStart: number;
+}
 
 /** Share of bars that must fit below full height; the rest are clipped at the top. */
 const WAVEFORM_DISPLAY_PERCENTILE = 0.99;
@@ -57,11 +77,20 @@ export function scalePeaksToDisplay(peaks: number[]): number[] {
   ],
   templateUrl: './timeline-editor.component.html',
   styleUrl: './timeline-editor.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '[class.hover-scrollbar]': 'usesHoverScrollbar'
+  }
 })
 export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit {
   public readonly contextMenuRequested = output<{ event: MouseEvent, clipId: string }>();
   public readonly hideContextMenuRequested = output<void>();
+  /**
+   * macOS hides its overlay scrollbars until something scrolls, which left the timeline
+   * looking unscrollable. On that platform the timeline gets its own scrollbar (styled
+   * in styles.scss) that appears while the pointer is over the timeline.
+   */
+  protected readonly usesHoverScrollbar = window.electronAPI?.platform === 'darwin';
   protected readonly isCtrlPressed = signal(false);
   protected readonly timelineContainer = viewChild.required<ElementRef<HTMLDivElement>>('timeline');
   protected readonly videoStateService = inject(VideoStateService);
@@ -72,6 +101,8 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
   private readonly elementRef = inject(ElementRef);
   private wavesurfer: WaveSurfer | undefined;
   private wsRegions: RegionsPlugin | undefined;
+  /** The peaks array the current WaveSurfer instance was built from. */
+  private renderedPeaks: number[][] | undefined;
   private readonly currentZoom = signal<number>(INITIAL_ZOOM);
   private readonly hasPerformedInitialSync = signal(false);
   private lastDrawnClipsSignature: string | null = null;
@@ -80,7 +111,8 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
   private inactiveSubtitleBg!: string;
   private gapBg!: string;
   private mustIgnoreNextScroll = false;
-  private lastWheelZoomAt = 0;
+  private wheelGesture: WheelGesture | null = null;
+  private wheelRedrawTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly keyHandler = (e: KeyboardEvent) => this.handleKey(e);
 
   constructor() {
@@ -119,45 +151,104 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   ngOnDestroy(): void {
+    this.disposeWaveSurfer();
+    document.removeEventListener('keydown', this.keyHandler);
+    document.removeEventListener('keyup', this.keyHandler);
+    if (this.wheelRedrawTimer !== undefined) {
+      clearTimeout(this.wheelRedrawTimer);
+    }
+  }
+
+  /** Tears down the WaveSurfer instance so that the renderer effect can build a fresh one. */
+  private disposeWaveSurfer(): void {
     this.wavesurfer?.un('scroll', this.handleWaveSurferScroll);
     this.wavesurfer?.un('ready', this.handleWaveSurferReady);
     this.wsRegions?.un('region-updated', this.handleRegionUpdated);
     this.wsRegions?.un('region-clicked', this.handleRegionLeftClicked);
     this.wsRegions?.un('region-created', this.handleRegionCreated);
     this.wavesurfer?.destroy();
-    document.removeEventListener('keydown', this.keyHandler);
-    document.removeEventListener('keyup', this.keyHandler);
+    this.wavesurfer = undefined;
+    this.wsRegions = undefined;
+    this.renderedPeaks = undefined;
+    this.isWaveSurferReady.set(false);
+    this.lastDrawnClipsSignature = null;
+    this.lastTrackIndex = null;
+    this.hasPerformedInitialSync.set(false);
   }
 
   public setAutoScroll(enabled: boolean): void {
     this.wavesurfer?.setOptions({autoScroll: enabled});
   }
 
+  /**
+   * Mouse wheel and trackpad handling for the timeline.
+   *
+   * Sideways movement scrolls the timeline (left to the browser); vertical movement
+   * zooms it; Shift forces scrolling and Ctrl (a trackpad pinch arrives as Ctrl+wheel)
+   * forces zooming. A trackpad delivers dozens of small events per gesture, often with
+   * both a sideways and a vertical part, so the decision is made once per gesture from
+   * its first few pixels and kept until the gesture ends; deciding per event made a
+   * sideways swipe zoom out on its diagonal events and stutter.
+   *
+   * Zoom amount: a mouse-wheel notch (one large event) is one zoom step, as before.
+   * A trackpad swipe zooms continuously with its travel, capped per gesture so that a
+   * flick with momentum cannot jump straight to the minimum or maximum zoom.
+   */
   public onWheel(event: WheelEvent): void {
     if (!this.wavesurfer) return;
 
-    // Sideways gestures (trackpad two-finger swipe, tilt wheel) and shift+wheel scroll
-    // the timeline; leave them to the browser. Before this check, a sideways swipe on a
-    // trackpad was read as "zoom out" (deltaY is 0), so the timeline shrank to fit the
-    // window and its scrollbar disappeared.
-    if (event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
+    const now = performance.now();
+    let gesture = this.wheelGesture;
+    if (!gesture || now - gesture.lastAt > WHEEL_GESTURE_GAP_MS) {
+      gesture = {axis: null, lastAt: now, dx: 0, dy: 0, notchSteps: 0, swipeSteps: 0, zoomAtStart: this.currentZoom()};
+      this.wheelGesture = gesture;
+    }
+    gesture.lastAt = now;
+    gesture.dx += event.deltaX;
+    gesture.dy += event.deltaY;
+
+    if (gesture.axis === null) {
+      if (event.ctrlKey) {
+        gesture.axis = 'zoom';
+      } else if (event.shiftKey) {
+        gesture.axis = 'scroll';
+      } else if (Math.max(Math.abs(gesture.dx), Math.abs(gesture.dy)) < WHEEL_AXIS_LOCK_PX) {
+        return; // Too little movement to tell yet.
+      } else {
+        gesture.axis = Math.abs(gesture.dx) > Math.abs(gesture.dy) ? 'scroll' : 'zoom';
+      }
+    }
+
+    if (gesture.axis === 'scroll') {
+      return; // The browser scrolls wavesurfer's container natively.
+    }
 
     event.preventDefault();
     if (event.deltaY === 0) return;
     this.hideContextMenuRequested.emit();
 
-    // A trackpad swipe delivers dozens of small wheel events per gesture, a mouse wheel
-    // one event per notch. Limiting to one zoom step per interval keeps a swipe from
-    // jumping straight to the minimum or maximum zoom, without changing mouse behaviour.
-    const now = performance.now();
-    if (now - this.lastWheelZoomAt < WHEEL_ZOOM_INTERVAL_MS) return;
-    this.lastWheelZoomAt = now;
-
-    if (event.deltaY < 0) {
-      this.zoomIn();
+    const continuous = event.ctrlKey || Math.abs(event.deltaY) < WHEEL_NOTCH_PX;
+    if (continuous) {
+      const steps = gesture.swipeSteps - event.deltaY / WHEEL_PIXELS_PER_ZOOM_STEP;
+      gesture.swipeSteps = Math.max(-WHEEL_MAX_SWIPE_STEPS, Math.min(WHEEL_MAX_SWIPE_STEPS, steps));
     } else {
-      this.zoomOut();
+      gesture.notchSteps -= Math.sign(event.deltaY);
     }
+
+    const totalSteps = gesture.notchSteps + gesture.swipeSteps;
+    const target = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, gesture.zoomAtStart * Math.pow(ZOOM_FACTOR, totalSteps)));
+    this.updateZoom(target);
+
+    // Zooming out needs the regions re-rendered (see zoomOut); do it once the gesture ends.
+    if (this.wheelRedrawTimer !== undefined) {
+      clearTimeout(this.wheelRedrawTimer);
+    }
+    this.wheelRedrawTimer = setTimeout(() => {
+      this.wheelRedrawTimer = undefined;
+      if (this.currentZoom() < gesture.zoomAtStart) {
+        this.forceWavesurferRedraw();
+      }
+    }, WHEEL_GESTURE_GAP_MS);
   }
 
   private zoomIn(): void {
@@ -217,7 +308,13 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
       return;
     }
 
+    // The waveform was regenerated while the timeline was open: rebuild with the new bars.
+    if (this.wavesurfer && audioPeaks && audioPeaks !== this.renderedPeaks) {
+      this.disposeWaveSurfer();
+    }
+
     if (!this.wavesurfer && duration > 0 && container) {
+      this.renderedPeaks = audioPeaks;
       const processedAudioPeaks = this.processAudioPeaks(audioPeaks, duration);
       this.initializeWaveSurfer(processedAudioPeaks, duration, container);
     }

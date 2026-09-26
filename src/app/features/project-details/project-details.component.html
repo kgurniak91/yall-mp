@@ -273,7 +273,8 @@
                                     [audioTracks]="project()?.audioTracks || []"
                                     [projectId]="project()!.id"
                                     (settingsChange)="projectSettingsStateService.setSettings($event)"
-                                    (ankiTagsChange)="onAnkiTagsChange($event)"/>
+                                    (ankiTagsChange)="onAnkiTagsChange($event)"
+                                    (regenerateWaveform)="regenerateWaveform()"/>
     </ng-template>
   </p-drawer>
 
