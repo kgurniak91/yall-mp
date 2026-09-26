@@ -27,6 +27,30 @@
         @if (pathErrors()[exe.key]) {
           <small class="text-red-500 font-bold mt-1">File not found. The app will fall back to the default executable.</small>
         }
+
+        @let inUse = executablesInUse()?.[exe.key];
+        @if (inUse) {
+          <small class="block mt-1 in-use-line">
+            @if (inUse.path) {
+              In use: <code>{{ inUse.path }}</code>@if (inUse.version) {, version {{ inUse.version }}}
+              @if (exe.key === 'customFfmpegPath') {
+                · hardware video encoder: <b>{{ inUse.hardwareEncoder ? 'yes' : 'no' }}</b>
+                · AV1 decoder: <b>{{ inUse.av1Decoder === 'dav1d' ? 'dav1d (fast)' : inUse.av1Decoder === 'libaom' ? 'libaom (slow)' : 'none' }}</b>
+              }
+            } @else {
+              Not found. Playback or export features depending on it will not work.
+            }
+          </small>
+          @if (exe.key === 'customFfmpegPath' && inUse.homebrewMissing) {
+            <small class="block mt-1 in-use-line">
+              Homebrew's ffmpeg is newer than the bundled one and decodes AV1 several times faster. Install it and restart the app;
+              it is picked up automatically:
+              <code class="brew-command">brew install ffmpeg</code>
+              <p-button icon="fa-solid fa-copy" size="small" severity="secondary" text
+                        pTooltip="Copy command" (onClick)="copyBrewCommand()"/>
+            </small>
+          }
+        }
       </div>
     }
   </div>

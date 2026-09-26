@@ -1,0 +1,16 @@
+
+.in-use-line {
+  color: var(--app-text-secondary);
+  line-height: 1.6;
+
+  code {
+    font-size: 0.85em;
+    word-break: break-all;
+  }
+
+  .brew-command {
+    background: var(--app-surface);
+    padding: 0.1rem 0.4rem;
+    border-radius: 0.25rem;
+  }
+}

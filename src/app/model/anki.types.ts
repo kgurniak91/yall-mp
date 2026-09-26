@@ -69,6 +69,9 @@ export interface AnkiBatchExportRequest {
   suspend: boolean;
   targets: AnkiTemplateTarget[];
   audioTrackIndex?: number | null;
+  /** Video card settings for the hardware encoder path (macOS); see GlobalSettings. */
+  videoQuality?: number;
+  videoMaxHeight?: number;
 }
 
 export interface ExportToAnkiDialogData {

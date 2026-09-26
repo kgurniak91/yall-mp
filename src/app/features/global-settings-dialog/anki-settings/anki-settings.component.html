@@ -88,6 +88,42 @@
     </div>
   </p-fieldset>
 
+  <p-fieldset legend="Video Cards" [toggleable]="false">
+    <div class="flex flex-column gap-4">
+      <div class="flex flex-column gap-2">
+        <label for="anki-video-quality">
+          Quality ({{ globalSettingsStateService.ankiVideoQuality() }} / 100)
+        </label>
+        <p-slider id="anki-video-quality"
+                  [ngModel]="globalSettingsStateService.ankiVideoQuality()"
+                  (ngModelChange)="globalSettingsStateService.setAnkiVideoQuality($event)"
+                  [min]="1"
+                  [max]="100"
+                  [step]="1"/>
+        <small class="block">
+          Constant quality of the video clip when the hardware encoder is used (macOS). Higher means larger files;
+          70 is a high setting. The export log line shows each clip's file size.
+        </small>
+      </div>
+
+      <div class="flex flex-column gap-2">
+        <label for="anki-video-max-height">Maximum resolution</label>
+        <p-select inputId="anki-video-max-height"
+                  [options]="videoMaxHeightOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  [ngModel]="globalSettingsStateService.ankiVideoMaxHeight()"
+                  (ngModelChange)="globalSettingsStateService.setAnkiVideoMaxHeight($event)"
+                  appendTo="body"
+                  styleClass="w-full"/>
+        <small class="block">
+          Clips keep the source resolution up to this height (hardware encoder path). 1080p is indistinguishable
+          from 4K on a phone or laptop card and about a quarter of the size.
+        </small>
+      </div>
+    </div>
+  </p-fieldset>
+
   <p-fieldset legend="Card templates" [toggleable]="false">
     @if ((ankiStateService.status() === AnkiConnectStatus.connected) || (ankiStateService.status() === AnkiConnectStatus.checking && ankiStateService.deckNames().length > 0)) {
       <div class="mb-3 flex justify-content-end">

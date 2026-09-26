@@ -59,6 +59,8 @@ export interface GlobalSettings {
   subtitleLookupBrowserType: SubtitleLookupBrowserType;
   ankiSuspendNewCardsByDefault: boolean;
   ankiInstantExport: boolean;
+  ankiVideoQuality: number;      // Video card quality when the hardware (VideoToolbox) encoder is used: 1-100
+  ankiVideoMaxHeight: number;    // Video card resolution cap in pixels of height (e.g. 1080), hardware path only
   generateAudioPeaks: boolean;
   timelineHeightPx: number; // Height of the timeline strip; adjustable by dragging its top edge
   swapNavigationShortcuts: boolean;
@@ -164,6 +166,8 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   subtitleLookupBrowserType: SubtitleLookupBrowserType.BuiltIn,
   ankiSuspendNewCardsByDefault: false,
   ankiInstantExport: false,
+  ankiVideoQuality: 70,
+  ankiVideoMaxHeight: 1080,
   generateAudioPeaks: false,
   timelineHeightPx: 100,
   swapNavigationShortcuts: false,

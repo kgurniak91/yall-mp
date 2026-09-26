@@ -221,6 +221,80 @@ function computeVideoBounds(containerRect: Electron.Rectangle, aspect: number | 
   };
 }
 
+export interface ExecutableInUse {
+  path: string | null;
+  version: string | null;
+  /** ffmpeg only */
+  hardwareEncoder?: boolean;
+  av1Decoder?: 'dav1d' | 'libaom' | 'none';
+  /** macOS: Homebrew's build is not installed (the bundled one is in use). */
+  homebrewMissing?: boolean;
+}
+
+/**
+ * Version token from `<exe> <flag>` (ffmpeg/ffprobe take -version, mpv and
+ * audiowaveform --version). stdin is closed and the process is killed after 3 s so
+ * that a tool waiting for input can never hang the settings page.
+ */
+function readVersion(exePath: string, flag: '-version' | '--version'): Promise<string | null> {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (value: string | null) => {
+      if (!done) {
+        done = true;
+        resolve(value);
+      }
+    };
+    const child = spawn(exePath, [flag], {stdio: ['ignore', 'pipe', 'pipe']});
+    let out = '';
+    child.stdout.on('data', (d) => out += d.toString());
+    child.stderr.on('data', (d) => out += d.toString());
+    const timer = setTimeout(() => {
+      child.kill();
+      finish(null);
+    }, 3000);
+    child.on('close', () => {
+      clearTimeout(timer);
+      const first = out.split('\n')[0] || '';
+      const match = first.match(/version\s+v?(\S+)/i) || first.match(/v?(\d+\.\d+[\w.\-]*)/);
+      finish(match ? match[1] : (first.trim() || null));
+    });
+    child.on('error', () => {
+      clearTimeout(timer);
+      finish(null);
+    });
+  });
+}
+
+/** For the Advanced settings page: which mpv/ffmpeg/ffprobe/audiowaveform the app actually runs. */
+async function describeExecutablesInUse(): Promise<Record<string, ExecutableInUse>> {
+  await ensureFFmpegPaths();
+  const mpv = resolveExecutable('mpv', customExecutables.mpv);
+  const audiowaveform = resolveExecutable('audiowaveform', customExecutables.audiowaveform);
+  const result: Record<string, ExecutableInUse> = {
+    customMpvPath: {path: mpv, version: mpv ? await readVersion(mpv, '--version') : null},
+    customFfmpegPath: {path: ffmpegPath || null, version: ffmpegPath ? await readVersion(ffmpegPath, '-version') : null},
+    customFfprobePath: {path: ffprobePath || null, version: ffprobePath ? await readVersion(ffprobePath, '-version') : null},
+    customAudiowaveformPath: {path: audiowaveform, version: audiowaveform ? await readVersion(audiowaveform, '--version') : null},
+  };
+  if (ffmpegPath) {
+    const caps = await getFfmpegCapabilities();
+    const decoders: string = await new Promise((resolve) => {
+      const child = spawn(ffmpegPath, ['-hide_banner', '-decoders'], {stdio: ['ignore', 'pipe', 'ignore']});
+      let out = '';
+      child.stdout.on('data', (d) => out += d.toString());
+      child.on('close', () => resolve(out));
+      child.on('error', () => resolve(''));
+    });
+    result['customFfmpegPath'].hardwareEncoder = caps.hevcVideoToolbox;
+    result['customFfmpegPath'].av1Decoder = /^\s*V[^\s]*\s+libdav1d\s/m.test(decoders) ? 'dav1d'
+      : (/^\s*V[^\s]*\s+libaom-av1\s/m.test(decoders) ? 'libaom' : 'none');
+    result['customFfmpegPath'].homebrewMissing = process.platform === 'darwin'
+      && !['/opt/homebrew/bin/ffmpeg', '/usr/local/bin/ffmpeg'].some(p => require('fs').existsSync(p));
+  }
+  return result;
+}
+
 /** Actions the macOS menu bar sends to the renderer (handled in header.component.ts). */
 type MenuAction =
   | 'new-project' | 'project-list' | 'edit-project' | 'delete-project'
@@ -975,6 +1049,7 @@ if (!gotTheLock) {
     pendingFilesToOpen.push(...getFilesFromArgv(process.argv)); // Handle "Open with" (macOS files arrive via 'open-file' instead)
 
     ipcMain.handle('dialog:openFile', (_, options) => handleFileOpen(options));
+    ipcMain.handle('system:executables-in-use', () => describeExecutablesInUse());
     ipcMain.handle('subtitle:parse', (_, projectId, filePath) => handleSubtitleParse(projectId, filePath));
     ipcMain.handle('media:getMetadata', (_, filePath) => handleGetMediaMetadata(filePath));
     ipcMain.handle('media:extractSubtitleTrack', (_, projectId, mediaPath, trackIndex) => handleExtractSubtitleTrack(projectId, mediaPath, trackIndex));
@@ -2126,6 +2201,8 @@ async function handleAnkiBatchExport(request: AnkiBatchExportRequest) {
   }
 
   const {subtitleData, mediaPath, exportTime, hint, notes, suspend, targets, audioTrackIndex} = request;
+  const videoQuality = Math.min(100, Math.max(1, Math.round(request.videoQuality ?? VIDEO_CLIP_VT_QUALITY)));
+  const videoMaxHeight = Math.max(240, Math.round(request.videoMaxHeight ?? VIDEO_CLIP_MAX_HEIGHT));
   const tempDir = os.tmpdir();
   const uniqueBatchId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
   const generatedFiles: string[] = [];
@@ -2253,10 +2330,10 @@ async function handleAnkiBatchExport(request: AnkiBatchExportRequest) {
             // VIDEO_CLIP_VT_QUALITY). MP4/HEVC plays on Anki desktop, AnkiMobile and AnkiDroid.
             videoArgs.push(
               '-c:v', 'hevc_videotoolbox',
-              '-q:v', String(VIDEO_CLIP_VT_QUALITY),   // constant quality, 1-100
+              '-q:v', String(videoQuality),             // constant quality, 1-100 (Global settings -> Anki)
               '-tag:v', 'hvc1',                         // the HEVC tag Apple players expect
               '-pix_fmt', 'yuv420p',                    // 8-bit for compatibility (10-bit sources are converted)
-              '-vf', `scale=w=-2:h=min(${VIDEO_CLIP_MAX_HEIGHT}\,ih-mod(ih\,2))`,
+              '-vf', `scale=w=-2:h=min(${videoMaxHeight}\\,ih-mod(ih\\,2))`, // \\, keeps the commas inside min()
               '-c:a', caps.aacAudioToolbox ? 'aac_at' : 'aac',
               '-b:a', '192k',
               '-af', audioFilter,                       // Downmix to stereo, then normalize loudness
@@ -2404,10 +2481,9 @@ async function handleAnkiBatchExport(request: AnkiBatchExportRequest) {
   };
 }
 
-/** Video cards on macOS: source resolution up to this height (1080 = Full HD). */
-const VIDEO_CLIP_MAX_HEIGHT = 1080;
-/** VideoToolbox HEVC constant quality, 1 (worst) to 100 (best); ~70 is a high setting. */
-const VIDEO_CLIP_VT_QUALITY = 70;
+/** Video cards on macOS, defaults when the request carries no setting (Global settings -> Anki). */
+const VIDEO_CLIP_MAX_HEIGHT = 1080;  // source resolution up to this height (1080 = Full HD)
+const VIDEO_CLIP_VT_QUALITY = 70;    // VideoToolbox HEVC constant quality, 1 (worst) to 100 (best)
 
 interface FfmpegCapabilities {
   hevcVideoToolbox: boolean;   // hardware HEVC encoder (macOS)
@@ -2424,7 +2500,7 @@ async function getFfmpegCapabilities(): Promise<FfmpegCapabilities> {
     return ffmpegCapabilities;
   }
   const run = (args: string[]): Promise<string> => new Promise((resolve) => {
-    const child = spawn(ffmpegPath, ['-hide_banner', ...args]);
+    const child = spawn(ffmpegPath, ['-hide_banner', ...args], {stdio: ['ignore', 'pipe', 'ignore']});
     let out = '';
     child.stdout.on('data', (d) => out += d.toString());
     child.on('close', () => resolve(out));

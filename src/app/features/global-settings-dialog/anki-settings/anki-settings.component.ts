@@ -14,6 +14,8 @@ import {TagsInputComponent} from '../../../shared/components/tags-input/tags-inp
 import {FormsModule} from '@angular/forms';
 import {GlobalSettingsStateService} from '../../../state/global-settings/global-settings-state.service';
 import {Checkbox} from 'primeng/checkbox';
+import {Slider} from 'primeng/slider';
+import {Select} from 'primeng/select';
 import {
   disableFocusInParentDialog,
   scheduleRestoreFocus
@@ -32,7 +34,9 @@ import {AnkiDailyGoalDialogComponent} from './anki-daily-goal-dialog/anki-daily-
     TagsInputComponent,
     FormsModule,
     Checkbox,
-    Menu
+    Menu,
+    Slider,
+    Select
   ],
   templateUrl: './anki-settings.component.html',
   styleUrl: './anki-settings.component.scss',
@@ -40,6 +44,13 @@ import {AnkiDailyGoalDialogComponent} from './anki-daily-goal-dialog/anki-daily-
 })
 export class AnkiSettingsComponent {
   protected readonly AnkiConnectStatus = AnkiConnectStatus;
+  protected readonly videoMaxHeightOptions = [
+    {label: '480p', value: 480},
+    {label: '720p', value: 720},
+    {label: '1080p (Full HD)', value: 1080},
+    {label: '1440p', value: 1440},
+    {label: '2160p (4K)', value: 2160},
+  ];
   protected readonly ankiStateService = inject(AnkiStateService);
   protected readonly globalSettingsStateService = inject(GlobalSettingsStateService);
   protected readonly actionMenuItems = signal<MenuItem[]>([]);

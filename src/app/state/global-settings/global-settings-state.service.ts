@@ -23,6 +23,8 @@ export class GlobalSettingsStateService {
   public readonly subtitleLookupBrowserType = computed(() => this.appStateService.globalSettings().subtitleLookupBrowserType);
   public readonly ankiSuspendNewCardsByDefault = computed(() => this.appStateService.globalSettings().ankiSuspendNewCardsByDefault);
   public readonly ankiInstantExport = computed(() => this.appStateService.globalSettings().ankiInstantExport);
+  public readonly ankiVideoQuality = computed(() => this.appStateService.globalSettings().ankiVideoQuality);
+  public readonly ankiVideoMaxHeight = computed(() => this.appStateService.globalSettings().ankiVideoMaxHeight);
   public readonly warnUnexportedNotes = computed(() => this.appStateService.globalSettings().warnUnexportedNotes);
   public readonly srtFontSizePx = computed(() => this.appStateService.globalSettings().srtFontSizePx);
   public readonly srtBackgroundOpacity = computed(() => this.appStateService.globalSettings().srtBackgroundOpacity);
@@ -107,6 +109,14 @@ export class GlobalSettingsStateService {
 
   public setAnkiInstantExport(value: boolean): void {
     this.appStateService.updateGlobalSettings({ankiInstantExport: value});
+  }
+
+  public setAnkiVideoQuality(value: number): void {
+    this.appStateService.updateGlobalSettings({ankiVideoQuality: Math.min(100, Math.max(1, Math.round(value)))});
+  }
+
+  public setAnkiVideoMaxHeight(value: number): void {
+    this.appStateService.updateGlobalSettings({ankiVideoMaxHeight: value});
   }
 
   public setWarnUnexportedNotes(value: boolean): void {

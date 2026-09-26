@@ -24,7 +24,16 @@ export interface ParsedSubtitlesData {
   detectedLanguage: SupportedLanguage;
 }
 
+export interface ExecutableInUse {
+  path: string | null;
+  version: string | null;
+  hardwareEncoder?: boolean;            // ffmpeg only
+  av1Decoder?: 'dav1d' | 'libaom' | 'none';
+  homebrewMissing?: boolean;            // macOS: Homebrew's ffmpeg is not installed
+}
+
 export interface IElectronAPI {
+  getExecutablesInUse: () => Promise<Record<string, ExecutableInUse>>;
   // --- App
   platform: NodeJS.Platform;
   getAppVersion: () => Promise<string>;

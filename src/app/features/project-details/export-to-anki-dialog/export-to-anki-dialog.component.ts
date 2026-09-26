@@ -31,6 +31,7 @@ import {Textarea} from 'primeng/textarea';
 import {ProjectClipNotes} from '../../../model/project.types';
 import {cloneDeep, escape, isEqual} from 'lodash-es';
 import {AppStateService} from '../../../state/app/app-state.service';
+import {GlobalSettingsStateService} from '../../../state/global-settings/global-settings-state.service';
 import {Popover} from 'primeng/popover';
 import {DialogOrchestrationService} from '../../../core/services/dialog-orchestration/dialog-orchestration.service';
 import {GlobalSettingsTab} from '../../global-settings-dialog/global-settings-dialog.types';
@@ -94,6 +95,7 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
   private readonly config = inject(DynamicDialogConfig);
   private readonly toastService = inject(ToastService);
   private readonly appStateService = inject(AppStateService);
+  private readonly globalSettingsStateService = inject(GlobalSettingsStateService);
   private readonly dialogOrchestrationService = inject(DialogOrchestrationService);
   private readonly elementRef = inject(ElementRef);
   private readonly confirmationService = inject(ConfirmationService);
@@ -281,7 +283,9 @@ export class ExportToAnkiDialogComponent implements OnInit, OnDestroy {
       notes: this.generateFormattedNotes(this.currentNotes()),
       suspend: this.suspendCard(),
       targets,
-      audioTrackIndex: project.settings.selectedAudioTrackIndex
+      audioTrackIndex: project.settings.selectedAudioTrackIndex,
+      videoQuality: this.globalSettingsStateService.ankiVideoQuality(),
+      videoMaxHeight: this.globalSettingsStateService.ankiVideoMaxHeight(),
     };
 
     // Media extraction and note creation can take several seconds. Hand the
