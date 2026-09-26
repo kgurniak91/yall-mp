@@ -1,10 +1,27 @@
 :host {
   display: block;
+  position: relative;
   width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
-  height: 6.25rem !important;
   background-color: var(--app-bg);
+}
+
+// Grab strip along the top edge for changing the timeline height.
+.resize-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: row-resize;
+  z-index: 10;
+  touch-action: none;
+
+  &:hover,
+  &:active {
+    background-color: color-mix(in srgb, var(--app-primary) 50%, transparent);
+  }
 }
 
 .loader-wrapper {

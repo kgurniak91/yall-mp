@@ -60,6 +60,7 @@ export interface GlobalSettings {
   ankiSuspendNewCardsByDefault: boolean;
   ankiInstantExport: boolean;
   generateAudioPeaks: boolean;
+  timelineHeightPx: number; // Height of the timeline strip; adjustable by dragging its top edge
   swapNavigationShortcuts: boolean;
   migratedDefaultAiServices?: boolean; // Flag set only once when migrating from older versions to v0.9.3-beta
   hardwareAcceleration: boolean;
@@ -164,6 +165,7 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   ankiSuspendNewCardsByDefault: false,
   ankiInstantExport: false,
   generateAudioPeaks: false,
+  timelineHeightPx: 100,
   swapNavigationShortcuts: false,
   migratedDefaultAiServices: true, // Set initially to true so new installations don't trigger migration
   hardwareAcceleration: false,

@@ -2,6 +2,7 @@ import {
   AfterViewInit,
   ChangeDetectionStrategy,
   Component,
+  computed,
   effect,
   ElementRef,
   inject,
@@ -48,6 +49,11 @@ interface WheelGesture {
   zoomAtStart: number;
 }
 
+/** Part of the timeline strip left below the waveform for the horizontal scrollbar. */
+const WAVEFORM_SCROLLBAR_SPACE_PX = 15;
+const MIN_TIMELINE_HEIGHT_PX = 60;
+const MAX_TIMELINE_HEIGHT_PX = 400;
+
 /** Share of bars that must fit below full height; the rest are clipped at the top. */
 const WAVEFORM_DISPLAY_PERCENTILE = 0.99;
 
@@ -79,18 +85,22 @@ export function scalePeaksToDisplay(peaks: number[]): number[] {
   styleUrl: './timeline-editor.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
-    '[class.hover-scrollbar]': 'usesHoverScrollbar'
+    '(mouseenter)': 'onPointerEnter()',
+    '[style.height.px]': 'timelineHeight()'
   }
 })
 export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit {
   public readonly contextMenuRequested = output<{ event: MouseEvent, clipId: string }>();
   public readonly hideContextMenuRequested = output<void>();
   /**
-   * macOS hides its overlay scrollbars until something scrolls, which left the timeline
-   * looking unscrollable. On that platform the timeline gets its own scrollbar (styled
-   * in styles.scss) that appears while the pointer is over the timeline.
+   * macOS overlay scrollbars stay hidden until something scrolls, so the timeline looked
+   * unscrollable. On that platform the scrollbar is flashed when the pointer enters the
+   * timeline (see onPointerEnter); Windows and Linux show it permanently anyway.
    */
-  protected readonly usesHoverScrollbar = window.electronAPI?.platform === 'darwin';
+  private readonly revealsScrollbarOnHover = window.electronAPI?.platform === 'darwin';
+  /** Height of the whole timeline strip in CSS pixels (user-adjustable, persisted). */
+  protected readonly timelineHeight = computed(() => this.globalSettingsStateService.timelineHeight());
+  private readonly waveformHeight = computed(() => Math.max(20, this.timelineHeight() - WAVEFORM_SCROLLBAR_SPACE_PX));
   protected readonly isCtrlPressed = signal(false);
   protected readonly timelineContainer = viewChild.required<ElementRef<HTMLDivElement>>('timeline');
   protected readonly videoStateService = inject(VideoStateService);
@@ -111,6 +121,9 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
   private inactiveSubtitleBg!: string;
   private gapBg!: string;
   private mustIgnoreNextScroll = false;
+  /** Scroll events to swallow because they come from the scrollbar flash, not the user. */
+  private scrollEventsToIgnore = 0;
+  private resizeDrag: {pointerId: number, startY: number, startHeight: number} | null = null;
   private wheelGesture: WheelGesture | null = null;
   private wheelRedrawTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly keyHandler = (e: KeyboardEvent) => this.handleKey(e);
@@ -133,6 +146,13 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
     effect(() => {
       const isCtrl = this.isCtrlPressed();
       this.updateRegionCursors(isCtrl);
+    });
+
+    effect(() => {
+      const height = this.waveformHeight();
+      if (this.wavesurfer && this.wavesurfer.options.height !== height) {
+        this.wavesurfer.setOptions({height});
+      }
     });
   }
 
@@ -174,6 +194,55 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
     this.lastDrawnClipsSignature = null;
     this.lastTrackIndex = null;
     this.hasPerformedInitialSync.set(false);
+  }
+
+  /**
+   * Shows the (macOS overlay) scrollbar when the pointer enters the timeline by scrolling
+   * one pixel right and back on consecutive frames: a scroll offset change is what makes
+   * the system fade the scrollbar in, and a pixel out and back leaves the view unchanged.
+   */
+  protected onPointerEnter(): void {
+    if (!this.revealsScrollbarOnHover || !this.wavesurfer) {
+      return;
+    }
+    const scroller = this.wavesurfer.getWrapper().parentElement;
+    if (!scroller || scroller.scrollWidth <= scroller.clientWidth) {
+      return;
+    }
+    const canNudgeRight = scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth;
+    const step = canNudgeRight ? 1 : -1;
+    this.scrollEventsToIgnore += 2;
+    scroller.scrollLeft += step;
+    requestAnimationFrame(() => {
+      scroller.scrollLeft -= step;
+    });
+  }
+
+  protected onResizeHandlePointerDown(event: PointerEvent): void {
+    if (event.button !== 0) {
+      return;
+    }
+    event.preventDefault();
+    (event.target as HTMLElement).setPointerCapture(event.pointerId);
+    this.resizeDrag = {pointerId: event.pointerId, startY: event.clientY, startHeight: this.timelineHeight()};
+  }
+
+  protected onResizeHandlePointerMove(event: PointerEvent): void {
+    if (!this.resizeDrag || event.pointerId !== this.resizeDrag.pointerId) {
+      return;
+    }
+    // The handle is on the top edge: dragging up makes the timeline taller.
+    const height = this.resizeDrag.startHeight + (this.resizeDrag.startY - event.clientY);
+    this.globalSettingsStateService.setTimelineHeight(
+      Math.max(MIN_TIMELINE_HEIGHT_PX, Math.min(MAX_TIMELINE_HEIGHT_PX, height))
+    );
+  }
+
+  protected onResizeHandlePointerUp(event: PointerEvent): void {
+    if (this.resizeDrag && event.pointerId === this.resizeDrag.pointerId) {
+      (event.target as HTMLElement).releasePointerCapture(event.pointerId);
+      this.resizeDrag = null;
+    }
   }
 
   public setAutoScroll(enabled: boolean): void {
@@ -386,7 +455,7 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
       media: undefined,
       peaks: processedAudioPeaks,
       duration: duration,
-      height: 85
+      height: this.waveformHeight()
     });
 
     this.wsRegions = this.wavesurfer.registerPlugin(RegionsPlugin.create());
@@ -529,6 +598,10 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   private handleWaveSurferScroll = () => {
+    if (this.scrollEventsToIgnore > 0) {
+      this.scrollEventsToIgnore--;
+      return;
+    }
     if (this.mustIgnoreNextScroll) {
       this.mustIgnoreNextScroll = false;
       return;

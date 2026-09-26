@@ -14,6 +14,10 @@ const TIME_UPDATE_FPS = 10;
 
 let embeddedSocketCounter = 0;
 
+/** Name of the mpv script message that media-key bindings send (see bindMediaKeys). */
+const MEDIA_KEY_MESSAGE = 'yall-media-key';
+export type MediaKeyAction = 'play-pause' | 'play' | 'pause' | 'next' | 'previous';
+
 async function waitForFile(filePath: string, timeoutMs: number): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (!fs.existsSync(filePath)) {
@@ -108,6 +112,10 @@ export class MpvManager extends EventEmitter {
       await this.mpv!.start();
       console.log(`[MpvManager] MPV ${this.usesEmbeddedMpv ? 'library' : 'process'} started successfully.`);
 
+      if (this.usesEmbeddedMpv) {
+        await this.bindMediaKeys();
+      }
+
       // Shared properties from custom Lua script:
       this.mpv!.observeProperty('user-data/auto-pause-fired');
 
@@ -180,6 +188,11 @@ export class MpvManager extends EventEmitter {
     const embeddedOptions: [string, string][] = [
       ['scripts', scriptPath],
       ['input-ipc-server', socketPath],
+      // macOS media keys (F8 play/pause etc., also from the Touch Bar and headphones):
+      // libmpv disables them by default; enabled, mpv registers with the system's
+      // "Now Playing" controls and delivers the keys as PLAY/PAUSEONLY/... key events,
+      // which bindMediaKeys() routes back to the app as script messages.
+      ['input-media-keys', 'yes'],
       ...options,
     ];
 
@@ -200,8 +213,39 @@ export class MpvManager extends EventEmitter {
     });
   }
 
+  /**
+   * Media keys arrive in mpv as key events; with input-default-bindings off they do
+   * nothing. Bind them to script messages so that the app's own playback logic (not
+   * mpv's `cycle pause`) handles them and the UI state stays right.
+   */
+  private async bindMediaKeys(): Promise<void> {
+    const bindings: [string, MediaKeyAction][] = [
+      ['PLAY', 'play-pause'],        // togglePlayPause (F8 / headphone button)
+      ['PLAYPAUSE', 'play-pause'],
+      ['PLAYONLY', 'play'],
+      ['PAUSEONLY', 'pause'],
+      ['STOP', 'pause'],
+      ['NEXT', 'next'],
+      ['PREV', 'previous'],
+    ];
+    for (const [key, action] of bindings) {
+      try {
+        await this.sendCommand(['keybind', key, `script-message ${MEDIA_KEY_MESSAGE} ${action}`]);
+      } catch (error) {
+        console.warn(`[MpvManager] Could not bind media key ${key}:`, error);
+      }
+    }
+  }
+
   private handleEmbeddedEvent(event: MpvEmbedEvent): void {
     switch (event.type) {
+      case 'client-message': {
+        const [name, action] = event.text.split('\n');
+        if (name === MEDIA_KEY_MESSAGE) {
+          this.emit('media-key', action as MediaKeyAction);
+        }
+        break;
+      }
       case 'log':
         console.log(`[mpv${event.prefix ? '/' + event.prefix : ''}] ${event.level}: ${event.text}`);
         break;

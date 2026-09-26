@@ -27,6 +27,7 @@ export class GlobalSettingsStateService {
   public readonly srtFontSizePx = computed(() => this.appStateService.globalSettings().srtFontSizePx);
   public readonly srtBackgroundOpacity = computed(() => this.appStateService.globalSettings().srtBackgroundOpacity);
   public readonly generateAudioPeaks = computed(() => this.appStateService.globalSettings().generateAudioPeaks);
+  public readonly timelineHeight = computed(() => this.appStateService.globalSettings().timelineHeightPx);
   public readonly swapNavigationShortcuts = computed(() => this.appStateService.globalSettings().swapNavigationShortcuts);
   public readonly hardwareAcceleration = computed(() => this.appStateService.globalSettings().hardwareAcceleration);
   public readonly preferredAudioLanguages = computed(() => this.appStateService.globalSettings().preferredAudioLanguages);
@@ -114,6 +115,10 @@ export class GlobalSettingsStateService {
 
   public setGenerateAudioPeaks(value: boolean): void {
     this.appStateService.updateGlobalSettings({generateAudioPeaks: value});
+  }
+
+  public setTimelineHeight(value: number): void {
+    this.appStateService.updateGlobalSettings({timelineHeightPx: Math.round(value)});
   }
 
   public setSwapNavigationShortcuts(value: boolean): void {

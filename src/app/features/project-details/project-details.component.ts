@@ -416,6 +416,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   private hasSetInitialClip = false;
   private cleanupInitialSeekListener: (() => void) | null = null;
   private cleanupMpvReadyListener: (() => void) | null = null;
+  private cleanupMediaKeyListener: (() => void) | null = null;
   private cleanupAddNoteListener: (() => void) | null = null;
   private clickTimeout: any = null;
   private hideCursorTimeout: any;
@@ -533,6 +534,20 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       this.isMpvReady.set(true);
     });
 
+    this.cleanupMediaKeyListener = window.electronAPI.onMediaKey?.((action) => {
+      switch (action) {
+        case 'play-pause':
+          this.togglePlayPause();
+          break;
+        case 'next':
+          this.goToNextSubtitledClip();
+          break;
+        case 'previous':
+          this.goToPreviousSubtitledClip();
+          break;
+      }
+    }) ?? null;
+
     this.headerCurrentProjectActionBridgeService.registerOffsetDialogOpener(() => this.openSubtitleOffsetDialog());
   }
 
@@ -648,6 +663,9 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     this.activeDialogRef?.close();
     if (this.cleanupMpvReadyListener) {
       this.cleanupMpvReadyListener();
+    }
+    if (this.cleanupMediaKeyListener) {
+      this.cleanupMediaKeyListener();
     }
     if (this.cleanupInitialSeekListener) {
       this.cleanupInitialSeekListener();

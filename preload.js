@@ -98,6 +98,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('mpv:managerReady', subscription);
     return () => ipcRenderer.removeListener('mpv:managerReady', subscription);
   },
+  onMediaKey: (callback) => {
+    const subscription = (_event, action) => callback(action);
+    ipcRenderer.on('playback:media-key', subscription);
+    return () => ipcRenderer.removeListener('playback:media-key', subscription);
+  },
   onMpvInitialSeekComplete: (callback) => {
     const subscription = () => callback();
     ipcRenderer.on('mpv:initial-seek-complete', subscription);

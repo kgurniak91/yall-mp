@@ -98,6 +98,8 @@ export interface IElectronAPI {
   onMpvEvent: (callback: (status: any) => void) => (() => void);
   onMainWindowMovedOrResized: (callback: () => void) => (() => void);
   onMpvManagerReady: (callback: () => void) => (() => void);
+  /** macOS media keys (F8 play/pause, F7/F9 previous/next) routed through mpv. */
+  onMediaKey: (callback: (action: 'play-pause' | 'next' | 'previous') => void) => (() => void);
   onMpvInitialSeekComplete: (callback: () => void) => (() => void);
   onMpvVideoVisibilityChange: (callback: (isVisible: boolean) => void) => (() => void);
   // --- Storage

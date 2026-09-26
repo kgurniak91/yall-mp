@@ -276,7 +276,7 @@ enum class Renderer {
 };
 
 struct EventPayload {
-    std::string type;    // "shutdown" | "log" | "render-error"
+    std::string type;    // "shutdown" | "log" | "render-error" | "client-message"
     std::string level;   // log level for "log"
     std::string prefix;  // log prefix for "log"
     std::string text;
@@ -631,6 +631,18 @@ void runEventLoop(std::shared_ptr<Session> session)
                 text.pop_back();
             }
             emitEvent(session, {"log", msg->level ? msg->level : "", msg->prefix ? msg->prefix : "", text});
+        }
+        if (event->event_id == MPV_EVENT_CLIENT_MESSAGE) {
+            // `script-message <args...>` from key bindings (media keys); args joined by newlines.
+            auto* msg = static_cast<mpv_event_client_message*>(event->data);
+            std::string text;
+            for (int i = 0; i < msg->num_args; ++i) {
+                if (i > 0) {
+                    text += '\n';
+                }
+                text += msg->args[i] ? msg->args[i] : "";
+            }
+            emitEvent(session, {"client-message", "", "", text});
         }
     }
 

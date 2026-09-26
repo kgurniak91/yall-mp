@@ -20,7 +20,7 @@ import type {MediaTrack} from './shared/types/media.type';
 import {AnkiBatchExportRequest, AnkiCard, AnkiFieldMappingSource} from './src/app/model/anki.types';
 import {v4 as uuidv4} from 'uuid';
 import {ChildProcess, spawn} from 'child_process';
-import {MpvManager} from './mpv-manager';
+import {MediaKeyAction, MpvManager} from './mpv-manager';
 import {FontData, ParsedSubtitlesData} from './src/electron-api';
 import {AppData, CoreConfig, Project, SubtitleSelection, SupportedLanguage} from './src/app/model/project.types';
 import {
@@ -1423,6 +1423,24 @@ if (!gotTheLock) {
       };
       mpvManager.on('status', onMpvStatus);
 
+      // macOS media keys (F8 etc.), delivered by libmpv (see MpvManager.bindMediaKeys).
+      // Toggle/next/previous go through the renderer so they behave exactly like the
+      // keyboard shortcuts; play/pause from the system's Now Playing panel are direct.
+      mpvManager.on('media-key', (action: MediaKeyAction) => {
+        switch (action) {
+          case 'play':
+            playbackManager?.play();
+            break;
+          case 'pause':
+            playbackManager?.pause();
+            break;
+          default:
+            if (uiWindow && !uiWindow.isDestroyed()) {
+              uiWindow.webContents.send('playback:media-key', action);
+            }
+        }
+      });
+
       mpvManager.on('error', (err) => console.error("MPV Error:", err));
       mpvManager.on('ready', () => {
         console.log('[Main Process] MpvManager is ready. Notifying renderer.');
@@ -1750,9 +1768,16 @@ if (!gotTheLock) {
 
     if (process.platform === 'darwin') {
       // On macOS the standard edit shortcuts (Cmd+C/V/X/A/Z) and Cmd+Q only work
-      // through the application menu, so keep a minimal one without View/Window
-      // items that would reintroduce reload or zoom shortcuts.
-      Menu.setApplicationMenu(Menu.buildFromTemplate([{role: 'appMenu'}, {role: 'editMenu'}]));
+      // through the application menu, so keep a minimal one. The View menu holds only
+      // the full-screen item (its native action is what fn+F / Ctrl+Cmd+F trigger);
+      // the stock View menu is avoided because it would reintroduce reload and zoom
+      // shortcuts. The Window menu gives Cmd+M / Cmd+W.
+      Menu.setApplicationMenu(Menu.buildFromTemplate([
+        {role: 'appMenu'},
+        {role: 'editMenu'},
+        {label: 'View', submenu: [{role: 'togglefullscreen'}]},
+        {role: 'windowMenu'},
+      ]));
     } else {
       // Disable the default menu bar and its associated shortcuts
       Menu.setApplicationMenu(null);

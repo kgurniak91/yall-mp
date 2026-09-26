@@ -1,3 +1,10 @@
+<div class="resize-handle"
+     title="Drag to change the timeline height"
+     (pointerdown)="onResizeHandlePointerDown($event)"
+     (pointermove)="onResizeHandlePointerMove($event)"
+     (pointerup)="onResizeHandlePointerUp($event)"
+     (pointercancel)="onResizeHandlePointerUp($event)"></div>
+
 @if (videoStateService.isTimelineLoading()) {
   <div class="loader-wrapper">
     <app-spinner/>

@@ -6,9 +6,10 @@ import * as fs from 'fs';
 import path from 'path';
 
 export interface MpvEmbedEvent {
-  type: 'shutdown' | 'log' | 'render-error';
+  type: 'shutdown' | 'log' | 'render-error' | 'client-message';
   level?: string;
   prefix?: string;
+  /** For 'client-message': the script-message arguments joined by newlines. */
   text: string;
 }
 
