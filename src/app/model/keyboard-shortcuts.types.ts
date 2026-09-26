@@ -30,6 +30,17 @@ export interface KeyboardShortcut {
   scope: KeyboardShortcutScope;
   type: ActionType;
   group: KeyboardShortcutGroup;
+  /** An alternative that menu labels prefer on this platform (e.g. ⌫ where there is no Delete key). */
+  preferredOn?: 'darwin';
+}
+
+/** "Split clip (\\)": a menu label with the keys of the action's shortcut, if it has one. */
+export function withShortcut(label: string, action: KeyboardAction): string {
+  const platform = window.electronAPI?.platform;
+  const definitions = KEYBOARD_SHORTCUTS.filter(shortcut => shortcut.action === action);
+  const shortcut = definitions.find(definition => definition.preferredOn === platform)
+    ?? definitions.find(definition => !definition.preferredOn);
+  return shortcut ? `${label} (${shortcut.displayKeys.join('+')})` : label;
 }
 
 const SWITCH_TRACK_SHORTCUTS: KeyboardShortcut[] = Array(9).fill(null).map((_, index: number) => {
@@ -296,6 +307,16 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
     group: KeyboardShortcutGroup.Timeline
   },
   {
+    action: KeyboardAction.DeleteClip,
+    key: 'Backspace',
+    description: 'Delete current clip or remove gap (alternative; the delete key on Mac keyboards)',
+    displayKeys: ['⌫'],
+    scope: KeyboardShortcutScope.Project,
+    type: ActionType.SingleShot,
+    group: KeyboardShortcutGroup.Timeline,
+    preferredOn: 'darwin'
+  },
+  {
     action: KeyboardAction.CreateClip,
     key: 'Insert',
     description: 'Create new subtitled clip in a gap',
@@ -347,6 +368,15 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
     key: 's',
     description: 'Edit current subtitles text',
     displayKeys: ['S'],
+    scope: KeyboardShortcutScope.Project,
+    type: ActionType.SingleShot,
+    group: KeyboardShortcutGroup.Subtitles
+  },
+  {
+    action: KeyboardAction.AddManualNote,
+    key: 'a',
+    description: 'Add a manual note to the current clip',
+    displayKeys: ['A'],
     scope: KeyboardShortcutScope.Project,
     type: ActionType.SingleShot,
     group: KeyboardShortcutGroup.Subtitles

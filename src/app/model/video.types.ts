@@ -57,6 +57,7 @@ export enum KeyboardAction {
   CloseDialogOrEsc = 'CloseDialogOrEsc',
   ConfirmDialog = 'ConfirmDialog',
   AddNote = 'AddNote',
+  AddManualNote = 'AddManualNote',
   DecreasePlaybackSpeed = 'DecreasePlaybackSpeed',
   IncreasePlaybackSpeed = 'IncreasePlaybackSpeed',
   ActivateSpeedOverride = 'ActivateSpeedOverride',

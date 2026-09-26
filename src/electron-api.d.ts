@@ -103,9 +103,10 @@ export interface IElectronAPI {
     volume: number,
     isMuted: boolean
   ) => Promise<void>;
-  mpvFinishVideoResize: (rect: { x: number, y: number, width: number, height: number }) => Promise<void>;
+  /** `viewport` is the page size; with it the macOS window is kept in the video's shape. */
+  mpvFinishVideoResize: (rect: { x: number, y: number, width: number, height: number }, viewport?: {width: number, height: number}) => Promise<void>;
   /** macOS live resize: moves the native video view immediately (no reply). */
-  mpvSetVideoBounds: (rect: {x: number, y: number, width: number, height: number}) => void;
+  mpvSetVideoBounds: (rect: {x: number, y: number, width: number, height: number}, viewport?: {width: number, height: number}) => void;
   mpvCommand: (commandArray: any[]) => Promise<void>;
   mpvGetProperty: (property: string) => Promise<any>;
   mpvSetProperty: (property: string, value: any) => Promise<void>;

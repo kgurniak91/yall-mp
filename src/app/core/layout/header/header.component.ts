@@ -9,6 +9,7 @@ import {
   OnDestroy,
   OnInit,
   signal,
+  untracked,
   viewChild
 } from '@angular/core';
 import type {MenuAction} from '../../../../electron-api';
@@ -27,10 +28,12 @@ import {
 import {LogoComponent} from '../../../shared/components/logo/logo.component';
 import {DEFAULT_CONFIRMATION} from '../../../shared/types/confirmation.types';
 
-// macOS title strip auto-hide (see onPointerMove).
+// macOS title strip auto-hide (see onPointerMove and showStripBriefly).
 const STRIP_HEIGHT_PX = 28; // MAC_TITLE_STRIP_HEIGHT in electron-main.ts
 const STRIP_REVEAL_ZONE_PX = 4;
 const STRIP_HIDE_DELAY_MS = 350;
+/** How long the strip stays after a project opens, like IINA's title bar on a newly opened video. */
+const STRIP_SHOW_ON_OPEN_MS = 3000;
 
 @Component({
   selector: 'app-header',
@@ -60,10 +63,17 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
   protected readonly windowTitle = computed(() =>
     this.isProjectDetailsView() ? (this.currentProject()?.mediaFileName || 'Loading media...') : "Y'ALL Media Player"
   );
-  /** macOS: the title strip (and the traffic lights) show only while the pointer is at the top edge. */
+  /**
+   * macOS: the title strip (and the traffic lights) show for a moment when a project opens,
+   * then only while the pointer is at the top edge; losing focus hides them at once.
+   */
   protected readonly stripVisible = signal(false);
   private stripHideTimer: ReturnType<typeof setTimeout> | undefined;
+  private stripAutoHideTimer: ReturnType<typeof setTimeout> | undefined;
+  private lastPointerY = Infinity;
+  private stripShownForProject: string | null = null;
   private readonly stripPointerHandler = (event: MouseEvent) => this.onPointerMove(event.clientY);
+  private readonly stripBlurHandler = () => this.hideStripNow();
   protected readonly currentUrl = signal<string>('');
   protected readonly currentProject = computed(() => this.computeCurrentProject());
   protected readonly mediaFileName = computed(() => this.currentProject()?.mediaFileName || 'Loading media...');
@@ -97,20 +107,62 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
       effect(() => {
         window.electronAPI.windowSetButtonsVisible(this.stripVisible());
       });
+      effect(() => {
+        // A project opened (its media is known): show the strip briefly, then leave only
+        // the video. Once per project, so saving project settings does not bring it back.
+        const project = this.isProjectDetailsView() ? this.currentProject() : null;
+        const key = project?.mediaFileName ? project.id : null;
+        if (key !== this.stripShownForProject) {
+          this.stripShownForProject = key;
+          if (key !== null) {
+            untracked(() => this.showStripBriefly());
+          }
+        }
+      });
       document.addEventListener('mousemove', this.stripPointerHandler);
+      window.addEventListener('blur', this.stripBlurHandler);
     }
   }
 
   /** Reveal zone: the top few pixels of the window; hide once the pointer is clearly below the strip. */
   private onPointerMove(clientY: number): void {
+    this.lastPointerY = clientY;
     if (this.isFullScreen()) {
       return; // macOS shows its own menu bar on top-edge hover in full screen.
     }
     if (clientY <= STRIP_REVEAL_ZONE_PX) {
       this.showStrip();
-    } else if (clientY > STRIP_HEIGHT_PX && this.stripVisible()) {
+    } else if (clientY > STRIP_HEIGHT_PX && this.stripVisible() && this.stripAutoHideTimer === undefined) {
       this.hideStripSoon();
     }
+  }
+
+  private showStripBriefly(): void {
+    if (this.isFullScreen()) {
+      return;
+    }
+    this.showStrip();
+    if (this.stripAutoHideTimer !== undefined) {
+      clearTimeout(this.stripAutoHideTimer);
+    }
+    this.stripAutoHideTimer = setTimeout(() => {
+      this.stripAutoHideTimer = undefined;
+      if (this.lastPointerY > STRIP_HEIGHT_PX) {
+        this.stripVisible.set(false);
+      }
+    }, STRIP_SHOW_ON_OPEN_MS);
+  }
+
+  private hideStripNow(): void {
+    if (this.stripHideTimer !== undefined) {
+      clearTimeout(this.stripHideTimer);
+      this.stripHideTimer = undefined;
+    }
+    if (this.stripAutoHideTimer !== undefined) {
+      clearTimeout(this.stripAutoHideTimer);
+      this.stripAutoHideTimer = undefined;
+    }
+    this.stripVisible.set(false);
   }
 
   protected onStripMouseLeave(): void {
@@ -189,8 +241,12 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
       this.cleanupMenuActionListener();
     }
     document.removeEventListener('mousemove', this.stripPointerHandler);
+    window.removeEventListener('blur', this.stripBlurHandler);
     if (this.stripHideTimer !== undefined) {
       clearTimeout(this.stripHideTimer);
+    }
+    if (this.stripAutoHideTimer !== undefined) {
+      clearTimeout(this.stripAutoHideTimer);
     }
   }
 

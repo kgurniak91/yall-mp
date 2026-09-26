@@ -113,7 +113,7 @@ export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
             y: rect.top,
             width: rect.width,
             height: rect.height,
-          });
+          }, this.viewportSize());
         }
       } finally {
         this.videoStateService.setVideoLoading(false);
@@ -136,8 +136,17 @@ export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
       if (!videoContainer) return;
       const rect = videoContainer.getBoundingClientRect();
       if (rect.width > 0 && rect.height > 0) {
-        window.electronAPI.mpvSetVideoBounds({x: rect.left, y: rect.top, width: rect.width, height: rect.height});
+        window.electronAPI.mpvSetVideoBounds({x: rect.left, y: rect.top, width: rect.width, height: rect.height}, this.viewportSize());
       }
     });
+  }
+
+  /**
+   * The page's size, i.e. the window's content area. The main process subtracts the
+   * video area from it to learn how much of the window is toolbar and timeline, which
+   * it keeps out of the window's aspect-ratio lock on macOS.
+   */
+  private viewportSize(): {width: number, height: number} {
+    return {width: window.innerWidth, height: window.innerHeight};
   }
 }

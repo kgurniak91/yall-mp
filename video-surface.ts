@@ -9,7 +9,7 @@
 // child-window design cannot work there.
 
 import {BrowserWindow, Rectangle} from 'electron';
-import {loadMpvEmbed, MpvEmbedBinding, MpvEmbedEvent, MpvEmbedStats} from './mpv-embed';
+import {loadMpvEmbed, MpvEmbedBinding, MpvEmbedEvent, MpvEmbedStats, WindowWatchEvent} from './mpv-embed';
 
 export type VideoSurfaceKind = 'child-window' | 'native-view';
 
@@ -159,6 +159,24 @@ export class NativeViewVideoSurface implements VideoSurface {
       return true;
     } catch (error) {
       console.error('[NativeViewVideoSurface] Could not attach the backdrop view:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Reports the window's full-screen transitions as they start (synchronously, before
+   * AppKit resizes the window). Returns false when the add-on in use predates this.
+   */
+  static watchWindow(window: BrowserWindow, onEvent: (event: WindowWatchEvent) => void): boolean {
+    const embed = loadMpvEmbed();
+    if (!embed || typeof embed.watchWindow !== 'function') {
+      return false;
+    }
+    try {
+      embed.watchWindow(window.getNativeWindowHandle(), onEvent);
+      return true;
+    } catch (error) {
+      console.error('[NativeViewVideoSurface] Could not watch the window:', error);
       return false;
     }
   }

@@ -176,6 +176,9 @@ export class ProjectActionService {
       case KeyboardAction.OpenDictionary:
         this.videoStateService.requestOpenDictionary();
         break;
+      case KeyboardAction.AddManualNote:
+        this.videoStateService.requestAddManualNote();
+        break;
       case KeyboardAction.ToggleCinemaMode:
         const currentMode = this.globalSettingsStateService.cinemaModeEnabled();
         this.globalSettingsStateService.setCinemaModeEnabled(!currentMode);

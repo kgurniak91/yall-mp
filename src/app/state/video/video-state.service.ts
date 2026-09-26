@@ -33,6 +33,7 @@ export class VideoStateService implements OnDestroy {
   private readonly _isUserSeeking = signal(false);
   private readonly _findInSubtitlesRequest = signal<number | null>(null);
   private readonly _openDictionaryRequest = signal<number | null>(null);
+  private readonly _addManualNoteRequest = signal<number | null>(null);
   private readonly _volume = signal(100);
   private readonly _isMuted = signal(false);
   private readonly _isSpeedOverridden = signal(false);
@@ -75,6 +76,7 @@ export class VideoStateService implements OnDestroy {
   public readonly isUserSeeking = this._isUserSeeking.asReadonly();
   public readonly findInSubtitlesRequest = this._findInSubtitlesRequest.asReadonly();
   public readonly openDictionaryRequest = this._openDictionaryRequest.asReadonly();
+  public readonly addManualNoteRequest = this._addManualNoteRequest.asReadonly();
   public readonly volume = this._volume.asReadonly();
   public readonly isMuted = this._isMuted.asReadonly();
   public readonly isSpeedOverridden = this._isSpeedOverridden.asReadonly();
@@ -307,6 +309,14 @@ export class VideoStateService implements OnDestroy {
 
   public clearOpenDictionaryRequest(): void {
     this._openDictionaryRequest.set(null);
+  }
+
+  public requestAddManualNote(): void {
+    this._addManualNoteRequest.set(Date.now());
+  }
+
+  public clearAddManualNoteRequest(): void {
+    this._addManualNoteRequest.set(null);
   }
 
   public requestZoomIn(): void {

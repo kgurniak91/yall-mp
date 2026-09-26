@@ -21,6 +21,7 @@ import {
   ProjectKeyboardShortcutsService
 } from './services/project-keyboard-shortcuts/project-keyboard-shortcuts.service';
 import {KeyboardAction, mapVideoClipToLightweight, VideoClip} from '../../model/video.types';
+import {withShortcut} from '../../model/keyboard-shortcuts.types';
 import {ClipsStateService} from '../../state/clips/clips-state.service';
 import {Popover} from 'primeng/popover';
 import {ActivatedRoute, Router} from '@angular/router';
@@ -526,6 +527,18 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
           this.subtitlesOverlay().openManualDictionary();
         });
         this.videoStateService.clearOpenDictionaryRequest();
+      }
+    });
+
+    effect(() => {
+      if (this.videoStateService.addManualNoteRequest()) {
+        this.videoStateService.clearAddManualNoteRequest();
+        const currentClip = untracked(() => this.clipsStateService.currentClipForAllTracks());
+        if (!currentClip || !currentClip.hasSubtitle) {
+          this.toastService.info('Notes can only be added to subtitled clips');
+          return;
+        }
+        untracked(() => this.openNoteDialog('', '', true));
       }
     });
 
@@ -1094,15 +1107,16 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       items.push({separator: true});
 
       // Actions for Subtitled Clip
+      // Each item shows its keyboard shortcut (see keyboard-shortcuts.types.ts).
       items.push(
         {
-          label: 'Edit subtitles',
+          label: withShortcut('Edit subtitles', KeyboardAction.EditCurrentSubtitles),
           icon: 'fa-solid fa-file-pen',
           disabled: (this.isAssProject() && this.projectSettingsStateService.useMpvSubtitles()),
           command: () => this.openEditSubtitlesDialog()
         },
         {
-          label: 'Export to Anki',
+          label: withShortcut('Export to Anki', KeyboardAction.ExportToAnki),
           icon: 'fa-solid fa-e',
           disabled: !this.ankiStateService.isAnkiExportAvailable(),
           command: () => {
@@ -1111,17 +1125,17 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
           }
         },
         {
-          label: 'Add manual note',
+          label: withShortcut('Add manual note', KeyboardAction.AddManualNote),
           icon: 'fa-solid fa-note-sticky',
           command: () => this.openNoteDialog('', '', true)
         },
         {
-          label: 'Split clip',
+          label: withShortcut('Split clip', KeyboardAction.SplitClip),
           icon: 'fa-solid fa-divide',
           command: () => this.splitCurrentSubtitledClip()
         },
         {
-          label: 'Delete clip',
+          label: withShortcut('Delete clip', KeyboardAction.DeleteClip),
           icon: 'fa-solid fa-eraser',
           command: () => this.deleteCurrentClip()
         }
@@ -1130,7 +1144,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       // Actions for Gap
       items.push({separator: true});
       items.push({
-        label: 'Create subtitled clip here',
+        label: withShortcut('Create subtitled clip here', KeyboardAction.CreateClip),
         icon: 'fa-regular fa-square-plus',
         command: () => this.createNewSubtitledClipAtCurrentTime()
       });
@@ -1142,14 +1156,14 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       const hasNeighbors = prev && next && prev.hasSubtitle && next.hasSubtitle;
 
       items.push({
-        label: 'Merge adjacent subtitles',
+        label: withShortcut('Merge adjacent subtitles', KeyboardAction.MergeSubtitles),
         icon: 'fa-solid fa-compress',
         disabled: !hasNeighbors || this.isAssProject(),
         command: () => this.actionService.dispatch(KeyboardAction.MergeSubtitles)
       });
 
       items.push({
-        label: 'Remove gap',
+        label: withShortcut('Remove gap', KeyboardAction.DeleteClip),
         icon: 'fa-solid fa-eraser',
         disabled: !hasNeighbors,
         command: () => this.deleteCurrentClip()

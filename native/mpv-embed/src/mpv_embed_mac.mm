@@ -1217,11 +1217,122 @@ Napi::Value Detach(const Napi::CallbackInfo& info)
     return env.Undefined();
 }
 
+// ---------------------------------------------------------------------------
+// Window watch: full-screen transitions, reported the moment they start
+//
+// Electron only tells JavaScript about full screen once the transition is
+// over, which is too late to drop the window's aspect-ratio lock (Electron
+// applies the lock to the full-screen size as well). AppKit posts the
+// "will enter" notification on the main thread, which in the Electron main
+// process is the JavaScript thread, so the callback can run right there --
+// no thread hop, unlike the mpv event callbacks above.
+// ---------------------------------------------------------------------------
+
+struct WindowWatch {
+    Napi::FunctionReference callback;
+    id willEnterObserver = nil;
+    id didExitObserver = nil;
+};
+
+// Main thread only.
+std::unordered_map<void*, std::unique_ptr<WindowWatch>> gWindowWatches;
+
+void notifyWindowWatch(WindowWatch* watch, const char* event)
+{
+    if (![NSThread isMainThread] || watch->callback.IsEmpty()) {
+        return;
+    }
+    Napi::Env env = watch->callback.Env();
+    Napi::HandleScope scope(env);
+    try {
+        watch->callback.Call({Napi::String::New(env, event)});
+    } catch (const Napi::Error& error) {
+        NSLog(@"[yall_mpv_embed] window watch callback threw: %s", error.what());
+    }
+}
+
+void removeWindowWatch(NSWindow* window)
+{
+    void* key = (__bridge void*)window;
+    const auto it = gWindowWatches.find(key);
+    if (it == gWindowWatches.end()) {
+        return;
+    }
+    NSNotificationCenter* center = [NSNotificationCenter defaultCenter];
+    if (it->second->willEnterObserver) {
+        [center removeObserver:it->second->willEnterObserver];
+    }
+    if (it->second->didExitObserver) {
+        [center removeObserver:it->second->didExitObserver];
+    }
+    it->second->callback.Reset(); // called from N-API entry points only, so the env is alive
+    gWindowWatches.erase(it);
+}
+
+// watchWindow(windowHandle, onEvent) -- onEvent('will-enter-full-screen' | 'did-exit-full-screen').
+// One watcher per window; a second call replaces the first.
+Napi::Value WatchWindow(const Napi::CallbackInfo& info)
+{
+    Napi::Env env = info.Env();
+    NSView* host = hostViewFromArg(info);
+    if (info.Length() < 2 || !info[1].IsFunction()) {
+        throw Napi::TypeError::New(env, "watchWindow(windowHandle, onEvent)");
+    }
+    if (![NSThread isMainThread]) {
+        throw Napi::Error::New(env, "watchWindow must be called on the main thread.");
+    }
+    NSWindow* window = [host window];
+    if (!window) {
+        throw Napi::Error::New(env, "The view is not in a window yet.");
+    }
+
+    removeWindowWatch(window);
+    auto watch = std::make_unique<WindowWatch>();
+    watch->callback = Napi::Persistent(info[1].As<Napi::Function>());
+    // The map outlives the JavaScript environment at exit; never touch the env from a destructor.
+    watch->callback.SuppressDestruct();
+    WindowWatch* raw = watch.get();
+    NSNotificationCenter* center = [NSNotificationCenter defaultCenter];
+    // queue:nil runs the blocks synchronously on the posting thread (the main thread).
+    watch->willEnterObserver = [center addObserverForName:NSWindowWillEnterFullScreenNotification
+                                                   object:window
+                                                    queue:nil
+                                               usingBlock:^(NSNotification* notification) {
+        (void)notification;
+        notifyWindowWatch(raw, "will-enter-full-screen");
+    }];
+    watch->didExitObserver = [center addObserverForName:NSWindowDidExitFullScreenNotification
+                                                 object:window
+                                                  queue:nil
+                                             usingBlock:^(NSNotification* notification) {
+        (void)notification;
+        notifyWindowWatch(raw, "did-exit-full-screen");
+    }];
+    gWindowWatches[(__bridge void*)window] = std::move(watch);
+    return env.Undefined();
+}
+
+// unwatchWindow(windowHandle)
+Napi::Value UnwatchWindow(const Napi::CallbackInfo& info)
+{
+    Napi::Env env = info.Env();
+    NSView* host = hostViewFromArg(info);
+    if (![NSThread isMainThread]) {
+        throw Napi::Error::New(env, "unwatchWindow must be called on the main thread.");
+    }
+    if (NSWindow* window = [host window]) {
+        removeWindowWatch(window);
+    }
+    return env.Undefined();
+}
+
 Napi::Object Init(Napi::Env env, Napi::Object exports)
 {
     exports.Set("probe", Napi::Function::New(env, Probe));
     exports.Set("attach", Napi::Function::New(env, Attach));
     exports.Set("detach", Napi::Function::New(env, Detach));
+    exports.Set("watchWindow", Napi::Function::New(env, WatchWindow));
+    exports.Set("unwatchWindow", Napi::Function::New(env, UnwatchWindow));
     exports.Set("create", Napi::Function::New(env, Create));
     exports.Set("setFrame", Napi::Function::New(env, SetFrame));
     exports.Set("setVisible", Napi::Function::New(env, SetVisible));

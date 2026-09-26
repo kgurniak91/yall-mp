@@ -27,6 +27,8 @@ opens the JSON IPC socket (`input-ipc-server`) that `node-mpv` talks to.
 | `setVisible(id, visible)` | Hide/show the video view (the black base view stays). |
 | `destroy(id)` | Frees the render context, terminates libmpv, removes the views. |
 | `stats(id)` | Renderer name, frame counters, backing size — for diagnostics. |
+| `attach(handle, position?)` / `detach(handle)` | Add/remove the black base view before any video exists. |
+| `watchWindow(handle, onEvent)` / `unwatchWindow(handle)` | `onEvent('will-enter-full-screen' \| 'did-exit-full-screen')`, called synchronously as the transition starts — Electron's own events come after it, too late to drop the window's aspect-ratio lock. |
 
 `create` accepts `renderer: 'gl' | 'sw'` (default OpenGL, automatic fallback to
 the software renderer if OpenGL is unavailable), `position: 'below' | 'above'`

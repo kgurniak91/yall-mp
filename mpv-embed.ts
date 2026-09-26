@@ -49,12 +49,20 @@ export interface MpvEmbedStats {
   contentsScale: number;
 }
 
+export type WindowWatchEvent = 'will-enter-full-screen' | 'did-exit-full-screen';
+
 export interface MpvEmbedBinding {
   probe(libmpvPath?: string): MpvEmbedProbeResult;
   /** Adds the opaque black backdrop view to the window (idempotent). */
   attach(windowHandle: Buffer, position?: 'below' | 'above'): void;
   /** Removes the backdrop view; destroy all sessions of that window first. */
   detach(windowHandle: Buffer): void;
+  /**
+   * Calls back, synchronously on the main thread, when the window starts entering or
+   * has left full screen. One watcher per window; missing in add-ons built before it.
+   */
+  watchWindow?(windowHandle: Buffer, onEvent: (event: WindowWatchEvent) => void): void;
+  unwatchWindow?(windowHandle: Buffer): void;
   create(windowHandle: Buffer, options?: MpvEmbedCreateOptions): MpvEmbedCreateResult;
   setFrame(id: number, x: number, y: number, width: number, height: number): void;
   setVisible(id: number, visible: boolean): void;
