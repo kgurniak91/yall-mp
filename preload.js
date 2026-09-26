@@ -77,6 +77,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     'mpv:createViewport', mediaPath, audioTrackIndex, subtitleSelection, subtitleTracks, useMpvSubtitles, subtitlesVisible, hardwareAcceleration, volume, isMuted
   ),
   mpvFinishVideoResize: (rect) => ipcRenderer.invoke('mpv:finishVideoResize', rect),
+  // macOS live resize: fire-and-forget bounds update on every layout change.
+  mpvSetVideoBounds: (rect) => ipcRenderer.send('mpv:setVideoBounds', rect),
   mpvCommand: (commandArray) => ipcRenderer.invoke('mpv:command', commandArray),
   mpvGetProperty: (property) => ipcRenderer.invoke('mpv:getProperty', property),
   mpvSetProperty: (property, value) => ipcRenderer.invoke('mpv:setProperty', property, value),

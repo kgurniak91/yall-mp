@@ -95,6 +95,8 @@ export interface IElectronAPI {
     isMuted: boolean
   ) => Promise<void>;
   mpvFinishVideoResize: (rect: { x: number, y: number, width: number, height: number }) => Promise<void>;
+  /** macOS live resize: moves the native video view immediately (no reply). */
+  mpvSetVideoBounds: (rect: {x: number, y: number, width: number, height: number}) => void;
   mpvCommand: (commandArray: any[]) => Promise<void>;
   mpvGetProperty: (property: string) => Promise<any>;
   mpvSetProperty: (property: string, value: any) => Promise<void>;

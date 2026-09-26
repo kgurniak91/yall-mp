@@ -122,6 +122,8 @@ let ffprobePath = '';
 let draggableHeaderZones: Rectangle[] = [];
 let isInitialResizeComplete = false;
 let hasRequestedInitialSeek = false;
+/** Last known aspect ratio of the loaded video (null for audio-only); lets live resizes skip the mpv round trip. */
+let cachedVideoAspect: number | null = null;
 let isVideoWindowVisible = false; // Has the video window been initialized and shown for the first time?
 let isSaving = false;
 let isRestoring = false;
@@ -168,6 +170,40 @@ async function ensureFFmpegPaths(): Promise<void> {
   } else {
     console.warn('FFmpeg or FFprobe binaries not found. Media features will be disabled.');
   }
+}
+
+/**
+ * Video rectangle inside the container, relative to the window's content area:
+ * letterboxed to the aspect ratio and centred, or the whole container for
+ * audio-only files. The surface translates it to screen coordinates if it is a
+ * separate window.
+ */
+function computeVideoBounds(containerRect: Electron.Rectangle, aspect: number | null): Electron.Rectangle {
+  if (aspect && aspect > 0) {
+    let newWidth = containerRect.width;
+    let newHeight = newWidth / aspect;
+
+    if (newHeight > containerRect.height) {
+      newHeight = containerRect.height;
+      newWidth = newHeight * aspect;
+    }
+
+    const offsetX = (containerRect.width - newWidth) / 2;
+    const offsetY = (containerRect.height - newHeight) / 2;
+
+    return {
+      x: Math.round(containerRect.x) + Math.round(offsetX),
+      y: Math.round(containerRect.y) + Math.round(offsetY),
+      width: Math.round(newWidth),
+      height: Math.round(newHeight),
+    };
+  }
+  return {
+    x: Math.round(containerRect.x),
+    y: Math.round(containerRect.y),
+    width: Math.round(containerRect.width),
+    height: Math.round(containerRect.height),
+  };
 }
 
 /** Actions the macOS menu bar sends to the renderer (handled in header.component.ts). */
@@ -1469,6 +1505,7 @@ if (!gotTheLock) {
       }
 
       isInitialResizeComplete = false;
+      cachedVideoAspect = null;
       hasRequestedInitialSeek = false;
       isVideoWindowVisible = false;
 
@@ -1513,6 +1550,9 @@ if (!gotTheLock) {
       });
 
       mpvManager.on('status', (status) => {
+        if (status.event === 'property-change' && status.name === 'video-params/aspect') {
+          cachedVideoAspect = typeof status.data === 'number' && status.data > 0 ? status.data : null;
+        }
         if (uiWindow) {
           uiWindow.webContents.send('mpv:event', status)
         }
@@ -1566,6 +1606,7 @@ if (!gotTheLock) {
         mpvManager.observeProperty('pause');
         mpvManager.observeProperty('volume');
         mpvManager.observeProperty('mute');
+        mpvManager.observeProperty('video-params/aspect'); // keeps cachedVideoAspect current (see below)
       } catch (error) {
         console.error('[Main Process] Critical error during MPV startup:', error);
         // Re-throw the error so the renderer process's Promise is rejected.
@@ -1592,42 +1633,10 @@ if (!gotTheLock) {
         } catch (e) {
           // Property unavailable, ignore and treat as null (audio-only mode)
         }
-
-        // Video rectangle relative to the window's content area; the surface
-        // translates it to screen coordinates if it is a separate window.
-        let finalBounds: Electron.Rectangle;
-
-        if (videoAspectRatio && videoAspectRatio > 0) {
-          // Perform the aspect ratio calculation.
-          let newWidth = containerRect.width;
-          let newHeight = newWidth / videoAspectRatio;
-
-          if (newHeight > containerRect.height) {
-            newHeight = containerRect.height;
-            newWidth = newHeight * videoAspectRatio;
-          }
-
-          // Center the video within the container
-          const offsetX = (containerRect.width - newWidth) / 2;
-          const offsetY = (containerRect.height - newHeight) / 2;
-
-          finalBounds = {
-            x: Math.round(containerRect.x) + Math.round(offsetX),
-            y: Math.round(containerRect.y) + Math.round(offsetY),
-            width: Math.round(newWidth),
-            height: Math.round(newHeight),
-          };
-        } else {
-          finalBounds = {
-            x: Math.round(containerRect.x),
-            y: Math.round(containerRect.y),
-            width: Math.round(containerRect.width),
-            height: Math.round(containerRect.height),
-          };
-        }
+        cachedVideoAspect = videoAspectRatio && videoAspectRatio > 0 ? videoAspectRatio : null;
 
         // Set the final bounds on the video surface.
-        videoSurface.setVideoBounds(finalBounds);
+        videoSurface.setVideoBounds(computeVideoBounds(containerRect, cachedVideoAspect));
 
         if (!isInitialResizeComplete) {
           console.log('[Main Process] Initial resize is complete.');
@@ -1641,6 +1650,23 @@ if (!gotTheLock) {
       } catch (e) {
         console.error("Error during viewport resize:", e);
       }
+    });
+
+    /**
+     * macOS live resize: the renderer sends the video area on every layout change
+     * (no debounce, no spinner) and the native view follows at once, using the
+     * cached aspect ratio instead of asking mpv each time.
+     */
+    ipcMain.on('mpv:setVideoBounds', (_, containerRect: Electron.Rectangle) => {
+      // Only once the first placement has shown the video (isInitialResizeComplete is a
+      // start-up sequencing flag that is cleared again afterwards).
+      if (!videoSurface || videoSurface.isDestroyed() || !isVideoWindowVisible) {
+        return;
+      }
+      if (containerRect.width <= 0 || containerRect.height <= 0) {
+        return;
+      }
+      videoSurface.setVideoBounds(computeVideoBounds(containerRect, cachedVideoAspect));
     });
 
     ipcMain.handle('mpv:command', (_, commandArray) => {
