@@ -228,7 +228,16 @@ std::string mpvErrorText(int code)
 {
     CGLContextObj cgl = [[self openGLContext] CGLContextObj];
     if (cgl) {
+        const CFAbsoluteTime waitStart = CFAbsoluteTimeGetCurrent();
         CGLLockContext(cgl);
+        // Probe: the main thread should never wait long here (the render queue holds the
+        // lock only while drawing). Logged at most once a second so a stall leaves a trace.
+        const double waitedMs = (CFAbsoluteTimeGetCurrent() - waitStart) * 1000.0;
+        static CFAbsoluteTime lastReport = 0;
+        if (waitedMs > 30.0 && CFAbsoluteTimeGetCurrent() - lastReport > 1.0) {
+            lastReport = CFAbsoluteTimeGetCurrent();
+            NSLog(@"[yall_mpv_embed] main thread waited %.0f ms for the OpenGL lock", waitedMs);
+        }
     }
     [super update];
     if (cgl) {
@@ -293,6 +302,14 @@ struct Session {
     NSView* __strong videoView = nil;
     NSOpenGLPixelFormat* __strong glPixelFormat = nil;
     NSOpenGLContext* __strong glContext = nil;
+
+    // Fill mode: the video view is pinned to the video area by insets from the window's
+    // content edges and resized by AppKit together with the window (autoresizing), so it
+    // never trails a live resize. mpv keeps the picture's shape inside it (keepaspect),
+    // drawing any bars itself. Main thread only.
+    bool fillMode = false;
+    NSEdgeInsets fillInsets = {0, 0, 0, 0};
+    id frameChangeObserver = nil;
 
     dispatch_queue_t renderQueue = nullptr;
     std::thread eventThread;
@@ -419,6 +436,71 @@ void refreshMetricsAsync(const std::shared_ptr<Session>& session)
         keep->redrawRequested.store(true);
         scheduleRender(keep);
     });
+}
+
+// Main thread. The video view's frame changed (fill-mode autoresizing during a live
+// window resize, or setFrame): resize the GL drawable, pick up the new backing size and
+// redraw at once, so the picture keeps up with the window.
+void onVideoViewFrameChanged(const std::shared_ptr<Session>& session)
+{
+    if (!session->videoView) {
+        return;
+    }
+    if (session->glContext && [session->videoView isKindOfClass:[NSOpenGLView class]]) {
+        [(NSOpenGLView*)session->videoView update]; // locked, see -[YallMpvGLView update]
+    }
+    refreshMetricsOnMain(session);
+    session->redrawRequested.store(true);
+    scheduleRender(session);
+}
+
+// Main thread. Called right after the video view is created.
+void observeVideoViewFrame(const std::shared_ptr<Session>& session)
+{
+    NSView* view = session->videoView;
+    if (!view) {
+        return;
+    }
+    view.postsFrameChangedNotifications = YES;
+    // A weak reference: the observer must not keep the session alive.
+    std::weak_ptr<Session> weak = session;
+    session->frameChangeObserver = [[NSNotificationCenter defaultCenter]
+        addObserverForName:NSViewFrameDidChangeNotification
+                    object:view
+                     queue:nil
+                usingBlock:^(NSNotification* notification) {
+        (void)notification;
+        if (const auto alive = weak.lock()) {
+            onVideoViewFrameChanged(alive);
+        }
+    }];
+}
+
+// Main thread. Pins the video view to the base view with the fill insets (fill mode) or
+// hands its frame back to setFrame (fill mode off).
+void applyFillFrame(const std::shared_ptr<Session>& session)
+{
+    NSView* view = session->videoView;
+    NSView* base = session->baseView;
+    if (!view || !base) {
+        return;
+    }
+    if (!session->fillMode) {
+        view.autoresizingMask = NSViewNotSizable;
+        return;
+    }
+    const NSRect bounds = base.bounds; // the base view is flipped: y grows downwards
+    const NSEdgeInsets insets = session->fillInsets;
+    const NSRect frame = NSMakeRect(
+        insets.left,
+        insets.top,
+        std::max(0.0, bounds.size.width - insets.left - insets.right),
+        std::max(0.0, bounds.size.height - insets.top - insets.bottom));
+    // Width and height follow the window; all four margins stay fixed.
+    view.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+    if (!NSEqualRects(view.frame, frame)) {
+        [view setFrame:frame];
+    }
 }
 
 // --- rendering ------------------------------------------------------------
@@ -758,6 +840,8 @@ bool createOpenGLView(const std::shared_ptr<Session>& session)
         session->glPixelFormat = pixelFormat;
         session->glContext = context;
         session->videoView = view;
+        observeVideoViewFrame(session);
+        applyFillFrame(session);
         created = true;
     });
     return created;
@@ -773,6 +857,8 @@ bool createSoftwareView(const std::shared_ptr<Session>& session)
         view.layer.contentsGravity = kCAGravityResize;
         [session->baseView addSubview:view];
         session->videoView = view;
+        observeVideoViewFrame(session);
+        applyFillFrame(session);
         created = true;
     });
     return created;
@@ -781,6 +867,10 @@ bool createSoftwareView(const std::shared_ptr<Session>& session)
 void removeVideoView(const std::shared_ptr<Session>& session)
 {
     runOnMainSync(^{
+        if (session->frameChangeObserver) {
+            [[NSNotificationCenter defaultCenter] removeObserver:session->frameChangeObserver];
+            session->frameChangeObserver = nil;
+        }
         if (session->videoView) {
             [session->videoView removeFromSuperview];
             session->videoView = nil;
@@ -1124,17 +1214,45 @@ Napi::Value SetFrame(const Napi::CallbackInfo& info)
     const double height = std::max(0.0, info[4].ToNumber().DoubleValue());
 
     runOnMainSync(^{
-        if (!session->videoView) {
+        // In fill mode AppKit sizes the view (setFillInsets); a frame from JavaScript
+        // would be a frame late and fight it.
+        if (!session->videoView || session->fillMode) {
             return;
         }
-        [session->videoView setFrame:NSMakeRect(x, y, width, height)];
-        if (session->glContext && [session->videoView isKindOfClass:[NSOpenGLView class]]) {
-            [(NSOpenGLView*)session->videoView update];
+        const NSRect frame = NSMakeRect(x, y, width, height);
+        if (NSEqualRects(session->videoView.frame, frame)) {
+            return; // nothing to do: no drawable update, no lock
         }
+        // NSViewFrameDidChangeNotification -> onVideoViewFrameChanged updates the
+        // drawable and redraws.
+        [session->videoView setFrame:frame];
     });
-    refreshMetricsAsync(session);
-    session->redrawRequested.store(true);
-    scheduleRender(session);
+    return env.Undefined();
+}
+
+// setFillInsets(id, top, right, bottom, left) -- pins the video view to the window's
+// content area minus these insets (points) and lets AppKit resize it with the window.
+// top < 0 turns fill mode off (setFrame positions the view again).
+Napi::Value SetFillInsets(const Napi::CallbackInfo& info)
+{
+    Napi::Env env = info.Env();
+    auto session = sessionFromArgs(info);
+    if (!session) {
+        return env.Undefined();
+    }
+    if (info.Length() < 5) {
+        throw Napi::TypeError::New(env, "setFillInsets(id, top, right, bottom, left)");
+    }
+    const double top = info[1].ToNumber().DoubleValue();
+    const double right = std::max(0.0, info[2].ToNumber().DoubleValue());
+    const double bottom = std::max(0.0, info[3].ToNumber().DoubleValue());
+    const double left = std::max(0.0, info[4].ToNumber().DoubleValue());
+    std::shared_ptr<Session> keep = session;
+    runOnMainSync(^{
+        keep->fillMode = top >= 0;
+        keep->fillInsets = NSEdgeInsetsMake(std::max(0.0, top), left, bottom, right);
+        applyFillFrame(keep);
+    });
     return env.Undefined();
 }
 
@@ -1233,6 +1351,8 @@ struct WindowWatch {
     Napi::FunctionReference callback;
     id willEnterObserver = nil;
     id didExitObserver = nil;
+    id willStartLiveResizeObserver = nil;
+    id didEndLiveResizeObserver = nil;
 };
 
 // Main thread only.
@@ -1266,11 +1386,18 @@ void removeWindowWatch(NSWindow* window)
     if (it->second->didExitObserver) {
         [center removeObserver:it->second->didExitObserver];
     }
+    if (it->second->willStartLiveResizeObserver) {
+        [center removeObserver:it->second->willStartLiveResizeObserver];
+    }
+    if (it->second->didEndLiveResizeObserver) {
+        [center removeObserver:it->second->didEndLiveResizeObserver];
+    }
     it->second->callback.Reset(); // called from N-API entry points only, so the env is alive
     gWindowWatches.erase(it);
 }
 
-// watchWindow(windowHandle, onEvent) -- onEvent('will-enter-full-screen' | 'did-exit-full-screen').
+// watchWindow(windowHandle, onEvent) -- onEvent('will-enter-full-screen' | 'did-exit-full-screen'
+//   | 'will-start-live-resize' | 'did-end-live-resize').
 // One watcher per window; a second call replaces the first.
 Napi::Value WatchWindow(const Napi::CallbackInfo& info)
 {
@@ -1308,6 +1435,21 @@ Napi::Value WatchWindow(const Napi::CallbackInfo& info)
                                              usingBlock:^(NSNotification* notification) {
         (void)notification;
         notifyWindowWatch(raw, "did-exit-full-screen");
+    }];
+    // The user started / finished dragging a window edge (programmatic resizes do not post these).
+    watch->willStartLiveResizeObserver = [center addObserverForName:NSWindowWillStartLiveResizeNotification
+                                                              object:window
+                                                               queue:nil
+                                                          usingBlock:^(NSNotification* notification) {
+        (void)notification;
+        notifyWindowWatch(raw, "will-start-live-resize");
+    }];
+    watch->didEndLiveResizeObserver = [center addObserverForName:NSWindowDidEndLiveResizeNotification
+                                                           object:window
+                                                            queue:nil
+                                                       usingBlock:^(NSNotification* notification) {
+        (void)notification;
+        notifyWindowWatch(raw, "did-end-live-resize");
     }];
     gWindowWatches[(__bridge void*)window] = std::move(watch);
     return env.Undefined();
@@ -1403,22 +1545,30 @@ NSSize yallWindowWillResize(id self, SEL _cmd, NSWindow* sender, NSSize frameSiz
         }
     }
 
-    const NSRect proposedContent = [sender contentRectForFrameRect:NSMakeRect(0, 0, frameSize.width, frameSize.height)];
+    // The page fills the content view, and with a hidden title bar the content view is the
+    // whole window. contentRectForFrameRect: would still subtract a (hidden) title bar,
+    // 28 pt, so use the window's actual frame-to-content difference instead (0 here).
+    const NSSize contentNow = [[sender contentView] frame].size;
+    const double chromeWidth = std::max(0.0, current.width - contentNow.width);
+    const double chromeHeight = std::max(0.0, current.height - contentNow.height);
+    const double proposedContentWidth = frameSize.width - chromeWidth;
+    const double proposedContentHeight = frameSize.height - chromeHeight;
+
     double videoWidth;
     double videoHeight;
     if (axis == 1) {
-        videoWidth = proposedContent.size.width - lock->extraWidth;
+        videoWidth = proposedContentWidth - lock->extraWidth;
         videoHeight = videoWidth / lock->aspect;
     } else {
-        videoHeight = proposedContent.size.height - lock->extraHeight;
+        videoHeight = proposedContentHeight - lock->extraHeight;
         videoWidth = videoHeight * lock->aspect;
     }
     if (videoWidth < lock->minVideoWidth) {
         videoWidth = lock->minVideoWidth;
         videoHeight = videoWidth / lock->aspect;
     }
-    const NSRect content = NSMakeRect(0, 0, round(videoWidth + lock->extraWidth), round(videoHeight + lock->extraHeight));
-    return [sender frameRectForContentRect:content].size;
+    return NSMakeSize(round(videoWidth + lock->extraWidth) + chromeWidth,
+                      round(videoHeight + lock->extraHeight) + chromeHeight);
 }
 
 // Switches the window's delegate object to a dynamic subclass of its own class
@@ -1540,6 +1690,7 @@ Napi::Object Init(Napi::Env env, Napi::Object exports)
     exports.Set("setWindowAspectLock", Napi::Function::New(env, SetWindowAspectLock));
     exports.Set("create", Napi::Function::New(env, Create));
     exports.Set("setFrame", Napi::Function::New(env, SetFrame));
+    exports.Set("setFillInsets", Napi::Function::New(env, SetFillInsets));
     exports.Set("setVisible", Napi::Function::New(env, SetVisible));
     exports.Set("destroy", Napi::Function::New(env, Destroy));
     exports.Set("stats", Napi::Function::New(env, Stats));

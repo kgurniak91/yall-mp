@@ -193,6 +193,12 @@ export class MpvManager extends EventEmitter {
       // "Now Playing" controls and delivers the keys as PLAY/PAUSEONLY/... key events,
       // which bindMediaKeys() routes back to the app as script messages.
       ['input-media-keys', 'yes'],
+      // With the default (50 ms) mpv renders each frame early and then waits inside the
+      // render call until its display time, holding the OpenGL lock the whole time; at 25
+      // fps that is nearly always, and every window-resize step on the main thread (which
+      // needs the same lock to resize the drawable) queued behind it. 0 = render at the
+      // display time, no waiting; the mpv manual suggests it for render-API users.
+      ['video-timing-offset', '0'],
       ...options,
     ];
 

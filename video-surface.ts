@@ -139,6 +139,8 @@ export class NativeViewVideoSurface implements VideoSurface {
   private sessionId: number | null = null;
   private visible = false;
   private destroyed = false;
+  /** Fill-mode insets last applied (or waiting for the session to exist); null = fill mode off. */
+  private fillInsets: {top: number; right: number; bottom: number; left: number} | null = null;
 
   constructor(private readonly host: BrowserWindow) {
     const embed = loadMpvEmbed();
@@ -218,6 +220,9 @@ export class NativeViewVideoSurface implements VideoSurface {
     });
     this.sessionId = result.id;
     this.embed.setVisible(result.id, this.visible);
+    if (this.fillInsets) {
+      this.applyFillInsets(this.fillInsets);
+    }
     return {
       renderer: result.renderer,
       libmpvPath: result.libmpvPath,
@@ -240,6 +245,53 @@ export class NativeViewVideoSurface implements VideoSurface {
   setVideoBounds(rect: Rectangle): void {
     if (this.sessionId !== null) {
       this.embed.setFrame(this.sessionId, rect.x, rect.y, rect.width, rect.height);
+    }
+  }
+
+  /** True when the add-on can pin the view (fill mode); older add-ons cannot. */
+  supportsFill(): boolean {
+    return typeof this.embed.setFillInsets === 'function';
+  }
+
+  /** In fill mode AppKit sizes the view; setVideoBounds is then ignored by the add-on. */
+  isFilling(): boolean {
+    return this.fillInsets !== null;
+  }
+
+  /**
+   * Places the video by the page's video area instead of a video rectangle: the view is
+   * pinned to the area (insets from the window edges) and follows the window by itself.
+   * The add-on is only called when the insets change (a new layout, a taller timeline),
+   * not on every resize step. Returns false when fill mode is unavailable.
+   */
+  setVideoArea(area: Rectangle, viewport: {width: number; height: number}): boolean {
+    if (!this.supportsFill()) {
+      return false;
+    }
+    const insets = {
+      top: Math.max(0, Math.round(area.y)),
+      left: Math.max(0, Math.round(area.x)),
+      right: Math.max(0, Math.round(viewport.width - area.x - area.width)),
+      bottom: Math.max(0, Math.round(viewport.height - area.y - area.height)),
+    };
+    const previous = this.fillInsets;
+    if (previous && previous.top === insets.top && previous.left === insets.left
+      && previous.right === insets.right && previous.bottom === insets.bottom) {
+      return true;
+    }
+    this.fillInsets = insets;
+    this.applyFillInsets(insets);
+    return true;
+  }
+
+  private applyFillInsets(insets: {top: number; right: number; bottom: number; left: number}): void {
+    if (this.sessionId === null || !this.embed.setFillInsets) {
+      return; // applied in createEmbeddedMpv
+    }
+    try {
+      this.embed.setFillInsets(this.sessionId, insets.top, insets.right, insets.bottom, insets.left);
+    } catch (error) {
+      console.error('[NativeViewVideoSurface] setFillInsets failed:', error);
     }
   }
 

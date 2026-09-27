@@ -49,7 +49,7 @@ export interface MpvEmbedStats {
   contentsScale: number;
 }
 
-export type WindowWatchEvent = 'will-enter-full-screen' | 'did-exit-full-screen';
+export type WindowWatchEvent = 'will-enter-full-screen' | 'did-exit-full-screen' | 'will-start-live-resize' | 'did-end-live-resize';
 
 export interface MpvEmbedBinding {
   probe(libmpvPath?: string): MpvEmbedProbeResult;
@@ -71,6 +71,12 @@ export interface MpvEmbedBinding {
   setWindowAspectLock?(windowHandle: Buffer, aspect: number, extraWidth: number, extraHeight: number, minVideoWidth: number): void;
   create(windowHandle: Buffer, options?: MpvEmbedCreateOptions): MpvEmbedCreateResult;
   setFrame(id: number, x: number, y: number, width: number, height: number): void;
+  /**
+   * Fill mode: pins the video view to the window's content area minus these insets and lets
+   * AppKit resize it together with the window, so it never trails a live resize (mpv keeps
+   * the picture's shape inside it). `top` < 0 turns it off. Missing in older add-ons.
+   */
+  setFillInsets?(id: number, top: number, right: number, bottom: number, left: number): void;
   setVisible(id: number, visible: boolean): void;
   destroy(id: number): void;
   stats(id: number): MpvEmbedStats | null;

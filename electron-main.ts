@@ -260,6 +260,13 @@ const ASPECT_LOCK_MIN_VIDEO_WIDTH = 480;
 let aspectLockHookMissingWarned = false;
 
 let lastVideoLayout: VideoLayout | null = null;
+/** The user is dragging a window edge (macOS, from the add-on's window watch). */
+let windowInLiveResize = false;
+/**
+ * True when the window's shape is held during user resizes (the add-on on macOS, Electron's
+ * setAspectRatio on the Linux test path). Without it the window is refitted after each drag.
+ */
+let aspectLockHeldLive = false;
 let aspectLock: {aspect: number; extra: {width: number; height: number}} | null = null;
 let aspectLockSettleTimer: NodeJS.Timeout | null = null;
 
@@ -286,9 +293,11 @@ function setWindowAspectLock(aspect: number, extra: {width: number; height: numb
   }
   if (process.platform !== 'darwin') {
     mainWindow.setAspectRatio(aspect, extra);
+    aspectLockHeldLive = true;
     return;
   }
-  if (!NativeViewVideoSurface.setAspectLock(mainWindow, aspect, extra, ASPECT_LOCK_MIN_VIDEO_WIDTH) && !aspectLockHookMissingWarned) {
+  aspectLockHeldLive = NativeViewVideoSurface.setAspectLock(mainWindow, aspect, extra, ASPECT_LOCK_MIN_VIDEO_WIDTH);
+  if (!aspectLockHeldLive && !aspectLockHookMissingWarned) {
     aspectLockHookMissingWarned = true;
     // The window is still fitted to the video after each change; only the live constraint is missing.
     console.warn('[Main Process] The native add-on cannot lock the window shape (rebuild it with build.sh native); the window is refitted after each resize instead.');
@@ -362,6 +371,7 @@ function conformWindowToAspectLock(): Electron.Rectangle | null {
   const x = Math.max(workArea.x, Math.min(bounds.x, workArea.x + workArea.width - width));
   const y = Math.max(workArea.y, Math.min(bounds.y, workArea.y + workArea.height - height));
   console.log(`[Main Process] Fitting the window to the video: ${bounds.width}x${bounds.height} -> ${width}x${height}`);
+  noteMainActivity(`fit ${width}x${height}`);
   isProgrammaticResize = true;
   mainWindow.setBounds({x, y, width, height});
   isProgrammaticResize = false;
@@ -407,7 +417,7 @@ function applyAspectLock(layout: VideoLayout, immediate: boolean): Electron.Rect
     setWindowAspectLock(cachedVideoAspect, extra);
   }
 
-  if (immediate) {
+  if (immediate && !windowInLiveResize) {
     if (aspectLockSettleTimer) {
       clearTimeout(aspectLockSettleTimer);
       aspectLockSettleTimer = null;
@@ -415,17 +425,56 @@ function applyAspectLock(layout: VideoLayout, immediate: boolean): Electron.Rect
     return conformWindowToAspectLock() ?? containerRect;
   }
 
+  // With the shape held live, a resize step that changes nothing about the lock needs no
+  // refit (and a refit mid-drag would fight the user's drag). Refit only when the video's
+  // shape or the toolbar/timeline height changed, once the layout has settled.
+  if (changed || !aspectLockHeldLive) {
+    scheduleAspectLockRefit();
+  }
+  return containerRect;
+}
+
+/** Refits the window once the layout has stopped changing, and never while the user drags an edge. */
+function scheduleAspectLockRefit(): void {
   if (aspectLockSettleTimer) {
     clearTimeout(aspectLockSettleTimer);
   }
   aspectLockSettleTimer = setTimeout(() => {
     aspectLockSettleTimer = null;
+    if (windowInLiveResize) {
+      return; // did-end-live-resize schedules it again
+    }
     const fitted = conformWindowToAspectLock();
-    if (fitted && videoSurface && !videoSurface.isDestroyed() && isVideoWindowVisible) {
-      videoSurface.setVideoBounds(computeVideoBounds(fitted, cachedVideoAspect));
+    if (fitted) {
+      placeFittedVideo(fitted);
     }
   }, ASPECT_LOCK_SETTLE_MS);
-  return containerRect;
+}
+
+/**
+ * Places the video for the page's video area. On macOS with a current add-on the view is
+ * pinned to the area (fill mode) and AppKit resizes it with the window, so nothing per
+ * frame is needed; otherwise the letterboxed video rectangle is set as before.
+ */
+function placeVideo(containerRect: Electron.Rectangle, viewport: {width: number; height: number} | undefined, fitted: Electron.Rectangle): void {
+  if (!videoSurface || videoSurface.isDestroyed()) {
+    return;
+  }
+  if (viewport && videoSurface instanceof NativeViewVideoSurface && videoSurface.setVideoArea(containerRect, viewport)) {
+    return;
+  }
+  videoSurface.setVideoBounds(computeVideoBounds(fitted, cachedVideoAspect));
+}
+
+/** After the window was refitted by code: in fill mode the view already followed it. */
+function placeFittedVideo(fitted: Electron.Rectangle): void {
+  if (!videoSurface || videoSurface.isDestroyed() || !isVideoWindowVisible) {
+    return;
+  }
+  if (videoSurface instanceof NativeViewVideoSurface && videoSurface.isFilling()) {
+    return;
+  }
+  videoSurface.setVideoBounds(computeVideoBounds(fitted, cachedVideoAspect));
 }
 
 /** After full screen, or when the video's shape changes: lock again from the last layout. */
@@ -437,9 +486,36 @@ function reapplyAspectLock(): void {
   const fitted = applyAspectLock(layout, true);
   // Only a window that was just resized needs the video moved here; otherwise the
   // surface already holds the bounds for this layout (the renderer sends them itself).
-  if (fitted !== layout.containerRect && videoSurface && !videoSurface.isDestroyed() && isVideoWindowVisible) {
-    videoSurface.setVideoBounds(computeVideoBounds(fitted, cachedVideoAspect));
+  if (fitted !== layout.containerRect) {
+    placeFittedVideo(fitted);
   }
+}
+
+/**
+ * Probe: logs when the main process was blocked for a long time (the app shows the spinning
+ * cursor). A timer should fire every 250 ms; a much later firing means the main thread was
+ * stuck in between. The last few IPC channels handled say what it was doing.
+ */
+const STALL_SAMPLE_MS = 250;
+const STALL_REPORT_MS = 500;
+const recentMainActivity: string[] = [];
+function noteMainActivity(what: string): void {
+  recentMainActivity.push(`${new Date().toISOString().slice(11, 23)} ${what}`);
+  if (recentMainActivity.length > 8) {
+    recentMainActivity.shift();
+  }
+}
+function startMainThreadStallLogger(): void {
+  let last = Date.now();
+  const timer = setInterval(() => {
+    const now = Date.now();
+    const blocked = now - last - STALL_SAMPLE_MS;
+    last = now;
+    if (blocked > STALL_REPORT_MS) {
+      console.warn(`[Stall] main process was blocked for ${blocked} ms; last activity: ${recentMainActivity.join(' | ') || 'none'}`);
+    }
+  }, STALL_SAMPLE_MS);
+  timer.unref();
 }
 
 export interface ExecutableInUse {
@@ -1178,8 +1254,20 @@ async function createWindow() {
     // the lock is dropped the moment the transition starts, whoever started it (fn+F, the
     // green button, the View menu). The add-on reports that synchronously (video-surface.ts).
     if (!NativeViewVideoSurface.watchWindow(mainWindow, (event) => {
-      if (event === 'will-enter-full-screen') {
-        clearAspectLock();
+      noteMainActivity(event);
+      switch (event) {
+        case 'will-enter-full-screen':
+          clearAspectLock();
+          break;
+        case 'will-start-live-resize':
+          windowInLiveResize = true;
+          break;
+        case 'did-end-live-resize':
+          windowInLiveResize = false;
+          if (aspectLock && !aspectLockHeldLive) {
+            scheduleAspectLockRefit(); // older add-on: snap to the video's shape after the drag
+          }
+          break;
       }
     })) {
       console.warn('[Main Process] Full-screen transitions are not reported by the native add-on (rebuild it with build.sh native); the window keeps its video shape only outside full screen.');
@@ -1253,6 +1341,7 @@ if (!gotTheLock) {
   });
 
   app.whenReady().then(async () => {
+    startMainThreadStallLogger();
     try {
       const configStr = await fs.readFile(APP_DATA_PATH, 'utf-8');
       const config = JSON.parse(configStr);
@@ -1978,11 +2067,13 @@ if (!gotTheLock) {
         }
         cachedVideoAspect = videoAspectRatio && videoAspectRatio > 0 ? videoAspectRatio : null;
 
-        // macOS native chrome: fit the window to the video first (see applyAspectLock).
-        const placement = viewport ? applyAspectLock({containerRect, viewport}, true) : containerRect;
+        // macOS native chrome: lock the window to the video (see applyAspectLock). The first
+        // fit waits until the layout has settled: measured this early, the timeline may not
+        // have its final height yet, and fitting twice made the window jump twice.
+        const placement = viewport ? applyAspectLock({containerRect, viewport}, false) : containerRect;
 
-        // Set the final bounds on the video surface.
-        videoSurface.setVideoBounds(computeVideoBounds(placement, cachedVideoAspect));
+        // Place the video (fill mode on macOS, see placeVideo).
+        placeVideo(containerRect, viewport, placement);
 
         if (!isInitialResizeComplete) {
           console.log('[Main Process] Initial resize is complete.');
@@ -2004,6 +2095,7 @@ if (!gotTheLock) {
      * cached aspect ratio instead of asking mpv each time.
      */
     ipcMain.on('mpv:setVideoBounds', (_, containerRect: Electron.Rectangle, viewport?: {width: number, height: number}) => {
+      noteMainActivity(`setVideoBounds ${Math.round(containerRect.width)}x${Math.round(containerRect.height)}`);
       // Only once the first placement has shown the video (isInitialResizeComplete is a
       // start-up sequencing flag that is cleared again afterwards).
       if (!videoSurface || videoSurface.isDestroyed() || !isVideoWindowVisible) {
@@ -2013,7 +2105,7 @@ if (!gotTheLock) {
         return;
       }
       const placement = viewport ? applyAspectLock({containerRect, viewport}, false) : containerRect;
-      videoSurface.setVideoBounds(computeVideoBounds(placement, cachedVideoAspect));
+      placeVideo(containerRect, viewport, placement);
     });
 
     ipcMain.handle('mpv:command', (_, commandArray) => {
