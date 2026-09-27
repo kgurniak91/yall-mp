@@ -309,7 +309,8 @@ struct Session {
     // drawing any bars itself. Main thread only.
     bool fillMode = false;
     NSEdgeInsets fillInsets = {0, 0, 0, 0};
-    id frameChangeObserver = nil;
+    // `::id`: inside Session the bare name `id` means the `id` member above, not the ObjC type.
+    ::id frameChangeObserver = nil;
 
     dispatch_queue_t renderQueue = nullptr;
     std::thread eventThread;
