@@ -53,6 +53,8 @@ interface WheelGesture {
 const WAVEFORM_SCROLLBAR_SPACE_PX = 15;
 const MIN_TIMELINE_HEIGHT_PX = 60;
 const MAX_TIMELINE_HEIGHT_PX = 400;
+/** Wait this long after the last height change before re-rasterizing the waveform (see the effect). */
+const WAVEFORM_HEIGHT_RERASTER_DELAY_MS = 90;
 
 /** Share of bars that must fit below full height; the rest are clipped at the top. */
 const WAVEFORM_DISPLAY_PERCENTILE = 0.99;
@@ -124,6 +126,11 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
   /** Scroll events to swallow because they come from the scrollbar flash, not the user. */
   private scrollEventsToIgnore = 0;
   private resizeDrag: {pointerId: number, startY: number, startHeight: number} | null = null;
+  /** Pending waveform re-raster after a height change (debounced; see the effect in the constructor). */
+  private waveformHeightRerasterTimer: ReturnType<typeof setTimeout> | undefined;
+  /** rAF handle that coalesces resize-handle drag events to one height update per frame. */
+  private resizeDragFrame: number | null = null;
+  private resizeDragPendingHeight: number | null = null;
   private wheelGesture: WheelGesture | null = null;
   private wheelRedrawTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly keyHandler = (e: KeyboardEvent) => this.handleKey(e);
@@ -149,10 +156,25 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
     });
 
     effect(() => {
+      // The strip resizes live through the CSS height binding; re-rasterizing the whole
+      // waveform is the expensive part, and a resize drag changes the height dozens of times
+      // a second, so it is deferred until the height stops changing. This mirrors what
+      // WaveSurfer already does for its own width resizes (a 100 ms debounce in its renderer);
+      // the height path through setOptions() skips that and re-renders synchronously.
       const height = this.waveformHeight();
-      if (this.wavesurfer && this.wavesurfer.options.height !== height) {
-        this.wavesurfer.setOptions({height});
+      if (!this.wavesurfer || this.wavesurfer.options.height === height) {
+        return;
       }
+      if (this.waveformHeightRerasterTimer !== undefined) {
+        clearTimeout(this.waveformHeightRerasterTimer);
+      }
+      this.waveformHeightRerasterTimer = setTimeout(() => {
+        this.waveformHeightRerasterTimer = undefined;
+        const target = this.waveformHeight();
+        if (this.wavesurfer && this.wavesurfer.options.height !== target) {
+          this.wavesurfer.setOptions({height: target});
+        }
+      }, WAVEFORM_HEIGHT_RERASTER_DELAY_MS);
     });
   }
 
@@ -177,6 +199,12 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
     if (this.wheelRedrawTimer !== undefined) {
       clearTimeout(this.wheelRedrawTimer);
     }
+    if (this.waveformHeightRerasterTimer !== undefined) {
+      clearTimeout(this.waveformHeightRerasterTimer);
+    }
+    if (this.resizeDragFrame !== null) {
+      cancelAnimationFrame(this.resizeDragFrame);
+    }
   }
 
   /** Tears down the WaveSurfer instance so that the renderer effect can build a fresh one. */
@@ -190,6 +218,10 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
     this.wavesurfer = undefined;
     this.wsRegions = undefined;
     this.renderedPeaks = undefined;
+    if (this.waveformHeightRerasterTimer !== undefined) {
+      clearTimeout(this.waveformHeightRerasterTimer);
+      this.waveformHeightRerasterTimer = undefined;
+    }
     this.isWaveSurferReady.set(false);
     this.lastDrawnClipsSignature = null;
     this.lastTrackIndex = null;
@@ -231,17 +263,34 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
     if (!this.resizeDrag || event.pointerId !== this.resizeDrag.pointerId) {
       return;
     }
-    // The handle is on the top edge: dragging up makes the timeline taller.
+    // The handle is on the top edge: dragging up makes the timeline taller. Coalesce to one
+    // update per animation frame so a fast drag does not run the whole layout (waveform,
+    // native video bounds) more than once a frame.
     const height = this.resizeDrag.startHeight + (this.resizeDrag.startY - event.clientY);
-    this.globalSettingsStateService.setTimelineHeight(
-      Math.max(MIN_TIMELINE_HEIGHT_PX, Math.min(MAX_TIMELINE_HEIGHT_PX, height))
-    );
+    this.resizeDragPendingHeight = Math.max(MIN_TIMELINE_HEIGHT_PX, Math.min(MAX_TIMELINE_HEIGHT_PX, height));
+    if (this.resizeDragFrame === null) {
+      this.resizeDragFrame = requestAnimationFrame(() => {
+        this.resizeDragFrame = null;
+        if (this.resizeDragPendingHeight !== null) {
+          this.globalSettingsStateService.setTimelineHeight(this.resizeDragPendingHeight);
+        }
+      });
+    }
   }
 
   protected onResizeHandlePointerUp(event: PointerEvent): void {
     if (this.resizeDrag && event.pointerId === this.resizeDrag.pointerId) {
       (event.target as HTMLElement).releasePointerCapture(event.pointerId);
       this.resizeDrag = null;
+      // Make sure the final height is applied even if the last move is still queued for a frame.
+      if (this.resizeDragFrame !== null) {
+        cancelAnimationFrame(this.resizeDragFrame);
+        this.resizeDragFrame = null;
+      }
+      if (this.resizeDragPendingHeight !== null) {
+        this.globalSettingsStateService.setTimelineHeight(this.resizeDragPendingHeight);
+        this.resizeDragPendingHeight = null;
+      }
     }
   }
 
