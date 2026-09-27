@@ -63,6 +63,12 @@ export interface MpvEmbedBinding {
    */
   watchWindow?(windowHandle: Buffer, onEvent: (event: WindowWatchEvent) => void): void;
   unwatchWindow?(windowHandle: Buffer): void;
+  /**
+   * Keeps the window in the video's shape while the user resizes it: the content area is
+   * `extraWidth + video width` by `extraHeight + video height` with the video at `aspect`,
+   * following the edge being dragged. `aspect` 0 removes the lock. Missing in older add-ons.
+   */
+  setWindowAspectLock?(windowHandle: Buffer, aspect: number, extraWidth: number, extraHeight: number, minVideoWidth: number): void;
   create(windowHandle: Buffer, options?: MpvEmbedCreateOptions): MpvEmbedCreateResult;
   setFrame(id: number, x: number, y: number, width: number, height: number): void;
   setVisible(id: number, visible: boolean): void;

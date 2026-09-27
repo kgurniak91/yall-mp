@@ -236,9 +236,9 @@ function computeVideoBounds(containerRect: Electron.Rectangle, aspect: number | 
 // The window's aspect ratio is locked to the video plus the fixed-height parts
 // below it (toolbar, timeline), so the video fills its area edge to edge with no
 // black band above or below, and the window's rounded corners clip the video.
-// Electron's setAspectRatio(ratio, extraSize) does the constraint on every user
-// resize; the code here decides the extras, resizes the window once when they
-// change (a new video, a taller timeline) and drops the lock in full screen.
+// The add-on constrains every user resize (setWindowAspectLock); the code here
+// decides the extras, resizes the window once when they change (a new video, a
+// taller timeline) and drops the lock in full screen.
 // ---------------------------------------------------------------------------
 
 interface VideoLayout {
@@ -255,6 +255,9 @@ const ASPECT_LOCK_ENABLED = NATIVE_MAC_CHROME && (process.platform === 'darwin' 
 const ASPECT_LOCK_SETTLE_MS = 200;
 /** Windows within this many pixels of the right shape are left alone (rounding). */
 const ASPECT_LOCK_TOLERANCE_PX = 2;
+/** The user cannot drag the window narrower than this much video. */
+const ASPECT_LOCK_MIN_VIDEO_WIDTH = 480;
+let aspectLockHookMissingWarned = false;
 
 let lastVideoLayout: VideoLayout | null = null;
 let aspectLock: {aspect: number; extra: {width: number; height: number}} | null = null;
@@ -269,8 +272,26 @@ function clearAspectLock(): void {
     return;
   }
   aspectLock = null;
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.setAspectRatio(0);
+  setWindowAspectLock(0, {width: 0, height: 0});
+}
+
+/**
+ * On macOS the constraint is the add-on's (setWindowAspectLock): Electron's own
+ * setAspectRatio sets NSWindow's contentAspectRatio as well, which ignores the extras and
+ * fights the extraSize maths on every drag. Electron's is kept for the Linux test path.
+ */
+function setWindowAspectLock(aspect: number, extra: {width: number; height: number}): void {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+  if (process.platform !== 'darwin') {
+    mainWindow.setAspectRatio(aspect, extra);
+    return;
+  }
+  if (!NativeViewVideoSurface.setAspectLock(mainWindow, aspect, extra, ASPECT_LOCK_MIN_VIDEO_WIDTH) && !aspectLockHookMissingWarned) {
+    aspectLockHookMissingWarned = true;
+    // The window is still fitted to the video after each change; only the live constraint is missing.
+    console.warn('[Main Process] The native add-on cannot lock the window shape (rebuild it with build.sh native); the window is refitted after each resize instead.');
   }
 }
 
@@ -383,7 +404,7 @@ function applyAspectLock(layout: VideoLayout, immediate: boolean): Electron.Rect
     || aspectLock.extra.height !== extra.height;
   if (changed) {
     aspectLock = {aspect: cachedVideoAspect, extra};
-    mainWindow.setAspectRatio(cachedVideoAspect, extra);
+    setWindowAspectLock(cachedVideoAspect, extra);
   }
 
   if (immediate) {

@@ -181,6 +181,24 @@ export class NativeViewVideoSurface implements VideoSurface {
     }
   }
 
+  /**
+   * Locks the window to the video's shape for user resizes (see setWindowAspectLock in the
+   * add-on); `aspect` 0 unlocks. Returns false when the add-on in use predates this.
+   */
+  static setAspectLock(window: BrowserWindow, aspect: number, extra: {width: number; height: number}, minVideoWidth: number): boolean {
+    const embed = loadMpvEmbed();
+    if (!embed || typeof embed.setWindowAspectLock !== 'function') {
+      return false;
+    }
+    try {
+      embed.setWindowAspectLock(window.getNativeWindowHandle(), aspect, extra.width, extra.height, minVideoWidth);
+      return true;
+    } catch (error) {
+      console.error('[NativeViewVideoSurface] Could not set the window aspect lock:', error);
+      return false;
+    }
+  }
+
   getMpvWindowId(): number | null {
     return null;
   }

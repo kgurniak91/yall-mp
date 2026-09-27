@@ -27,6 +27,7 @@
 #import <OpenGL/OpenGL.h>
 #import <OpenGL/gl3.h>
 #import <QuartzCore/QuartzCore.h>
+#import <objc/runtime.h>
 
 #include <dlfcn.h>
 
@@ -1326,6 +1327,209 @@ Napi::Value UnwatchWindow(const Napi::CallbackInfo& info)
     return env.Undefined();
 }
 
+// ---------------------------------------------------------------------------
+// Window aspect lock: the window keeps the video's shape while the user resizes it
+//
+// Electron's BrowserWindow.setAspectRatio(ratio, extraSize) cannot be used for
+// this: it sets NSWindow's own contentAspectRatio (which knows nothing about
+// the extra toolbar/timeline height) AND recomputes the size in its delegate
+// (which does), and the two fight -- the window jumps between two shapes on
+// every drag. So the constraint lives here instead, in windowWillResize:toSize:.
+//
+// Electron's window delegate must stay the very same object (Electron and
+// Chromium keep pointers to it and check its class), so the override is put on
+// a dynamic subclass of that object's class and the object is switched to it --
+// the technique KVO uses. When no lock is set, the original implementation runs.
+//
+// The resize follows whichever edge the user drags: a right-edge drag decides
+// the width and the height follows, a bottom-edge drag the other way round; at
+// a corner the axis that moved more (relative to the window) wins and stays
+// chosen for the rest of that drag.
+// ---------------------------------------------------------------------------
+
+struct WindowAspectLock {
+    double aspect = 0;          // width / height of the video; 0 = no lock
+    double extraWidth = 0;      // window content that is not video (sidebars)
+    double extraHeight = 0;     // window content that is not video (toolbar + timeline)
+    double minVideoWidth = 0;   // the video never gets narrower than this
+    int dragAxis = 0;           // during a live resize: 1 = width decides, 2 = height decides
+    bool inFullScreenTransition = false;
+    id liveResizeEndObserver = nil;
+    id willEnterFullScreenObserver = nil;
+    id didEnterFullScreenObserver = nil;
+    id willExitFullScreenObserver = nil;
+    id didExitFullScreenObserver = nil;
+};
+
+// Main thread only. Keyed by the NSWindow.
+std::unordered_map<void*, std::unique_ptr<WindowAspectLock>> gWindowAspectLocks;
+
+WindowAspectLock* findWindowAspectLock(NSWindow* window)
+{
+    const auto it = gWindowAspectLocks.find((__bridge void*)window);
+    return it == gWindowAspectLocks.end() ? nullptr : it->second.get();
+}
+
+// Replacement for -[ElectronNSWindowDelegate windowWillResize:toSize:].
+NSSize yallWindowWillResize(id self, SEL _cmd, NSWindow* sender, NSSize frameSize)
+{
+    WindowAspectLock* lock = findWindowAspectLock(sender);
+    const bool fullScreen = ([sender styleMask] & NSWindowStyleMaskFullScreen) != 0;
+    if (!lock || lock->aspect <= 0 || fullScreen || lock->inFullScreenTransition) {
+        // No lock: the original (Electron's) implementation.
+        Class superclass = class_getSuperclass(object_getClass(self));
+        Method original = superclass ? class_getInstanceMethod(superclass, _cmd) : nullptr;
+        if (!original) {
+            return frameSize;
+        }
+        auto imp = reinterpret_cast<NSSize (*)(id, SEL, NSWindow*, NSSize)>(method_getImplementation(original));
+        return imp(self, _cmd, sender, frameSize);
+    }
+
+    const NSSize current = [sender frame].size;
+    const double dw = frameSize.width - current.width;
+    const double dh = frameSize.height - current.height;
+    if (fabs(dw) < 0.5 && fabs(dh) < 0.5) {
+        return frameSize;
+    }
+
+    int axis = [sender inLiveResize] ? lock->dragAxis : 0;
+    if (axis == 0) {
+        const double relativeWidthChange = fabs(dw) / std::max(current.width, 1.0);
+        const double relativeHeightChange = fabs(dh) / std::max(current.height, 1.0);
+        axis = relativeWidthChange >= relativeHeightChange ? 1 : 2;
+        if ([sender inLiveResize]) {
+            lock->dragAxis = axis; // keep it for the rest of this drag
+        }
+    }
+
+    const NSRect proposedContent = [sender contentRectForFrameRect:NSMakeRect(0, 0, frameSize.width, frameSize.height)];
+    double videoWidth;
+    double videoHeight;
+    if (axis == 1) {
+        videoWidth = proposedContent.size.width - lock->extraWidth;
+        videoHeight = videoWidth / lock->aspect;
+    } else {
+        videoHeight = proposedContent.size.height - lock->extraHeight;
+        videoWidth = videoHeight * lock->aspect;
+    }
+    if (videoWidth < lock->minVideoWidth) {
+        videoWidth = lock->minVideoWidth;
+        videoHeight = videoWidth / lock->aspect;
+    }
+    const NSRect content = NSMakeRect(0, 0, round(videoWidth + lock->extraWidth), round(videoHeight + lock->extraHeight));
+    return [sender frameRectForContentRect:content].size;
+}
+
+// Switches the window's delegate object to a dynamic subclass of its own class
+// that overrides windowWillResize:toSize:. Idempotent. Returns false without a
+// delegate to hook.
+bool installWindowResizeHook(NSWindow* window)
+{
+    id delegate = [window delegate];
+    if (!delegate) {
+        return false;
+    }
+    Class current = object_getClass(delegate);
+    const std::string currentName = class_getName(current);
+    if (currentName.find("_YallAspectLock") != std::string::npos) {
+        return true; // already switched
+    }
+    const std::string hookedName = currentName + "_YallAspectLock";
+    Class hooked = objc_getClass(hookedName.c_str());
+    if (!hooked) {
+        hooked = objc_allocateClassPair(current, hookedName.c_str(), 0);
+        if (!hooked) {
+            return false;
+        }
+        const SEL selector = @selector(windowWillResize:toSize:);
+        Method original = class_getInstanceMethod(current, selector);
+        const char* types = original ? method_getTypeEncoding(original) : "{CGSize=dd}@:@{CGSize=dd}";
+        class_addMethod(hooked, selector, reinterpret_cast<IMP>(yallWindowWillResize), types);
+        objc_registerClassPair(hooked);
+    }
+    object_setClass(delegate, hooked);
+    return true;
+}
+
+WindowAspectLock* ensureWindowAspectLock(NSWindow* window)
+{
+    if (WindowAspectLock* existing = findWindowAspectLock(window)) {
+        return existing;
+    }
+    auto lock = std::make_unique<WindowAspectLock>();
+    WindowAspectLock* raw = lock.get();
+    NSNotificationCenter* center = [NSNotificationCenter defaultCenter];
+    lock->liveResizeEndObserver = [center addObserverForName:NSWindowDidEndLiveResizeNotification
+                                                       object:window
+                                                        queue:nil
+                                                   usingBlock:^(NSNotification* notification) {
+        (void)notification;
+        raw->dragAxis = 0;
+    }];
+    // AppKit sizes the window to the screen during the transition; the lock must not touch that.
+    // (Each block captures the plain local `raw` by value -- never a reference or a lambda's
+    // closure, which would dangle once this function returns; see the note on commit 443fe89.)
+    lock->willEnterFullScreenObserver = [center addObserverForName:NSWindowWillEnterFullScreenNotification
+                                                            object:window
+                                                             queue:nil
+                                                        usingBlock:^(NSNotification* notification) {
+        (void)notification;
+        raw->inFullScreenTransition = true;
+    }];
+    lock->didEnterFullScreenObserver = [center addObserverForName:NSWindowDidEnterFullScreenNotification
+                                                           object:window
+                                                            queue:nil
+                                                       usingBlock:^(NSNotification* notification) {
+        (void)notification;
+        raw->inFullScreenTransition = false;
+    }];
+    lock->willExitFullScreenObserver = [center addObserverForName:NSWindowWillExitFullScreenNotification
+                                                           object:window
+                                                            queue:nil
+                                                       usingBlock:^(NSNotification* notification) {
+        (void)notification;
+        raw->inFullScreenTransition = true;
+    }];
+    lock->didExitFullScreenObserver = [center addObserverForName:NSWindowDidExitFullScreenNotification
+                                                          object:window
+                                                           queue:nil
+                                                      usingBlock:^(NSNotification* notification) {
+        (void)notification;
+        raw->inFullScreenTransition = false;
+    }];
+    gWindowAspectLocks[(__bridge void*)window] = std::move(lock);
+    return raw;
+}
+
+// setWindowAspectLock(windowHandle, aspect, extraWidth, extraHeight, minVideoWidth)
+// aspect <= 0 removes the lock (the hook stays installed and just defers to Electron).
+Napi::Value SetWindowAspectLock(const Napi::CallbackInfo& info)
+{
+    Napi::Env env = info.Env();
+    NSView* host = hostViewFromArg(info);
+    if (![NSThread isMainThread]) {
+        throw Napi::Error::New(env, "setWindowAspectLock must be called on the main thread.");
+    }
+    NSWindow* window = [host window];
+    if (!window) {
+        throw Napi::Error::New(env, "The view is not in a window yet.");
+    }
+    auto number = [&](size_t index) -> double {
+        return info.Length() > index && info[index].IsNumber() ? info[index].As<Napi::Number>().DoubleValue() : 0;
+    };
+    const double aspect = number(1);
+    if (aspect > 0 && !installWindowResizeHook(window)) {
+        throw Napi::Error::New(env, "The window has no delegate to hook.");
+    }
+    WindowAspectLock* lock = ensureWindowAspectLock(window);
+    lock->aspect = aspect > 0 ? aspect : 0;
+    lock->extraWidth = std::max(0.0, number(2));
+    lock->extraHeight = std::max(0.0, number(3));
+    lock->minVideoWidth = std::max(0.0, number(4));
+    return env.Undefined();
+}
+
 Napi::Object Init(Napi::Env env, Napi::Object exports)
 {
     exports.Set("probe", Napi::Function::New(env, Probe));
@@ -1333,6 +1537,7 @@ Napi::Object Init(Napi::Env env, Napi::Object exports)
     exports.Set("detach", Napi::Function::New(env, Detach));
     exports.Set("watchWindow", Napi::Function::New(env, WatchWindow));
     exports.Set("unwatchWindow", Napi::Function::New(env, UnwatchWindow));
+    exports.Set("setWindowAspectLock", Napi::Function::New(env, SetWindowAspectLock));
     exports.Set("create", Napi::Function::New(env, Create));
     exports.Set("setFrame", Napi::Function::New(env, SetFrame));
     exports.Set("setVisible", Napi::Function::New(env, SetVisible));

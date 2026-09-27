@@ -28,6 +28,7 @@ opens the JSON IPC socket (`input-ipc-server`) that `node-mpv` talks to.
 | `destroy(id)` | Frees the render context, terminates libmpv, removes the views. |
 | `stats(id)` | Renderer name, frame counters, backing size — for diagnostics. |
 | `attach(handle, position?)` / `detach(handle)` | Add/remove the black base view before any video exists. |
+| `setWindowAspectLock(handle, aspect, extraWidth, extraHeight, minVideoWidth)` | Keeps the window in the video's shape while the user resizes it (content = extras + video at `aspect`, following the dragged edge); `aspect` 0 unlocks. Overrides `windowWillResize:toSize:` on a dynamic subclass of Electron's window delegate, because `BrowserWindow.setAspectRatio` also sets NSWindow's own aspect ratio, which ignores `extraSize` and fights it. |
 | `watchWindow(handle, onEvent)` / `unwatchWindow(handle)` | `onEvent('will-enter-full-screen' \| 'did-exit-full-screen')`, called synchronously as the transition starts — Electron's own events come after it, too late to drop the window's aspect-ratio lock. |
 
 `create` accepts `renderer: 'gl' | 'sw'` (default OpenGL, automatic fallback to
