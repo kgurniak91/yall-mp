@@ -288,6 +288,7 @@
     "lodash-es": "^4.17.21",
     "mustache": "^4.2.0",
     "ng-mocks": "^14.13.5",
+    "node-gyp": "^13.1.0",
     "nodemon": "^3.1.10",
     "primeflex": "^4.0.0",
     "primeng": "^19.1.3",
