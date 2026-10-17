@@ -92,7 +92,7 @@ jobs:
             RES=$(echo dist_electron/mac*/*.app/Contents/Resources)
           fi
           echo "Resources dir: $RES"
-          ls -R "$RES" | head -50
+          ls -la "$RES"
           test -f "$RES/mpv/yall_auto_pause.lua"
           test -f "$RES/electron-resources/extensions/yomitan/manifest.json"
           test -f "$RES/THIRD-PARTY-NOTICES.txt"
