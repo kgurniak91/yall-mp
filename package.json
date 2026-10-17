@@ -134,6 +134,10 @@
       "target": "dmg",
       "icon": "build/icon.icns",
       "artifactName": "${productName} v${version}.${ext}",
+      "electronLanguages": [
+        "en",
+        "pl"
+      ],
       "extraResources": [
         {
           "from": "electron-resources/extensions",
