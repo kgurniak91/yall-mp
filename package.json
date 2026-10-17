@@ -134,6 +134,22 @@
       "target": "dmg",
       "icon": "build/icon.icns",
       "artifactName": "${productName} v${version}.${ext}",
+      "extraResources": [
+        {
+          "from": "electron-resources/extensions",
+          "to": "electron-resources/extensions",
+          "filter": [
+            "**/*"
+          ]
+        },
+        {
+          "from": "mpv",
+          "to": "mpv",
+          "filter": [
+            "**/*.lua"
+          ]
+        }
+      ],
       "fileAssociations": [
         {
           "ext": [
@@ -180,7 +196,23 @@
     "linux": {
       "target": "AppImage",
       "icon": "build/icon.png",
-      "artifactName": "${productName} v${version}.${ext}"
+      "artifactName": "${productName} v${version}.${ext}",
+      "extraResources": [
+        {
+          "from": "electron-resources/extensions",
+          "to": "electron-resources/extensions",
+          "filter": [
+            "**/*"
+          ]
+        },
+        {
+          "from": "mpv",
+          "to": "mpv",
+          "filter": [
+            "**/*.lua"
+          ]
+        }
+      ]
     },
     "nsis": {
       "oneClick": false,
