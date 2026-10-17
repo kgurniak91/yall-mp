@@ -90,7 +90,10 @@ export function isMpvEmbedPlatform(): boolean {
 }
 
 export function getMpvEmbedBinaryPath(): string {
-  return path.join(app.getAppPath(), 'native', 'mpv-embed', 'build', 'Release', 'yall_mpv_embed.node');
+  // In a packaged app the add-on is unpacked from the asar archive (package.json
+  // "asarUnpack"); point at the real file so dlopen never has to go through asar.
+  const appPath = app.getAppPath().replace(/app\.asar$/, 'app.asar.unpacked');
+  return path.join(appPath, 'native', 'mpv-embed', 'build', 'Release', 'yall_mpv_embed.node');
 }
 
 /**

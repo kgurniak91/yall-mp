@@ -242,7 +242,7 @@ To create a distributable installer/executable for your current OS:
 
 *   **Windows:** `npm run package:win`
 *   **Linux:** `npm run package:linux`
-*   **macOS:** `npm run package:mac`
+*   **macOS:** `npm run package:mac` (builds the native add-on first; without an Apple Developer certificate electron-builder signs the app ad-hoc, which is enough to run it on the Mac that built it)
 
 The output files will be located in the `dist_electron` folder.
 
