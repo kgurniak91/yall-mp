@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, 'feature/**' ]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ windows-latest, ubuntu-latest, macos-latest ]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Required for 'font-scanner' to compile during npm install
+      - name: Install Linux Build Dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfontconfig1-dev
+          # Ubuntu 24.04 AppArmor blocks Chrome's sandbox (needed by Karma ChromeHeadless)
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
+      - name: Cache downloaded binaries
+        uses: actions/cache@v4
+        with:
+          path: electron-resources
+          key: electron-resources-${{ runner.os }}-${{ hashFiles('scripts/download-dependencies.js') }}
+
+      - run: npm ci
+
+      - run: npm run test:electron
+
+      - run: npm run test:angular
+
+  package-smoke:
+    needs: test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, macos-latest ]
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Linux Build Dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfontconfig1-dev libarchive-tools
+
+      - name: Cache downloaded binaries
+        uses: actions/cache@v4
+        with:
+          path: electron-resources
+          key: electron-resources-${{ runner.os }}-${{ hashFiles('scripts/download-dependencies.js') }}
+
+      - run: npm ci
+
+      - run: npm run electron:build
+
+      - run: npx electron-builder --dir --publish never
+
+      - name: Verify extraResources were packaged
+        shell: bash
+        run: |
+          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            RES=dist_electron/linux-unpacked/resources
+          else
+            RES=$(echo dist_electron/mac*/*.app/Contents/Resources)
+          fi
+          echo "Resources dir: $RES"
+          ls -R "$RES" | head -50
+          test -f "$RES/mpv/yall_auto_pause.lua"
+          test -f "$RES/electron-resources/extensions/yomitan/manifest.json"
+          test -f "$RES/THIRD-PARTY-NOTICES.txt"
