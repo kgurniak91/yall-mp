@@ -210,8 +210,12 @@ export class AnkiStateService {
         }
 
         this.appStateService.addAnkiExportToHistory(projectId, subtitleId);
-      } else {
-        this.toastService.error(result.error || 'Failed to export to Anki');
+      }
+
+      // The error text says which export template failed and why (built in the main
+      // process); it stays on screen until closed, because it is meant to be read.
+      if (result.error || result.successCount === 0) {
+        this.toastService.error(result.error || 'Failed to export to Anki', {sticky: true});
       }
     } catch (e: any) {
       this.toastService.error(e?.message || 'An error occurred during export to Anki');

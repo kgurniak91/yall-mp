@@ -35,6 +35,7 @@ import {
   LoudnormMeasurement,
   parseLoudnormMeasurement
 } from './shared/utils/audio-loudness';
+import {ANKI_UNREACHABLE_MESSAGE, explainAddNoteError, toToastHtml} from './shared/utils/anki-errors';
 import {PlaybackManager} from './playback-manager';
 import type fontkit from 'fontkit';
 import {
@@ -2497,21 +2498,55 @@ function preprocessSubtitles(subtitles: SubtitleData[]): SubtitleData[] {
   return sortedSubtitles.filter(sub => sub.endTime > sub.startTime);
 }
 
-async function invokeAnkiConnect(action: string, params = {}) {
+/**
+ * Calls AnkiConnect and throws on failure: AnkiConnect's own error text, or
+ * ANKI_UNREACHABLE_MESSAGE when nothing answers on its port.
+ */
+async function callAnkiConnect(action: string, params = {}): Promise<any> {
+  let data: any;
   try {
     const response = await fetch('http://localhost:8765', {
       method: 'POST',
       body: JSON.stringify({action, version: 6, params})
     });
-    const data = await response.json();
-    if (data.error) {
-      throw new Error(data.error);
-    }
-    return data.result;
+    data = await response.json();
+  } catch (e) {
+    console.error(`AnkiConnect action '${action}' could not reach Anki:`, e);
+    throw new Error(ANKI_UNREACHABLE_MESSAGE);
+  }
+  if (data?.error) {
+    throw new Error(String(data.error));
+  }
+  return data?.result;
+}
+
+/** Same call, but failures are logged and returned as null. */
+async function invokeAnkiConnect(action: string, params = {}) {
+  try {
+    return await callAnkiConnect(action, params);
   } catch (e) {
     console.error(`AnkiConnect action '${action}' failed:`, e);
     return null;
   }
+}
+
+/** Builds the detailed message for a failed addNote, asking Anki about the note type where that helps. */
+async function describeAddNoteFailure(ankiMessage: string, templateName: string, note: AnkiCard): Promise<string> {
+  const lower = ankiMessage.toLowerCase();
+  const needsTemplates = lower.includes('unknown reason');
+  const needsFieldNames = lower.includes('because it is empty');
+  const [cardTemplates, modelFieldNames] = await Promise.all([
+    needsTemplates ? invokeAnkiConnect('modelTemplates', {modelName: note.modelName}) : null,
+    needsFieldNames ? invokeAnkiConnect('modelFieldNames', {modelName: note.modelName}) : null,
+  ]);
+  return explainAddNoteError(ankiMessage, {
+    templateName,
+    deckName: note.deckName,
+    modelName: note.modelName,
+    fields: note.fields,
+    cardTemplates,
+    modelFieldNames,
+  });
 }
 
 async function storeMediaFileInAnki(filePath: string): Promise<string | null> {
@@ -2731,12 +2766,12 @@ async function handleAnkiBatchExport(request: AnkiBatchExportRequest) {
     for (const file of generatedFiles) {
       await fs.unlink(file).catch(e => console.error(`Failed to delete temp file: ${file}`, e));
     }
-    return {successCount: 0, error: `Media generation failed: ${error.message}`};
+    return {successCount: 0, error: toToastHtml(`Media generation failed: ${error.message}`)};
   }
 
   // Create flashcards using cached media
   let successCount = 0;
-  let lastError = '';
+  const failures: string[] = [];
 
   for (const target of targets) {
     const finalFields: Record<string, string> = {};
@@ -2782,7 +2817,7 @@ async function handleAnkiBatchExport(request: AnkiBatchExportRequest) {
     };
 
     try {
-      const cardId = await invokeAnkiConnect('addNote', {note});
+      const cardId = await callAnkiConnect('addNote', {note});
       if (cardId) {
         if (suspend) {
           const suspendResult = await invokeAnkiConnect('suspend', {cards: [cardId]});
@@ -2792,11 +2827,12 @@ async function handleAnkiBatchExport(request: AnkiBatchExportRequest) {
         }
         successCount++;
       } else {
-        lastError = 'Failed to add specific note to Anki.';
+        failures.push(`Export template "${template.name}": Anki did not return a note id, so the note may not have been created.`);
       }
     } catch (e: any) {
-      console.error(`Failed to add note for template ${template.name}`, e);
-      lastError = e.message;
+      const detail = await describeAddNoteFailure(String(e?.message ?? e), template.name, note);
+      console.error(`[Anki Export] addNote failed for template "${template.name}" (deck "${note.deckName}", note type "${note.modelName}"):\n${detail}`);
+      failures.push(detail);
     }
   }
 
@@ -2805,9 +2841,11 @@ async function handleAnkiBatchExport(request: AnkiBatchExportRequest) {
     await fs.unlink(file).catch(e => console.error(`Failed to delete temp file: ${file}`, e));
   }
 
+  // Every failure is reported, also when another template of the same export succeeded.
   return {
     successCount,
-    error: successCount === 0 ? (lastError || 'Unknown error') : undefined
+    failedCount: failures.length,
+    error: failures.length > 0 ? toToastHtml(failures.join('\n\n')) : undefined
   };
 }
 

@@ -88,7 +88,7 @@ export interface IElectronAPI {
   getAnkiDeckNames: () => Promise<any>;
   getAnkiNoteTypes: () => Promise<any>;
   getAnkiNoteTypeFieldNames: (noteTypeName: string) => Promise<any>;
-  exportAnkiCardBatch: (batchRequest: AnkiBatchExportRequest) => Promise<{ successCount: number; error?: string }>;
+  exportAnkiCardBatch: (batchRequest: AnkiBatchExportRequest) => Promise<{ successCount: number; failedCount?: number; error?: string }>;
   // --- FFmpeg
   checkFFmpegAvailability: () => Promise<boolean>;
   // --- MPV

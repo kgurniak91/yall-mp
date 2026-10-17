@@ -55,12 +55,14 @@ export class ToastService {
     });
   }
 
-  error(message: string = 'Unknown error'): void {
+  /** `sticky` keeps the toast until the user closes it (for long, detailed errors). */
+  error(message: string = 'Unknown error', options?: {sticky?: boolean}): void {
     this.add({
       severity: 'error',
       summary: 'Error',
       detail: message,
-      life: 5000
+      life: 5000,
+      ...(options?.sticky ? {sticky: true} : {})
     });
   }
 
