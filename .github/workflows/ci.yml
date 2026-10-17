@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ windows-2022, ubuntu-latest, macos-latest ]
+        os: [ windows-latest, ubuntu-latest, macos-latest ]
 
     steps:
       - uses: actions/checkout@v4
@@ -34,6 +34,15 @@ jobs:
           sudo apt-get install -y libfontconfig1-dev
           # Ubuntu 24.04 AppArmor blocks Chrome's sandbox (needed by Karma ChromeHeadless)
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
+      # windows-latest ships Visual Studio 2026 (v18), which the node-gyp bundled with npm 10 can't detect.
+      # font-scanner has no prebuilt binary, so point npm at a newer node-gyp for the install step.
+      - name: Use newer node-gyp (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          npm install -g node-gyp@13.1.0
+          echo "npm_config_node_gyp=$(npm root -g)/node-gyp/bin/node-gyp.js" >> "$GITHUB_ENV"
 
       - name: Cache downloaded binaries
         uses: actions/cache@v4
