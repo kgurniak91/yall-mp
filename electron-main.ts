@@ -707,6 +707,13 @@ if (!gotTheLock) {
   });
 
   app.whenReady().then(async () => {
+    // GUI-launched macOS apps don't inherit the shell PATH, so Homebrew binaries (mpv, audiowaveform) aren't found
+    if (process.platform === 'darwin') {
+      const currentPaths = (process.env.PATH || '').split(path.delimiter);
+      const homebrewPaths = ['/opt/homebrew/bin', '/usr/local/bin'].filter(p => !currentPaths.includes(p));
+      process.env.PATH = [...homebrewPaths, ...currentPaths].join(path.delimiter);
+    }
+
     try {
       const configStr = await fs.readFile(APP_DATA_PATH, 'utf-8');
       const config = JSON.parse(configStr);
