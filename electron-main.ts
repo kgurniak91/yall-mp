@@ -72,6 +72,7 @@ interface RequiredFont {
 
 const APP_DATA_KEY = 'yall-mp-app-data';
 const APP_DATA_PATH = path.join(app.getPath('userData'), `${APP_DATA_KEY}.json`);
+const DIALOG_STATE_PATH = path.join(app.getPath('userData'), 'dialog-state.json');
 const PROJECTS_DIR = path.join(app.getPath('userData'), 'projects');
 const FONT_CACHE_DIR = path.join(app.getPath('userData'), 'font-cache');
 const USER_AGENT_OPTIONS = {
@@ -1718,9 +1719,27 @@ app.on('window-all-closed', () => {
   }
 });
 
+// Electron 43+ opens file dialogs in Downloads instead of the last used folder, so remember it ourselves.
+async function readLastDialogDirectory(): Promise<string | undefined> {
+  try {
+    const state = JSON.parse(await fs.readFile(DIALOG_STATE_PATH, 'utf-8'));
+    if (typeof state.lastDirectory === 'string' && statSync(state.lastDirectory).isDirectory()) {
+      return state.lastDirectory;
+    }
+  } catch {
+    // No saved state yet, or the folder is gone.
+  }
+  return undefined;
+}
+
 async function handleFileOpen(options: Electron.OpenDialogOptions) {
-  const {canceled, filePaths} = await dialog.showOpenDialog(options);
+  const defaultPath = options.defaultPath ?? await readLastDialogDirectory();
+  const {canceled, filePaths} = await dialog.showOpenDialog({...options, defaultPath});
   if (!canceled) {
+    if (filePaths.length > 0) {
+      fs.writeFile(DIALOG_STATE_PATH, JSON.stringify({lastDirectory: path.dirname(filePaths[0])}), 'utf-8')
+        .catch(err => console.warn('[Main] Failed to save the last dialog directory:', err));
+    }
     return filePaths;
   }
   return [];
