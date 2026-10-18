@@ -6,8 +6,8 @@ export default defineConfig({
   // Tests share real windows, the screen, the mouse and mpv
   workers: 1,
   fullyParallel: false,
-  timeout: 60_000,
-  expect: {timeout: 15_000},
+  timeout: process.env['CI'] ? 90_000 : 60_000,
+  expect: {timeout: process.env['CI'] ? 30_000 : 15_000},
   retries: process.env['CI'] ? 1 : 0,
   reporter: [['list'], ['html', {open: 'never'}]],
   outputDir: 'test-results',
