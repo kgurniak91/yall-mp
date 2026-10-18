@@ -65,3 +65,8 @@ yomitan-manager.js.map
 # Generated License Files
 public/licenses.json
 public/THIRD-PARTY-NOTICES.txt
+
+# E2E (Playwright)
+/playwright-report/
+/test-results/
+/e2e-artifacts/
