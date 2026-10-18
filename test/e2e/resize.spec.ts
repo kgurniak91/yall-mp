@@ -1,6 +1,7 @@
 import {expect, test} from './support/app';
 import {seedProject} from './support/seed';
 import {waitForPlayer} from './support/playback';
+import {baseline} from './support/baseline';
 import {getWindowStates, rectContains, rectsClose, withWindows} from './support/windows';
 
 test('setBounds resize: ui follows and the video re-fits inside the placeholder', async ({launch}) => {
@@ -20,7 +21,7 @@ test('setBounds resize: ui follows and the video re-fits inside the placeholder'
   await expect.poll(() => ui.evaluate(() => window.innerWidth)).toBeGreaterThan(900);
 
   // After the 250 ms debounce the video window must sit inside the #mpv-placeholder rect (screen coordinates)
-  await expect.poll(async () => {
+  await baseline('video inside placeholder', () => expect.poll(async () => {
     const {ui: uiWin, video} = await getWindowStates(app);
     if (!uiWin || !video?.isVisible) {
       return 'video not visible';
@@ -31,7 +32,7 @@ test('setBounds resize: ui follows and the video re-fits inside the placeholder'
     }
     const placeholder = {x: uiWin.contentBounds.x + r.x, y: uiWin.contentBounds.y + r.y, width: r.width, height: r.height};
     return rectContains(placeholder, video.bounds, 3) ? 'ok' : `video ${JSON.stringify(video.bounds)} outside ${JSON.stringify(placeholder)}`;
-  }, {timeout: 10_000}).toBe('ok');
+  }, {timeout: 10_000}).toBe('ok'));
 
   // Below the 800x600 minimum: recorded, not asserted
   await withWindows(app, ({mainWindow}) => {

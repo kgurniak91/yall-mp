@@ -2,6 +2,7 @@ import type {ElectronApplication, Page} from '@playwright/test';
 import {expect, test} from './support/app';
 import {seedProject} from './support/seed';
 import {waitForPlayer} from './support/playback';
+import {baseline} from './support/baseline';
 import {getWindowStates, rectContains, rectsClose, withWindows} from './support/windows';
 
 /** Baseline invariant of the 3-window stack: ui follows main, and the video sits inside the ui. */
@@ -19,19 +20,6 @@ async function expectStackInSync(app: ElectronApplication): Promise<void> {
     }
     return 'ok';
   }, {timeout: 10_000}).toBe('ok');
-}
-
-// The stacked-window invariants only hold on Windows today; elsewhere a failed check is recorded as a baseline note instead of failing
-async function baseline(label: string, check: () => Promise<void>): Promise<void> {
-  try {
-    await check();
-  } catch (e) {
-    if (process.platform === 'win32') {
-      throw e;
-    }
-    const received = (e as Error).message.split('\n').find(l => l.includes('Received'));
-    test.info().annotations.push({type: 'baseline', description: `${label}: ${received ?? (e as Error).message.slice(0, 200)}`});
-  }
 }
 
 const icon = (ui: Page, name: string) => ui.locator(`.window-controls-wrapper .${name}`);
