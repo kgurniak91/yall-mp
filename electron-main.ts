@@ -13,13 +13,13 @@ import {
 } from 'electron';
 import path from 'path';
 import os from 'os';
-import {promises as fs, statSync} from 'fs';
+import {existsSync, promises as fs, statSync} from 'fs';
 import type {CaptionsFileFormat, ParsedCaptionsResult, parseResponse, VTTCue} from 'media-captions';
 import type {SrtSubtitleData, SubtitleData} from './shared/types/subtitle.type';
 import type {MediaTrack} from './shared/types/media.type';
 import {AnkiBatchExportRequest, AnkiCard, AnkiFieldMappingSource} from './src/app/model/anki.types';
 import {v4 as uuidv4} from 'uuid';
-import {ChildProcess, spawn} from 'child_process';
+import {ChildProcess, execFile, spawn} from 'child_process';
 import {MpvManager} from './mpv-manager';
 import {FontData, ParsedSubtitlesData} from './src/electron-api';
 import {AppData, CoreConfig, Project, SubtitleSelection, SupportedLanguage} from './src/app/model/project.types';
@@ -2604,13 +2604,79 @@ async function extractAttachmentsWithEbml(mediaPath: string): Promise<Map<string
   return attachmentMap;
 }
 
+interface SystemFontQuery {
+  family: string;
+  italic: boolean;
+  weight: number;
+}
+
+// On Linux, font-scanner's fontconfig calls trap (SIGTRAP) inside Electron 44's Chromium process, while the same
+// addon works in a plain Node process. So look fonts up in a child process running the Electron binary as Node.
+async function findSystemFonts(queries: SystemFontQuery[]): Promise<Array<{ path: string } | null>> {
+  if (queries.length === 0) {
+    return [];
+  }
+
+  if (process.platform !== 'linux') {
+    const fontScanner = (await import('font-scanner')).default;
+    const results: Array<{ path: string } | null> = [];
+    for (const query of queries) {
+      try {
+        results.push(await fontScanner.findFont(query));
+      } catch {
+        results.push(null);
+      }
+    }
+    return results;
+  }
+
+  let modulePath = path.dirname(require.resolve('font-scanner/package.json'));
+  const unpackedPath = modulePath.replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
+  if (unpackedPath !== modulePath && existsSync(unpackedPath)) {
+    modulePath = unpackedPath;
+  }
+
+  const script = `
+    const scanner = require(process.argv[1]);
+    (async () => {
+      const out = [];
+      for (const query of JSON.parse(process.argv[2])) {
+        try {
+          const font = await scanner.findFont(query);
+          out.push(font ? {path: font.path} : null);
+        } catch {
+          out.push(null);
+        }
+      }
+      process.stdout.write(JSON.stringify(out));
+    })();`;
+
+  return new Promise(resolve => {
+    execFile(process.execPath, ['-e', script, modulePath, JSON.stringify(queries)], {
+      env: {...process.env, ELECTRON_RUN_AS_NODE: '1'},
+      timeout: 30000,
+      maxBuffer: 1024 * 1024
+    }, (error, stdout) => {
+      if (error) {
+        console.warn('[Fonts] System font lookup failed:', error.message);
+        resolve(queries.map(() => null));
+        return;
+      }
+      try {
+        resolve(JSON.parse(stdout));
+      } catch {
+        resolve(queries.map(() => null));
+      }
+    });
+  });
+}
+
 async function loadFontData(
   requiredFonts: RequiredFont[],
   mediaPath?: string,
   assFilePath?: string
 ): Promise<FontData[]> {
   const Levenshtein = (await import('fast-levenshtein')).default;
-  const fontScanner = (await import('font-scanner')).default;
   const fontkit = (await import('fontkit')).default;
 
   console.log(`[Fonts] Starting search for ${requiredFonts.length} required font styles.`);
@@ -2681,15 +2747,16 @@ async function loadFontData(
 
   // From system fonts (only search for needed fonts)
   console.log(`[Fonts] Pre-caching potential system font matches...`);
-  for (const req of requiredFonts) {
+  const systemFonts = await findSystemFonts(requiredFonts.map(req => ({family: req.family, italic: req.italic, weight: req.bold ? 700 : 400})));
+  for (const font of systemFonts) {
+    if (!font) {
+      continue;
+    }
     try {
-      const font = await fontScanner.findFont({family: req.family, italic: req.italic, weight: req.bold ? 700 : 400});
-      if (font) {
-        const fontBuffer = await fs.readFile(font.path);
-        addFontToDatabase(fontBuffer, path.basename(font.path), 'system');
-      }
+      const fontBuffer = await fs.readFile(font.path);
+      addFontToDatabase(fontBuffer, path.basename(font.path), 'system');
     } catch (e) {
-      /* Not found, that's fine */
+      /* Not readable, that's fine */
     }
   }
 
