@@ -47,13 +47,13 @@ test.describe('window state (3-window baseline)', () => {
     // Today's maximize is custom: isMaximized() stays false, so assert on bounds (documented baseline)
     await ui.evaluate(() => (window as any).electronAPI.windowToggleMaximize());
     await baseline('bounds #2', () => expect.poll(async () => rectsClose((await getWindowStates(app)).main!.bounds, initial.display.workArea, 4), {timeout: 10_000}).toBe(true));
-    await expect(icon(ui, 'fa-window-restore')).toBeVisible();
+    await baseline('icon fa-window-restore', () => expect(icon(ui, 'fa-window-restore')).toBeVisible());
     await baseline('stack in sync #3', () => expectStackInSync(app));
     test.info().annotations.push({type: 'baseline', description: `isMaximized() after toggle: ${(await getWindowStates(app)).main!.isMaximized}`});
 
     await ui.evaluate(() => (window as any).electronAPI.windowToggleMaximize());
     await baseline('bounds #4', () => expect.poll(async () => rectsClose((await getWindowStates(app)).main!.bounds, initial.bounds, 4), {timeout: 10_000}).toBe(true));
-    await expect(icon(ui, 'fa-window-maximize')).toBeVisible();
+    await baseline('icon fa-window-maximize', () => expect(icon(ui, 'fa-window-maximize')).toBeVisible());
     await baseline('stack in sync #5', () => expectStackInSync(app));
 
     await ui.evaluate(() => (window as any).electronAPI.windowMinimize());
@@ -65,12 +65,12 @@ test.describe('window state (3-window baseline)', () => {
 
     await ui.evaluate(() => (window as any).electronAPI.windowToggleFullScreen());
     await expect.poll(async () => (await getWindowStates(app)).main!.isFullScreen, {timeout: 10_000}).toBe(true);
-    await expect(icon(ui, 'fa-compress')).toBeVisible();
+    await baseline('icon fa-compress', () => expect(icon(ui, 'fa-compress')).toBeVisible());
     await baseline('stack in sync #7', () => expectStackInSync(app));
 
     await ui.evaluate(() => (window as any).electronAPI.windowToggleFullScreen());
     await expect.poll(async () => (await getWindowStates(app)).main!.isFullScreen, {timeout: 10_000}).toBe(false);
-    await expect(icon(ui, 'fa-expand')).toBeVisible();
+    await baseline('icon fa-expand', () => expect(icon(ui, 'fa-expand')).toBeVisible());
     await baseline('stack in sync #8', () => expectStackInSync(app));
   });
 
