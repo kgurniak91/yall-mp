@@ -42,8 +42,14 @@ import {LEGACY_TO_YOMITAN_ISO_MAP} from './shared/types/yomitan';
 let customExecutables: { mpv?: string, ffmpeg?: string, ffprobe?: string, audiowaveform?: string } = {};
 let isFfmpegPathsInitialized = false;
 
-// Data isolation for development purposes only to avoid corrupting real study data on the local machine
-if (!app.isPackaged) {
+const isE2E = process.env.YALL_MP_E2E === '1';
+
+// E2E tests give every run its own userData dir (and therefore its own single-instance lock)
+if (process.env.YALL_MP_USER_DATA_DIR) {
+  app.setPath('userData', process.env.YALL_MP_USER_DATA_DIR);
+  console.log(`[Main] Data path overridden by YALL_MP_USER_DATA_DIR: ${process.env.YALL_MP_USER_DATA_DIR}`);
+} else if (!app.isPackaged) {
+  // Data isolation for development purposes only to avoid corrupting real study data on the local machine
   const userDataPath = path.join(app.getPath('appData'), 'yall-mp-dev');
   app.setPath('userData', userDataPath);
   console.log(`[Main] Development mode detected. Data path set to: ${userDataPath}`);
@@ -666,7 +672,12 @@ async function createWindow() {
   const indexPath = path.join(__dirname, './dist/yall-mp/browser/index.html');
   uiWindow.loadFile(indexPath);
 
-  if (isDev) {
+  if (isE2E) {
+    // Read-only probe so e2e tests can inspect the windows without URL heuristics
+    (globalThis as any).__yallE2E = {getWindows: () => ({mainWindow, uiWindow, videoWindow})};
+  }
+
+  if (isDev && !isE2E) {
     uiWindow.webContents.once('devtools-opened', () => {
       if (uiWindow && !uiWindow.isDestroyed()) {
         uiWindow.focus();
