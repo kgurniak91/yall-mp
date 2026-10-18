@@ -655,12 +655,20 @@ async function createWindow() {
   mainWindow.on('leave-full-screen', () => {
     isEnteringFullscreen = false;
 
-    if (mainWindow) {
-      mainWindow.setResizable(true);
-    }
+    const restoreResizable = () => {
+      if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isFullScreen()) {
+        mainWindow.setResizable(true);
+      }
+      if (uiWindow && !uiWindow.isDestroyed() && mainWindow && !mainWindow.isFullScreen()) {
+        uiWindow.setResizable(true);
+      }
+    };
+    restoreResizable();
+    // Newer Electron versions re-apply the pre-fullscreen window state after this event, which left the windows
+    // non-resizable and made the next fullscreen entry stick at the old size in the top-left corner.
+    setTimeout(restoreResizable, 150);
 
     if (uiWindow) {
-      uiWindow.setResizable(true);
       uiWindow.webContents.send('window:fullscreen-state-changed', false);
     }
 

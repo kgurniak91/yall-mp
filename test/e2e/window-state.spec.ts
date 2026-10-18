@@ -84,4 +84,33 @@ test.describe('window state (3-window baseline)', () => {
     await ui.keyboard.press('Escape');
     await expect.poll(async () => (await getWindowStates(app)).main!.isFullScreen, {timeout: 10_000}).toBe(false);
   });
+  test('fullscreen can be entered repeatedly and fills the display every time', async ({launch}) => {
+    const {app, ui} = await launch({seed: dir => seedProject(dir)});
+    await waitForPlayer(ui);
+    const initial = (await getWindowStates(app)).main!;
+
+    for (const round of [1, 2, 3]) {
+      await ui.keyboard.press('F11');
+      await expect.poll(async () => (await getWindowStates(app)).main!.isFullScreen, {timeout: 10_000, message: `enter #${round}`}).toBe(true);
+      await expect.poll(async () => {
+        const {main, ui: uiState} = await getWindowStates(app);
+        return rectsClose(main!.bounds, main!.display.bounds, 2) && rectsClose(uiState!.bounds, main!.display.bounds, 2)
+          ? 'fills display'
+          : `main ${JSON.stringify(main!.bounds)} ui ${JSON.stringify(uiState!.bounds)} display ${JSON.stringify(main!.display.bounds)}`;
+      }, {timeout: 10_000, message: `fullscreen #${round} fills the display`}).toBe('fills display');
+
+      // Let the fullscreen resize lock (setResizable(false) after a resize debounce) kick in before leaving
+      await ui.waitForTimeout(600);
+      await ui.keyboard.press('Escape');
+      await expect.poll(async () => (await getWindowStates(app)).main!.isFullScreen, {timeout: 10_000, message: `leave #${round}`}).toBe(false);
+      await expect.poll(() => withWindows(app, ({mainWindow, uiWindow}) => mainWindow.isResizable() && uiWindow.isResizable()),
+        {timeout: 10_000, message: `windows resizable again #${round}`}).toBe(true);
+      await expect.poll(async () => {
+        const {bounds} = (await getWindowStates(app)).main!;
+        return rectsClose(bounds, initial.bounds, 4) ? 'restored' : `${JSON.stringify(bounds)} != initial ${JSON.stringify(initial.bounds)}`;
+      }, {timeout: 10_000, message: `restored bounds #${round}`}).toBe('restored');
+      // Re-entering within ~150 ms of leaving makes Electron save mid-transition bounds, a human toggle is slower than that
+      await ui.waitForTimeout(400);
+    }
+  });
 });

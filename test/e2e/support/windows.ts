@@ -15,7 +15,7 @@ export interface WindowState {
   isMaximized: boolean;
   isFullScreen: boolean;
   opacity: number;
-  display: { id: number; workArea: Rect; scaleFactor: number };
+  display: { id: number; bounds: Rect; workArea: Rect; scaleFactor: number };
 }
 
 export interface WindowStates {
@@ -42,7 +42,7 @@ export async function getWindowStates(app: ElectronApplication): Promise<WindowS
         isMaximized: win.isMaximized(),
         isFullScreen: win.isFullScreen(),
         opacity: win.getOpacity(),
-        display: {id: display.id, workArea: display.workArea, scaleFactor: display.scaleFactor}
+        display: {id: display.id, bounds: display.bounds, workArea: display.workArea, scaleFactor: display.scaleFactor}
       };
     };
     return {main: describe(wins.mainWindow), ui: describe(wins.uiWindow), video: describe(wins.videoWindow)};
