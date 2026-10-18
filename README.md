@@ -251,7 +251,7 @@ The output files will be located in the `dist_electron` folder.
 ## 🛠️ Tech Stack
 
 **Core Application**
-*   **[Electron 37](https://www.electronjs.org/):** Cross-platform desktop framework.
+*   **[Electron 44](https://www.electronjs.org/):** Cross-platform desktop framework.
 *   **[Angular 19](https://angular.io/):** Frontend framework with **Signals** for reactive state management.
 *   **[PrimeNG 19](https://primeng.org/):** UI Component library.
 

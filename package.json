@@ -29,7 +29,7 @@
     "package:mac": "npm run electron:build && electron-builder --mac",
     "package:linux": "npm run electron:build && electron-builder --linux",
     "build:github-pages": "node github-pages/build.js",
-    "postinstall": "node scripts/download-dependencies.js && npm run generate:licenses"
+    "postinstall": "node scripts/download-dependencies.js && install-electron && npm run generate:licenses"
   },
   "build": {
     "appId": "com.yall-mp.app",
@@ -275,12 +275,12 @@
     "@types/fontkit": "^2.0.8",
     "@types/jasmine": "~5.1.0",
     "@types/lodash-es": "^4.17.12",
-    "@types/node": "^24.0.14",
+    "@types/node": "^24.19.2",
     "7zip-bin": "^5.2.0",
     "assjs": "^0.1.4",
     "concurrently": "^9.2.0",
-    "electron": "^37.2.1",
-    "electron-builder": "^26.0.12",
+    "electron": "^44.9.0",
+    "electron-builder": "^26.15.3",
     "fs-extra": "^11.3.2",
     "jasmine-core": "~5.6.0",
     "karma": "~6.4.0",
