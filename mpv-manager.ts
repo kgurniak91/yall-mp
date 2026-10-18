@@ -36,7 +36,7 @@ export class MpvManager extends EventEmitter {
       binary: this.getMpvExecutablePath(),
       time_update: (1 / TIME_UPDATE_FPS),
       // E2E runs must never attach to an mpv already listening on node-mpv's fixed default socket
-      ...(process.env.YALL_MP_E2E === '1' ? {
+      ...(process.env['YALL_MP_E2E'] === '1' ? {
         socket: process.platform === 'win32'
           ? `\\\\.\\pipe\\yall-mp-e2e-${process.pid}`
           : path.join(os.tmpdir(), `yall-mp-e2e-${process.pid}.sock`)
