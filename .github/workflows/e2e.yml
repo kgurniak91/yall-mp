@@ -1,0 +1,96 @@
+name: E2E
+
+on:
+  push:
+    branches: [ master, 'feature/**' ]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ${{ matrix.os }}
+    # Linux/macOS record the known-broken baseline of the stacked-window design; only Windows gates
+    continue-on-error: ${{ matrix.os != 'windows-latest' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ windows-latest, ubuntu-latest, macos-latest ]
+    env:
+      E2E_RECORD_DESKTOP: '1'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfontconfig1-dev xvfb openbox
+          # Ubuntu 24.04 AppArmor blocks the Chromium/Electron sandbox
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          sudo add-apt-repository -y ppa:ubuntuhandbook1/mpv
+          sudo add-apt-repository -y ppa:chris-needham/ppa
+          sudo apt-get update
+          sudo apt-get install -y mpv audiowaveform
+          Xvfb :99 -screen 0 1920x1080x24 &
+          sleep 2
+          DISPLAY=:99 openbox &
+          echo "DISPLAY=:99" >> "$GITHUB_ENV"
+
+      - name: Install macOS dependencies
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install mpv
+          brew tap bbc/audiowaveform
+          brew install audiowaveform
+
+      - name: Set Windows display resolution
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          try { Set-DisplayResolution -Width 1920 -Height 1080 -Force } catch { Write-Host "Could not change resolution: $_" }
+
+      - name: Cache downloaded binaries
+        uses: actions/cache@v4
+        with:
+          path: electron-resources
+          key: electron-resources-${{ runner.os }}-${{ hashFiles('scripts/download-dependencies.js') }}
+
+      - run: npm ci
+
+      - name: Log mpv version
+        shell: bash
+        run: |
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            ./electron-resources/windows/mpv.exe --version | sed -n 1p || true
+          else
+            mpv --version | sed -n 1p || true
+          fi
+
+      - run: npx tsc --noEmit -p test/e2e
+
+      - run: npm run electron:build
+
+      - run: npx playwright test
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-${{ matrix.os }}
+          path: |
+            playwright-report/
+            test-results/
+            e2e-artifacts/
+          retention-days: 14
+          if-no-files-found: ignore
