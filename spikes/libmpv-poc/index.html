@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>libmpv PoC</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font-family: Segoe UI, sans-serif; }
+    .video-area { position: absolute; inset: 0; background: #000; }
+    #video-surface { width: 100%; height: 100%; display: block; }
+    .overlay { position: absolute; left: 0; right: 0; bottom: 8%; text-align: center; pointer-events: none; }
+    .sub { display: inline-block; color: #fff; font-size: 34px; padding: 4px 14px;
+           text-shadow: 0 0 4px #000, 2px 2px 3px #000; background: rgba(0, 0, 0, .25); }
+    .panel { position: absolute; left: 12px; top: 12px; background: rgba(20, 20, 30, .7); color: #fff;
+             padding: 10px 14px; border-radius: 6px; font-size: 13px; line-height: 1.5; }
+    .panel button { margin-top: 6px; padding: 4px 10px; }
+    .panel button:hover { background: #4c8; }
+    #hud { white-space: pre; font-family: Consolas, monospace; }
+  </style>
+</head>
+<body>
+  <div class="video-area"><canvas id="video-surface"></canvas></div>
+  <div class="overlay"><span class="sub">DOM subtitle over the video 日本語のサブタイトル</span></div>
+  <div class="panel">
+    <div id="hud">waiting for frames…</div>
+    <button id="btn" onclick="this.textContent = 'clicked ' + (++window.__clicks || (window.__clicks = 1))">hover / click me</button>
+  </div>
+</body>
+</html>
