@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     clearMocks: true,
-    include: ['test/**/*.test.ts']
+    include: ['test/**/*.test.ts'],
+    exclude: ['**/node_modules/**', 'test/native/**', 'test/e2e/**']
   },
 });

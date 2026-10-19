@@ -12,6 +12,8 @@
   "include": [
     "electron-main.ts",
     "mpv-manager.ts",
+    "libmpv-bridge.ts",
+    "libmpv-frame-sender.ts",
     "src/custom-typings.d.ts",
     "playback-manager.ts",
     "yomitan-manager.ts",
