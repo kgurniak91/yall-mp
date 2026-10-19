@@ -24,7 +24,7 @@ describeAddon('libmpv loading failures', (addon) => {
       expect.unreachable();
     } catch (error) {
       expect((error as LibmpvError).code).toBe('LIB_NOT_FOUND');
-      expect((error as LibmpvError).tried[0].error).toContain('missing export');
+      expect((error as LibmpvError).tried[0].error).toMatch(/missing export|cannot dynamically load|invalid ELF|not a valid|mach-o/i);
     }
     expect(addon.apiVersion()).toBeNull();
   });

@@ -144,7 +144,11 @@ describeNative('libmpv client API', (env) => {
       await player.destroy();
     };
 
-    await cycle(); // warm up allocators before measuring
+    // glibc arenas and libmpv's one-time caches grow during the first cycles, so warm up with a full batch and
+    // judge the second one: a real per-cycle leak keeps growing, allocator warm-up plateaus.
+    for (let i = 0; i < 20; i++) {
+      await cycle();
+    }
     const rssBefore = process.memoryUsage().rss;
     for (let i = 0; i < 20; i++) {
       await cycle();

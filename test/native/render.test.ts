@@ -154,7 +154,10 @@ describeNative('libmpv render API', (env: NativeEnv) => {
       expect(stats.impl).toBe('d3d11');
       expect(stats.gpuWaitImpl).not.toBe('query-poll');
       expect(stats.gpuWaitTimeouts).toBe(0);
-      expect(stats.adapter.software).toBe(adapter === 'warp');
+      // 'default' may itself resolve to WARP on a GPU-less machine (CI), so only the explicit WARP case is certain
+      if (adapter === 'warp') {
+        expect(stats.adapter.software).toBe(true);
+      }
     });
 
     it('detaches with all slots in flight, accepts late releases and drains', async () => {
