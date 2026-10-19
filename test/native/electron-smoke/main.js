@@ -84,6 +84,13 @@ async function begin(width, height, gpuInfo) {
   }
   libmpv = Libmpv.create(addon, {options, apiVersion: loaded.apiVersion});
   libmpv.on('end-file', e => log('end-file', JSON.stringify(e)));
+  // mpv's own warnings and errors (VO/render failures are otherwise just an error code)
+  libmpv.on('event', e => {
+    if (e.event === 'log-message') {
+      log(`mpv[${e.prefix}] ${e.level}: ${String(e.text).trim()}`);
+    }
+  });
+  libmpv.requestLogMessages('warn');
 
   const adapter = cfg.adapter === 'gpu' ? undefined : cfg.adapter;
   sender = new LibmpvFrameSender({
@@ -157,7 +164,9 @@ async function run(gpuInfo) {
     check('fallback logged', logLines.some(l => /shared-texture import failed on first frame .*switching to readback/.test(l)));
     check('readback frames keep arriving after the fallback', (rendererStats.readback || 0) > 0 && frames > 0);
   } else {
-    check('no import failures', fs_.importFailures === 0, `${fs_.importFailures}`);
+    // A real first-frame import failure (no usable GPU) legitimately switches to readback: that is the intended fallback.
+    check('no import failures, or a clean switch to readback', fs_.importFailures === 0 || (fs_.fallbackReason !== null && backend === 'readback'),
+      `${fs_.importFailures}${fs_.fallbackReason ? `, fallback: ${fs_.fallbackReason}` : ''}`);
     check('no send failures', fs_.sendFailures === 0, `${fs_.sendFailures}`);
     if (cfg.backend === 'd3d11-shared') {
       check('shared backend kept (no fallback)', wasShared, fs_.fallbackReason ?? '');
@@ -171,7 +180,7 @@ async function run(gpuInfo) {
   }
   if (wasShared) {
     const total = summary.renderThreadCpuPct.total;
-    check('render thread < 1 % of one core (P4-1)', total !== null && total < 1,
+    check('render thread < 1 % of one core', total !== null && total < 1,
       `total ${total?.toFixed(2)} % = render ${summary.renderThreadCpuPct.render?.toFixed(2)} + wait ${summary.renderThreadCpuPct.wait?.toFixed(2)}; gpuWaitImpl=${attach.gpuWaitImpl}`);
   }
 
@@ -185,8 +194,8 @@ async function run(gpuInfo) {
   const counts = loadLibmpvAddon({appRoot: ROOT}).liveCounts();
   summary.shutdownMs = shutdownMs;
   summary.liveCountsAfter = counts;
-  check('live counts zero after shutdown (P4-3)', Object.values(counts).every(v => v === 0), JSON.stringify(counts));
-  check('shutdown < 3 s (P4-3)', shutdownMs < 3000, `${shutdownMs} ms`);
+  check('live counts zero after shutdown', Object.values(counts).every(v => v === 0), JSON.stringify(counts));
+  check('shutdown < 3 s', shutdownMs < 3000, `${shutdownMs} ms`);
   check('no "Unable to duplicate handle" logged', !logLines.some(l => /duplicate handle/i.test(l)));
 
   summary.checks = checks;

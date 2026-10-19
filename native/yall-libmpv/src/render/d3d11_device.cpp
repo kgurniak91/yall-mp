@@ -129,7 +129,7 @@ std::string D3D11Device::Init(const AdapterRequest& request) {
     }
   }
 
-  // The flags are the ones d3d11va hwdec was verified with in the spike: keep them.
+  // These flags are known to work with d3d11va hwdec: keep them.
   const D3D_FEATURE_LEVEL levels[] = {D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0};
   auto create = [&](IDXGIAdapter* a, D3D_DRIVER_TYPE t) {
     return D3D11CreateDevice(a, t, nullptr, D3D11_CREATE_DEVICE_BGRA_SUPPORT, levels, 2, D3D11_SDK_VERSION, &device,

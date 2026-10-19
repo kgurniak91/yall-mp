@@ -1,6 +1,6 @@
 #pragma once
 // Readback through mpv's software renderer (MPV_RENDER_API_TYPE_SW). The only readback path off
-// Windows until the GL backends of Phase 8. mpv scales and converts on the CPU, so the frame size
+// Windows until GL backends exist. mpv scales and converts on the CPU, so the frame size
 // is capped by the caller.
 #include <mutex>
 #include "backend.h"

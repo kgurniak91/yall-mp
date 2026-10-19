@@ -227,7 +227,7 @@ describeNative('libmpv render API', (env: NativeEnv) => {
     });
   });
 
-  // P4-5: the capped readback must stay interactive on a machine without a GPU.
+  // The capped readback must stay interactive on a machine without a GPU.
   describe.runIf(isWindows)('WARP readback throughput', () => {
     it('reaches 24 fps at 960x540 from a 1080p30 clip', async () => {
       const clip = ensureClip({size: '1920x1080', fps: 30, seconds: 20});

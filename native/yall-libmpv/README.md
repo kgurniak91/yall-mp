@@ -21,7 +21,7 @@ On Windows libmpv is `electron-resources/windows/libmpv-2.dll`, downloaded by `n
 - `src/core.*`, `src/addon.cpp`: `MpvCore`, one per instance. Options, `initialize`, promise-based `command` / `getProperty` / `setProperty` (`mpv_*_async` reply ids, the promise map is only touched on the JS thread), property observation, and one event thread (the only `mpv_wait_event` caller) feeding a single ThreadSafeFunction.
 - `src/core_render.cpp`, `src/render/*`: render core.
   - `render_thread`: one per attach. Waits on the mpv update callback, renders, hands frames to JS.
-  - `d3d11_shared`: 4-slot pool of shared NT-handle textures (Windows). `d3d11_readback`: staging-texture readback. `sw_readback`: mpv SW render API, default readback off Windows. macOS/Linux GPU backends are Phase 8.
+  - `d3d11_shared`: 4-slot pool of shared NT-handle textures (Windows). `d3d11_readback`: staging-texture readback. `sw_readback`: mpv SW render API, default readback off Windows. macOS/Linux GPU backends are not implemented yet.
   - `d3d11_device`: adapter match by vendor/device id and the `GpuWaiter` (fence, then `EnqueueSetEvent`, then query + `Sleep(1)`; never a busy spin).
 - `ring_stats.h`, `thread_cpu.*`: `stats()` percentiles and per-thread CPU time.
 

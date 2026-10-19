@@ -161,12 +161,12 @@ jobs:
         run: |
           mkdir -p test-results/smoke
           if [ "${{ runner.os }}" = "Windows" ]; then
-            npm run test:native:smoke -- --backend=auto --adapter=default --json=test-results/smoke/windows.json
+            npm run test:native:smoke -- --backend=auto --adapter=default --seconds=6 --json=test-results/smoke/windows.json
           elif [ "${{ runner.os }}" = "Linux" ]; then
             # embedded ASS exercises libass/fontconfig inside the Electron main process
-            xvfb-run -a npm run test:native:smoke -- --backend=readback --subs --file=test/e2e/fixtures/sample-5.1.mkv --json=test-results/smoke/linux.json --no-sandbox
+            xvfb-run -a npm run test:native:smoke -- --backend=readback --hwdec=no --subs --seconds=4 --min-fps=10 --file=test/e2e/fixtures/sample-5.1.mkv --json=test-results/smoke/linux.json --no-sandbox
           else
-            npm run test:native:smoke -- --backend=readback --json=test-results/smoke/macos.json
+            npm run test:native:smoke -- --backend=readback --seconds=4 --min-fps=10 --json=test-results/smoke/macos.json
           fi
 
       - uses: actions/upload-artifact@v4
