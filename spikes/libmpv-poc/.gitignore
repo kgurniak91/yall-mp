@@ -1,0 +1,6 @@
+vendor/
+media/
+node_modules/
+addon/build/
+results/*
+!results/bench-table.md

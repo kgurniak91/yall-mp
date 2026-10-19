@@ -1,0 +1,15 @@
+{
+  "name": "libmpv-poc",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Throwaway spike: libmpv rendering into an Electron canvas. Never shipped.",
+  "main": "main.js",
+  "scripts": {
+    "vendor": "node scripts/fetch-vendor.js",
+    "build:addon": "cmake-js compile -d addon"
+  },
+  "devDependencies": {
+    "cmake-js": "^7.3.0",
+    "node-addon-api": "^8.0.0"
+  }
+}
