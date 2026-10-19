@@ -17,6 +17,8 @@
     "test": "ng test",
     "test:angular": "ng test --no-watch --no-progress --browsers=ChromeHeadless",
     "test:electron": "tsc --project tsconfig.electron.json && vitest run",
+    "test:native": "tsc --project tsconfig.electron.json && vitest run -c vitest.native.config.ts",
+    "test:native:smoke": "tsc --project tsconfig.electron.json && electron test/native/electron-smoke/main.js",
     "test:all": "npm run test:angular && npm run test:electron",
     "test:e2e": "npm run electron:build && playwright test",
     "test:e2e:run": "playwright test",
@@ -29,7 +31,9 @@
     "package:mac": "npm run electron:build && electron-builder --mac",
     "package:linux": "npm run electron:build && electron-builder --linux",
     "build:github-pages": "node github-pages/build.js",
-    "postinstall": "node scripts/download-dependencies.js && install-electron && npm run generate:licenses"
+    "postinstall": "node scripts/download-dependencies.js && install-electron && npm run generate:licenses",
+    "native:build": "node scripts/build-native.js",
+    "native:build:debug": "node scripts/build-native.js --debug"
   },
   "build": {
     "appId": "com.yall-mp.app",
@@ -45,6 +49,9 @@
       "dist/yall-mp/browser/**/*",
       "electron-main.js",
       "mpv-manager.js",
+      "libmpv-bridge.js",
+      "libmpv-frame-sender.js",
+      "native/yall-libmpv/build/Release/yall_libmpv.node",
       "playback-manager.js",
       "yomitan-manager.js",
       "shared/**/*.js",
@@ -61,7 +68,8 @@
     ],
     "asarUnpack": [
       "**/node_modules/ffmpeg-static/**",
-      "**/node_modules/ffprobe-static/**"
+      "**/node_modules/ffprobe-static/**",
+      "**/*.node"
     ],
     "removePackageScripts": true,
     "win": {
@@ -72,7 +80,8 @@
           "from": "electron-resources/windows",
           "to": "electron-resources/windows",
           "filter": [
-            "**/*.exe"
+            "**/*.exe",
+            "**/*.dll"
           ]
         },
         {
@@ -278,6 +287,7 @@
     "@types/node": "^24.19.2",
     "7zip-bin": "^5.2.0",
     "assjs": "^0.1.4",
+    "cmake-js": "^7.4.0",
     "concurrently": "^9.2.0",
     "electron": "^44.9.0",
     "electron-builder": "^26.15.3",
@@ -292,6 +302,7 @@
     "lodash-es": "^4.17.21",
     "mustache": "^4.2.0",
     "ng-mocks": "^14.13.5",
+    "node-addon-api": "^8.9.2",
     "node-gyp": "^13.1.0",
     "nodemon": "^3.1.10",
     "primeflex": "^4.0.0",

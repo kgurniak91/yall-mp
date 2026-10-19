@@ -70,3 +70,11 @@ public/THIRD-PARTY-NOTICES.txt
 /playwright-report/
 /test-results/
 /e2e-artifacts/
+
+# Native addon (yall-libmpv)
+/native/yall-libmpv/build/
+/native/yall-libmpv/prebuilds/
+/libmpv-bridge.js
+/libmpv-bridge.js.map
+/libmpv-frame-sender.js
+/libmpv-frame-sender.js.map
