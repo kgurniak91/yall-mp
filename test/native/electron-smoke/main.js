@@ -82,7 +82,9 @@ async function begin(width, height, gpuInfo) {
   if (cfg.ao) {
     options.ao = cfg.ao;
   }
+  log('creating the mpv core');
   libmpv = Libmpv.create(addon, {options, apiVersion: loaded.apiVersion});
+  log('mpv core created');
   libmpv.on('end-file', e => log('end-file', JSON.stringify(e)));
   // mpv's own warnings and errors (VO/render failures are otherwise just an error code)
   libmpv.on('event', e => {

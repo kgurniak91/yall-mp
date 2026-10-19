@@ -164,7 +164,8 @@ jobs:
             npm run test:native:smoke -- --backend=auto --adapter=default --seconds=6 --json=test-results/smoke/windows.json
           elif [ "${{ runner.os }}" = "Linux" ]; then
             # embedded ASS exercises libass/fontconfig inside the Electron main process
-            xvfb-run -a npm run test:native:smoke -- --backend=readback --hwdec=no --subs --seconds=4 --min-fps=10 --file=test/e2e/fixtures/sample-5.1.mkv --json=test-results/smoke/linux.json --no-sandbox
+            ldd "$(ldconfig -p | awk '/libmpv.so.2 /{print $NF; exit}')" | grep -iE "libX|xcb|ssl|fontconfig" || true
+            xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:native:smoke -- --backend=readback --hwdec=no --subs --seconds=4 --min-fps=10 --file=test/e2e/fixtures/sample-5.1.mkv --json=test-results/smoke/linux.json --no-sandbox
           else
             npm run test:native:smoke -- --backend=readback --seconds=4 --min-fps=10 --json=test-results/smoke/macos.json
           fi

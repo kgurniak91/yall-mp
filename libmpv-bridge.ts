@@ -366,6 +366,9 @@ export class Libmpv extends EventEmitter {
       // WARP rasterises mpv's default scalers on the CPU at ~55 ms per 960x540 frame (17 fps). The built-in
       // "fast" profile (bilinear scalers, no dithering) brings it to full frame rate.
       this.core.command(['apply-profile', 'fast']).catch(() => undefined);
+      // Hardware decoding through a software adapter is pointless, and on the Basic Render Driver the dxva2
+      // interop fails fatally ("Can't StretchRect from NV12 to XRGB"), which also breaks the video output.
+      this.core.setProperty('hwdec', 'no').catch(() => undefined);
     }
     return result;
   }
