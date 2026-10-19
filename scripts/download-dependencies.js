@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const crypto = require('crypto');
 const {execFileSync, fork} = require('child_process');
 const pathTo7za = require('7zip-bin').path7za;
 
@@ -21,6 +22,19 @@ const URLS = {
     mpv: 'https://github.com/shinchiro/mpv-winbuild-cmake/releases/download/20261017/mpv-x86_64-20261017-git-dde0671072.7z',
     audiowaveform: 'https://github.com/bbc/audiowaveform/releases/download/1.10.2/audiowaveform-1.10.2-win64.zip'
   }
+};
+
+// libmpv for the native addon (Windows). The mpv-dev archive is the same shinchiro build as the mpv CLI above,
+// but shinchiro prunes old releases, so the first source is a mirror in this project's own releases.
+// Bumping: change archive + sha256 + mirror tag together and re-run `node scripts/vendor-mpv-headers.js <commit>`
+// (the commit of the archive) so that the vendored headers match, all in one commit.
+const LIBMPV = {
+  archive: 'mpv-dev-x86_64-20261017-git-dde0671072.7z',
+  sha256: 'd6638b2b40561e6071627f39ad60a38e15721dc87a49f244b897911ea2edfd9f',
+  sources: [
+    'https://github.com/kgurniak91/yall-mp/releases/download/deps-mpv-dev-20261017/mpv-dev-x86_64-20261017-git-dde0671072.7z',
+    'https://github.com/shinchiro/mpv-winbuild-cmake/releases/download/20261017/mpv-dev-x86_64-20261017-git-dde0671072.7z'
+  ]
 };
 
 const preserveLicense = (sourceDir, destDir, binaryName) => {
@@ -64,6 +78,33 @@ const downloadFile = (url, destPath) => {
       reject(err);
     });
   });
+};
+
+const sha256File = (filePath) => new Promise((resolve, reject) => {
+  const hash = crypto.createHash('sha256');
+  fs.createReadStream(filePath).on('data', chunk => hash.update(chunk)).on('error', reject)
+    .on('end', () => resolve(hash.digest('hex')));
+});
+
+/** Tries each source in turn; a download error or a sha256 mismatch moves on to the next. */
+const downloadVerified = async (sources, destPath, sha256) => {
+  const errors = [];
+  for (const url of sources) {
+    try {
+      console.log(`   Downloading ${url}`);
+      await downloadFile(url, destPath);
+      const actual = await sha256File(destPath);
+      if (actual === sha256) {
+        return url;
+      }
+      throw new Error(`sha256 mismatch (expected ${sha256}, got ${actual})`);
+    } catch (err) {
+      errors.push(`${url}: ${err.message}`);
+      console.warn(`   ⚠️  ${err.message}`);
+      fs.rmSync(destPath, {force: true});
+    }
+  }
+  throw new Error(`Could not download ${path.basename(destPath)} from any source:\n  ${errors.join('\n  ')}`);
 };
 
 const extractArchive = (archivePath, outputDir) => {
@@ -135,6 +176,32 @@ async function main() {
   }
 
   console.log(`\nY'ALL MP: Setting up Windows binaries...`);
+
+  // --- LIBMPV (native addon) ---
+  const libmpvDll = path.join(winTargetDir, 'libmpv-2.dll');
+  const libmpvStamp = `${libmpvDll}.version`;
+  const libmpvVersion = `${LIBMPV.archive} ${LIBMPV.sha256}`;
+  const stamped = fs.existsSync(libmpvStamp) ? fs.readFileSync(libmpvStamp, 'utf8').trim() : '';
+  if (!fs.existsSync(libmpvDll) || stamped !== libmpvVersion) {
+    console.log(`   Setting up libmpv (${LIBMPV.archive})...`);
+    const libmpvArchive = path.join(winTargetDir, 'mpv-dev.7z');
+    const tmpDir = path.join(winTargetDir, 'mpv-dev-tmp');
+    try {
+      const source = await downloadVerified(LIBMPV.sources, libmpvArchive, LIBMPV.sha256);
+      console.log(`   Verified sha256 from ${source}`);
+      fs.rmSync(tmpDir, {recursive: true, force: true});
+      // only the dll is needed at runtime; the headers are vendored in native/yall-libmpv/include
+      execFileSync(pathTo7za, ['e', libmpvArchive, 'libmpv-2.dll', `-o${tmpDir}`, '-y'], {stdio: 'inherit'});
+      fs.copyFileSync(path.join(tmpDir, 'libmpv-2.dll'), libmpvDll);
+      fs.writeFileSync(libmpvStamp, `${libmpvVersion}
+`);
+    } finally {
+      fs.rmSync(tmpDir, {recursive: true, force: true});
+      fs.rmSync(libmpvArchive, {force: true});
+    }
+  } else {
+    console.log(`   libmpv found, skipping.`);
+  }
 
   // --- MPV ---
   const mpvArchive = path.join(winTargetDir, 'mpv.7z');

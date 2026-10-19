@@ -96,3 +96,82 @@ jobs:
           test -f "$RES/mpv/yall_auto_pause.lua"
           test -f "$RES/electron-resources/extensions/yomitan/manifest.json"
           test -f "$RES/THIRD-PARTY-NOTICES.txt"
+
+  native:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ windows-latest, ubuntu-latest, macos-latest ]
+    env:
+      YALL_NATIVE_REQUIRED: 1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfontconfig1-dev xvfb
+          # Ubuntu 24.04 AppArmor blocks the Electron sandbox
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          sudo add-apt-repository -y ppa:ubuntuhandbook1/mpv
+          sudo apt-get update
+          sudo apt-get install -y mpv libmpv-dev
+
+      - name: Install macOS dependencies
+        if: runner.os == 'macOS'
+        run: brew install mpv cmake
+
+      - name: Cache downloaded binaries
+        uses: actions/cache@v4
+        with:
+          path: electron-resources
+          key: electron-resources-${{ runner.os }}-${{ hashFiles('scripts/download-dependencies.js') }}
+
+      - run: npm ci
+
+      - name: Toolchain versions
+        shell: bash
+        run: |
+          cmake --version || true
+          mpv --version | head -n 1 || true
+          ls -la electron-resources/windows/libmpv-2.dll* 2>/dev/null || true
+
+      - run: npm run native:build -- --prebuild
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: yall-libmpv-${{ runner.os }}-${{ runner.arch }}
+          path: |
+            native/yall-libmpv/prebuilds/
+            native/yall-libmpv/include/mpv/VENDORED.md
+
+      - run: npm run test:native
+
+      - name: Electron smoke (non-gating)
+        continue-on-error: true
+        shell: bash
+        run: |
+          mkdir -p test-results/smoke
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            npm run test:native:smoke -- --backend=auto --adapter=default --json=test-results/smoke/windows.json
+          elif [ "${{ runner.os }}" = "Linux" ]; then
+            # embedded ASS exercises libass/fontconfig inside the Electron main process
+            xvfb-run -a npm run test:native:smoke -- --backend=readback --subs --file=test/e2e/fixtures/sample-5.1.mkv --json=test-results/smoke/linux.json --no-sandbox
+          else
+            npm run test:native:smoke -- --backend=readback --json=test-results/smoke/macos.json
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-smoke-${{ runner.os }}
+          path: test-results/smoke/
+          if-no-files-found: ignore

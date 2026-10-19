@@ -182,6 +182,11 @@ This application is not code-signed (which requires a paid Apple Developer accou
 *   **Node.js** (v22+ recommended)
 *   **npm**
 *   **System Dependencies:** Ensure you have installed the requirements listed in the [System Requirements](#system-requirements) section above.
+*   **Native addon** (needed from the libmpv migration on, see [`native/yall-libmpv`](native/yall-libmpv/README.md)):
+    *   **Windows:** Visual Studio 2019 (16.11+) or 2022 Build Tools with "Desktop development with C++" (MSVC v142 or newer), the Windows 10 SDK and CMake 3.20+ (the CMake bundled with Visual Studio is found automatically).
+    *   **macOS:** Xcode Command Line Tools, `brew install mpv cmake`.
+    *   **Linux:** `build-essential`, `cmake`, and libmpv with Lua (`libmpv2` / `libmpv-dev`, from the mpv PPA on Ubuntu).
+    *   Build with `npm run native:build`, run the integration tests with `npm run test:native` and the Electron smoke harness with `npm run test:native:smoke`.
 
 ### Setup
 

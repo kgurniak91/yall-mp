@@ -75,6 +75,34 @@ SOFTWARE.`
     licenseText: "Distributed under the GPLv2 or later.\nSource code available at: https://github.com/mpv-player/mpv"
   },
   {
+    name: "libmpv",
+    licenses: "GPLv2+",
+    repository: "https://github.com/mpv-player/mpv",
+    publisher: "The mpv developers",
+    notice: "Windows builds bundle libmpv-2.dll (shinchiro mpv-winbuild-cmake 20261017, mpv commit dde0671072); macOS and Linux use the system libmpv.",
+    licenseText: "Distributed under the GPLv2 or later.\nSource code available at: https://github.com/mpv-player/mpv"
+  },
+  {
+    name: "mpv client API headers",
+    licenses: "ISC",
+    repository: "https://github.com/mpv-player/mpv",
+    publisher: "The mpv developers",
+    notice: "The native addon is compiled against the mpv client API headers (mpv commit dde0671072723c311df874a32dc4e48b5197ca62).",
+    licenseText: `Copyright (C) 2017 the mpv developers
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.`
+  },
+  {
     name: "audiowaveform",
     licenses: "GPLv3",
     repository: "https://github.com/bbc/audiowaveform",
