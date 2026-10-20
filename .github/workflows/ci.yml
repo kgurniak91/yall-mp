@@ -165,13 +165,10 @@ jobs:
           elif [ "${{ runner.os }}" = "Linux" ]; then
             # embedded ASS exercises libass/fontconfig inside the Electron main process
             ldd "$(ldconfig -p | awk '/libmpv.so.2 /{print $NF; exit}')" | grep -iE "libX|xcb|ssl|fontconfig" || true
-            # Diagnostic: libmpv calls exit(1) inside mpv_initialize when DISPLAY is set. Which option avoids it?
-            mkdir -p test-results/smoke
-            for variant in "terminal=yes,msg-level=all=v" "clipboard-backends=" "terminal=yes,msg-level=all=v,clipboard-backends="; do
-              echo "::group::create-only smoke, opts=$variant"
-              xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:native:smoke -- --stop-after-create --opts="$variant" --no-sandbox 2>&1 | grep -vE "dbus|ssl_client" | tail -40 || true
-              echo "::endgroup::"
-            done
+            # create-only run with mpv's terminal output, to see why mpv_initialize fails if it does
+            echo "::group::create-only smoke"
+            xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:native:smoke -- --stop-after-create --opts="terminal=yes,msg-level=all=v" --no-sandbox 2>&1 | grep -vE "dbus|ssl_client" | tail -40 || true
+            echo "::endgroup::"
             xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:native:smoke -- --backend=readback --hwdec=no --subs --seconds=4 --min-fps=10 --file=test/e2e/fixtures/sample-5.1.mkv --json=test-results/smoke/linux.json --no-sandbox
           else
             npm run test:native:smoke -- --backend=readback --seconds=4 --min-fps=10 --json=test-results/smoke/macos.json

@@ -65,7 +65,13 @@ void CloseLib(LibHandle h) { FreeLibrary(h); }
 using LibHandle = void*;
 
 LibHandle OpenLib(const std::string& path, std::string& err) {
-  LibHandle h = dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
+  int flags = RTLD_NOW | RTLD_LOCAL;
+#ifdef __linux__
+  // Electron exports its own ffmpeg symbols globally. Without this, libmpv would bind to them
+  // instead of the system libav* it was built against, and mpv exits on the version mismatch.
+  flags |= RTLD_DEEPBIND;
+#endif
+  LibHandle h = dlopen(path.c_str(), flags);
   if (!h) {
     const char* e = dlerror();
     err = e ? e : "dlopen failed";
