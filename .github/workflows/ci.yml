@@ -184,7 +184,8 @@ jobs:
             echo "::endgroup::"
             # the dlmopen smoke aborted with "free(): invalid pointer" during shutdown: get the backtrace
             echo "::group::dlmopen smoke under gdb"
-            YALL_LIBMPV_DLMOPEN=1 xvfb-run -a -s "-screen 0 1920x1080x24" gdb -batch -ex "handle SIGUSR1 nostop noprint pass" -ex run -ex bt -ex "thread apply all bt 14" --args "$ELECTRON_BIN" test/native/electron-smoke/main.js --backend=readback --hwdec=no --subs --warmup=1 --seconds=3 --min-fps=10 --file=test/e2e/fixtures/sample-5.1.mkv --no-sandbox 2>&1 | grep -vE "^\[New Thread|^\[Thread|^warning: Error disabling|dbus|ALSA|pw\.conf" | tail -120 || true
+            YALL_LIBMPV_DLMOPEN=1 xvfb-run -a -s "-screen 0 1920x1080x24" gdb -batch -ex "set pagination off" -ex "handle all nostop noprint pass" -ex "handle SIGABRT stop print" -ex run -ex "bt 40" -ex "thread apply all bt 12" --args "$ELECTRON_BIN" test/native/electron-smoke/main.js --backend=readback --hwdec=no --subs --warmup=1 --seconds=3 --min-fps=10 --file=test/e2e/fixtures/sample-5.1.mkv --no-sandbox > test-results/smoke/gdb-full.txt 2>&1 || true
+            grep -a -n -B3 -A60 "received signal SIGABRT" test-results/smoke/gdb-full.txt | cut -c1-240 | head -120 || true
             echo "::endgroup::"
             YALL_LIBMPV_DLMOPEN=1 xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:native:smoke -- --backend=readback --hwdec=no --subs --warmup=1 --seconds=3 --min-fps=10 --file=test/e2e/fixtures/sample-5.1.mkv --json=test-results/smoke/linux.json --no-sandbox
           else
