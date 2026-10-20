@@ -165,6 +165,12 @@ jobs:
           elif [ "${{ runner.os }}" = "Linux" ]; then
             # embedded ASS exercises libass/fontconfig inside the Electron main process
             ldd "$(ldconfig -p | awk '/libmpv.so.2 /{print $NF; exit}')" | grep -iE "libX|xcb|ssl|fontconfig" || true
+            # Bisect the crash inside mpv_create/mpv_initialize (diagnostic, results only in the log)
+            for opts in "ytdl=no" "load-scripts=no" "ytdl=no,load-scripts=no,idle=no,vo=null"; do
+              echo "::group::create-only smoke, opts=$opts"
+              xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:native:smoke -- --stop-after-create --opts="$opts" --no-sandbox || echo "create-only smoke FAILED for $opts"
+              echo "::endgroup::"
+            done
             xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:native:smoke -- --backend=readback --hwdec=no --subs --seconds=4 --min-fps=10 --file=test/e2e/fixtures/sample-5.1.mkv --json=test-results/smoke/linux.json --no-sandbox
           else
             npm run test:native:smoke -- --backend=readback --seconds=4 --min-fps=10 --json=test-results/smoke/macos.json

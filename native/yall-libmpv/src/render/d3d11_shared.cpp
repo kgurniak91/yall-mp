@@ -24,6 +24,12 @@ std::string D3D11SharedBackend::Init(mpv_handle* handle) {
       {MPV_RENDER_PARAM_API_TYPE, const_cast<char*>(MPV_RENDER_API_TYPE_D3D11)},
       {MPV_RENDER_PARAM_D3D11_INIT_PARAMS, &initParams},
       {MPV_RENDER_PARAM_INVALID, nullptr}};
+  if (adapterInfo_.software) {
+    // libmpv's render API probes every hwdec interop at context creation, whatever `hwdec` says. On the Basic
+    // Render Driver the dxva2 interop fails fatally ("Can't StretchRect from NV12 to XRGB") and takes the video
+    // output with it; hardware decoding is pointless on a software adapter anyway.
+    mpv.set_option_string(handle, "gpu-hwdec-interop", "no");
+  }
   int rc = mpv.render_context_create(&rc_, handle, params);
   if (rc < 0) return std::string("mpv_render_context_create: ") + mpv.error_string(rc);
   slots_.reserve(static_cast<size_t>(maxSlots_));

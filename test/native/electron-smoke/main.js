@@ -8,6 +8,8 @@
 // --adapter=gpu|default|warp             gpu = the active GPU from getGPUInfo (default)
 // --file=<path> | --clip=<WxH>@<fps>     media (default test/e2e/fixtures/sample.mp4); clips are generated on demand
 // --seconds=N  --warmup=N  --width=N --height=N  --hwdec=auto|no  --ao=<driver>  --subs  --simulate-import-failure
+// --opts=a=b,c=d                        extra mpv options (bisecting)
+// --stop-after-create                    exit 0 once the mpv core was created
 // --min-fps=N                            override the minimum received frame rate
 const {app, BrowserWindow, ipcMain} = require('electron');
 const fs = require('fs');
@@ -35,6 +37,8 @@ const cfg = {
   width: parseInt(args.width || '1600', 10),
   height: parseInt(args.height || '900', 10),
   subs: !!args.subs,
+  opts: typeof args.opts === 'string' ? args.opts.split(',').filter(Boolean) : [],
+  stopAfterCreate: !!args['stop-after-create'],
   simulateImportFailure: !!args['simulate-import-failure'],
   minFps: args['min-fps'] ? parseFloat(args['min-fps']) : null,
   json: args.json ? path.resolve(args.json) : null,
@@ -82,9 +86,18 @@ async function begin(width, height, gpuInfo) {
   if (cfg.ao) {
     options.ao = cfg.ao;
   }
+  for (const pair of cfg.opts) {
+    const [k, ...v] = pair.split('=');
+    options[k] = v.join('=');
+  }
   log('creating the mpv core');
   libmpv = Libmpv.create(addon, {options, apiVersion: loaded.apiVersion});
   log('mpv core created');
+  if (cfg.stopAfterCreate) {
+    await libmpv.destroy();
+    app.exit(0);
+    await new Promise(() => {}); // app.exit ends the process
+  }
   libmpv.on('end-file', e => log('end-file', JSON.stringify(e)));
   // mpv's own warnings and errors (VO/render failures are otherwise just an error code)
   libmpv.on('event', e => {
