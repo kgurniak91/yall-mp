@@ -167,7 +167,8 @@ jobs:
             ldd "$(ldconfig -p | awk '/libmpv.so.2 /{print $NF; exit}')" | grep -iE "libX|xcb|ssl|fontconfig" || true
             # Diagnostic: where does the Xlib IO error come from? (backtrace at the handler)
             sudo apt-get install -y gdb
-            xvfb-run -a -s "-screen 0 1920x1080x24" gdb -batch -ex "set breakpoint pending on" -ex "break _XIOError" -ex "break exit" -ex run -ex bt -ex "info sharedlibrary" --args node_modules/electron/dist/electron test/native/electron-smoke/main.js --stop-after-create --no-sandbox 2>&1 | grep -vE "^\[New Thread|^\[Thread|^warning: Error disabling|dbus" | tail -60 || true
+            xvfb-run -a -s "-screen 0 1920x1080x24" gdb -batch -ex "set breakpoint pending on" -ex "break _XIOError" -ex "break exit" -ex run -ex "thread apply all bt 25" --args node_modules/electron/dist/electron test/native/electron-smoke/main.js --stop-after-create --no-sandbox > test-results/smoke/gdb.log 2>&1 || true
+            grep -vE "^\[New Thread|^\[Thread|dbus|Missing separate debuginfos|^warning" test-results/smoke/gdb.log | tail -150 || true
             xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:native:smoke -- --backend=readback --hwdec=no --subs --seconds=4 --min-fps=10 --file=test/e2e/fixtures/sample-5.1.mkv --json=test-results/smoke/linux.json --no-sandbox
           else
             npm run test:native:smoke -- --backend=readback --seconds=4 --min-fps=10 --json=test-results/smoke/macos.json

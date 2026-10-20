@@ -36,6 +36,8 @@ const fakeLibmpv = (opts: { d3d11?: boolean; software?: boolean } = {}): FakeLib
     releaseSlot: vi.fn(),
     detachRenderer: vi.fn(),
     reinitVideo: vi.fn().mockResolvedValue(undefined),
+    getProperty: vi.fn((name: string) => Promise.resolve(({path: '/media/a.mp4', 'time-pos': 1.5, pause: false} as Record<string, unknown>)[name])),
+    command: vi.fn().mockResolvedValue(undefined),
     stats: vi.fn().mockReturnValue(null),
     observeProperty: vi.fn(() => ++observeId),
     unobserveProperty: vi.fn(),
@@ -164,6 +166,60 @@ describe('LibmpvFrameSender', () => {
     libmpv.attaches[0].onFrame(sharedFrame(1, 2, 9));
     expect(texture.importSharedTexture).toHaveBeenCalledTimes(1);
     expect(sender.stats().staleDropped).toBe(1);
+  });
+
+  describe('video output failing during the switch to readback', () => {
+    const failFirstImport = (libmpv: FakeLibmpv): LibmpvFrameSender => {
+      (texture.importSharedTexture as ReturnType<typeof vi.fn>).mockImplementation(() => {
+        throw new Error('GPU is not available');
+      });
+      const sender = create(libmpv);
+      sender.start({width: 800, height: 450, preferred: 'd3d11-shared'});
+      libmpv.attaches[0].onFrame(sharedFrame(1));
+      return sender;
+    };
+    const voFailed: LibmpvEvent = {event: 'end-file', reason: 'error', error: {code: 'VO_INIT_FAILED', message: 'video output initialization failed'}};
+
+    it('reloads the file at the same position when the video output gave up', async () => {
+      const libmpv = fakeLibmpv();
+      failFirstImport(libmpv);
+      libmpv.emit(voFailed);
+      await flush();
+      expect(libmpv.command).toHaveBeenCalledWith(['loadfile', '/media/a.mp4', 'replace', '-1', 'start=1.5,pause=no']);
+      expect(log).toHaveBeenCalledWith(expect.stringContaining('reloading the file at 1.50 s'));
+
+      // One repair per switch.
+      libmpv.emit(voFailed);
+      await flush();
+      expect(libmpv.command).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores other end-file events', async () => {
+      const libmpv = fakeLibmpv();
+      failFirstImport(libmpv);
+      libmpv.emit({event: 'end-file', reason: 'eof'});
+      libmpv.emit({event: 'end-file', reason: 'error', error: {code: 'LOADING_FAILED', message: 'loading failed'}});
+      await flush();
+      expect(libmpv.command).not.toHaveBeenCalled();
+    });
+
+    it('does nothing without a fallback', async () => {
+      const libmpv = fakeLibmpv();
+      const sender = create(libmpv);
+      sender.start({width: 800, height: 450, preferred: 'd3d11-shared'});
+      libmpv.attaches[0].onFrame(sharedFrame(1));
+      libmpv.emit(voFailed);
+      await flush();
+      expect(libmpv.command).not.toHaveBeenCalled();
+    });
+
+    it('stop() cancels a pending repair', async () => {
+      const libmpv = fakeLibmpv();
+      failFirstImport(libmpv).stop();
+      libmpv.emit(voFailed);
+      await flush();
+      expect(libmpv.command).not.toHaveBeenCalled();
+    });
   });
 
   it('only counts import failures after the first frame', () => {

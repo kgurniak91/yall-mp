@@ -19,9 +19,9 @@ export const READBACK_CHANNEL = 'libmpv:readback-frame';
 export type PreferredBackend = 'd3d11-shared' | 'readback' | 'auto';
 
 export interface FrameSenderLibmpv extends Pick<Libmpv, 'supportsD3D11' | 'attachRenderer' | 'resize' | 'releaseSlot'
-  | 'detachRenderer' | 'stats' | 'observeProperty' | 'unobserveProperty' | 'reinitVideo'> {
-  on(event: 'property-change', listener: (event: LibmpvEvent) => void): unknown;
-  off(event: 'property-change', listener: (event: LibmpvEvent) => void): unknown;
+  | 'detachRenderer' | 'stats' | 'observeProperty' | 'unobserveProperty' | 'reinitVideo' | 'getProperty' | 'command'> {
+  on(event: 'property-change' | 'end-file', listener: (event: LibmpvEvent) => void): unknown;
+  off(event: 'property-change' | 'end-file', listener: (event: LibmpvEvent) => void): unknown;
 }
 
 export interface SharedTextureImportedLike {
@@ -76,6 +76,9 @@ export interface FrameSenderStats {
   addon: RenderStats | null;
 }
 
+// How long after a fallback a failed video output is still blamed on the switch and repaired by reloading the file.
+const RECOVERY_WINDOW_MS = 5000;
+
 // "No receiver registered yet" is a timing problem of the page, not a broken GPU path.
 const NO_RECEIVER = /receiver/i;
 
@@ -97,6 +100,8 @@ export class LibmpvFrameSender {
   private firstFrameDone = false;
   private switching = false;
   private observeIds: number[] = [];
+  private recoveryListener: ((event: LibmpvEvent) => void) | null = null;
+  private recoveryTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly onPropertyChange = (event: LibmpvEvent): void => this.handlePropertyChange(event);
 
   private sent = 0;
@@ -138,6 +143,7 @@ export class LibmpvFrameSender {
   }
 
   stop(): void {
+    this.cancelRecovery();
     this.libmpv.off('property-change', this.onPropertyChange);
     for (const id of this.observeIds) {
       try {
@@ -310,11 +316,50 @@ export class LibmpvFrameSender {
       const a = failed.adapter;
       this.log(`[libmpv] shared-texture import failed on first frame (${message}), switching to readback; ` +
         `adapter=${a.name} vendor/device=${a.vendorId}/${a.deviceId}`);
+      // Asked before the first context is freed: on a slow machine the video output gives up (VO_INIT_FAILED)
+      // while the second context is still being created, and then the file has to be loaded again.
+      const snapshot = Promise.all(['path', 'time-pos', 'pause'].map(name => this.libmpv.getProperty(name).catch(() => undefined)));
+      this.armRecovery(snapshot);
       this.attachBackend('readback');
       // The first render context took the video output with it when it was freed.
       this.libmpv.reinitVideo().catch((error: unknown) => this.log(`[libmpv] could not re-create the video output: ${errorMessage(error)}`));
     } finally {
       this.switching = false;
     }
+  }
+
+  private armRecovery(snapshot: Promise<unknown[]>): void {
+    this.cancelRecovery();
+    this.recoveryListener = (event: LibmpvEvent): void => {
+      if (event.event !== 'end-file' || event.reason !== 'error' || event.error?.code !== 'VO_INIT_FAILED') {
+        return;
+      }
+      this.cancelRecovery();
+      this.reloadFile(snapshot).catch((error: unknown) => this.log(`[libmpv] could not reload the file after the switch: ${errorMessage(error)}`));
+    };
+    this.libmpv.on('end-file', this.recoveryListener);
+    this.recoveryTimer = setTimeout(() => this.cancelRecovery(), RECOVERY_WINDOW_MS);
+    this.recoveryTimer.unref?.();
+  }
+
+  private cancelRecovery(): void {
+    if (this.recoveryListener) {
+      this.libmpv.off('end-file', this.recoveryListener);
+      this.recoveryListener = null;
+    }
+    if (this.recoveryTimer) {
+      clearTimeout(this.recoveryTimer);
+      this.recoveryTimer = null;
+    }
+  }
+
+  private async reloadFile(snapshot: Promise<unknown[]>): Promise<void> {
+    const [path, position, paused] = await snapshot;
+    if (typeof path !== 'string' || !path) {
+      return;
+    }
+    const start = typeof position === 'number' && position > 0 ? position : 0;
+    this.log(`[libmpv] video output failed during the switch to readback, reloading the file at ${start.toFixed(2)} s`);
+    await this.libmpv.command(['loadfile', path, 'replace', '-1', `start=${start},pause=${paused === false ? 'no' : 'yes'}`]);
   }
 }
