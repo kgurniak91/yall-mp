@@ -1,4 +1,6 @@
 #include "mpv_loader.h"
+#include <cstdlib>
+#include <cstring>
 #include <mutex>
 
 #ifdef _WIN32
@@ -65,7 +67,18 @@ void CloseLib(LibHandle h) { FreeLibrary(h); }
 using LibHandle = void*;
 
 LibHandle OpenLib(const std::string& path, std::string& err) {
-  LibHandle h = dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
+  LibHandle h = nullptr;
+#ifdef __linux__
+  // Experiment: a private link-map namespace keeps libmpv off Electron's bundled ffmpeg (and its allocator).
+  const char* dlmopenEnv = getenv("YALL_LIBMPV_DLMOPEN");
+  if (dlmopenEnv && strcmp(dlmopenEnv, "1") == 0) {
+    h = dlmopen(LM_ID_NEWLM, path.c_str(), RTLD_NOW | RTLD_LOCAL);
+  } else {
+    h = dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
+  }
+#else
+  h = dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
+#endif
   if (!h) {
     const char* e = dlerror();
     err = e ? e : "dlopen failed";

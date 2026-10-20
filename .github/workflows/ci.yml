@@ -165,14 +165,34 @@ jobs:
           elif [ "${{ runner.os }}" = "Linux" ]; then
             # embedded ASS exercises libass/fontconfig inside the Electron main process
             ldd "$(ldconfig -p | awk '/libmpv.so.2 /{print $NF; exit}')" | grep -iE "libX|xcb|ssl|fontconfig" || true
-            # create-only run with mpv's terminal output, to see why mpv_initialize fails if it does
-            echo "::group::create-only smoke"
-            xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:native:smoke -- --stop-after-create --opts="terminal=yes,msg-level=all=v" --no-sandbox 2>&1 | grep -vE "dbus|ssl_client" | tail -40 || true
+            echo "::group::ffmpeg scope diagnostics"
+            ELECTRON_BIN=node_modules/electron/dist/electron
+            echo "--- electron binary: NEEDED / ffmpeg"
+            readelf -d "$ELECTRON_BIN" | grep -E "NEEDED|RUNPATH|RPATH" || true
+            ldd "$ELECTRON_BIN" | grep -iE "ffmpeg|libav" || echo "ldd: no ffmpeg/libav entry"
+            ls -la node_modules/electron/dist/ | grep -iE "ffmpeg" || true
+            echo "--- probe under plain node"
+            node test/native/support/ffmpeg-scope-probe.js 2>&1 | grep -v "dbus" | tail -25 || echo "node probe exit $?"
+            echo "--- probe under ELECTRON_RUN_AS_NODE=1"
+            ELECTRON_RUN_AS_NODE=1 "$ELECTRON_BIN" test/native/support/ffmpeg-scope-probe.js 2>&1 | grep -v "dbus" | tail -25 || echo "run-as-node probe exit $?"
+            echo "--- probe as Electron main (LD_DEBUG=bindings)"
+            mkdir -p "$RUNNER_TEMP/ld"
+            LD_DEBUG=bindings LD_DEBUG_OUTPUT="$RUNNER_TEMP/ld/main" xvfb-run -a -s "-screen 0 1920x1080x24" "$ELECTRON_BIN" test/native/support/ffmpeg-scope-probe.js --no-sandbox 2>&1 | grep -v "dbus" | tail -25 || echo "electron probe exit $?"
+            grep -h "avcodec_version\|avutil_version" "$RUNNER_TEMP"/ld/main.* 2>/dev/null | head -8 || true
+            echo "--- probe as Electron main with YALL_LIBMPV_DLMOPEN=1"
+            YALL_LIBMPV_DLMOPEN=1 xvfb-run -a -s "-screen 0 1920x1080x24" "$ELECTRON_BIN" test/native/support/ffmpeg-scope-probe.js --no-sandbox 2>&1 | grep -v "dbus" | tail -25 || echo "dlmopen electron probe exit $?"
             echo "::endgroup::"
-            xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:native:smoke -- --backend=readback --hwdec=no --subs --seconds=4 --min-fps=10 --file=test/e2e/fixtures/sample-5.1.mkv --json=test-results/smoke/linux.json --no-sandbox
+            YALL_LIBMPV_DLMOPEN=1 xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:native:smoke -- --backend=readback --hwdec=no --subs --seconds=4 --min-fps=10 --file=test/e2e/fixtures/sample-5.1.mkv --json=test-results/smoke/linux.json --no-sandbox
           else
             npm run test:native:smoke -- --backend=readback --seconds=4 --min-fps=10 --json=test-results/smoke/macos.json
           fi
+
+      - name: test:native in a private link-map namespace (Linux, non-gating)
+        if: runner.os == 'Linux'
+        continue-on-error: true
+        env:
+          YALL_LIBMPV_DLMOPEN: 1
+        run: npm run test:native
 
       - uses: actions/upload-artifact@v4
         if: always()
