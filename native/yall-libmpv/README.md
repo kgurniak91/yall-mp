@@ -13,6 +13,8 @@ npm run test:native:smoke -- --backend=auto --seconds=12   # Electron harness, s
 
 Prerequisites are listed in the root README (MSVC v142+, CMake 3.20+, system libmpv on macOS/Linux). `scripts/build-native.js` finds CMake (`CMAKE_PATH`, PATH, then the one bundled with Visual Studio) and never hard-codes a generator; `CMAKE_GENERATOR` still overrides. The CRT is linked statically.
 
+**Linux limitation:** the addon works under plain Node (`test:native` runs there), but libmpv cannot be loaded inside the Electron main process: Electron's bundled `libffmpeg.so` is in the global symbol scope, libmpv binds to its libavcodec instead of the system one, and mpv exits in `mpv_initialize` with a version mismatch. `dlmopen` and `RTLD_DEEPBIND` do not fix it (they abort on free). Linux therefore needs libmpv in a separate host process; `test/native/support/ffmpeg-scope-probe.js` prints the evidence.
+
 On Windows libmpv is `electron-resources/windows/libmpv-2.dll`, downloaded by `npm install`. On macOS and Linux the system library is used. `YALL_LIBMPV_ADDON` overrides the addon path and `YALL_LIBMPV_PATH` the library path in tests. Set `YALL_NATIVE_REQUIRED=1` to make `test:native` fail instead of skip when the addon or libmpv is missing (CI does).
 
 ## Layout
