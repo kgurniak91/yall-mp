@@ -9,6 +9,7 @@
 // --file=<path> | --clip=<WxH>@<fps>     media (default test/e2e/fixtures/sample.mp4); clips are generated on demand
 // --seconds=N  --warmup=N  --width=N --height=N  --hwdec=auto|no  --ao=<driver>  --subs  --simulate-import-failure
 // --opts=a=b,c=d                        extra mpv options (bisecting)
+// --mpv-log=<level>                     mpv log level to print (default warn; v for verbose)
 // --stop-after-create                    exit 0 once the mpv core was created
 // --min-fps=N                            override the minimum received frame rate
 const {app, BrowserWindow, ipcMain} = require('electron');
@@ -39,6 +40,7 @@ const cfg = {
   subs: !!args.subs,
   opts: typeof args.opts === 'string' ? args.opts.split(',').filter(Boolean) : [],
   stopAfterCreate: !!args['stop-after-create'],
+  mpvLog: typeof args['mpv-log'] === 'string' ? args['mpv-log'] : 'warn',
   simulateImportFailure: !!args['simulate-import-failure'],
   minFps: args['min-fps'] ? parseFloat(args['min-fps']) : null,
   json: args.json ? path.resolve(args.json) : null,
@@ -105,7 +107,7 @@ async function begin(width, height, gpuInfo) {
       log(`mpv[${e.prefix}] ${e.level}: ${String(e.text).trim()}`);
     }
   });
-  libmpv.requestLogMessages('warn');
+  libmpv.requestLogMessages(cfg.mpvLog);
 
   const adapter = cfg.adapter === 'gpu' ? undefined : cfg.adapter;
   sender = new LibmpvFrameSender({
