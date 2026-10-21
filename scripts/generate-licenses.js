@@ -67,14 +67,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.`
   },
   {
-    name: "mpv",
-    licenses: "GPLv2+",
-    repository: "https://github.com/mpv-player/mpv",
-    publisher: "The mpv developers",
-    notice: "This application bundles a binary of mpv.",
-    licenseText: "Distributed under the GPLv2 or later.\nSource code available at: https://github.com/mpv-player/mpv"
-  },
-  {
     name: "libmpv",
     licenses: "GPLv2+",
     repository: "https://github.com/mpv-player/mpv",

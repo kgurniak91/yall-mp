@@ -48,8 +48,8 @@ thumbs.db
 # Electron
 electron-main.js
 electron-main.js.map
-mpv-manager.js
-mpv-manager.js.map
+libmpv-manager.js
+libmpv-manager.js.map
 playback-manager.js
 playback-manager.js.map
 yomitan-manager.js

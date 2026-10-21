@@ -90,6 +90,12 @@ export class AppStateService {
         }
       });
 
+      // The old setting pointed at an mpv executable, which is useless as a libmpv path, so it is dropped.
+      if ('customMpvPath' in mergedData.globalSettings) {
+        delete (mergedData.globalSettings as { customMpvPath?: string }).customMpvPath;
+        requiresSave = true;
+      }
+
       if (data.globalSettings?.subtitleLookupServices) {
         mergedData.globalSettings.subtitleLookupServices = data.globalSettings.subtitleLookupServices;
       }

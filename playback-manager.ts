@@ -1,4 +1,4 @@
-import {MpvManager} from './mpv-manager';
+import type {LibmpvManager} from './libmpv-manager';
 import {LightweightVideoClip, PlayerState} from './src/app/model/video.types';
 import type {ProjectSettings} from './src/app/model/settings.types';
 import {SubtitleBehavior} from './src/app/model/settings.types';
@@ -39,7 +39,7 @@ export class PlaybackManager extends EventEmitter {
   private isMuted = false;
 
   constructor(
-    private mpvManager: MpvManager,
+    private mpvManager: LibmpvManager,
     private uiWindow: BrowserWindow,
   ) {
     super();

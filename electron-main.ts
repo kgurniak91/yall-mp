@@ -20,7 +20,7 @@ import type {MediaTrack} from './shared/types/media.type';
 import {AnkiBatchExportRequest, AnkiCard, AnkiFieldMappingSource} from './src/app/model/anki.types';
 import {v4 as uuidv4} from 'uuid';
 import {ChildProcess, execFile, spawn} from 'child_process';
-import {MpvManager} from './mpv-manager';
+import {ensureLibmpv, LibmpvManager} from './libmpv-manager';
 import {FontData, ParsedSubtitlesData} from './src/electron-api';
 import {AppData, CoreConfig, Project, SubtitleSelection, SupportedLanguage} from './src/app/model/project.types';
 import {
@@ -39,7 +39,7 @@ import {
 import {YomitanManager} from './yomitan-manager';
 import {LEGACY_TO_YOMITAN_ISO_MAP} from './shared/types/yomitan';
 
-let customExecutables: { mpv?: string, ffmpeg?: string, ffprobe?: string, audiowaveform?: string } = {};
+let customExecutables: { libmpv?: string, ffmpeg?: string, ffprobe?: string, audiowaveform?: string } = {};
 let isFfmpegPathsInitialized = false;
 
 const isE2E = process.env.YALL_MP_E2E === '1';
@@ -81,7 +81,7 @@ const USER_AGENT_OPTIONS = {
 const LOOKUP_PARTITION = 'persist:yall_mp_lookup_session';
 
 let playbackManager: PlaybackManager | null = null;
-let mpvManager: MpvManager | null = null;
+let mpvManager: LibmpvManager | null = null;
 let yomitanManager: YomitanManager | null = null;
 let mainWindow: BrowserWindow | null = null;
 let uiWindow: BrowserWindow | null = null;
@@ -615,7 +615,7 @@ async function createWindow() {
       clearInterval(manualResizeInterval);
     }
 
-    mpvManager?.stop();
+    void mpvManager?.stop();
     yomitanManager?.destroy();
 
     // Child windows are destroyed automatically when the parent is closed, no need to close them explicitly.
@@ -739,7 +739,7 @@ if (!gotTheLock) {
       const config = JSON.parse(configStr);
       if (config?.globalSettings) {
         customExecutables = {
-          mpv: config.globalSettings.customMpvPath,
+          libmpv: config.globalSettings.customLibmpvPath,
           ffmpeg: config.globalSettings.customFfmpegPath,
           ffprobe: config.globalSettings.customFfprobePath,
           audiowaveform: config.globalSettings.customAudiowaveformPath
@@ -806,7 +806,7 @@ if (!gotTheLock) {
       coreConfigToSave = coreConfig;
       if (coreConfig?.globalSettings) {
         customExecutables = {
-          mpv: coreConfig.globalSettings.customMpvPath,
+          libmpv: coreConfig.globalSettings.customLibmpvPath,
           ffmpeg: coreConfig.globalSettings.customFfmpegPath,
           ffprobe: coreConfig.globalSettings.customFfprobePath,
           audiowaveform: coreConfig.globalSettings.customAudiowaveformPath
@@ -1324,7 +1324,7 @@ if (!gotTheLock) {
         uiWindow.webContents.send('mpv:video-visibility-change', false);
       }
       videoWindow?.close();
-      mpvManager?.stop();
+      await mpvManager?.stop();
 
       // Create a new, borderless, independent window.
       videoWindow = new BrowserWindow({
@@ -1353,8 +1353,10 @@ if (!gotTheLock) {
       // uiWindow is the child of videoWindow to always be on top and prevent stacking order issues:
       uiWindow.setParentWindow(videoWindow);
 
-      mpvManager = new MpvManager(videoWindow);
-      mpvManager.customMpvPath = customExecutables.mpv;
+      mpvManager = new LibmpvManager({
+        basePath: app.isPackaged ? process.resourcesPath : app.getAppPath(),
+        customLibmpvPath: customExecutables.libmpv
+      });
       playbackManager = new PlaybackManager(mpvManager, uiWindow);
       playbackManager.setInitialVolumeState(volume, isMuted);
 
@@ -1386,20 +1388,14 @@ if (!gotTheLock) {
 
       mpvManager.on('error', (err) => console.error("MPV Error:", err));
       mpvManager.on('ready', () => {
-        console.log('[Main Process] MpvManager is ready. Notifying renderer.');
+        console.log('[Main Process] LibmpvManager is ready. Notifying renderer.');
         if (uiWindow) {
           uiWindow.webContents.send('mpv:managerReady');
         }
       });
 
       try {
-        // Start MPV inside the child window's handle
         await mpvManager.start(mediaPath, audioTrackIndex, subtitleSelection, subtitleTracks, useMpvSubtitles, subtitlesVisible, hardwareAcceleration, volume, isMuted);
-        mpvManager.observeProperty('time-pos');
-        mpvManager.observeProperty('duration');
-        mpvManager.observeProperty('pause');
-        mpvManager.observeProperty('volume');
-        mpvManager.observeProperty('mute');
       } catch (error) {
         console.error('[Main Process] Critical error during MPV startup:', error);
         // Re-throw the error so the renderer process's Promise is rejected.
@@ -1481,8 +1477,8 @@ if (!gotTheLock) {
       mpvManager?.sendCommand(commandArray);
     });
 
-    ipcMain.handle('mpv:getProperty', (_, property) => {
-      const value = mpvManager?.getProperty(property);
+    ipcMain.handle('mpv:getProperty', async (_, property) => {
+      const value = await mpvManager?.getProperty(property);
       console.log(`[Main Process] Received mpv:getProperty: ${property}=${value}`);
       return value;
     });
@@ -1495,10 +1491,10 @@ if (!gotTheLock) {
     ipcMain.handle('mpv:showSubtitles', () => mpvManager?.showSubtitles());
     ipcMain.handle('mpv:hideSubtitles', () => mpvManager?.hideSubtitles());
 
-    ipcMain.handle('mpv:destroyViewport', () => {
+    ipcMain.handle('mpv:destroyViewport', async () => {
       console.log('[Main Process] Received mpv:destroyViewport. Cleaning up.');
 
-      mpvManager?.stop();
+      await mpvManager?.stop();
       mpvManager = null;
       playbackManager = null;
 
@@ -3130,33 +3126,37 @@ async function checkSystemDependencies() {
     return;
   }
 
-  const dependencies = [
-    {
-      name: 'mpv',
-      installCmd: process.platform === 'darwin' ? 'brew install mpv' : 'sudo apt install mpv'
-    },
+  const spawnCheck = (name: string) => new Promise<void>((resolve, reject) => {
+    // Try to run with "--version" flag to see if dependency exists
+    const check = spawn(name, ['--version']);
+    check.on('error', () => reject()); // Error means command not found
+    check.on('close', (code) => code === 0 ? resolve() : reject());
+  });
+
+  const dependencies: { name: string, installCmd: string, check: () => Promise<void> }[] = [
     {
       name: 'audiowaveform',
-      installCmd: process.platform === 'darwin' ? 'brew tap bbc/audiowaveform && brew install audiowaveform' : 'See https://github.com/bbc/audiowaveform'
+      installCmd: process.platform === 'darwin' ? 'brew tap bbc/audiowaveform && brew install audiowaveform' : 'See https://github.com/bbc/audiowaveform',
+      check: () => spawnCheck('audiowaveform')
     }
   ];
+
+  // Linux playback is gated until it has its own libmpv host, so only macOS needs the library here.
+  if (process.platform === 'darwin') {
+    dependencies.unshift({
+      name: 'libmpv',
+      installCmd: 'brew install mpv',
+      check: async () => {
+        ensureLibmpv(app.getAppPath(), customExecutables.libmpv, process.platform);
+      }
+    });
+  }
 
   const missing: string[] = [];
 
   for (const dep of dependencies) {
     try {
-      await new Promise<void>((resolve, reject) => {
-        // Try to run with "--version" flag to see if dependency exists
-        const check = spawn(dep.name, ['--version']);
-        check.on('error', () => reject()); // Error means command not found
-        check.on('close', (code) => {
-          if (code === 0) {
-            resolve();
-          } else {
-            reject();
-          }
-        });
-      });
+      await dep.check();
     } catch (e) {
       missing.push(`${dep.name}\n   (Install: ${dep.installCmd})`);
     }

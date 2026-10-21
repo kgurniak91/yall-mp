@@ -19,13 +19,12 @@ const EXTENSIONS_DIR = path.join(RESOURCES_DIR, 'extensions');
 const URLS = {
   yomitan: 'https://github.com/yomidevs/yomitan/releases/download/25.11.11.0/yomitan-chrome.zip',
   win32: {
-    mpv: 'https://github.com/shinchiro/mpv-winbuild-cmake/releases/download/20261017/mpv-x86_64-20261017-git-dde0671072.7z',
     audiowaveform: 'https://github.com/bbc/audiowaveform/releases/download/1.10.2/audiowaveform-1.10.2-win64.zip'
   }
 };
 
-// libmpv for the native addon (Windows). The mpv-dev archive is the same shinchiro build as the mpv CLI above,
-// but shinchiro prunes old releases, so the first source is a mirror in this project's own releases.
+// libmpv for the native addon (Windows), from the shinchiro build. Shinchiro prunes old releases, so the first
+// source is a mirror in this project's own releases.
 // Bumping: change archive + sha256 + mirror tag together and re-run `node scripts/vendor-mpv-headers.js <commit>`
 // (the commit of the archive) so that the vendored headers match, all in one commit.
 const LIBMPV = {
@@ -164,8 +163,8 @@ async function main() {
   // --- PLATFORM SPECIFIC DEPENDENCIES ---
   if (platform !== 'win32') {
     console.log(`\n⚠️  Platform '${platform}' detected.`);
-    console.log(`   Binaries (mpv/audiowaveform) skipped (Windows only).`);
-    console.log(`   Please ensure mpv and audiowaveform are installed via package manager (brew/apt).`);
+    console.log(`   Binaries (libmpv/audiowaveform) skipped (Windows only).`);
+    console.log(`   Please ensure libmpv (mpv) and audiowaveform are installed via package manager (brew/apt).`);
     return;
   }
 
@@ -176,6 +175,16 @@ async function main() {
   }
 
   console.log(`\nY'ALL MP: Setting up Windows binaries...`);
+
+  // --- LEFTOVERS OF THE FORMER mpv.exe DOWNLOAD (the app plays through libmpv now) ---
+  for (const leftover of ['mpv.exe', 'mpv.com', 'd3dcompiler_43.dll', 'updater.bat', 'doc', 'installer', 'mpv']) {
+    fs.rmSync(path.join(winTargetDir, leftover), {recursive: true, force: true});
+  }
+  for (const file of fs.readdirSync(winTargetDir)) {
+    if (file.startsWith('mpv-LICENSE')) {
+      fs.rmSync(path.join(winTargetDir, file), {force: true});
+    }
+  }
 
   // --- LIBMPV (native addon) ---
   const libmpvDll = path.join(winTargetDir, 'libmpv-2.dll');
@@ -201,18 +210,6 @@ async function main() {
     }
   } else {
     console.log(`   libmpv found, skipping.`);
-  }
-
-  // --- MPV ---
-  const mpvArchive = path.join(winTargetDir, 'mpv.7z');
-  if (!fs.existsSync(path.join(winTargetDir, 'mpv.exe'))) {
-    console.log(`   Downloading MPV...`);
-    await downloadFile(URLS.win32.mpv, mpvArchive);
-    extractArchive(mpvArchive, winTargetDir);
-    preserveLicense(winTargetDir, winTargetDir, 'mpv');
-    fs.unlinkSync(mpvArchive);
-  } else {
-    console.log(`   mpv found, skipping.`);
   }
 
   // --- AUDIOWAVEFORM ---

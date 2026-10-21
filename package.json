@@ -27,8 +27,8 @@
     "electron:build": "npm run generate:licenses && ng build --configuration=electron && tsc --project tsconfig.electron.json",
     "electron:watch:build": "npm run generate:licenses && concurrently \"ng build --watch --configuration=electron\" \"tsc --watch --project tsconfig.electron.json\"",
     "electron:watch:run": "nodemon",
-    "package:win": "npm run electron:build && electron-builder --win",
-    "package:mac": "npm run electron:build && electron-builder --mac",
+    "package:win": "npm run native:build && npm run electron:build && electron-builder --win",
+    "package:mac": "npm run native:build && npm run electron:build && electron-builder --mac",
     "package:linux": "npm run electron:build && electron-builder --linux",
     "build:github-pages": "node github-pages/build.js",
     "postinstall": "node scripts/download-dependencies.js && install-electron && npm run generate:licenses",
@@ -48,7 +48,7 @@
     "files": [
       "dist/yall-mp/browser/**/*",
       "electron-main.js",
-      "mpv-manager.js",
+      "libmpv-manager.js",
       "libmpv-bridge.js",
       "libmpv-frame-sender.js",
       "native/yall-libmpv/build/Release/yall_libmpv.node",
@@ -249,7 +249,6 @@
     "fontkit": "^2.0.4",
     "franc-all": "^7.2.0",
     "media-captions": "^0.0.18",
-    "node-mpv": "^2.0.0-beta.2",
     "ts-ebml": "^3.0.1",
     "uuid": "^11.1.0"
   },

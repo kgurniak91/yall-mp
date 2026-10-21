@@ -70,7 +70,7 @@ export interface GlobalSettings {
   isMuted?: boolean;
   cinemaModeEnabled: boolean;
   cinemaModeSpeed: number;
-  customMpvPath?: string;
+  customLibmpvPath?: string;
   customFfmpegPath?: string;
   customFfprobePath?: string;
   customAudiowaveformPath?: string;
@@ -174,7 +174,7 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   isMuted: false,
   cinemaModeEnabled: false,
   cinemaModeSpeed: 1.0,
-  customMpvPath: '',
+  customLibmpvPath: '',
   customFfmpegPath: '',
   customFfprobePath: '',
   customAudiowaveformPath: '',
@@ -182,7 +182,7 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
 };
 
 export enum CustomPath {
-  customMpvPath = 'MPV Player',
+  customLibmpvPath = 'libmpv library',
   customFfmpegPath = 'FFmpeg',
   customFfprobePath = 'FFprobe',
   customAudiowaveformPath = 'Audiowaveform',

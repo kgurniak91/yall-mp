@@ -79,6 +79,13 @@ jobs:
 
       - run: npm ci
 
+      # Linux playback is gated until it has its own libmpv host, so only macOS packages the addon
+      - name: Build the native addon
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install cmake
+          npm run native:build
+
       - run: npm run electron:build
 
       - run: npx electron-builder --dir --publish never
@@ -96,6 +103,9 @@ jobs:
           test -f "$RES/mpv/yall_auto_pause.lua"
           test -f "$RES/electron-resources/extensions/yomitan/manifest.json"
           test -f "$RES/THIRD-PARTY-NOTICES.txt"
+          if [ "${{ matrix.os }}" = "macos-latest" ]; then
+            find dist_electron/mac*/*.app -name yall_libmpv.node | grep -q .
+          fi
 
   native:
     runs-on: ${{ matrix.os }}

@@ -39,7 +39,7 @@ export class AdvancedSettingsComponent implements OnInit {
 
   async browseCustomExe(key: CustomPathKey): Promise<void> {
     const filePaths = await window.electronAPI.openFileDialog({
-      title: `Select ${CustomPath[key]} Executable`,
+      title: `Select ${CustomPath[key]} file`,
       properties: ['openFile']
     });
 

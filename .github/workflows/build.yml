@@ -35,8 +35,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libfontconfig1-dev libarchive-tools
 
+      - name: Install CMake (macOS)
+        if: matrix.os == 'macos-latest'
+        run: brew install cmake
+
       - name: Install Dependencies
         run: npm install
+
+      # Linux playback is gated until it has its own libmpv host, so there is no addon to build there
+      - name: Build the native addon
+        if: matrix.os != 'ubuntu-latest'
+        run: npm run native:build
 
       - name: Build Source
         run: npm run electron:build

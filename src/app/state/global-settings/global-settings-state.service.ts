@@ -33,7 +33,7 @@ export class GlobalSettingsStateService {
   public readonly preferredSubtitleLanguages = computed(() => this.appStateService.globalSettings().preferredSubtitleLanguages);
   public readonly cinemaModeEnabled = computed(() => this.appStateService.globalSettings().cinemaModeEnabled);
   public readonly cinemaModeSpeed = computed(() => this.appStateService.globalSettings().cinemaModeSpeed);
-  public readonly customMpvPath = computed(() => this.appStateService.globalSettings().customMpvPath || '');
+  public readonly customLibmpvPath = computed(() => this.appStateService.globalSettings().customLibmpvPath || '');
   public readonly customFfmpegPath = computed(() => this.appStateService.globalSettings().customFfmpegPath || '');
   public readonly customFfprobePath = computed(() => this.appStateService.globalSettings().customFfprobePath || '');
   public readonly customAudiowaveformPath = computed(() => this.appStateService.globalSettings().customAudiowaveformPath || '');

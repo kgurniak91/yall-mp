@@ -1,7 +1,7 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {PlaybackManager, PlaybackStateUpdate} from '../playback-manager';
 import {LightweightVideoClip, PlayerState, VideoClip} from '../src/app/model/video.types';
-import {MpvManager} from '../mpv-manager';
+import {LibmpvManager} from '../libmpv-manager';
 import type {BrowserWindow} from 'electron';
 import {DEFAULT_PROJECT_SETTINGS, ProjectSettings, SubtitleBehavior} from '../src/app/model/settings.types';
 import {cloneDeep} from 'lodash-es';
@@ -46,7 +46,7 @@ describe('PlaybackManager', () => {
 
   const setupManager = (settings: Partial<ProjectSettings> = {}, startTime = 0) => {
     const fullSettings = {...DEFAULT_PROJECT_SETTINGS, ...settings};
-    const manager = new PlaybackManager(mockMpvManager as unknown as MpvManager, mockUiWindow as unknown as BrowserWindow);
+    const manager = new PlaybackManager(mockMpvManager as unknown as LibmpvManager, mockUiWindow as unknown as BrowserWindow);
     manager.loadProject(cloneDeep(mockClips), fullSettings, startTime, {enabled: false, speed: 1.0});
     return manager;
   };
@@ -93,7 +93,7 @@ describe('PlaybackManager', () => {
 
     it('should apply correct settings on the first seek after loading', () => {
       // ARRANGE: Create a manager and load a project, which primes the state but doesn't apply settings yet
-      const manager = new PlaybackManager(mockMpvManager as unknown as MpvManager, mockUiWindow as unknown as BrowserWindow);
+      const manager = new PlaybackManager(mockMpvManager as unknown as LibmpvManager, mockUiWindow as unknown as BrowserWindow);
       const settings = {...DEFAULT_PROJECT_SETTINGS, subtitledClipSpeed: 1.0, gapSpeed: 3.0};
       const lastPlaybackTime = 15; // A time inside the subtitled clip 'sub-1'
       manager.loadProject(cloneDeep(mockClips), settings, lastPlaybackTime, {enabled: false, speed: 1.0});
@@ -461,7 +461,7 @@ describe('PlaybackManager', () => {
     ];
 
     beforeEach(() => {
-      playbackManager = new PlaybackManager(mockMpvManager as unknown as MpvManager, mockUiWindow as unknown as BrowserWindow);
+      playbackManager = new PlaybackManager(mockMpvManager as unknown as LibmpvManager, mockUiWindow as unknown as BrowserWindow);
       playbackManager.loadProject(JSON.parse(JSON.stringify(fourClipLayout)), {} as ProjectSettings, 0, {
         enabled: false,
         speed: 1.0
@@ -1542,7 +1542,7 @@ describe('PlaybackManager', () => {
       };
 
       const manager = new PlaybackManager(
-        mockMpvManager as unknown as MpvManager,
+        mockMpvManager as unknown as LibmpvManager,
         mockUiWindow as unknown as BrowserWindow
       );
 
