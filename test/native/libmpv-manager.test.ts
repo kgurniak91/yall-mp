@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import {afterEach, expect, it} from 'vitest';
+import {afterEach, describe, expect, it} from 'vitest';
 import {LibmpvManager} from '../../libmpv-manager';
 import type {SubtitleSelection} from '../../src/app/model/project.types';
 import type {MediaTrack} from '../../shared/types/media.type';
@@ -9,7 +9,9 @@ import {describeNative, ROOT, SAMPLE_51_MKV, SAMPLE_MP4, sleep, waitFor} from '.
 
 const NO_SUBTITLES = {type: 'none'} as unknown as SubtitleSelection;
 
-describeNative('LibmpvManager with a real libmpv', () => {
+// Linux playback is gated (libmpv cannot run inside the Electron process there), so the manager refuses to start
+(process.platform === 'linux' ? describe.skip : describe)('LibmpvManager with a real libmpv', () => {
+  describeNative('libmpv', () => {
   const managers: LibmpvManager[] = [];
   let tempDir: string | undefined;
 
@@ -170,4 +172,5 @@ describeNative('LibmpvManager with a real libmpv', () => {
     await manager.stop();
     await expect(manager.getProperty('pause')).rejects.toThrow('not running');
   });
+});
 });

@@ -39,6 +39,7 @@ describe('LibmpvManager', () => {
   const create = (extra: Partial<ConstructorParameters<typeof LibmpvManager>[0]> = {}) => {
     manager = new LibmpvManager({
       basePath: '/base',
+      platform: 'win32',
       libmpvFactory: (options) => {
         optionsSeen = options;
         return fake as unknown as Libmpv;
