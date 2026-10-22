@@ -36,7 +36,7 @@ export function skipWithoutLibmpv(): void {
 /** Waits until the loading spinner is gone, i.e. libmpv reached the resume position (mpv:initial-seek-complete). */
 export async function waitForPlayer(ui: Page): Promise<void> {
   skipWithoutLibmpv();
-  await expect(ui.locator('#mpv-placeholder')).toBeAttached({timeout: 30_000});
-  await expect(ui.locator('#mpv-placeholder .resizing-overlay')).toHaveCount(0, {timeout: 30_000});
+  await expect(ui.locator('#video-container')).toBeAttached({timeout: 30_000});
+  await expect(ui.locator('#video-container .resizing-overlay')).toHaveCount(0, {timeout: 30_000});
   await expect(ui.locator('.interaction-blocker')).toHaveCount(0, {timeout: 30_000});
 }

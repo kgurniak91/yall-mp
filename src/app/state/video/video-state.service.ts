@@ -18,7 +18,6 @@ export class VideoStateService implements OnDestroy {
   private readonly _forceContinueRequest = signal<number | null>(null);
   private readonly _editSubtitlesRequest = signal<number | null>(null);
   private readonly _ankiExportRequest = signal<{ timestamp: number, instant: boolean } | null>(null);
-  private readonly _forceResizeRequest = signal<number | null>(null);
   private readonly _isPaused = signal(true);
   private readonly _isVideoLoading = signal(true);
   private readonly _isTimelineLoading = signal(true);
@@ -29,7 +28,7 @@ export class VideoStateService implements OnDestroy {
   private readonly _playerState = signal<PlayerState>(PlayerState.Idle);
   private readonly _nextMediaPath = signal<string | null>(null);
   private readonly _prevMediaPath = signal<string | null>(null);
-  private readonly _isVideoWindowVisible = signal(false);
+  private readonly _isVideoReady = signal(false);
   private readonly _isUserSeeking = signal(false);
   private readonly _findInSubtitlesRequest = signal<number | null>(null);
   private readonly _openDictionaryRequest = signal<number | null>(null);
@@ -45,7 +44,7 @@ export class VideoStateService implements OnDestroy {
   private cleanupMpvListener: (() => void) | null = null;
   private cleanupPlaybackListener: (() => void) | null = null;
   private cleanupRepeatSeekListener: (() => void) | null = null;
-  private cleanupVideoVisibilityListener: (() => void) | null = null;
+  private cleanupInitialSeekListener: (() => void) | null = null;
   private isDestroyed = false;
 
   public readonly mediaPath: Signal<string | null> = this._mediaPath.asReadonly();
@@ -59,7 +58,6 @@ export class VideoStateService implements OnDestroy {
   public readonly forceContinueRequest = this._forceContinueRequest.asReadonly();
   public readonly editSubtitlesRequest = this._editSubtitlesRequest.asReadonly();
   public readonly ankiExportRequest = this._ankiExportRequest.asReadonly();
-  public readonly forceResizeRequest = this._forceResizeRequest.asReadonly();
   public readonly isPaused = this._isPaused.asReadonly();
   public readonly isVideoLoading = this._isVideoLoading.asReadonly();
   public readonly isTimelineLoading = this._isTimelineLoading.asReadonly();
@@ -71,7 +69,8 @@ export class VideoStateService implements OnDestroy {
   public readonly playerState = this._playerState.asReadonly();
   public readonly nextMediaPath = this._nextMediaPath.asReadonly();
   public readonly prevMediaPath = this._prevMediaPath.asReadonly();
-  public readonly isVideoWindowVisible = this._isVideoWindowVisible.asReadonly();
+  /** The picture at the resume position is out: the spinner can go. */
+  public readonly isVideoReady = this._isVideoReady.asReadonly();
   public readonly isUserSeeking = this._isUserSeeking.asReadonly();
   public readonly findInSubtitlesRequest = this._findInSubtitlesRequest.asReadonly();
   public readonly openDictionaryRequest = this._openDictionaryRequest.asReadonly();
@@ -116,8 +115,8 @@ export class VideoStateService implements OnDestroy {
       this._seekCompleted.set(Date.now());
     });
 
-    this.cleanupVideoVisibilityListener = window.electronAPI.onMpvVideoVisibilityChange((isVisible) => {
-      this._isVideoWindowVisible.set(isVisible);
+    this.cleanupInitialSeekListener = window.electronAPI.onMpvInitialSeekComplete(() => {
+      this._isVideoReady.set(true);
     });
 
     toObservable(this.mediaPath).pipe(
@@ -165,9 +164,9 @@ export class VideoStateService implements OnDestroy {
       this.cleanupRepeatSeekListener();
       this.cleanupRepeatSeekListener = null;
     }
-    if (this.cleanupVideoVisibilityListener) {
-      this.cleanupVideoVisibilityListener();
-      this.cleanupVideoVisibilityListener = null;
+    if (this.cleanupInitialSeekListener) {
+      this.cleanupInitialSeekListener();
+      this.cleanupInitialSeekListener = null;
     }
 
     // Only auto-save if manual cleanup inside `performCleanup` hasn't run
@@ -189,6 +188,7 @@ export class VideoStateService implements OnDestroy {
 
   public setProjectId(id: string): void {
     this._projectId = id;
+    this._isVideoReady.set(false);
     this.isInitializing = true;
     this.setupPeriodicSaving();
   }
@@ -241,10 +241,6 @@ export class VideoStateService implements OnDestroy {
 
   public requestAnkiExport(instant: boolean): void {
     this._ankiExportRequest.set({timestamp: Date.now(), instant});
-  }
-
-  public requestForceResize(): void {
-    this._forceResizeRequest.set(Date.now());
   }
 
   public repeatCurrentClip(): void {
@@ -360,10 +356,6 @@ export class VideoStateService implements OnDestroy {
 
   public clearAnkiExportRequest(): void {
     this._ankiExportRequest.set(null);
-  }
-
-  public clearForceResizeRequest(): void {
-    this._forceResizeRequest.set(null);
   }
 
   public clearToggleSubtitlesRequest(): void {

@@ -1,5 +1,6 @@
-<div #mpvPlaceholder id="mpv-placeholder">
-  @if (videoStateService.isVideoLoading() || !videoStateService.isVideoWindowVisible()) {
+<div #videoContainer id="video-container">
+  <canvas #videoSurface id="video-surface"></canvas>
+  @if (videoStateService.isVideoLoading() || !videoStateService.isVideoReady()) {
     <div class="resizing-overlay">
       <app-spinner/>
     </div>

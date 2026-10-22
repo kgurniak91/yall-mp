@@ -294,4 +294,54 @@ describe('LibmpvFrameSender', () => {
     expect(sender.stats().staleDropped).toBe(1);
     expect(libmpv.unobserveProperty).toHaveBeenCalledTimes(2);
   });
+
+  describe('waitForFrame', () => {
+    it('resolves at once when more frames were already sent', async () => {
+      const libmpv = fakeLibmpv();
+      const sender = create(libmpv);
+      sender.start({width: 320, height: 180, preferred: 'readback'});
+      libmpv.attaches[0].onFrame(readbackFrame(1));
+      await expect(sender.waitForFrame(0, 1000)).resolves.toBe(true);
+    });
+
+    it('resolves when a frame beyond the baseline is sent', async () => {
+      const libmpv = fakeLibmpv();
+      const sender = create(libmpv);
+      sender.start({width: 320, height: 180, preferred: 'readback'});
+      libmpv.attaches[0].onFrame(readbackFrame(1));
+      const waiting = sender.waitForFrame(1, 1000);
+      libmpv.attaches[0].onFrame(readbackFrame(1));
+      await expect(waiting).resolves.toBe(true);
+    });
+
+    it('counts shared frames too', async () => {
+      const libmpv = fakeLibmpv();
+      const sender = create(libmpv);
+      sender.start({width: 640, height: 360, preferred: 'd3d11-shared'});
+      const waiting = sender.waitForFrame(0, 1000);
+      libmpv.attaches[0].onFrame(sharedFrame(1));
+      await expect(waiting).resolves.toBe(true);
+    });
+
+    it('resolves false on timeout', async () => {
+      vi.useFakeTimers();
+      try {
+        const sender = create(fakeLibmpv());
+        sender.start({width: 320, height: 180, preferred: 'readback'});
+        const waiting = sender.waitForFrame(0, 1000);
+        await vi.advanceTimersByTimeAsync(1001);
+        await expect(waiting).resolves.toBe(false);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('resolves false on stop', async () => {
+      const sender = create(fakeLibmpv());
+      sender.start({width: 320, height: 180, preferred: 'readback'});
+      const waiting = sender.waitForFrame(0, 60000);
+      sender.stop();
+      await expect(waiting).resolves.toBe(false);
+    });
+  });
 });

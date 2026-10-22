@@ -1,4 +1,48 @@
-const {contextBridge, ipcRenderer, webUtils} = require('electron');
+const {contextBridge, ipcRenderer, sharedTexture, webUtils} = require('electron');
+
+// --- Video frames. Both paths hand the page a VideoFrame (shared textures from the GPU path, BGRA pixels from the
+// readback path), so the page has one draw routine. Without a subscriber only the newest frame is kept, because the
+// first paused frame can arrive before the canvas exists.
+const READBACK_CHANNEL = 'libmpv:readback-frame';
+let frameSink = null;
+let heldFrame = null;
+let droppedFrames = 0;
+
+const deliverFrame = (frame) => {
+  if (frameSink) {
+    frameSink(frame);
+    return;
+  }
+  heldFrame?.close();
+  heldFrame = frame;
+};
+
+if (sharedTexture?.setSharedTextureReceiver) {
+  sharedTexture.setSharedTextureReceiver(async ({importedSharedTexture}) => {
+    try {
+      // The VideoFrame keeps the texture alive; the slot goes back to the pool when the page closes the frame.
+      deliverFrame(importedSharedTexture.getVideoFrame());
+    } catch (error) {
+      droppedFrames++;
+    } finally {
+      try {
+        importedSharedTexture.release();
+      } catch (error) {
+        // already released
+      }
+    }
+  });
+}
+
+ipcRenderer.on(READBACK_CHANNEL, (_event, message) => {
+  try {
+    deliverFrame(new VideoFrame(message.data, {
+      format: 'BGRA', codedWidth: message.width, codedHeight: message.height, timestamp: 0
+    }));
+  } catch (error) {
+    droppedFrames++;
+  }
+});
 
 contextBridge.exposeInMainWorld('electronAPI', {
   // --- App
@@ -75,7 +119,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   mpvCreateViewport: (mediaPath, audioTrackIndex, subtitleSelection, subtitleTracks, useMpvSubtitles, subtitlesVisible, hardwareAcceleration, volume, isMuted) => ipcRenderer.invoke(
     'mpv:createViewport', mediaPath, audioTrackIndex, subtitleSelection, subtitleTracks, useMpvSubtitles, subtitlesVisible, hardwareAcceleration, volume, isMuted
   ),
-  mpvFinishVideoResize: (rect) => ipcRenderer.invoke('mpv:finishVideoResize', rect),
   mpvCommand: (commandArray) => ipcRenderer.invoke('mpv:command', commandArray),
   mpvGetProperty: (property) => ipcRenderer.invoke('mpv:getProperty', property),
   mpvSetProperty: (property, value) => ipcRenderer.invoke('mpv:setProperty', property, value),
@@ -102,11 +145,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('mpv:initial-seek-complete', subscription);
     return () => ipcRenderer.removeListener('mpv:initial-seek-complete', subscription); // return cleanup function
   },
-  onMpvVideoVisibilityChange: (callback) => {
-    const subscription = (_event, isVisible) => callback(isVisible);
-    ipcRenderer.on('mpv:video-visibility-change', subscription);
-    return () => ipcRenderer.removeListener('mpv:video-visibility-change', subscription);
+  // --- Video surface
+  onVideoFrame: (callback) => {
+    frameSink = callback;
+    if (heldFrame) {
+      const frame = heldFrame;
+      heldFrame = null;
+      callback(frame);
+    }
+    return () => {
+      if (frameSink === callback) {
+        frameSink = null;
+      }
+    };
   },
+  getDroppedVideoFrames: () => droppedFrames,
+  videoSurfaceSetSize: (width, height) => ipcRenderer.send('video:set-canvas-size', width, height),
   // --- Storage
   getAppData: () => ipcRenderer.invoke('app:get-data'),
   getProjectById: (projectId) => ipcRenderer.invoke('project:get-by-id', projectId),

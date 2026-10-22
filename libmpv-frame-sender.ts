@@ -109,6 +109,7 @@ export class LibmpvFrameSender {
   private importFailures = 0;
   private staleDropped = 0;
   private fallbackReason: string | null = null;
+  private frameWaiters = new Set<{ afterSent: number; settle: (arrived: boolean) => void }>();
 
   constructor(options: FrameSenderOptions) {
     this.libmpv = options.libmpv;
@@ -142,7 +143,42 @@ export class LibmpvFrameSender {
     this.applySize();
   }
 
+  /**
+   * Resolves true once more than `afterSent` frames were sent (at once if that already holds), false after
+   * `timeoutMs` or when the sender stops. Lets main tell the page that the picture after a seek is there.
+   */
+  waitForFrame(afterSent: number, timeoutMs: number): Promise<boolean> {
+    if (this.sent > afterSent) {
+      return Promise.resolve(true);
+    }
+    return new Promise<boolean>(resolve => {
+      const waiter = {
+        afterSent,
+        settle: (arrived: boolean): void => {
+          clearTimeout(timer);
+          this.frameWaiters.delete(waiter);
+          resolve(arrived);
+        }
+      };
+      const timer = setTimeout(() => waiter.settle(false), timeoutMs);
+      timer.unref?.();
+      this.frameWaiters.add(waiter);
+    });
+  }
+
+  private countSent(): void {
+    this.sent++;
+    for (const waiter of [...this.frameWaiters]) {
+      if (this.sent > waiter.afterSent) {
+        waiter.settle(true);
+      }
+    }
+  }
+
   stop(): void {
+    for (const waiter of [...this.frameWaiters]) {
+      waiter.settle(false);
+    }
     this.cancelRecovery();
     this.libmpv.off('property-change', this.onPropertyChange);
     for (const id of this.observeIds) {
@@ -256,7 +292,7 @@ export class LibmpvFrameSender {
         this.target.send(READBACK_CHANNEL, {
           attachId: frame.attachId, width: frame.width, height: frame.height, data: frame.pixels
         });
-        this.sent++;
+        this.countSent();
       } catch {
         // the page is gone (window closing): nothing to deliver to
         this.sendFailures++;
@@ -286,7 +322,7 @@ export class LibmpvFrameSender {
       }
       return;
     }
-    this.sent++;
+    this.countSent();
     const onSendError = (error: unknown): void => {
       this.sendFailures++;
       imported.release();

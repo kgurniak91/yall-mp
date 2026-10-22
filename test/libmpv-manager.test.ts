@@ -130,6 +130,51 @@ describe('LibmpvManager', () => {
     await result;
   });
 
+  describe('video output', () => {
+    it('uses vo=libmpv and runs the hook after creation and before loadfile', async () => {
+      const order: string[] = [];
+      const hook = vi.fn((libmpv: Libmpv) => {
+        expect(libmpv).toBe(fake);
+        order.push('attach');
+      });
+      fake.command.mockImplementation(async (args: string[]) => {
+        order.push(args[0]);
+        if (args[0] === 'loadfile') {
+          queueMicrotask(() => fake.loadResult());
+        }
+      });
+      create({attachVideo: hook});
+      await start();
+      expect(optionsSeen['vo']).toBe('libmpv');
+      expect(order.slice(0, 2)).toEqual(['attach', 'loadfile']);
+    });
+
+    it('runs the disposer first in stop(), once', async () => {
+      const order: string[] = [];
+      const dispose = vi.fn(() => order.push('dispose'));
+      fake.destroy.mockImplementation(async () => { order.push('destroy'); });
+      create({attachVideo: () => dispose});
+      await start();
+      await manager.stop();
+      await manager.stop();
+      expect(order).toEqual(['dispose', 'destroy']);
+    });
+
+    it('rejects start and stops when the hook throws', async () => {
+      create({attachVideo: () => { throw new Error('no surface'); }});
+      await expect(start()).rejects.toThrow('no surface');
+      expect(fake.destroy).toHaveBeenCalled();
+      expect(fake.command).not.toHaveBeenCalledWith(['loadfile', '/media/a.mp4', 'replace']);
+    });
+
+    it('survives a throwing disposer', async () => {
+      create({attachVideo: () => () => { throw new Error('boom'); }});
+      await start();
+      await manager.stop();
+      expect(fake.destroy).toHaveBeenCalled();
+    });
+  });
+
   describe('events', () => {
     beforeEach(async () => {
       await start();

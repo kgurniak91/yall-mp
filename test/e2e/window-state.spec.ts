@@ -3,20 +3,17 @@ import {expect, test} from './support/app';
 import {seedProject} from './support/seed';
 import {waitForPlayer} from './support/playback';
 import {baseline} from './support/baseline';
-import {getWindowStates, rectContains, rectsClose, withWindows} from './support/windows';
+import {getWindowStates, rectsClose, withWindows} from './support/windows';
 
-/** Baseline invariant of the 3-window stack: ui follows main, and the video sits inside the ui. */
+/** Baseline invariant of the window stack: ui follows main. */
 async function expectStackInSync(app: ElectronApplication): Promise<void> {
   await expect.poll(async () => {
-    const {main, ui, video} = await getWindowStates(app);
+    const {main, ui} = await getWindowStates(app);
     if (!main || !ui) {
       return 'missing main/ui';
     }
     if (!rectsClose(main.bounds, ui.bounds, 2)) {
       return `ui ${JSON.stringify(ui.bounds)} != main ${JSON.stringify(main.bounds)}`;
-    }
-    if (video?.isVisible && !rectContains(ui.bounds, video.bounds, 2)) {
-      return `video ${JSON.stringify(video.bounds)} outside ui ${JSON.stringify(ui.bounds)}`;
     }
     return 'ok';
   }, {timeout: 10_000}).toBe('ok');
@@ -24,7 +21,7 @@ async function expectStackInSync(app: ElectronApplication): Promise<void> {
 
 const icon = (ui: Page, name: string) => ui.locator(`.window-controls-wrapper .${name}`);
 
-test.describe('window state (3-window baseline)', () => {
+test.describe('window state', () => {
   test('maximize, minimize/restore and fullscreen keep the stack in sync', async ({launch}) => {
     const {app, ui} = await launch({seed: dir => seedProject(dir)});
     await waitForPlayer(ui);

@@ -21,10 +21,9 @@ export interface WindowState {
 export interface WindowStates {
   main: WindowState | null;
   ui: WindowState | null;
-  video: WindowState | null;
 }
 
-/** Snapshot of the three stacked windows, read through the main-side __yallE2E probe (only present under YALL_MP_E2E=1). */
+/** Snapshot of the stacked windows, read through the main-side __yallE2E probe (only present under YALL_MP_E2E=1). */
 export async function getWindowStates(app: ElectronApplication): Promise<WindowStates> {
   return app.evaluate(({screen}) => {
     const wins = (globalThis as any).__yallE2E.getWindows();
@@ -45,14 +44,14 @@ export async function getWindowStates(app: ElectronApplication): Promise<WindowS
         display: {id: display.id, bounds: display.bounds, workArea: display.workArea, scaleFactor: display.scaleFactor}
       };
     };
-    return {main: describe(wins.mainWindow), ui: describe(wins.uiWindow), video: describe(wins.videoWindow)};
+    return {main: describe(wins.mainWindow), ui: describe(wins.uiWindow)};
   });
 }
 
 /** Runs a function against the real BrowserWindow objects in the main process. */
 export async function withWindows<T>(
   app: ElectronApplication,
-  fn: (wins: { mainWindow: any, uiWindow: any, videoWindow: any }) => T
+  fn: (wins: { mainWindow: any, uiWindow: any }) => T
 ): Promise<T> {
   return app.evaluate((_electron, {src}) => {
     // eslint-disable-next-line no-new-func

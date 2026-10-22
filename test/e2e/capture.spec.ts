@@ -1,50 +1,158 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import {expect, REPO_ROOT, test} from './support/app';
-import {seedProject} from './support/seed';
+import {fixture, seedProject} from './support/seed';
 import {latestPlayback, recordPlayback, waitForPlayer} from './support/playback';
-import {getWindowStates} from './support/windows';
-import {captureComposited, isGreen, isRed, type Rgb} from './support/capture';
+import {withWindows} from './support/windows';
+import {
+  captureComposited,
+  capturePage,
+  isBlack,
+  isGreen,
+  isRed,
+  pictureRect,
+  type Rgb
+} from './support/capture';
 
 const osName = process.platform === 'win32' ? 'win' : process.platform === 'darwin' ? 'mac' : 'linux';
-// Elsewhere (and on CI runners without a GPU) the probe values are the baseline we document, not a gate
-const hardAssert = process.platform === 'win32' && !process.env['CI'];
+// macOS takes the capped readback path until its GPU backend exists, so its pixels are a baseline, not a gate
+const hardAssert = process.platform === 'win32';
 
-test('composited capture shows the video under the UI', async ({launch}) => {
-  test.skip(true, 'The video is invisible by design until the renderer has a canvas for it');
+const artifactsDir = path.join(REPO_ROOT, 'e2e-artifacts');
+
+const backendOf = async (app: Parameters<typeof withWindows>[0]): Promise<string> =>
+  app.evaluate(() => (globalThis as any).__yallE2E.getVideoStats()?.backend ?? 'none');
+
+test('the canvas shows the video colours under the UI', async ({launch}) => {
   const {app, ui} = await launch({seed: dir => seedProject(dir, {lastPlaybackTime: 1.0})});
   await waitForPlayer(ui);
   await recordPlayback(ui);
-  // Let the frame at the resume position be presented
-  await new Promise(r => setTimeout(r, 1000));
 
-  const probePoint = async () => {
-    const {ui: uiWin} = await getWindowStates(app);
-    const r = (await ui.locator('#mpv-placeholder').boundingBox())!;
-    return {x: uiWin!.contentBounds.x + r.x + r.width / 2, y: uiWin!.contentBounds.y + r.y + r.height / 2};
+  const centre = async (): Promise<Rgb | null> => {
+    const r = (await ui.locator('#video-container').boundingBox())!;
+    return (await capturePage(app, ui)).colorAt(r.x + r.width / 2, r.y + r.height / 2);
   };
 
-  const artifactsDir = path.join(REPO_ROOT, 'e2e-artifacts');
   fs.mkdirSync(artifactsDir, {recursive: true});
+  const backend = await backendOf(app);
+  test.info().annotations.push({type: 'backend', description: backend});
 
-  const redShot = await captureComposited(app, [await probePoint()]);
-  await test.info().attach('composited.png', {body: redShot.png, contentType: 'image/png'});
+  let red: Rgb | null = null;
+  await expect.poll(async () => isRed(red = await centre()), {timeout: 10_000, message: 'centre at t=1s should be red'}).toBe(true).catch(e => {
+    if (hardAssert) {
+      throw e;
+    }
+  });
+  const redShot = await captureComposited(app, []);
   fs.writeFileSync(path.join(artifactsDir, `${osName}-composited.png`), redShot.png);
-  const red: Rgb | null = redShot.colors[0];
+  await test.info().attach('composited.png', {body: redShot.png, contentType: 'image/png'});
 
   await ui.evaluate(() => (window as any).electronAPI.playbackSeek(4));
   await expect.poll(async () => (await latestPlayback(ui))?.currentTime ?? 0, {timeout: 10_000}).toBeGreaterThan(3.5);
-  await new Promise(r => setTimeout(r, 1000));
+  let green: Rgb | null = null;
+  await expect.poll(async () => isGreen(green = await centre()), {timeout: 10_000, message: 'centre at t=4s should be green'}).toBe(true).catch(e => {
+    if (hardAssert) {
+      throw e;
+    }
+  });
+  fs.writeFileSync(path.join(artifactsDir, `${osName}-composited-green.png`), (await captureComposited(app, [])).png);
 
-  const greenShot = await captureComposited(app, [await probePoint()]);
-  fs.writeFileSync(path.join(artifactsDir, `${osName}-composited-green.png`), greenShot.png);
-  const green: Rgb | null = greenShot.colors[0];
+  console.log(`[e2e] ${osName} (${backend}) probes: t=1s ${JSON.stringify(red)}, t=4s ${JSON.stringify(green)}`);
+  test.info().annotations.push({type: 'probe', description: `${backend}: t=1s centre ${JSON.stringify(red)}, t=4s centre ${JSON.stringify(green)}`});
+});
 
-  test.info().annotations.push({type: 'probe', description: `t=1s centre RGB: ${JSON.stringify(red)}, t=4s centre RGB: ${JSON.stringify(green)}`});
-  console.log(`[e2e] ${osName} probes: t=1s ${JSON.stringify(red)}, t=4s ${JSON.stringify(green)}`);
+test('letterbox bars are opaque black and the picture is not stretched', async ({launch}) => {
+  const {app, ui} = await launch({seed: dir => seedProject(dir, {lastPlaybackTime: 1.0})});
+  await waitForPlayer(ui);
 
-  if (hardAssert) {
-    expect(isRed(red), `centre at t=1s should be red, got ${JSON.stringify(red)}`).toBe(true);
-    expect(isGreen(green), `centre at t=4s should be green, got ${JSON.stringify(green)}`).toBe(true);
-  }
+  // A window whose video area is clearly not 16:9 (about 4:3)
+  await withWindows(app, ({mainWindow}) => {
+    const b = mainWindow.getBounds();
+    mainWindow.setBounds({x: b.x, y: b.y, width: 1000, height: 1000});
+  });
+  await expect.poll(() => ui.evaluate(() => window.innerWidth), {timeout: 10_000}).toBeGreaterThan(900);
+  // the canvas backing store follows the settled size
+  await expect.poll(async () => ui.evaluate(() => {
+    const canvas = document.querySelector<HTMLCanvasElement>('#video-surface')!;
+    const box = document.querySelector('#video-container')!.getBoundingClientRect();
+    return Math.abs(canvas.width - Math.round(box.width * devicePixelRatio)) <= 1 && Math.abs(canvas.height - Math.round(box.height * devicePixelRatio)) <= 1;
+  }), {timeout: 10_000}).toBe(true);
+
+  const picture = await pictureRect(ui);
+  const horizontalBars = picture.y - picture.container.y > 10;
+  const verticalBars = picture.x - picture.container.x > 10;
+  expect(horizontalBars || verticalBars, 'the test window should leave bars around a 16:9 picture').toBe(true);
+
+  let bar: Rgb | null = null;
+  let inside: Rgb | null = null;
+  await expect.poll(async () => {
+    const shot = await capturePage(app, ui);
+    bar = horizontalBars
+      ? shot.colorAt(picture.container.x + picture.container.width / 2, picture.container.y + 4)
+      : shot.colorAt(picture.container.x + 4, picture.container.y + picture.container.height / 2);
+    inside = shot.colorAt(picture.x + picture.width / 2, picture.y + picture.height / 2);
+    return isBlack(bar) && isRed(inside);
+  }, {timeout: 10_000, message: () => `bar ${JSON.stringify(bar)}, picture ${JSON.stringify(inside)}`}).toBe(true).catch(e => {
+    if (hardAssert) {
+      throw e;
+    }
+  });
+});
+
+test('subtitle text is drawn above the canvas', async ({launch}) => {
+  const {ui} = await launch({seed: dir => seedProject(dir, {lastPlaybackTime: 1.0})});
+  await waitForPlayer(ui);
+
+  const line = ui.locator('.srt-container > span').first();
+  await expect(line).toContainText('Red line one', {timeout: 15_000});
+  const topmost = await line.evaluate(el => {
+    const r = el.getBoundingClientRect();
+    const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    return {insideOverlay: !!hit?.closest('.srt-container'), isCanvas: hit?.id === 'video-surface'};
+  });
+  expect(topmost).toEqual({insideOverlay: true, isCanvas: false});
+});
+
+test.describe('mpv-rendered subtitles', () => {
+  const subtitleBand = async (ui: Parameters<typeof pictureRect>[0]) => {
+    const p = await pictureRect(ui);
+    return {x: p.x, y: p.y + p.height * 0.7, width: p.width, height: p.height * 0.3};
+  };
+
+  test('useMpvSubtitles burns the text into the picture and hides the DOM layer', async ({launch}) => {
+    const {app, ui} = await launch({
+      seed: dir => seedProject(dir, {subtitle: fixture('sample-styled.ass'), lastPlaybackTime: 1.0, settings: {useMpvSubtitles: true}})
+    });
+    await waitForPlayer(ui);
+    await expect(ui.locator('.ASS-dialogue')).toBeHidden();
+
+    const band = await subtitleBand(ui);
+    let white = 0;
+    await expect.poll(async () => (white = (await capturePage(app, ui)).countWhite(band)), {
+      timeout: 10_000, message: 'mpv should draw the white subtitle text into the frame'
+    }).toBeGreaterThan(150).catch(e => {
+      if (hardAssert) {
+        throw e;
+      }
+    });
+    test.info().annotations.push({type: 'probe', description: `white pixels in the subtitle band (mpv): ${white}`});
+  });
+
+  test('without useMpvSubtitles the picture has no text of its own', async ({launch}) => {
+    const {app, ui} = await launch({
+      seed: dir => seedProject(dir, {subtitle: fixture('sample-styled.ass'), lastPlaybackTime: 1.0, settings: {useMpvSubtitles: false}})
+    });
+    await waitForPlayer(ui);
+    await expect(ui.locator('.ASS-dialogue').first()).toContainText('Red line one', {timeout: 15_000});
+
+    // Hide the DOM layer: whatever text is left in the screenshot came from the video itself
+    await ui.addStyleTag({content: 'app-subtitles-overlay { visibility: hidden !important; }'});
+    const band = await subtitleBand(ui);
+    await new Promise(r => setTimeout(r, 300));
+    const white = (await capturePage(app, ui)).countWhite(band);
+    test.info().annotations.push({type: 'probe', description: `white pixels in the subtitle band (DOM layer hidden): ${white}`});
+    if (hardAssert) {
+      expect(white).toBeLessThan(20);
+    }
+  });
 });

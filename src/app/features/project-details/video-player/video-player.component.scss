@@ -1,13 +1,27 @@
-:host, #mpv-placeholder {
+:host, #video-container {
   display: block;
   width: 100%;
   height: 100%;
   position: relative;
 }
 
-.resizing-overlay {
+// Black behind the picture: the bars around a letterboxed video are part of the video area.
+#video-container {
+  background: #000;
+  overflow: hidden;
+}
+
+#video-surface {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
+  object-fit: contain;
+}
+
+.resizing-overlay {
+  position: absolute;
+  inset: 0;
   display: flex;
   justify-content: center;
   align-items: center;

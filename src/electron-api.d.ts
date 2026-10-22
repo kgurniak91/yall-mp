@@ -87,7 +87,6 @@ export interface IElectronAPI {
     volume: number,
     isMuted: boolean
   ) => Promise<void>;
-  mpvFinishVideoResize: (rect: { x: number, y: number, width: number, height: number }) => Promise<void>;
   mpvCommand: (commandArray: any[]) => Promise<void>;
   mpvGetProperty: (property: string) => Promise<any>;
   mpvSetProperty: (property: string, value: any) => Promise<void>;
@@ -98,7 +97,12 @@ export interface IElectronAPI {
   onMainWindowMovedOrResized: (callback: () => void) => (() => void);
   onMpvManagerReady: (callback: () => void) => (() => void);
   onMpvInitialSeekComplete: (callback: () => void) => (() => void);
-  onMpvVideoVisibilityChange: (callback: (isVisible: boolean) => void) => (() => void);
+  /** One subscriber; the page owns every delivered frame and must `close()` it. Returns the unsubscribe function. */
+  onVideoFrame: (callback: (frame: VideoFrame) => void) => (() => void);
+  /** Frames the preload could not build or import. */
+  getDroppedVideoFrames: () => number;
+  /** Canvas backing size in device pixels; the renderer in main resizes the frames to it. */
+  videoSurfaceSetSize: (width: number, height: number) => void;
   // --- Storage
   getAppData: () => Promise<AppData | null>;
   getProjectById: (projectId: string) => Promise<Project | null>;

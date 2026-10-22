@@ -33,6 +33,12 @@ export interface LibmpvManagerOptions {
   options?: Record<string, string>;
   /** Test seam: creates the player from the final option map instead of loading the addon and the library. */
   libmpvFactory?: (options: Record<string, string>) => Libmpv;
+  /**
+   * Gives the video a surface. It runs after the player is created and before the file is loaded (a render
+   * context freed later takes mpv's video output with it) and switches `vo` to `libmpv`. The returned function
+   * undoes it and runs first in `stop()`. Without it there is no video output (`vo=null`).
+   */
+  attachVideo?: (libmpv: Libmpv) => (() => void) | void;
 }
 
 interface LoadedRuntime {
@@ -77,6 +83,7 @@ export class LibmpvManager extends EventEmitter {
   private paused = true;
   private timePos: number | null = null;
   private lastIdle: boolean | undefined;
+  private detachVideo: (() => void) | null = null;
   private pendingSeeks = 0;
   private timeTimer: ReturnType<typeof setInterval> | null = null;
   private readonly observed = new Set<string>();
@@ -104,8 +111,8 @@ export class LibmpvManager extends EventEmitter {
     }
 
     const options: Record<string, string> = {
-      // No video output until the renderer has a surface; `null` still decodes, so seeking behaves.
-      vo: 'null',
+      // Without a surface `null` still decodes, so seeking behaves.
+      vo: this.config.attachVideo ? 'libmpv' : 'null',
       hwdec: hardwareAcceleration ? 'auto' : 'no',
       'load-scripts': 'yes',
       scripts: path.join(this.config.basePath, 'mpv', 'yall_auto_pause.lua'),
@@ -155,6 +162,7 @@ export class LibmpvManager extends EventEmitter {
       this.resetState();
       const libmpv = this.createPlayer(options, platform);
       this.libmpv = libmpv;
+      this.detachVideo = this.config.attachVideo?.(libmpv) ?? null;
       libmpv.on('event', (event: LibmpvEvent) => this.handleEvent(event));
       libmpv.requestLogMessages('warn');
       for (const property of OBSERVED_PROPERTIES) {
@@ -342,6 +350,16 @@ export class LibmpvManager extends EventEmitter {
     return this.sendCommand(['script-message', 'set-auto-pause', endTime, token]);
   }
 
+  private runDetachVideo(): void {
+    const detach = this.detachVideo;
+    this.detachVideo = null;
+    try {
+      detach?.();
+    } catch (error) {
+      console.warn('[LibmpvManager] Error while detaching the video output:', error);
+    }
+  }
+
   /** Idempotent. */
   public async stop(): Promise<void> {
     if (this.timeTimer) {
@@ -354,6 +372,7 @@ export class LibmpvManager extends EventEmitter {
     }
     this.stopping = true;
     this.libmpv = null;
+    this.runDetachVideo();
     try {
       await libmpv.destroy();
     } catch (error) {

@@ -72,7 +72,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       return true;
     }
 
-    if (!this.videoStateService.isVideoWindowVisible()) {
+    if (!this.videoStateService.isVideoReady()) {
       return true;
     }
 

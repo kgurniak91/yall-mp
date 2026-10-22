@@ -13,7 +13,7 @@ import {
 } from 'electron';
 import path from 'path';
 import os from 'os';
-import {existsSync, promises as fs, statSync} from 'fs';
+import {appendFileSync, existsSync, promises as fs, statSync, writeFileSync} from 'fs';
 import type {CaptionsFileFormat, ParsedCaptionsResult, parseResponse, VTTCue} from 'media-captions';
 import type {SrtSubtitleData, SubtitleData} from './shared/types/subtitle.type';
 import type {MediaTrack} from './shared/types/media.type';
@@ -21,6 +21,8 @@ import {AnkiBatchExportRequest, AnkiCard, AnkiFieldMappingSource} from './src/ap
 import {v4 as uuidv4} from 'uuid';
 import {ChildProcess, execFile, spawn} from 'child_process';
 import {ensureLibmpv, LibmpvManager} from './libmpv-manager';
+import {GpuInfoLike, LibmpvFrameSender, PreferredBackend} from './libmpv-frame-sender';
+import type {AdapterOption} from './libmpv-bridge';
 import {FontData, ParsedSubtitlesData} from './src/electron-api';
 import {AppData, CoreConfig, Project, SubtitleSelection, SupportedLanguage} from './src/app/model/project.types';
 import {
@@ -85,7 +87,6 @@ let mpvManager: LibmpvManager | null = null;
 let yomitanManager: YomitanManager | null = null;
 let mainWindow: BrowserWindow | null = null;
 let uiWindow: BrowserWindow | null = null;
-let videoWindow: BrowserWindow | null = null;
 let subtitlesLookupWindow: BrowserWindow | null = null;
 let subtitlesLookupView: WebContentsView | null = null;
 let currentSubtitlesLookupContext: { clipSubtitleId: string; originalSelection: string; } | null = null;
@@ -98,9 +99,13 @@ let isFFmpegAvailable = false;
 let ffmpegPath = '';
 let ffprobePath = '';
 let draggableHeaderZones: Rectangle[] = [];
-let isInitialResizeComplete = false;
 let hasRequestedInitialSeek = false;
-let isVideoWindowVisible = false; // Has the video window been initialized and shown for the first time?
+// Frames sent when the first seek was requested: the picture at the resume position is the first one after it.
+let initialSeekFrameBaseline = 0;
+let videoSender: LibmpvFrameSender | null = null;
+// Last canvas backing size (CSS px x scale factor) reported by the page.
+let videoCanvasSize: { width: number; height: number } | null = null;
+let gpuInfoPromise: Promise<GpuInfoLike | null> | null = null;
 let isSaving = false;
 let isRestoring = false;
 let coreConfigToSave: CoreConfig | null = null;
@@ -240,26 +245,60 @@ function updateUiWindowShape() {
   uiWindow.setShape(visibleShapes);
 }
 
-function tryShowVideoWindowAndNotifyUI() {
-  // Safety check: Ensure mainWindow is actually visible before showing the video window.
-  // This prevents the video window from showing up if the app was started minimized or hidden.
-  if (mainWindow && mainWindow.isMinimized()) {
+function finishInitialSeek() {
+  if (!uiWindow || uiWindow.isDestroyed()) {
     return;
   }
-
-  if (!isRestoring && isInitialResizeComplete && hasRequestedInitialSeek && videoWindow && !videoWindow.isDestroyed() && uiWindow && mainWindow) {
-    console.log('[Main Process] All startup conditions met. Showing video window and notifying UI.');
-    isVideoWindowVisible = true;
-
-    safeShowVideoWindow();
+  console.log('[Main Process] First frame at the resume position is out. Notifying UI.');
+  // A minimized window must stay hidden, the page is told either way.
+  if (mainWindow && !mainWindow.isMinimized() && !isRestoring) {
     safeShowUiWindow();
     setMainWindowLoadingState(false);
-    uiWindow.webContents.send('mpv:initial-seek-complete');
-
-    // Reset flags to prevent this from ever running again for this project instance.
-    isInitialResizeComplete = false;
-    hasRequestedInitialSeek = false;
   }
+  uiWindow.webContents.send('mpv:initial-seek-complete');
+  hasRequestedInitialSeek = false;
+}
+
+const VIDEO_BACKENDS: PreferredBackend[] = ['auto', 'readback', 'd3d11-shared'];
+const VIDEO_LOG_PATH = path.join(app.getPath('userData'), 'video.log');
+const VIDEO_LOG_MAX_BYTES = 256 * 1024;
+let isVideoLogReset = false;
+
+/** Console plus `video.log` in the userData folder: which backend and adapter a machine ended up on, and why. */
+function logVideo(message: string): void {
+  console.log(message);
+  try {
+    if (!isVideoLogReset) {
+      isVideoLogReset = true;
+      if (existsSync(VIDEO_LOG_PATH) && statSync(VIDEO_LOG_PATH).size > VIDEO_LOG_MAX_BYTES) {
+        writeFileSync(VIDEO_LOG_PATH, '');
+      }
+    }
+    appendFileSync(VIDEO_LOG_PATH, `${new Date().toISOString()} ${message}\n`);
+  } catch {
+    // diagnostics only
+  }
+}
+
+/** `YALL_MP_VIDEO_BACKEND` (auto, readback, d3d11-shared) for diagnostics and CI. */
+function preferredVideoBackend(): PreferredBackend {
+  const value = process.env.YALL_MP_VIDEO_BACKEND as PreferredBackend | undefined;
+  return value && VIDEO_BACKENDS.includes(value) ? value : 'auto';
+}
+
+/** `YALL_MP_VIDEO_ADAPTER=warp` forces the software adapter (what the GPU-less CI runner has). */
+function videoAdapterOverride(): AdapterOption | undefined {
+  const value = process.env.YALL_MP_VIDEO_ADAPTER;
+  return value === 'warp' || value === 'default' ? value : undefined;
+}
+
+function initialVideoCanvasSize(window: BrowserWindow): { width: number; height: number } {
+  if (videoCanvasSize) {
+    return videoCanvasSize;
+  }
+  const [width, height] = window.getContentSize();
+  const scale = screen.getDisplayMatching(window.getBounds()).scaleFactor || 1;
+  return {width: Math.max(2, Math.round(width * scale)), height: Math.max(2, Math.round(height * scale))};
 }
 
 function handleWindowEscape() {
@@ -419,19 +458,11 @@ async function createWindow() {
 
     // If the main window is minimized, absolutely enforce that children are hidden too.
     if (mainWindow.isMinimized()) {
-      if (videoWindow && !videoWindow.isDestroyed() && videoWindow.isVisible()) {
-        safeHideVideoWindow();
-        safeHideUiWindow();
-      }
       if (uiWindow.isVisible()) {
+        safeHideUiWindow();
         uiWindow.hide();
       }
       return;
-    }
-
-    // Hide video window immediately during movement to prevent visual desync
-    if (!isRestoring && videoWindow && !videoWindow.isDestroyed() && videoWindow.isVisible()) {
-      safeHideVideoWindow();
     }
 
     if (showVideoTimeout) {
@@ -451,9 +482,6 @@ async function createWindow() {
     };
 
     uiWindow.setBounds(sanitizedBounds);
-    if (videoWindow && !videoWindow.isDestroyed()) {
-      videoWindow.setBounds(sanitizedBounds);
-    }
 
     isProgrammaticResize = false;
 
@@ -463,13 +491,8 @@ async function createWindow() {
     updateUiWindowShape();
 
     showVideoTimeout = setTimeout(() => {
-      // Re-verify state before showing: if the user minimized the app during this 250ms delay, do NOT show the video.
-      if (!isRestoring && videoWindow && !videoWindow.isDestroyed() && mainWindow && !mainWindow.isMinimized() && isVideoWindowVisible) {
-        safeShowVideoWindow();
-        safeShowUiWindow(); // Ensure UI comes back with video
-        setMainWindowLoadingState(false);
-      } else if (!isRestoring && uiWindow && !uiWindow.isDestroyed() && mainWindow && !mainWindow.isMinimized()) {
-        // Fallback: If video isn't ready, at least show UI (e.g. if file not loaded yet)
+      // Re-verify state before showing: if the user minimized the app during this 250ms delay, do NOT show the UI.
+      if (!isRestoring && uiWindow && !uiWindow.isDestroyed() && mainWindow && !mainWindow.isMinimized()) {
         safeShowUiWindow();
         setMainWindowLoadingState(false);
       }
@@ -584,13 +607,11 @@ async function createWindow() {
   mainWindow.on('minimize', () => {
     isRestoring = true;
     setMainWindowLoadingState(true);
-    safeHideVideoWindow();
     safeHideUiWindow();
   });
 
   mainWindow.on('restore', () => {
-    // Ensure video and UI remain hidden during restore animation (OS might try to restore children automatically)
-    safeHideVideoWindow();
+    // Ensure the UI remains hidden during the restore animation (OS might try to restore children automatically)
     safeHideUiWindow();
 
     // Tell UI to show spinner immediately (reusing the resize event logic)
@@ -619,7 +640,6 @@ async function createWindow() {
     yomitanManager?.destroy();
 
     // Child windows are destroyed automatically when the parent is closed, no need to close them explicitly.
-    videoWindow = null;
     uiWindow = null;
     mainWindow = null;
 
@@ -683,7 +703,7 @@ async function createWindow() {
 
   if (isE2E) {
     // Read-only probe so e2e tests can inspect the windows without URL heuristics
-    (globalThis as any).__yallE2E = {getWindows: () => ({mainWindow, uiWindow, videoWindow})};
+    (globalThis as any).__yallE2E = {getWindows: () => ({mainWindow, uiWindow}), getVideoStats: () => videoSender?.stats() ?? null};
   }
 
   if (isDev && !isE2E) {
@@ -733,6 +753,9 @@ if (!gotTheLock) {
       const homebrewPaths = ['/opt/homebrew/bin', '/usr/local/bin'].filter(p => !currentPaths.includes(p));
       process.env.PATH = [...homebrewPaths, ...currentPaths].join(path.delimiter);
     }
+
+    // The renderer asks for frames right after the project opens: have the active GPU known by then.
+    gpuInfoPromise = app.getGPUInfo('complete').then(info => info as GpuInfoLike).catch(() => null);
 
     try {
       const configStr = await fs.readFile(APP_DATA_PATH, 'utf-8');
@@ -1314,48 +1337,35 @@ if (!gotTheLock) {
         return;
       }
 
-      isInitialResizeComplete = false;
       hasRequestedInitialSeek = false;
-      isVideoWindowVisible = false;
 
-      // Clean up any old instances
-      if (uiWindow && !uiWindow.isDestroyed()) {
-        // Ensure state is reset to hidden when recreating the viewport
-        uiWindow.webContents.send('mpv:video-visibility-change', false);
-      }
-      videoWindow?.close();
+      // Clean up any old instance
       await mpvManager?.stop();
 
-      // Create a new, borderless, independent window.
-      videoWindow = new BrowserWindow({
-        frame: false,
-        show: false,
-        skipTaskbar: true,
-        transparent: true,
-        resizable: false,
-        focusable: false,
-        parent: mainWindow,
-      });
-
-      videoWindow.setIgnoreMouseEvents(true);
-
-      // Failsafe listener: even though focusable is false for videoWindow, if it somehow gets input, handle ESC.
-      videoWindow.webContents.on('before-input-event', (event, input) => {
-        if (input.key === 'Escape' && input.type === 'keyDown') {
-          event.preventDefault();
-          handleWindowEscape();
-          return;
-        }
-
-        blockDefaultBrowserShortcuts(event, input);
-      });
-
-      // uiWindow is the child of videoWindow to always be on top and prevent stacking order issues:
-      uiWindow.setParentWindow(videoWindow);
+      const gpuInfo = await gpuInfoPromise;
+      const pageContents = uiWindow.webContents;
+      const initialSize = initialVideoCanvasSize(uiWindow);
 
       mpvManager = new LibmpvManager({
         basePath: app.isPackaged ? process.resourcesPath : app.getAppPath(),
-        customLibmpvPath: customExecutables.libmpv
+        customLibmpvPath: customExecutables.libmpv,
+        attachVideo: libmpv => {
+          const sender = new LibmpvFrameSender({
+            libmpv, webContents: pageContents, gpuInfo: gpuInfo ?? undefined, adapter: videoAdapterOverride(),
+            log: logVideo
+          });
+          const attach = sender.start({...initialSize, preferred: preferredVideoBackend()});
+          videoSender = sender;
+          const a = attach.adapter;
+          logVideo(`[Main Process] Video: backend=${attach.backend} impl=${attach.impl} gpuWait=${attach.gpuWaitImpl} ` +
+            `adapter=${a.name} (${a.vendorId}/${a.deviceId}${a.software ? ', software' : ''}) canvas=${initialSize.width}x${initialSize.height}`);
+          return () => {
+            sender.stop();
+            if (videoSender === sender) {
+              videoSender = null;
+            }
+          };
+        }
       });
       playbackManager = new PlaybackManager(mpvManager, uiWindow);
       playbackManager.setInitialVolumeState(volume, isMuted);
@@ -1378,10 +1388,18 @@ if (!gotTheLock) {
         if (status.event === 'playback-restart' && hasRequestedInitialSeek) {
           console.log('[Main Process] Confirmed playback-restart AFTER seek request.');
 
-          tryShowVideoWindowAndNotifyUI();
-
           // This is only needed once:
           mpvManager?.removeListener('status', onMpvStatus);
+
+          // Wait for the picture of that seek; a file without video never produces one, so the wait is bounded.
+          const manager = mpvManager;
+          const sender = videoSender;
+          const arrived = sender ? sender.waitForFrame(initialSeekFrameBaseline, 1000) : Promise.resolve(false);
+          void arrived.then(() => {
+            if (manager === mpvManager) {
+              finishInitialSeek();
+            }
+          });
         }
       };
       mpvManager.on('status', onMpvStatus);
@@ -1403,73 +1421,13 @@ if (!gotTheLock) {
       }
     });
 
-    ipcMain.handle('mpv:finishVideoResize', async (_, containerRect: {
-      x: number,
-      y: number,
-      width: number,
-      height: number
-    }) => {
-      if (!videoWindow || !mainWindow || !mpvManager) {
-        console.error('[Main Process] Resize called but a window is missing!');
+    ipcMain.on('video:set-canvas-size', (_, width: unknown, height: unknown) => {
+      if (typeof width !== 'number' || typeof height !== 'number' || !Number.isFinite(width) || !Number.isFinite(height)
+        || width < 2 || height < 2 || width > 8192 || height > 8192) {
         return;
       }
-
-      try {
-        let videoAspectRatio: number | null = null;
-        try {
-          // Try to get aspect ratio from MPV. This will fail for audio-only files (without any cover art)
-          videoAspectRatio = await mpvManager.getProperty('video-params/aspect');
-        } catch (e) {
-          // Property unavailable, ignore and treat as null (audio-only mode)
-        }
-
-        let finalBounds: Electron.Rectangle;
-        const [parentX, parentY] = mainWindow.getPosition();
-
-        if (videoAspectRatio && videoAspectRatio > 0) {
-          // Perform the aspect ratio calculation.
-          let newWidth = containerRect.width;
-          let newHeight = newWidth / videoAspectRatio;
-
-          if (newHeight > containerRect.height) {
-            newHeight = containerRect.height;
-            newWidth = newHeight * videoAspectRatio;
-          }
-
-          // Center the video within the container
-          const offsetX = (containerRect.width - newWidth) / 2;
-          const offsetY = (containerRect.height - newHeight) / 2;
-
-          finalBounds = {
-            x: parentX + Math.round(containerRect.x) + Math.round(offsetX),
-            y: parentY + Math.round(containerRect.y) + Math.round(offsetY),
-            width: Math.round(newWidth),
-            height: Math.round(newHeight),
-          };
-        } else {
-          finalBounds = {
-            x: parentX + Math.round(containerRect.x),
-            y: parentY + Math.round(containerRect.y),
-            width: Math.round(containerRect.width),
-            height: Math.round(containerRect.height),
-          };
-        }
-
-        // Set the final bounds on the video window.
-        videoWindow.setBounds(finalBounds);
-
-        if (!isInitialResizeComplete) {
-          console.log('[Main Process] Initial resize is complete.');
-          isInitialResizeComplete = true;
-          tryShowVideoWindowAndNotifyUI();
-        } else {
-          if (!isRestoring && isVideoWindowVisible) {
-            safeShowVideoWindow();
-          }
-        }
-      } catch (e) {
-        console.error("Error during viewport resize:", e);
-      }
+      videoCanvasSize = {width: Math.round(width), height: Math.round(height)};
+      videoSender?.setCanvasSize(videoCanvasSize.width, videoCanvasSize.height);
     });
 
     ipcMain.handle('mpv:command', (_, commandArray) => {
@@ -1498,11 +1456,6 @@ if (!gotTheLock) {
       mpvManager = null;
       playbackManager = null;
 
-      // Reset UI parent window
-      if (uiWindow && !uiWindow.isDestroyed() && mainWindow && !mainWindow.isDestroyed()) {
-        uiWindow.setParentWindow(mainWindow);
-      }
-
       // Cleanup subtitles lookup window if open
       if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
         subtitlesLookupWindow.destroy();
@@ -1510,18 +1463,6 @@ if (!gotTheLock) {
       subtitlesLookupWindow = null;
       subtitlesLookupView = null;
 
-      return new Promise<void>((resolve) => {
-        // Defer the destruction of the videoWindow to the NEXT macrotask.
-        // This guarantees that the re-parenting command above has been fully processed by Electron.
-        setTimeout(() => {
-          if (videoWindow && !videoWindow.isDestroyed()) {
-            videoWindow.close();
-          }
-          videoWindow = null;
-          console.log('[Main Process] Deferred videoWindow cleanup complete.');
-          resolve();
-        }, 50);
-      });
     });
 
     ipcMain.handle('fonts:get-fonts', async (_, projectId: string) => {
@@ -1563,9 +1504,10 @@ if (!gotTheLock) {
     ipcMain.on('playback:repeat', () => playbackManager?.repeat());
     ipcMain.on('playback:forceContinue', () => playbackManager?.forceContinue());
     ipcMain.on('playback:seek', (_, time, isNavigation) => {
-      // Use this flag on first seek to coordinate showing the video window
+      // The first seek is the resume position: the page waits for the frame it produces
       if (!hasRequestedInitialSeek) {
         hasRequestedInitialSeek = true;
+        initialSeekFrameBaseline = videoSender?.stats().sent ?? 0;
       }
       playbackManager?.seek(time, isNavigation);
     });
@@ -3057,26 +2999,6 @@ function getFilesFromArgv(argv: string[]): string[] {
       return false;
     }
   });
-}
-
-function safeHideVideoWindow() {
-  if (videoWindow && !videoWindow.isDestroyed()) {
-    videoWindow.setOpacity(0);
-    videoWindow.hide();
-    if (uiWindow && !uiWindow.isDestroyed()) {
-      uiWindow.webContents.send('mpv:video-visibility-change', false);
-    }
-  }
-}
-
-function safeShowVideoWindow() {
-  if (videoWindow && !videoWindow.isDestroyed()) {
-    videoWindow.setOpacity(1);
-    videoWindow.showInactive();
-    if (uiWindow && !uiWindow.isDestroyed()) {
-      uiWindow.webContents.send('mpv:video-visibility-change', true);
-    }
-  }
 }
 
 function safeHideUiWindow() {

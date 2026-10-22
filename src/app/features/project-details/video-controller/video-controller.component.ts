@@ -25,7 +25,7 @@ import {VideoPlayerComponent} from '../video-player/video-player.component';
 })
 export class VideoControllerComponent implements OnDestroy {
   public readonly ready = output<void>();
-  public readonly videoContainerElement = computed(() => this.videoPlayer().mpvPlaceholderRef()?.nativeElement);
+  public readonly videoContainerElement = computed(() => this.videoPlayer().videoContainerRef()?.nativeElement);
   protected readonly clipsStateService = inject(ClipsStateService);
   private readonly videoStateService = inject(VideoStateService);
   private readonly videoPlayer = viewChild.required(VideoPlayerComponent);
