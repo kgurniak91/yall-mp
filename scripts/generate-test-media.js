@@ -23,12 +23,12 @@ function ts(seconds, sep) {
   return `${h}:${m}:${s}${sep}${f}`;
 }
 
-function writeSrt() {
-  const body = LINES.map((l, i) => `${i + 1}\n${ts(l.start, ',')} --> ${ts(l.end, ',')}\n${l.text}\n`).join('\n');
-  fs.writeFileSync(path.join(OUT, 'sample.srt'), body);
+function writeSrt(lines = LINES, name = 'sample.srt') {
+  const body = lines.map((l, i) => `${i + 1}\n${ts(l.start, ',')} --> ${ts(l.end, ',')}\n${l.text}\n`).join('\n');
+  fs.writeFileSync(path.join(OUT, name), body);
 }
 
-function writeAss() {
+function writeAss(lines = LINES, name = 'sample-styled.ass', playRes = [640, 360]) {
   const assTs = (sec) => {
     const cs = Math.round(sec * 100);
     const h = Math.floor(cs / 360000);
@@ -39,8 +39,8 @@ function writeAss() {
   const header = [
     '[Script Info]',
     'ScriptType: v4.00+',
-    'PlayResX: 640',
-    'PlayResY: 360',
+    `PlayResX: ${playRes[0]}`,
+    `PlayResY: ${playRes[1]}`,
     'WrapStyle: 0',
     '',
     '[V4+ Styles]',
@@ -50,8 +50,8 @@ function writeAss() {
     '[Events]',
     'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',
   ];
-  const events = LINES.map(l => `Dialogue: 0,${assTs(l.start)},${assTs(l.end)},Default,,0,0,0,,${l.text}`);
-  fs.writeFileSync(path.join(OUT, 'sample-styled.ass'), [...header, ...events, ''].join('\n'));
+  const events = lines.map(l => `Dialogue: 0,${assTs(l.start)},${assTs(l.end)},Default,,0,0,0,,${l.text}`);
+  fs.writeFileSync(path.join(OUT, name), [...header, ...events, ''].join('\n'));
 }
 
 function ffmpeg(args) {
@@ -99,14 +99,59 @@ function makeMkv() {
   ]);
 }
 
+// The player e2e fixture: ten clips as the app's clip generator would cut them (gaps and subtitled clips alternate,
+// two subtitled clips are adjacent, one gap is very short). Every clip has its own solid colour, so a centre-pixel
+// probe tells which clip is on screen. support/clips.ts reads clips.json, so the timeline lives only here.
+const CLIPS = [
+  {start: 0.0, end: 1.0, text: null, color: '808080'},
+  {start: 1.0, end: 2.5, text: 'Clip one', color: 'ff0000'},
+  {start: 2.5, end: 4.0, text: null, color: '00c000'},
+  {start: 4.0, end: 5.5, text: 'Clip two', color: '0000ff'},
+  {start: 5.5, end: 7.0, text: 'Clip three', color: 'ffff00'},
+  {start: 7.0, end: 7.3, text: null, color: 'ff00ff'},
+  {start: 7.3, end: 8.8, text: 'Clip four', color: '00ffff'},
+  {start: 8.8, end: 12.0, text: null, color: 'ff8000'},
+  {start: 12.0, end: 13.5, text: 'Clip five', color: '8000ff'},
+  {start: 13.5, end: 15.0, text: null, color: '804000'},
+];
+const CLIPS_DURATION = 15;
+
+function writeClipsSubtitles() {
+  const lines = CLIPS.filter(c => c.text !== null);
+  writeSrt(lines, 'clips.srt');
+  writeAss(lines, 'clips.ass', [320, 180]);
+  const json = CLIPS.map((c, index) => ({index, start: c.start, end: c.end, hasSubtitle: c.text !== null, text: c.text, color: `#${c.color}`}));
+  fs.writeFileSync(path.join(OUT, 'clips.json'), JSON.stringify({duration: CLIPS_DURATION, clips: json}, null, 2) + '\n');
+}
+
+function makeClipsMp4() {
+  const args = [];
+  for (const c of CLIPS) {
+    args.push('-f', 'lavfi', '-i', `color=c=0x${c.color}:s=320x180:r=30:d=${(c.end - c.start).toFixed(3)}`);
+  }
+  const n = CLIPS.length;
+  args.push('-f', 'lavfi', '-i', `testsrc2=s=64x36:r=30:d=${CLIPS_DURATION}`);
+  args.push('-f', 'lavfi', '-i', `sine=frequency=440:duration=${CLIPS_DURATION}`);
+  const filter = `${CLIPS.map((_, i) => `[${i}:v]`).join('')}concat=n=${n}:v=1:a=0[bg];[bg][${n}:v]overlay=8:8[v]`;
+  ffmpeg([
+    ...args, '-filter_complex', filter, '-map', '[v]', '-map', `${n + 1}:a`, '-t', String(CLIPS_DURATION),
+    // A keyframe every 8 frames keeps exact seeks cheap and landing times predictable
+    '-c:v', 'libx264', '-preset', 'veryslow', '-crf', '30', '-pix_fmt', 'yuv420p', '-g', '8', '-keyint_min', '8', '-sc_threshold', '0',
+    '-movflags', '+faststart', '-c:a', 'aac', '-b:a', '64k',
+    path.join(OUT, 'clips.mp4'),
+  ]);
+}
+
 fs.mkdirSync(OUT, {recursive: true});
 writeSrt();
 writeAss();
 makeMp4();
 makeMkv();
+writeClipsSubtitles();
+makeClipsMp4();
 
 let total = 0;
-for (const name of ['sample.mp4', 'sample.srt', 'sample-styled.ass', 'sample-5.1.mkv']) {
+for (const name of ['sample.mp4', 'sample.srt', 'sample-styled.ass', 'sample-5.1.mkv', 'clips.mp4', 'clips.srt', 'clips.ass', 'clips.json']) {
   const size = fs.statSync(path.join(OUT, name)).size;
   total += size;
   console.log(`${name}: ${size} bytes`);
