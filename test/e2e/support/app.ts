@@ -43,7 +43,12 @@ export async function getUiPage(app: ElectronApplication, timeoutMs = 30_000): P
 }
 
 async function closeApp(app: ElectronApplication): Promise<void> {
-  const proc = app.process();
+  let proc;
+  try {
+    proc = app.process();
+  } catch {
+    return; // The app already exited, e.g. the test closed the window itself
+  }
   const closed = app.close().catch(() => undefined);
   const timedOut = await Promise.race([
     closed.then(() => false),
