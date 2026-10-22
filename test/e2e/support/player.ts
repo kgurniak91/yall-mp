@@ -272,3 +272,37 @@ export async function whitePixelsInSubtitleBand(app: ElectronApplication, ui: Pa
   const {colors} = await captureComposited(app, probes);
   return colors.filter(c => c && c.r > 225 && c.g > 225 && c.b > 225).length;
 }
+
+/**
+ * Samples (current clip, mpv speed) every 50 ms inside the page and keeps a count per pair, so a slow test runner cannot
+ * miss a state that only lasts a few seconds. Read the result with `speedSamples`.
+ */
+export async function startSpeedSampler(ui: Page): Promise<void> {
+  await ui.evaluate(() => {
+    const w = window as any;
+    w.__e2eSpeedSamples = {};
+    w.__e2eSpeedTimer = setInterval(async () => {
+      const clip = w.__e2ePlayback?.currentClipIndex;
+      if (clip === undefined) {
+        return;
+      }
+      const speed = Number(await w.electronAPI.mpvGetProperty('speed'));
+      const bucket = (w.__e2eSpeedSamples[clip] ??= {});
+      bucket[speed] = (bucket[speed] ?? 0) + 1;
+    }, 50);
+  });
+}
+
+export type SpeedSamples = Record<string, Record<string, number>>;
+
+export const speedSamples = (ui: Page): Promise<SpeedSamples> => ui.evaluate(() => (window as any).__e2eSpeedSamples ?? {});
+
+/** The speed mpv ran at for most of the samples taken while the clip was current, with how many samples that is. */
+export function dominantSpeed(samples: SpeedSamples, clip: number): { speed: number; count: number } | null {
+  const bucket = samples[clip];
+  if (!bucket) {
+    return null;
+  }
+  const [speed, count] = Object.entries(bucket).sort((a, b) => b[1] - a[1])[0];
+  return {speed: Number(speed), count};
+}

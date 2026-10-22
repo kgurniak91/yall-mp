@@ -1,8 +1,8 @@
 import {expect, test} from './support/app';
 import {CLIPS, inClip} from './support/clips';
 import {
-  describeSteps, launchClips, markHistory, mpvPaused, mpvSpeed, mpvTime, press, quiet, seekTo, snapshot, startPlaying, stepsSince, waitForState,
-  waitForTime
+  describeSteps, dominantSpeed, launchClips, markHistory, mpvPaused, mpvSpeed, mpvTime, press, quiet, seekTo, snapshot, speedSamples, startPlaying,
+  startSpeedSampler, stepsSince, waitForState, waitForTime
 } from './support/player';
 import type {Page} from '@playwright/test';
 
@@ -26,21 +26,27 @@ test('each clip plays at its own speed: subtitled clips and gaps differ', async 
   }
 });
 
-test('the speed changes when playback crosses from a gap into a subtitled clip and back', async ({launch}) => {
-  // Slower clips so each state lasts a few seconds and can be observed without racing it
+test('the speed changes when playback crosses from a gap into subtitled clips and out into a gap again', async ({launch}) => {
+  // Slower clips, and speeds sampled inside the page: a slow runner must not be able to miss a short-lived state
   const slow = 0.5;
   const gap = 1.5;
-  const {ui} = await launchClips(launch, {lastPlaybackTime: inClip(2, 0.85), settings: {subtitledClipSpeed: slow, gapSpeed: gap}});
+  const {ui} = await launchClips(launch, {lastPlaybackTime: inClip(2, 0.3), settings: {subtitledClipSpeed: slow, gapSpeed: gap}});
+  await startSpeedSampler(ui);
+  const mark = await markHistory(ui);
 
-  await startPlaying(ui);
-  await expectSpeed(ui, gap, 'speed in the gap');
+  await press(ui, 'Space');
+  await expect.poll(async () => (await stepsSince(ui, mark)).some(s => s.clip >= 7), {
+    message: 'playback reaches the long gap after the subtitled clips',
+    timeout: 90_000
+  }).toBe(true);
+  await quiet(600); // a few samples inside that gap
+  const samples = await speedSamples(ui);
 
-  await expect.poll(async () => (await snapshot(ui))?.currentClipIndex, {message: 'enters the subtitled clip', timeout: 20_000}).toBe(3);
-  await expectSpeed(ui, slow, 'speed in the subtitled clip');
-
-  // And out of the subtitled clips into the long gap after them
-  await expect.poll(async () => (await snapshot(ui))?.currentClipIndex, {message: 'reaches the long gap', timeout: 40_000}).toBe(7);
-  await expectSpeed(ui, gap, 'speed in the gap after the subtitled clips');
+  for (const [clip, speed] of [[2, gap], [3, slow], [4, slow], [6, slow], [7, gap]] as const) {
+    const seen = dominantSpeed(samples, clip);
+    expect(seen, `clip ${clip} should have been sampled: ${JSON.stringify(samples)}`).not.toBeNull();
+    expect(seen!.speed, `speed while clip ${clip} was current: ${JSON.stringify(samples[clip])}`).toBeCloseTo(speed, 5);
+  }
 });
 
 test('holding Shift plays at the override speed and releasing it restores the clip speed', async ({launch}) => {
