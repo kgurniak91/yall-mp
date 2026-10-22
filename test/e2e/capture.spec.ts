@@ -92,9 +92,9 @@ test('letterbox bars are opaque black and the picture is not stretched', async (
       : shot.colorAt(picture.container.x + 4, picture.container.y + picture.container.height / 2);
     inside = shot.colorAt(picture.x + picture.width / 2, picture.y + picture.height / 2);
     return isBlack(bar) && isRed(inside);
-  }, {timeout: 10_000, message: () => `bar ${JSON.stringify(bar)}, picture ${JSON.stringify(inside)}`}).toBe(true).catch(e => {
+  }, {timeout: 10_000}).toBe(true).catch(e => {
     if (hardAssert) {
-      throw e;
+      throw new Error(`bar ${JSON.stringify(bar)}, picture ${JSON.stringify(inside)}\n${e.message}`);
     }
   });
 });
