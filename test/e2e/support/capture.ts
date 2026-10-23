@@ -75,6 +75,8 @@ export interface PageCapture {
   colorAt(x: number, y: number): Rgb | null;
   /** Number of near-white pixels in a CSS pixel rectangle (rendered subtitle text). */
   countWhite(rect: { x: number; y: number; width: number; height: number }): number;
+  /** Number of light pixels (green and blue both above `min`) in a CSS pixel rectangle: text on a red picture however it is anti-aliased. */
+  countLight(rect: { x: number; y: number; width: number; height: number }, min?: number): number;
 }
 
 /** Screenshot of the page with the video in it, decoded in the main process (nativeImage, no extra dependency). */
@@ -106,6 +108,22 @@ export async function capturePage(app: ElectronApplication, ui: Page): Promise<P
   };
   return {
     png, scale, width: decoded.width, height: decoded.height, rgba, colorAt: at,
+    countLight: (rect, min = 160) => {
+      let count = 0;
+      const x0 = Math.max(0, Math.round(rect.x * scale));
+      const y0 = Math.max(0, Math.round(rect.y * scale));
+      const x1 = Math.min(decoded.width, Math.round((rect.x + rect.width) * scale));
+      const y1 = Math.min(decoded.height, Math.round((rect.y + rect.height) * scale));
+      for (let y = y0; y < y1; y++) {
+        for (let x = x0; x < x1; x++) {
+          const o = (y * decoded.width + x) * 4;
+          if (rgba[o + 1] > min && rgba[o + 2] > min) {
+            count++;
+          }
+        }
+      }
+      return count;
+    },
     countWhite: rect => {
       let count = 0;
       const x0 = Math.max(0, Math.round(rect.x * scale));

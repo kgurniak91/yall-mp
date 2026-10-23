@@ -128,8 +128,8 @@ test.describe('mpv-rendered subtitles', () => {
 
     const band = await subtitleBand(ui);
     let white = 0;
-    await expect.poll(async () => (white = (await capturePage(app, ui)).countWhite(band)), {
-      timeout: 10_000, message: 'mpv should draw the white subtitle text into the frame'
+    await expect.poll(async () => (white = (await capturePage(app, ui)).countLight(band)), {
+      timeout: 10_000, message: 'mpv should draw the subtitle text into the frame'
     }).toBeGreaterThan(150).catch(async e => {
       // What mpv thinks it is showing, and what the page looks like, for runners where the text does not appear
       const props: Record<string, unknown> = {};
@@ -142,7 +142,7 @@ test.describe('mpv-rendered subtitles', () => {
         throw e;
       }
     });
-    test.info().annotations.push({type: 'probe', description: `white pixels in the subtitle band (mpv): ${white}`});
+    test.info().annotations.push({type: 'probe', description: `light pixels in the subtitle band (mpv): ${white}`});
   });
 
   test('without useMpvSubtitles the picture has no text of its own', async ({launch}) => {

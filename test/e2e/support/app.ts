@@ -18,6 +18,8 @@ export interface LaunchedApp {
   userDataDir: string;
   /** Uncaught renderer exceptions collected so far */
   pageErrors: string[];
+  /** What the main process printed (stdout and stderr), capped; attached to the report when the test fails */
+  mainLog: () => string;
 }
 
 export async function getUiPage(app: ElectronApplication, timeoutMs = 30_000): Promise<Page> {
@@ -59,6 +61,8 @@ async function closeApp(app: ElectronApplication): Promise<void> {
   }
 }
 
+const MAIN_LOG_LIMIT = 400_000;
+
 export const test = base.extend<{ launch: (opts?: LaunchOptions) => Promise<LaunchedApp> }>({
   launch: async ({}, use, testInfo) => {
     const launched: LaunchedApp[] = [];
@@ -85,7 +89,19 @@ export const test = base.extend<{ launch: (opts?: LaunchOptions) => Promise<Laun
       const pageErrors: string[] = [];
       ui.on('pageerror', err => pageErrors.push(err.message));
 
-      const result = {app, ui, userDataDir, pageErrors};
+      const chunks: string[] = [];
+      let size = 0;
+      const collect = (data: Buffer) => {
+        if (size < MAIN_LOG_LIMIT) {
+          const text = data.toString();
+          size += text.length;
+          chunks.push(text);
+        }
+      };
+      app.process().stdout?.on('data', collect);
+      app.process().stderr?.on('data', collect);
+
+      const result = {app, ui, userDataDir, pageErrors, mainLog: () => chunks.join('')};
       launched.push(result);
       return result;
     });
@@ -97,6 +113,9 @@ export const test = base.extend<{ launch: (opts?: LaunchOptions) => Promise<Laun
         await l.app.context().tracing.stop({path: failed ? tracePath : undefined});
         if (failed) {
           await testInfo.attach(`trace-${i}`, {path: tracePath, contentType: 'application/zip'});
+        }
+        if (failed) {
+          await testInfo.attach(`main-process-${i}.log`, {body: l.mainLog(), contentType: 'text/plain'});
         }
       } catch {
         // The app may already be gone
