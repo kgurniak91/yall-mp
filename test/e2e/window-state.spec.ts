@@ -3,6 +3,7 @@ import {expect, test} from './support/app';
 import {seedProject} from './support/seed';
 import {waitForPlayer} from './support/playback';
 import {baseline} from './support/baseline';
+import {expectPictureFillsContainer} from './support/capture';
 import {getWindowStates, rectsClose, withWindows} from './support/windows';
 
 /** Baseline invariant of the window stack: ui follows main. */
@@ -23,9 +24,11 @@ const icon = (ui: Page, name: string) => ui.locator(`.window-controls-wrapper .$
 
 test.describe('window state', () => {
   test('maximize, minimize/restore and fullscreen keep the stack in sync', async ({launch}) => {
-    const {app, ui} = await launch({seed: dir => seedProject(dir)});
+    // Paused at 1 s: the all-red picture has to be redrawn after every window change
+    const {app, ui} = await launch({seed: dir => seedProject(dir, {lastPlaybackTime: 1.0})});
     await waitForPlayer(ui);
     await baseline('stack in sync #1', () => expectStackInSync(app));
+    await baseline('picture #1', () => expectPictureFillsContainer(app, ui));
 
     const initial = (await getWindowStates(app)).main!;
 
@@ -34,12 +37,14 @@ test.describe('window state', () => {
     await baseline('bounds #2', () => expect.poll(async () => rectsClose((await getWindowStates(app)).main!.bounds, initial.display.workArea, 4), {timeout: 10_000}).toBe(true));
     await baseline('icon fa-window-restore', () => expect(icon(ui, 'fa-window-restore')).toBeVisible());
     await baseline('stack in sync #3', () => expectStackInSync(app));
+    await baseline('picture #3', () => expectPictureFillsContainer(app, ui));
     test.info().annotations.push({type: 'baseline', description: `isMaximized() after toggle: ${(await getWindowStates(app)).main!.isMaximized}`});
 
     await ui.evaluate(() => (window as any).electronAPI.windowToggleMaximize());
     await baseline('bounds #4', () => expect.poll(async () => rectsClose((await getWindowStates(app)).main!.bounds, initial.bounds, 4), {timeout: 10_000}).toBe(true));
     await baseline('icon fa-window-maximize', () => expect(icon(ui, 'fa-window-maximize')).toBeVisible());
     await baseline('stack in sync #5', () => expectStackInSync(app));
+    await baseline('picture #5', () => expectPictureFillsContainer(app, ui));
 
     await ui.evaluate(() => (window as any).electronAPI.windowMinimize());
     await expect.poll(async () => (await getWindowStates(app)).main!.isMinimized, {timeout: 10_000}).toBe(true);
@@ -47,16 +52,19 @@ test.describe('window state', () => {
     await expect.poll(async () => (await getWindowStates(app)).main!.isMinimized, {timeout: 10_000}).toBe(false);
     await expect.poll(async () => (await getWindowStates(app)).ui!.opacity, {timeout: 10_000}).toBe(1);
     await baseline('stack in sync #6', () => expectStackInSync(app));
+    await baseline('picture #6', () => expectPictureFillsContainer(app, ui));
 
     await ui.evaluate(() => (window as any).electronAPI.windowToggleFullScreen());
     await expect.poll(async () => (await getWindowStates(app)).main!.isFullScreen, {timeout: 10_000}).toBe(true);
     await baseline('icon fa-compress', () => expect(icon(ui, 'fa-compress')).toBeVisible());
     await baseline('stack in sync #7', () => expectStackInSync(app));
+    await baseline('picture #7', () => expectPictureFillsContainer(app, ui));
 
     await ui.evaluate(() => (window as any).electronAPI.windowToggleFullScreen());
     await expect.poll(async () => (await getWindowStates(app)).main!.isFullScreen, {timeout: 10_000}).toBe(false);
     await baseline('icon fa-expand', () => expect(icon(ui, 'fa-expand')).toBeVisible());
     await baseline('stack in sync #8', () => expectStackInSync(app));
+    await baseline('picture #8', () => expectPictureFillsContainer(app, ui));
   });
 
   test('F11 enters fullscreen and Escape leaves it', async ({launch}) => {

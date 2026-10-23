@@ -1,16 +1,8 @@
 import {expect, test} from './support/app';
 import {seedProject} from './support/seed';
 import {waitForPlayer} from './support/playback';
-import {capturePage, isRed, pictureRect} from './support/capture';
+import {canvasMatchesContainer, capturePage, isRed, pictureRect} from './support/capture';
 import {getWindowStates, rectsClose, withWindows} from './support/windows';
-
-const canvasMatchesContainer = (ui: import('@playwright/test').Page) => ui.evaluate(() => {
-  const canvas = document.querySelector<HTMLCanvasElement>('#video-surface')!;
-  const box = document.querySelector('#video-container')!.getBoundingClientRect();
-  const wantW = Math.round(box.width * devicePixelRatio);
-  const wantH = Math.round(box.height * devicePixelRatio);
-  return {ok: Math.abs(canvas.width - wantW) <= 1 && Math.abs(canvas.height - wantH) <= 1, canvas: [canvas.width, canvas.height], want: [wantW, wantH]};
-});
 
 const hardAssert = process.platform === 'win32';
 

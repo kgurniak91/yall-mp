@@ -1,3 +1,4 @@
+import {expect} from '@playwright/test';
 import type {ElectronApplication, Page} from '@playwright/test';
 
 export interface Rgb {
@@ -137,4 +138,35 @@ export async function pictureRect(ui: Page, aspect = 16 / 9): Promise<{ x: numbe
     width = height * aspect;
   }
   return {x: box.x + (box.width - width) / 2, y: box.y + (box.height - height) / 2, width, height, container: box};
+}
+
+/** Whether the canvas backing store matches `#video-container` in device pixels, i.e. the last resize has settled. */
+export const canvasMatchesContainer = (ui: Page) => ui.evaluate(() => {
+  const canvas = document.querySelector<HTMLCanvasElement>('#video-surface')!;
+  const box = document.querySelector('#video-container')!.getBoundingClientRect();
+  const wantW = Math.round(box.width * devicePixelRatio);
+  const wantH = Math.round(box.height * devicePixelRatio);
+  return {ok: Math.abs(canvas.width - wantW) <= 1 && Math.abs(canvas.height - wantH) <= 1, canvas: [canvas.width, canvas.height], want: [wantW, wantH]};
+});
+
+/**
+ * For a paused all-red picture: the canvas has settled at the container size and the picture is red at its centre and
+ * near its four corners, so it fills the area the window gives it (not black, not partial, not stale at the old size).
+ */
+export async function expectPictureFillsContainer(app: ElectronApplication, ui: Page): Promise<void> {
+  let last = '';
+  try {
+    await expect.poll(async () => {
+      const fit = await canvasMatchesContainer(ui);
+      const {x, y, width, height} = await pictureRect(ui);
+      const shot = await capturePage(app, ui);
+      const inset = 8;
+      const probes = [[0.5, 0.5], [0, 0], [1, 0], [0, 1], [1, 1]].map(([fx, fy]) =>
+        shot.colorAt(x + inset + (width - 2 * inset) * fx, y + inset + (height - 2 * inset) * fy));
+      last = `canvas ${JSON.stringify(fit)}, picture ${JSON.stringify({x, y, width, height})}, probes ${JSON.stringify(probes)}`;
+      return fit.ok && probes.every(isRed);
+    }, {timeout: 10_000}).toBe(true);
+  } catch (e) {
+    throw new Error(`the picture should fill the container: ${last}\n${(e as Error).message}`);
+  }
 }
