@@ -37,8 +37,9 @@ for (const atStart of [false, true]) {
     const mark = await markHistory(ui);
     await quiet(1200);
     await press(ui, 'Control+ArrowLeft');
+    // The clip index does not change, so the seek itself is what to wait for before judging where the clip landed
+    await expect.poll(async () => containsInOrder(await stepsSince(ui, mark), [{state: 'Transitioning', clip: 1}]), {message: 'the clip should have been sought'}).toBe(true);
     await landsOn(1);
-    expect(containsInOrder(await stepsSince(ui, mark), [{state: 'Transitioning', clip: 1}]), 'the clip should have been sought').toBe(true);
   });
 }
 
@@ -72,7 +73,8 @@ test('Ctrl+Left from the leading gap does nothing', async ({launch}) => {
 });
 
 test('Up repeats the current clip from its start while playing', async ({launch}) => {
-  const {ui} = await launchClips(launch, {lastPlaybackTime: inClip(3, 0.8)});
+  // Early in the clip: the key must land well before playback runs on into the adjacent clip
+  const {ui} = await launchClips(launch, {lastPlaybackTime: inClip(3, 0.1)});
   await startPlaying(ui);
   const mark = await markHistory(ui);
   const before = await repeatCompletions(ui);
