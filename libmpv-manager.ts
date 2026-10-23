@@ -85,6 +85,8 @@ export class LibmpvManager extends EventEmitter {
   private lastIdle: boolean | undefined;
   private detachVideo: (() => void) | null = null;
   private pendingSeeks = 0;
+  /** An absolute seek that mpv refused (for example while the video output was being re-created), re-issued after the next file-loaded. */
+  private failedSeek: string[] | null = null;
   private timeTimer: ReturnType<typeof setInterval> | null = null;
   private readonly observed = new Set<string>();
 
@@ -208,6 +210,7 @@ export class LibmpvManager extends EventEmitter {
     this.timePos = null;
     this.lastIdle = undefined;
     this.pendingSeeks = 0;
+    this.failedSeek = null;
     this.observed.clear();
   }
 
@@ -237,6 +240,14 @@ export class LibmpvManager extends EventEmitter {
     switch (event.event) {
       case 'property-change':
         this.handlePropertyChange(event);
+        break;
+      case 'file-loaded':
+        // The file was loaded again behind our back (the readback fallback reloads it): the position it asked for is lost otherwise
+        if (this.failedSeek) {
+          const command = this.failedSeek;
+          this.failedSeek = null;
+          void this.sendCommand(command);
+        }
         break;
       case 'seek':
         this.pendingSeeks++;
@@ -312,7 +323,21 @@ export class LibmpvManager extends EventEmitter {
   }
 
   public sendCommand(command: any[]): Promise<void> {
-    return this.safely(`Command ${command[0]}`, libmpv => libmpv.command(command.map(arg => String(arg))));
+    const args = command.map(arg => String(arg));
+    const isAbsoluteSeek = args[0] === 'seek' && args[2] === 'absolute';
+    return this.safely(`Command ${command[0]}`, async libmpv => {
+      try {
+        await libmpv.command(args);
+        if (isAbsoluteSeek) {
+          this.failedSeek = null;
+        }
+      } catch (error) {
+        if (isAbsoluteSeek) {
+          this.failedSeek = args;
+        }
+        throw error;
+      }
+    });
   }
 
   public setProperty(property: string, value: any): Promise<void> {

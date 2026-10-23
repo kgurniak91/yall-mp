@@ -282,6 +282,51 @@ describe('LibmpvManager', () => {
       expect(fake.command).toHaveBeenCalledWith(['seek', '12.5', 'absolute', 'exact']);
     });
 
+    describe('a seek that mpv refuses', () => {
+      beforeEach(() => {
+        vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      });
+
+      it('is issued again when the file is loaded again', async () => {
+        fake.command.mockRejectedValueOnce(new Error('error running command'));
+        await manager.sendCommand(['seek', 4.75, 'absolute']);
+        fake.command.mockClear();
+
+        fake.send({event: 'file-loaded'});
+        await Promise.resolve();
+        expect(fake.command).toHaveBeenCalledWith(['seek', '4.75', 'absolute']);
+
+        // Only once
+        fake.command.mockClear();
+        fake.send({event: 'file-loaded'});
+        await Promise.resolve();
+        expect(fake.command).not.toHaveBeenCalled();
+      });
+
+      it('is forgotten once a later seek succeeds', async () => {
+        fake.command.mockRejectedValueOnce(new Error('error running command'));
+        await manager.sendCommand(['seek', 4.75, 'absolute']);
+        await manager.sendCommand(['seek', 8, 'absolute']);
+        fake.command.mockClear();
+
+        fake.send({event: 'file-loaded'});
+        await Promise.resolve();
+        expect(fake.command).not.toHaveBeenCalled();
+      });
+
+      it('is not remembered for relative seeks or other commands', async () => {
+        fake.command.mockRejectedValueOnce(new Error('error running command'));
+        await manager.sendCommand(['seek', 2, 'relative']);
+        fake.command.mockRejectedValueOnce(new Error('error running command'));
+        await manager.sendCommand(['script-message', 'x']);
+        fake.command.mockClear();
+
+        fake.send({event: 'file-loaded'});
+        await Promise.resolve();
+        expect(fake.command).not.toHaveBeenCalled();
+      });
+    });
+
     it('sets the auto-pause through the lua script', async () => {
       await manager.setLuaAutoPause(4.2, 'tok');
       expect(fake.command).toHaveBeenCalledWith(['script-message', 'set-auto-pause', '4.2', 'tok']);
