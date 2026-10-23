@@ -24,14 +24,14 @@ test('opening another project and coming back twice shows the right video each t
   await recordPlayback(ui);
 
   const expectClips = async (): Promise<void> => {
-    expect(await mpvTime(ui)).toBeCloseTo(inClip(3, 0.5), 1);
+    await expect.poll(() => mpvTime(ui), {message: 'mpv should be at the resume position of the clips project'}).toBeCloseTo(inClip(3, 0.5), 1);
     expect(Number(await mpvProp(ui, 'duration'))).toBeCloseTo(CLIPS_DURATION, 1);
     if (pixelProbesAvailable) {
       await expectVideoShowsClip(app, ui, 3);
     }
   };
   const expectSample = async (): Promise<void> => {
-    expect(await mpvTime(ui)).toBeCloseTo(4, 1);
+    await expect.poll(() => mpvTime(ui), {message: 'mpv should be at the resume position of sample.mp4'}).toBeCloseTo(4, 1);
     expect(Number(await mpvProp(ui, 'duration'))).toBeCloseTo(10, 1);
     if (pixelProbesAvailable) {
       await expect.poll(async () => isGreen(await probeVideoColor(app, ui)), {message: 'sample.mp4 at 4 s is green'}).toBe(true);

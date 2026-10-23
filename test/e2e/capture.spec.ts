@@ -130,7 +130,14 @@ test.describe('mpv-rendered subtitles', () => {
     let white = 0;
     await expect.poll(async () => (white = (await capturePage(app, ui)).countWhite(band)), {
       timeout: 10_000, message: 'mpv should draw the white subtitle text into the frame'
-    }).toBeGreaterThan(150).catch(e => {
+    }).toBeGreaterThan(150).catch(async e => {
+      // What mpv thinks it is showing, and what the page looks like, for runners where the text does not appear
+      const props: Record<string, unknown> = {};
+      for (const name of ['sid', 'sub-visibility', 'sub-text', 'sub-delay', 'time-pos', 'pause', 'osd-width', 'osd-height']) {
+        props[name] = await ui.evaluate(p => (window as any).electronAPI.mpvGetProperty(p), name).catch(err => `error: ${err}`);
+      }
+      await test.info().attach('mpv-properties.json', {body: JSON.stringify({white, band, props}, null, 2), contentType: 'application/json'});
+      await test.info().attach('page.png', {body: await ui.screenshot(), contentType: 'image/png'}).catch(() => undefined);
       if (hardAssert) {
         throw e;
       }
