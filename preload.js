@@ -53,10 +53,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   windowToggleMaximize: () => ipcRenderer.send('window:toggle-maximize'),
   windowToggleFullScreen: () => ipcRenderer.send('window:toggle-fullscreen'),
   windowEscape: () => ipcRenderer.send('window:escape'),
-  windowHandleDoubleClick: () => ipcRenderer.send('window:handle-double-click'),
   windowClose: () => ipcRenderer.send('window:close'),
-  windowStartManualResize: (direction) => ipcRenderer.send('window:manual-resize-start', direction),
-  windowStopManualResize: () => ipcRenderer.send('window:manual-resize-stop'),
   onWindowMaximizedStateChanged: (callback) => {
     const subscription = (_event, value) => callback(value);
     ipcRenderer.on('window:maximized-state-changed', subscription);
@@ -67,7 +64,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('window:fullscreen-state-changed', subscription);
     return () => ipcRenderer.removeListener('window:fullscreen-state-changed', subscription);
   },
-  windowUpdateDraggableZones: (shapes) => ipcRenderer.send('window:update-draggable-zones', shapes),
   openInSystemBrowser: (url) => ipcRenderer.invoke('app:openInSystemBrowser', url),
   // --- Subtitles Lookup
   openSubtitlesLookupWindow: (data) => ipcRenderer.invoke('lookup:open-window', data),
@@ -129,11 +125,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const subscription = (_event, value) => callback(value);
     ipcRenderer.on('mpv:event', subscription);
     return () => ipcRenderer.removeListener('mpv:event', subscription); // return cleanup function
-  },
-  onMainWindowMovedOrResized: (callback) => {
-    const subscription = () => callback();
-    ipcRenderer.on('mpv:mainWindowMovedOrResized', subscription);
-    return () => ipcRenderer.removeListener('mpv:mainWindowMovedOrResized', subscription);
   },
   onMpvManagerReady: (callback) => {
     const subscription = () => callback();

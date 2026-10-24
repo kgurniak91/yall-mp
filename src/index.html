@@ -2,12 +2,39 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>YallMp</title>
+  <title>Y'ALL Media Player</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
 <body>
-  <app-root></app-root>
+  <app-root>
+    <style>
+      html, body {
+        margin: 0;
+        height: 100%;
+        background: #1e1e1e;
+        -webkit-app-region: drag;
+      }
+
+      .splash {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+      }
+
+      .splash-logo {
+        width: 25vmin;
+        height: 25vmin;
+        background-color: #ceced1;
+        -webkit-mask-image: url('./yall-mp-logo.svg');
+        -webkit-mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+      }
+    </style>
+    <div class="splash"><div class="splash-logo"></div></div>
+  </app-root>
 </body>
 </html>

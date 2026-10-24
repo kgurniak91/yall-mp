@@ -5,7 +5,7 @@ import {
   ipcMain,
   Menu,
   nativeTheme,
-  Rectangle,
+  powerSaveBlocker,
   screen,
   session,
   shell,
@@ -86,19 +86,12 @@ let playbackManager: PlaybackManager | null = null;
 let mpvManager: LibmpvManager | null = null;
 let yomitanManager: YomitanManager | null = null;
 let mainWindow: BrowserWindow | null = null;
-let uiWindow: BrowserWindow | null = null;
 let subtitlesLookupWindow: BrowserWindow | null = null;
 let subtitlesLookupView: WebContentsView | null = null;
 let currentSubtitlesLookupContext: { clipSubtitleId: string; originalSelection: string; } | null = null;
-let preMaximizeBounds: Electron.Rectangle | null = null;
-let isFixingMaximize = false;
-let isProgrammaticResize = false;
-let isEnteringFullscreen = false;
-let resizeDebounceTimer: NodeJS.Timeout | null = null;
 let isFFmpegAvailable = false;
 let ffmpegPath = '';
 let ffprobePath = '';
-let draggableHeaderZones: Rectangle[] = [];
 let hasRequestedInitialSeek = false;
 // Frames sent when the first seek was requested: the picture at the resume position is the first one after it.
 let initialSeekFrameBaseline = 0;
@@ -107,17 +100,11 @@ let videoSender: LibmpvFrameSender | null = null;
 let videoCanvasSize: { width: number; height: number } | null = null;
 let gpuInfoPromise: Promise<GpuInfoLike | null> | null = null;
 let isSaving = false;
-let isRestoring = false;
+let displaySleepBlockerId: number | null = null;
 let coreConfigToSave: CoreConfig | null = null;
 const projectsToSave = new Map<string, Project>();
-let showVideoTimeout: NodeJS.Timeout | null = null;
-let manualResizeInterval: NodeJS.Timeout | null = null;
-const MIN_WIDTH = 800;
-const MIN_HEIGHT = 600;
 
-let initialAppBounds: Electron.Rectangle | null = null;
 let pendingFilesToOpen: string[] = [];
-const DRAGGABLE_ZONE_PADDING = 3; // 3px on all sides
 
 async function ensureFFmpegPaths(): Promise<void> {
   if (isFfmpegPathsInitialized) {
@@ -153,109 +140,12 @@ async function ensureFFmpegPaths(): Promise<void> {
   }
 }
 
-function subtractRect(rect: Rectangle, hole: Rectangle): Rectangle[] {
-  const result: Rectangle[] = [];
-
-  // Check for intersection
-  const intersects = rect.x < hole.x + hole.width &&
-    rect.x + rect.width > hole.x &&
-    rect.y < hole.y + hole.height &&
-    rect.y + rect.height > hole.y;
-
-  if (!intersects) {
-    return [rect]; // No intersection, return original rectangle
-  }
-
-  // Top part
-  if (rect.y < hole.y) {
-    result.push({x: rect.x, y: rect.y, width: rect.width, height: hole.y - rect.y});
-  }
-
-  // Bottom part
-  if (rect.y + rect.height > hole.y + hole.height) {
-    result.push({
-      x: rect.x,
-      y: hole.y + hole.height,
-      width: rect.width,
-      height: (rect.y + rect.height) - (hole.y + hole.height)
-    });
-  }
-
-  // Left part
-  if (rect.x < hole.x) {
-    result.push({x: rect.x, y: hole.y, width: hole.x - rect.x, height: hole.height});
-  }
-
-  // Right part
-  if (rect.x + rect.width > hole.x + hole.width) {
-    result.push({
-      x: hole.x + hole.width,
-      y: hole.y,
-      width: (rect.x + rect.width) - (hole.x + hole.width),
-      height: hole.height
-    });
-  }
-
-  return result.filter(r => r.width > 0 && r.height > 0);
-}
-
-function updateUiWindowShape() {
-  if (!uiWindow || !mainWindow || mainWindow.isFullScreen()) {
-    uiWindow?.setShape([]);
-    return;
-  }
-
-  const {width, height} = mainWindow.getBounds();
-  if (width === 0 || height === 0) return;
-
-  // Define all the logical holes without padding
-  const unpaddedHoles: Rectangle[] = [
-    {
-      x: width - 170,
-      y: 5,
-      width: 165,
-      height: 30
-    }
-  ];
-
-  if (draggableHeaderZones && draggableHeaderZones.length > 0) {
-    unpaddedHoles.push(...draggableHeaderZones);
-  }
-
-  // Create a new array of 'padded' holes
-  const holes = unpaddedHoles.map(hole => ({
-    x: hole.x + DRAGGABLE_ZONE_PADDING,
-    y: hole.y + DRAGGABLE_ZONE_PADDING,
-    width: hole.width - (DRAGGABLE_ZONE_PADDING * 2),
-    height: hole.height - (DRAGGABLE_ZONE_PADDING * 2)
-  })).filter(hole => hole.width > 0 && hole.height > 0); // Important: filter out any holes that become invalid after padding
-
-  // Start with the entire window as one visible shape
-  let visibleShapes: Rectangle[] = [{x: 0, y: 0, width, height}];
-
-  // Iteratively subtract each PADDED hole
-  for (const hole of holes) {
-    let nextVisibleShapes: Rectangle[] = [];
-    for (const shape of visibleShapes) {
-      nextVisibleShapes.push(...subtractRect(shape, hole));
-    }
-    visibleShapes = nextVisibleShapes;
-  }
-
-  uiWindow.setShape(visibleShapes);
-}
-
 function finishInitialSeek() {
-  if (!uiWindow || uiWindow.isDestroyed()) {
+  if (!mainWindow || mainWindow.isDestroyed()) {
     return;
   }
   console.log('[Main Process] First frame at the resume position is out. Notifying UI.');
-  // A minimized window must stay hidden, the page is told either way.
-  if (mainWindow && !mainWindow.isMinimized() && !isRestoring) {
-    safeShowUiWindow();
-    setMainWindowLoadingState(false);
-  }
-  uiWindow.webContents.send('mpv:initial-seek-complete');
+  mainWindow.webContents.send('mpv:initial-seek-complete');
   hasRequestedInitialSeek = false;
 }
 
@@ -301,6 +191,21 @@ function initialVideoCanvasSize(window: BrowserWindow): { width: number; height:
   return {width: Math.max(2, Math.round(width * scale)), height: Math.max(2, Math.round(height * scale))};
 }
 
+/** mpv's own window used to keep the display awake while playing; with libmpv the app has to ask for it. */
+function setDisplaySleepBlocked(blocked: boolean): void {
+  if (blocked === (displaySleepBlockerId !== null)) {
+    return;
+  }
+  if (blocked) {
+    displaySleepBlockerId = powerSaveBlocker.start('prevent-display-sleep');
+    console.log('[Main Process] Display sleep blocked while playing.');
+  } else {
+    powerSaveBlocker.stop(displaySleepBlockerId!);
+    displaySleepBlockerId = null;
+    console.log('[Main Process] Display sleep allowed again.');
+  }
+}
+
 function handleWindowEscape() {
   if (!mainWindow || mainWindow.isMinimized()) {
     return;
@@ -308,18 +213,8 @@ function handleWindowEscape() {
 
   if (mainWindow.isFullScreen()) {
     mainWindow.setFullScreen(false);
-    // Force focus back to UI after exiting fullscreen so shortcuts work immediately
-    setTimeout(() => {
-      if (uiWindow && !uiWindow.isDestroyed()) {
-        uiWindow.focus();
-      }
-    }, 100);
-  } else if (preMaximizeBounds) {
-    mainWindow.setBounds(preMaximizeBounds);
-    preMaximizeBounds = null;
-    if (uiWindow) {
-      uiWindow.webContents.send('window:maximized-state-changed', false);
-    }
+  } else if (mainWindow.isMaximized()) {
+    mainWindow.unmaximize();
   } else {
     mainWindow.minimize();
   }
@@ -374,71 +269,26 @@ function blockDefaultBrowserShortcuts(event: Electron.Event, input: Electron.Inp
 }
 
 async function createWindow() {
-  const primaryDisplay = screen.getPrimaryDisplay();
-  const workArea = primaryDisplay.workArea;
+  const workArea = screen.getPrimaryDisplay().workArea;
 
-  // Calculate 90% of the work area's dimensions
-  const initialWidth = Math.round(workArea.width * 0.9);
-  const initialHeight = Math.round(workArea.height * 0.9);
+  // The minimum size must not exceed a small work area, or the window would start taller than the screen
+  const minWidth = Math.min(800, workArea.width);
+  const minHeight = Math.min(600, workArea.height);
 
-  // Calculate centered position
-  const initialX = Math.round(workArea.x + (workArea.width - initialWidth) / 2);
-  const initialY = Math.round(workArea.y + (workArea.height - initialHeight) / 2);
-
-  // Store the calculated initial bounds for later use (e.g., restoring from Aero Snap)
-  initialAppBounds = {
-    x: initialX,
-    y: initialY,
-    width: initialWidth,
-    height: initialHeight
-  };
+  // 90% of the work area, centered
+  const initialWidth = Math.max(minWidth, Math.round(workArea.width * 0.9));
+  const initialHeight = Math.max(minHeight, Math.round(workArea.height * 0.9));
 
   mainWindow = new BrowserWindow({
-    ...initialAppBounds,
-    transparent: false,
-    backgroundColor: '#000000',
+    x: Math.round(workArea.x + (workArea.width - initialWidth) / 2),
+    y: Math.round(workArea.y + (workArea.height - initialHeight) / 2),
+    width: initialWidth,
+    height: initialHeight,
+    minWidth,
+    minHeight,
+    backgroundColor: '#1e1e1e',
     frame: false,
     show: false,
-  });
-
-  const isDev = !app.isPackaged;
-
-  mainWindow.webContents.on('before-input-event', (event, input) => {
-    if (input.key === 'Escape' && input.type === 'keyDown') {
-      event.preventDefault();
-      handleWindowEscape();
-      return;
-    }
-
-    blockDefaultBrowserShortcuts(event, input);
-  });
-
-  mainWindow.on('focus', () => {
-    // Failsafe: If the window gets focus (e.g., returning from Win+D) and is stuck in the restoring state, force a sync to reveal the UI.
-    if (mainWindow && !mainWindow.isMinimized() && isRestoring) {
-      console.log('[Main Process] Window focused while state was stuck in restoring. Forcing geometry sync.');
-      isRestoring = false;
-      syncWindowGeometry();
-    }
-
-    // Defer focus transfer to next iteration of the event loop, after the current event loop phase completes.
-    // This allows mainWindow to settle its focus state, preventing swallowed keyboard inputs during the transition.
-    setImmediate(() => {
-      if (uiWindow && !uiWindow.isDestroyed()) {
-        uiWindow.focus();
-      }
-    });
-
-    if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed() && subtitlesLookupWindow.isVisible()) {
-      subtitlesLookupWindow.hide();
-    }
-  });
-
-  uiWindow = new BrowserWindow({
-    ...initialAppBounds,
-    transparent: true,
-    frame: false,
-    parent: mainWindow,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -447,200 +297,39 @@ async function createWindow() {
     },
   });
 
-  uiWindow.webContents.on('before-input-event', (event, input) => {
+  const isDev = !app.isPackaged;
+
+  mainWindow.webContents.on('before-input-event', (event, input) => {
     blockDefaultBrowserShortcuts(event, input);
   });
 
-  const syncWindowGeometry = () => {
-    if (!mainWindow || !uiWindow || uiWindow.isDestroyed()) {
-      return;
-    }
-
-    // If the main window is minimized, absolutely enforce that children are hidden too.
-    if (mainWindow.isMinimized()) {
-      if (uiWindow.isVisible()) {
-        safeHideUiWindow();
-        uiWindow.hide();
-      }
-      return;
-    }
-
-    if (showVideoTimeout) {
-      clearTimeout(showVideoTimeout);
-    }
-
-    const bounds = mainWindow.getBounds();
-
-    isProgrammaticResize = true;
-
-    // Enforce integer values to avoid sub-pixel errors:
-    const sanitizedBounds = {
-      x: Math.round(bounds.x),
-      y: Math.round(bounds.y),
-      width: Math.round(bounds.width),
-      height: Math.round(bounds.height)
-    };
-
-    uiWindow.setBounds(sanitizedBounds);
-
-    isProgrammaticResize = false;
-
-    if (uiWindow) {
-      uiWindow.webContents.send('mpv:mainWindowMovedOrResized');
-    }
-    updateUiWindowShape();
-
-    showVideoTimeout = setTimeout(() => {
-      // Re-verify state before showing: if the user minimized the app during this 250ms delay, do NOT show the UI.
-      if (!isRestoring && uiWindow && !uiWindow.isDestroyed() && mainWindow && !mainWindow.isMinimized()) {
-        safeShowUiWindow();
-        setMainWindowLoadingState(false);
-      }
-    }, 250);
-  };
-
-  mainWindow.on('resize', () => {
-    // If user manually resizes window, invalidate the "restore" bounds.
-    if (!isProgrammaticResize && !isEnteringFullscreen && !isFixingMaximize && !mainWindow?.isMaximized()) {
-      if (preMaximizeBounds) {
-        preMaximizeBounds = null;
-        if (uiWindow) {
-          uiWindow.webContents.send('window:maximized-state-changed', false);
-        }
-      }
-    }
-
-    // Always run the core geometry sync logic immediately
-    syncWindowGeometry();
-
-    // When in the process of entering fullscreen, handle the debounce logic
-    if (isEnteringFullscreen) {
-      if (resizeDebounceTimer) {
-        clearTimeout(resizeDebounceTimer);
-      }
-
-      resizeDebounceTimer = setTimeout(() => {
-        console.log('[Main Process] Fullscreen resize complete. Locking window resize.');
-        if (mainWindow) {
-          mainWindow.setResizable(false);
-        }
-        if (uiWindow) {
-          uiWindow.setResizable(false);
-        }
-
-        // Reset the flag so this logic doesn't run on normal resizes
-        isEnteringFullscreen = false;
-      }, 100);
-    }
-  });
-
-  mainWindow.on('move', syncWindowGeometry);
-
-  uiWindow.on('resize', () => {
-    // If this resize was caused by code, ignore it to prevent a loop.
-    if (isProgrammaticResize || !mainWindow || !uiWindow) {
-      return;
-    }
-    // Otherwise, a user resized the UI window. Force the main window to match it.
-    mainWindow.setBounds(uiWindow.getBounds());
-  });
-
-  uiWindow.on('focus', () => {
+  mainWindow.on('focus', () => {
     if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed() && subtitlesLookupWindow.isVisible()) {
       subtitlesLookupWindow.hide();
     }
   });
 
-  // Dragging maximized window should unmaximize it automatically:
-  mainWindow.on('will-move', (event) => {
-    if (preMaximizeBounds && !isFixingMaximize && mainWindow) {
-      event.preventDefault();
-      const restoreBounds = preMaximizeBounds;
-      preMaximizeBounds = null;
-      if (uiWindow) {
-        uiWindow.webContents.send('window:maximized-state-changed', false);
-      }
-      const cursorPos = screen.getCursorScreenPoint();
-      const newX = Math.floor(cursorPos.x - (restoreBounds.width * (cursorPos.x / screen.getPrimaryDisplay().bounds.width)));
-      const newY = cursorPos.y;
-      mainWindow.setBounds({...restoreBounds, x: newX, y: newY});
-    }
-  });
-
-  // Handle OS-level maximization when dropping window on screen edges, like Aero Snap on Windows:
   mainWindow.on('maximize', () => {
-    if (!mainWindow) {
-      return;
-    }
-
-    if (!preMaximizeBounds) {
-      preMaximizeBounds = initialAppBounds;
-    }
-
-    isFixingMaximize = true;
-
-    setTimeout(() => {
-      if (mainWindow) {
-        mainWindow.unmaximize();
-        const display = screen.getDisplayMatching(mainWindow.getBounds());
-        mainWindow.setBounds(display.workArea);
-        syncWindowGeometry();
-      }
-      isFixingMaximize = false;
-    }, 50);
-
-    if (uiWindow) {
-      uiWindow.webContents.send('window:maximized-state-changed', true);
-    }
+    mainWindow?.webContents.send('window:maximized-state-changed', true);
   });
 
   mainWindow.on('unmaximize', () => {
-    if (isFixingMaximize) {
-      return;
-    }
-    preMaximizeBounds = null;
-    if (uiWindow) {
-      uiWindow.webContents.send('window:maximized-state-changed', false);
-    }
+    mainWindow?.webContents.send('window:maximized-state-changed', false);
   });
 
-  mainWindow.on('minimize', () => {
-    isRestoring = true;
-    setMainWindowLoadingState(true);
-    safeHideUiWindow();
+  mainWindow.on('enter-full-screen', () => {
+    mainWindow?.webContents.send('window:fullscreen-state-changed', true);
   });
 
-  mainWindow.on('restore', () => {
-    // Ensure the UI remains hidden during the restore animation (OS might try to restore children automatically)
-    safeHideUiWindow();
-
-    // Tell UI to show spinner immediately (reusing the resize event logic)
-    if (uiWindow && !uiWindow.isDestroyed()) {
-      uiWindow.webContents.send('mpv:mainWindowMovedOrResized');
-    }
-
-    // Wait for OS window animation to finish
-    setTimeout(() => {
-      // Check state again after the timeout. If the user minimized in the meantime, abort.
-      if (!mainWindow || mainWindow.isMinimized()) {
-        return;
-      }
-
-      isRestoring = false;
-      syncWindowGeometry(); // Handles showing the video and UI properly
-    }, 250);
+  mainWindow.on('leave-full-screen', () => {
+    mainWindow?.webContents.send('window:fullscreen-state-changed', false);
   });
 
   mainWindow.on('closed', () => {
-    if (manualResizeInterval) {
-      clearInterval(manualResizeInterval);
-    }
-
+    setDisplaySleepBlocked(false);
     void mpvManager?.stop();
     yomitanManager?.destroy();
 
-    // Child windows are destroyed automatically when the parent is closed, no need to close them explicitly.
-    uiWindow = null;
     mainWindow = null;
 
     // Force the entire application to quit - this ensures all processes and windows are terminated.
@@ -648,72 +337,24 @@ async function createWindow() {
   });
 
   mainWindow.on('ready-to-show', () => {
-    if (uiWindow && mainWindow) {
-      mainWindow.show();
-      uiWindow.showInactive();
-      updateUiWindowShape();
-      uiWindow.hide();
-      uiWindow.showInactive();
-      uiWindow.webContents.send('window:maximized-state-changed', mainWindow.isMaximizable());
-
-      if (!isDev) {
-        uiWindow.focus();
-      }
-    }
+    mainWindow?.show();
   });
 
-  mainWindow.on('enter-full-screen', () => {
-    isEnteringFullscreen = true;
-
-    if (uiWindow) {
-      uiWindow.webContents.send('window:fullscreen-state-changed', true);
-    }
-
-    updateUiWindowShape();
-  });
-
-  mainWindow.on('leave-full-screen', () => {
-    isEnteringFullscreen = false;
-
-    const restoreResizable = () => {
-      if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isFullScreen()) {
-        mainWindow.setResizable(true);
-      }
-      if (uiWindow && !uiWindow.isDestroyed() && mainWindow && !mainWindow.isFullScreen()) {
-        uiWindow.setResizable(true);
-      }
-    };
-    restoreResizable();
-    // Newer Electron versions re-apply the pre-fullscreen window state after this event, which left the windows
-    // non-resizable and made the next fullscreen entry stick at the old size in the top-left corner.
-    setTimeout(restoreResizable, 150);
-
-    if (uiWindow) {
-      uiWindow.webContents.send('window:fullscreen-state-changed', false);
-    }
-
-    updateUiWindowShape();
-  });
-
-  const draggableHostPath = path.join(__dirname, './dist/yall-mp/browser/draggable-host.html');
-  mainWindow.loadFile(draggableHostPath);
-
-  const indexPath = path.join(__dirname, './dist/yall-mp/browser/index.html');
-  uiWindow.loadFile(indexPath);
+  mainWindow.loadFile(path.join(__dirname, './dist/yall-mp/browser/index.html'));
 
   if (isE2E) {
-    // Read-only probe so e2e tests can inspect the windows without URL heuristics
-    (globalThis as any).__yallE2E = {getWindows: () => ({mainWindow, uiWindow}), getVideoStats: () => videoSender?.stats() ?? null};
+    // Read-only probe so e2e tests can inspect the window without URL heuristics
+    (globalThis as any).__yallE2E = {getWindows: () => ({mainWindow}), getVideoStats: () => videoSender?.stats() ?? null, isDisplaySleepBlocked: () => displaySleepBlockerId !== null};
   }
 
   if (isDev && !isE2E) {
-    uiWindow.webContents.once('devtools-opened', () => {
-      if (uiWindow && !uiWindow.isDestroyed()) {
-        uiWindow.focus();
+    mainWindow.webContents.once('devtools-opened', () => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.focus();
       }
     });
 
-    uiWindow.webContents.openDevTools({mode: 'detach'});
+    mainWindow.webContents.openDevTools({mode: 'detach'});
   }
 }
 
@@ -735,9 +376,9 @@ if (!gotTheLock) {
     const files = getFilesFromArgv(commandLine);
 
     if (files.length > 0) {
-      if (uiWindow && !uiWindow.isDestroyed()) {
-        uiWindow.webContents.send('app:open-files', files);
-        uiWindow.focus();
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('app:open-files', files);
+        mainWindow.focus();
       } else {
         console.error('[Main] UI Window is missing or destroyed, cannot send files.');
       }
@@ -899,116 +540,16 @@ if (!gotTheLock) {
       if (!mainWindow) {
         return;
       }
-
-      isProgrammaticResize = true;
-
-      if (preMaximizeBounds) {
-        mainWindow.setBounds(preMaximizeBounds);
-        preMaximizeBounds = null;
-        if (uiWindow) {
-          uiWindow.webContents.send('window:maximized-state-changed', false);
-        }
+      if (mainWindow.isMaximized()) {
+        mainWindow.unmaximize();
       } else {
-        preMaximizeBounds = mainWindow.getBounds();
-        const display = screen.getPrimaryDisplay();
-        mainWindow.setBounds(display.workArea);
-        if (uiWindow) {
-          uiWindow.webContents.send('window:maximized-state-changed', true);
-        }
-      }
-
-      isProgrammaticResize = false;
-    });
-
-    ipcMain.on('window:manual-resize-start', (event, direction) => {
-      if (manualResizeInterval || !mainWindow) {
-        return;
-      }
-
-      // Safety: Clear any existing intervals just in case
-      if (manualResizeInterval) {
-        clearInterval(manualResizeInterval);
-      }
-
-      let lastMouse = screen.getCursorScreenPoint();
-
-      manualResizeInterval = setInterval(() => {
-        if (!mainWindow) {
-          return;
-        }
-
-        const currentMouse = screen.getCursorScreenPoint();
-        const dx = currentMouse.x - lastMouse.x;
-        const dy = currentMouse.y - lastMouse.y;
-        lastMouse = currentMouse;
-
-        if (dx === 0 && dy === 0) {
-          return;
-        }
-
-        let {x, y, width, height} = mainWindow.getBounds();
-
-        // Right side
-        if (direction.includes('e')) {
-          width += dx;
-        }
-
-        // Left side (adjusts X and Width)
-        if (direction.includes('w')) {
-          if (width - dx >= MIN_WIDTH) {
-            x += dx;
-            width -= dx;
-          }
-        }
-
-        // Bottom side
-        if (direction.includes('s')) {
-          height += dy;
-        }
-
-        // Top side (adjusts Y and Height)
-        if (direction.includes('n')) {
-          if (height - dy >= MIN_HEIGHT) {
-            y += dy;
-            height -= dy;
-          }
-        }
-
-        // Final safety clamp
-        width = Math.max(width, MIN_WIDTH);
-        height = Math.max(height, MIN_HEIGHT);
-
-        mainWindow.setBounds({
-          x: Math.round(x),
-          y: Math.round(y),
-          width: Math.round(width),
-          height: Math.round(height)
-        });
-      }, 16); // ~60fps
-    });
-
-    ipcMain.on('window:manual-resize-stop', () => {
-      if (manualResizeInterval) {
-        clearInterval(manualResizeInterval);
-        manualResizeInterval = null;
+        mainWindow.maximize();
       }
     });
 
     ipcMain.on('window:toggle-fullscreen', () => {
       if (mainWindow) {
         mainWindow.setFullScreen(!mainWindow.isFullScreen());
-      }
-    });
-
-    ipcMain.on('window:handle-double-click', () => {
-      if (!mainWindow) {
-        return;
-      }
-
-      if (mainWindow.isFullScreen()) {
-        mainWindow.setFullScreen(false);
-      } else {
-        mainWindow.setFullScreen(true);
       }
     });
 
@@ -1020,14 +561,6 @@ if (!gotTheLock) {
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.close();
       }
-    });
-
-    ipcMain.on('window:update-draggable-zones', (_, rects: Rectangle[]) => {
-      if (areRectsSimilar(draggableHeaderZones, rects)) {
-        return;
-      }
-      draggableHeaderZones = rects;
-      updateUiWindowShape();
     });
 
     ipcMain.handle('app:openInSystemBrowser', async (_, url: string) => {
@@ -1098,8 +631,8 @@ if (!gotTheLock) {
             }
             subtitlesLookupView = null;
           }
-          if (uiWindow && !uiWindow.isDestroyed()) {
-            uiWindow.focus();
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.focus();
           }
           notifyLookupWindowState(false);
         };
@@ -1286,8 +819,8 @@ if (!gotTheLock) {
         {
           label: 'Add to Notes',
           click: () => {
-            if (uiWindow && !uiWindow.isDestroyed() && currentSubtitlesLookupContext && selectedText) {
-              uiWindow.webContents.send('project:add-note', {
+            if (mainWindow && !mainWindow.isDestroyed() && currentSubtitlesLookupContext && selectedText) {
+              mainWindow.webContents.send('project:add-note', {
                 clipSubtitleId: currentSubtitlesLookupContext.clipSubtitleId,
                 text: selectedText,
                 selection: currentSubtitlesLookupContext.originalSelection
@@ -1296,7 +829,7 @@ if (!gotTheLock) {
                 subtitlesLookupWindow.webContents.send('lookup:show-toast', 'Note added!');
               }
             } else {
-              console.error('[Main Process] Could not send note: uiWindow or context is missing.');
+              console.error('[Main Process] Could not send note: mainWindow or context is missing.');
             }
           }
         }
@@ -1307,8 +840,8 @@ if (!gotTheLock) {
     });
 
     ipcMain.on('lookup:add-note', (_, {text}) => {
-      if (uiWindow && !uiWindow.isDestroyed() && currentSubtitlesLookupContext) {
-        uiWindow.webContents.send('project:add-note', {
+      if (mainWindow && !mainWindow.isDestroyed() && currentSubtitlesLookupContext) {
+        mainWindow.webContents.send('project:add-note', {
           clipSubtitleId: currentSubtitlesLookupContext.clipSubtitleId,
           text: text,
           selection: currentSubtitlesLookupContext.originalSelection
@@ -1317,7 +850,7 @@ if (!gotTheLock) {
           subtitlesLookupWindow.webContents.send('lookup:show-toast', 'Note added!');
         }
       } else {
-        console.error('[Main Process] Could not forward note: uiWindow or context is missing.');
+        console.error('[Main Process] Could not forward note: mainWindow or context is missing.');
       }
     });
 
@@ -1333,18 +866,19 @@ if (!gotTheLock) {
       volume: number,
       isMuted: boolean
     ) => {
-      if (!uiWindow || !mainWindow) {
+      if (!mainWindow) {
         return;
       }
 
       hasRequestedInitialSeek = false;
 
       // Clean up any old instance
+      setDisplaySleepBlocked(false);
       await mpvManager?.stop();
 
       const gpuInfo = await gpuInfoPromise;
-      const pageContents = uiWindow.webContents;
-      const initialSize = initialVideoCanvasSize(uiWindow);
+      const pageContents = mainWindow.webContents;
+      const initialSize = initialVideoCanvasSize(mainWindow);
 
       mpvManager = new LibmpvManager({
         basePath: app.isPackaged ? process.resourcesPath : app.getAppPath(),
@@ -1367,18 +901,26 @@ if (!gotTheLock) {
           };
         }
       });
-      playbackManager = new PlaybackManager(mpvManager, uiWindow);
+      playbackManager = new PlaybackManager(mpvManager, mainWindow);
       playbackManager.setInitialVolumeState(volume, isMuted);
 
       playbackManager.on('repeat-seek-completed', () => {
-        if (uiWindow && !uiWindow.isDestroyed()) {
-          uiWindow.webContents.send('playback:repeat-seek-completed');
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('playback:repeat-seek-completed');
         }
       });
 
       mpvManager.on('status', (status) => {
-        if (uiWindow) {
-          uiWindow.webContents.send('mpv:event', status)
+        if (mainWindow) {
+          mainWindow.webContents.send('mpv:event', status)
+        }
+      });
+
+      mpvManager.on('status', (status) => {
+        if (status.event === 'property-change' && status.name === 'pause') {
+          setDisplaySleepBlocked(status.data === false);
+        } else if (status.event === 'end-file') {
+          setDisplaySleepBlocked(false);
         }
       });
 
@@ -1404,11 +946,14 @@ if (!gotTheLock) {
       };
       mpvManager.on('status', onMpvStatus);
 
-      mpvManager.on('error', (err) => console.error("MPV Error:", err));
+      mpvManager.on('error', (err) => {
+        console.error("MPV Error:", err);
+        setDisplaySleepBlocked(false);
+      });
       mpvManager.on('ready', () => {
         console.log('[Main Process] LibmpvManager is ready. Notifying renderer.');
-        if (uiWindow) {
-          uiWindow.webContents.send('mpv:managerReady');
+        if (mainWindow) {
+          mainWindow.webContents.send('mpv:managerReady');
         }
       });
 
@@ -1452,6 +997,7 @@ if (!gotTheLock) {
     ipcMain.handle('mpv:destroyViewport', async () => {
       console.log('[Main Process] Received mpv:destroyViewport. Cleaning up.');
 
+      setDisplaySleepBlocked(false);
       await mpvManager?.stop();
       mpvManager = null;
       playbackManager = null;
@@ -2776,35 +2322,6 @@ async function loadFontData(
   return fontData;
 }
 
-function areRectsSimilar(rectsA: Rectangle[], rectsB: Rectangle[], tolerance: number = 5): boolean {
-  if (rectsA.length !== rectsB.length) {
-    return false;
-  }
-
-  if (rectsA.length === 0) {
-    return true;
-  }
-
-  const sortedA = [...rectsA].sort((a, b) => a.x - b.x);
-  const sortedB = [...rectsB].sort((a, b) => a.x - b.x);
-
-  for (let i = 0; i < sortedA.length; i++) {
-    const rectA = sortedA[i];
-    const rectB = sortedB[i];
-
-    if (
-      Math.abs(rectA.x - rectB.x) > tolerance ||
-      Math.abs(rectA.y - rectB.y) > tolerance ||
-      Math.abs(rectA.width - rectB.width) > tolerance ||
-      Math.abs(rectA.height - rectB.height) > tolerance
-    ) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
 function getFullTextFromSubtitles(subtitles: SubtitleData[]): string {
   return subtitles.map(sub => {
     if (sub.type === 'srt') {
@@ -3001,47 +2518,6 @@ function getFilesFromArgv(argv: string[]): string[] {
   });
 }
 
-function safeHideUiWindow() {
-  if (uiWindow && !uiWindow.isDestroyed()) {
-    uiWindow.setOpacity(0);
-    // Do NOT call uiWindow.hide() here because the renderer must remain active and process IPC events (like resizing/spinner logic),
-    // just make visually invisible to the user to prevent graphical artifacts.
-  }
-}
-
-function safeShowUiWindow() {
-  if (uiWindow && !uiWindow.isDestroyed()) {
-    uiWindow.setOpacity(1);
-    uiWindow.showInactive();
-    uiWindow.focus();
-  }
-}
-
-function setMainWindowLoadingState(isLoading: boolean) {
-  if (!mainWindow || mainWindow.isDestroyed()) {
-    return;
-  }
-
-  // Use `executeJavaScript` to avoid complex IPC/preload for the static host file
-  const code = `(() => {
-    var skeleton = document.getElementById('skeleton-view');
-    var loading = document.getElementById('loading-view');
-    if (skeleton && loading) {
-      if (${isLoading}) {
-        skeleton.classList.add('hidden');
-        loading.classList.remove('hidden');
-      } else {
-        loading.classList.add('hidden');
-        skeleton.classList.remove('hidden');
-      }
-    }
-  })();`;
-
-  mainWindow.webContents.executeJavaScript(code).catch((e) => {
-    console.error('setMainWindowLoadingState execution failed:', e);
-  });
-}
-
 async function checkSystemDependencies() {
   // Only check on non-Windows platforms because Windows bundles its own binaries
   if (process.platform === 'win32') {
@@ -3108,7 +2584,7 @@ async function checkSystemDependencies() {
 }
 
 function notifyLookupWindowState(isVisible: boolean) {
-  if (uiWindow && !uiWindow.isDestroyed()) {
-    uiWindow.webContents.send('lookup:window-state-changed', isVisible);
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('lookup:window-state-changed', isVisible);
   }
 }

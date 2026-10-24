@@ -11,6 +11,12 @@
   background-color: var(--app-bg);
   border-bottom: 1px solid var(--app-border);
   height: 100%;
+  // The whole header drags the window; everything clickable opts out below
+  -webkit-app-region: drag;
+
+  &.fullscreen {
+    -webkit-app-region: no-drag;
+  }
 }
 
 .menu-wrapper {
@@ -23,6 +29,7 @@
 }
 
 .window-controls-wrapper {
+  -webkit-app-region: no-drag;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -42,12 +49,14 @@
 }
 
 .menu-button-wrapper {
+  -webkit-app-region: no-drag;
   padding: 0.5rem;
   border-right: 1px solid #444;
   flex-shrink: 0;
 }
 
 .filename {
+  -webkit-app-region: no-drag; // tooltips need hover
   display: flex;
   align-items: center;
   gap: 0.5rem;

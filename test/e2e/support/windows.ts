@@ -20,12 +20,13 @@ export interface WindowState {
 
 export interface WindowStates {
   main: WindowState | null;
-  ui: WindowState | null;
+  /** Windows that are shown right now; the hidden Yomitan proxy and the lookup window do not count */
+  visibleWindows: number;
 }
 
-/** Snapshot of the stacked windows, read through the main-side __yallE2E probe (only present under YALL_MP_E2E=1). */
+/** Snapshot of the app window, read through the main-side __yallE2E probe (only present under YALL_MP_E2E=1). */
 export async function getWindowStates(app: ElectronApplication): Promise<WindowStates> {
-  return app.evaluate(({screen}) => {
+  return app.evaluate(({screen, BrowserWindow}) => {
     const wins = (globalThis as any).__yallE2E.getWindows();
     const describe = (win: any) => {
       if (!win || win.isDestroyed()) {
@@ -44,14 +45,17 @@ export async function getWindowStates(app: ElectronApplication): Promise<WindowS
         display: {id: display.id, bounds: display.bounds, workArea: display.workArea, scaleFactor: display.scaleFactor}
       };
     };
-    return {main: describe(wins.mainWindow), ui: describe(wins.uiWindow)};
+    return {
+      main: describe(wins.mainWindow),
+      visibleWindows: BrowserWindow.getAllWindows().filter(w => w.isVisible()).length
+    };
   });
 }
 
 /** Runs a function against the real BrowserWindow objects in the main process. */
 export async function withWindows<T>(
   app: ElectronApplication,
-  fn: (wins: { mainWindow: any, uiWindow: any }) => T
+  fn: (wins: { mainWindow: any }) => T
 ): Promise<T> {
   return app.evaluate((_electron, {src}) => {
     // eslint-disable-next-line no-new-func

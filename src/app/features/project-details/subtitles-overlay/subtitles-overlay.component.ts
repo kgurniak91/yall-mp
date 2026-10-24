@@ -160,15 +160,9 @@ export class SubtitlesOverlayComponent implements OnDestroy {
         });
       };
 
-      const cleanupMoveListener = window.electronAPI.onMainWindowMovedOrResized(() => clearState());
-      const cleanupFullScreenListener = window.electronAPI.onWindowFullScreenStateChanged(() => clearState());
-      const cleanupMaximizedListener = window.electronAPI.onWindowMaximizedStateChanged(() => clearState());
+      window.addEventListener('resize', clearState);
 
-      onCleanup(() => {
-        cleanupMoveListener();
-        cleanupFullScreenListener();
-        cleanupMaximizedListener();
-      });
+      onCleanup(() => window.removeEventListener('resize', clearState));
     });
 
     effect(() => {

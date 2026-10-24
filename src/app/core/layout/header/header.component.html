@@ -1,5 +1,5 @@
-<div class="header-wrapper">
-  <div #menuWrapper class="menu-wrapper">
+<div class="header-wrapper" [class.fullscreen]="isFullScreen()">
+  <div class="menu-wrapper">
     <div class="menu-button-wrapper">
       <p-menu #projectMenu
               [model]="menuItems()"
@@ -20,14 +20,14 @@
         </span>
       </div>
 
-      <div #lastFilename class="filename border-right-none">
+      <div class="filename border-right-none">
         <i class="fa-solid fa-file-lines"></i>
         <span [pTooltip]="subtitleFileName() || ''" tooltipPosition="bottom">
           {{ subtitleFileName() || 'Loading subtitles...' }}
         </span>
       </div>
     } @else {
-      <div #lastFilename class="filename border-right-none">
+      <div class="filename border-right-none">
         <div class="inline-block">
           <app-logo size="1.5rem" color="#ceced1"/>
         </div>
@@ -36,7 +36,7 @@
     }
   </div>
 
-  <div #dragHandle class="drag-handle">
+  <div class="drag-handle">
     <i class="fa-solid fa-up-down-left-right"></i>
   </div>
 

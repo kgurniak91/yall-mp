@@ -27,23 +27,18 @@ The root `.ts` files compile **in place** to sibling `.js` files, using `tsconfi
 A new main-process source file must be listed in that `include` list, and its output in `build.files` in `package.json`, or it won't be compiled or packaged.
 
 - `electron-main.ts` (~3k lines): window management, all `ipcMain` handlers, subtitle/media parsing (ffprobe, mkv fonts, ASS), Anki export (ffmpeg), and persistence. Dev runs use a separate userData dir, `yall-mp-dev`.
-- `mpv-manager.ts` (~290 lines): spawns and talks to the mpv process through `node-mpv` (emits events, `setProperty`, `sendCommand`). `mpv/yall_auto_pause.lua` is loaded into mpv and handles pausing at clip ends.
-- `playback-manager.ts` (~670 lines): the clip-aware playback state machine. It takes an `MpvManager` and the `uiWindow`, handles repeat, auto-pause, speed override and cinema mode, and sends `playback:state-update` to the renderer. Its unit tests mock `MpvManager` and the window.
+- `libmpv-manager.ts`: the mpv backend. It drives libmpv in-process through the native addon in `native/yall-libmpv` (wrapped by `libmpv-bridge.ts`) and emits events, `setProperty` and `sendCommand`. `mpv/yall_auto_pause.lua` is loaded into mpv and handles pausing at clip ends. `libmpv-frame-sender.ts` moves the rendered frames to the renderer.
+- `playback-manager.ts` (~670 lines): the clip-aware playback state machine. It takes the mpv manager and the `mainWindow`, handles repeat, auto-pause, speed override and cinema mode, and sends `playback:state-update` to the renderer. Its unit tests mock the manager and the window.
 - `yomitan-manager.ts`: loads the Yomitan extension from `electron-resources/extensions/yomitan` and proxies lookup requests through a hidden window. `scripts/patch-yomitan.js` patches the extension at install time.
 - `preload.js`: the single `window.electronAPI` surface exposed to the renderer. Types are in `src/electron-api.d.ts`. Each IPC call is declared in three places: `ipcMain` in `electron-main.ts`, `preload.js`, and `electron-api.d.ts`.
 
 ### How video is displayed (current state)
 
-mpv runs as a separate child process, started by `MpvManager` via `node-mpv` and controlled over its JSON IPC. It is launched with `--wid=<native handle>` of `videoWindow`, so mpv draws into that window itself. Frames never pass through Electron's renderer.
+There is one opaque, frameless `BrowserWindow` (`mainWindow`) that holds the Angular app. libmpv renders each frame into a GPU texture (Windows) or a readback buffer (fallback), `LibmpvFrameSender` hands it to the renderer as a `VideoFrame`, and `video-surface-renderer.ts` draws it onto a `<canvas>` in the video area. Subtitles, the timeline and dialogs are plain DOM over that canvas. Set `YALL_MP_VIDEO_BACKEND` / `YALL_MP_VIDEO_ADAPTER` to force a backend or adapter.
 
-Three `BrowserWindow`s are involved:
-- `mainWindow`: the visible frame (frameless, black background).
-- `videoWindow`: frameless, unfocusable, click-through (`setIgnoreMouseEvents`), `skipTaskbar`. It is recreated when a project loads. It is the `--wid` target.
-- `uiWindow`: transparent, holds the Angular app, and is re-parented to `videoWindow` so that it stays on top.
+Window behaviour is native: maximize, resize (min 800x600) and Aero Snap come from the OS, and the header is a CSS `-webkit-app-region: drag` area with `no-drag` on its controls (body-appended overlays are covered by a global `no-drag` rule in `styles.scss`). The display is kept awake with `powerSaveBlocker` while mpv is unpaused. The window starts with a splash inlined in `src/index.html`.
 
-`syncWindowGeometry` in `electron-main.ts` keeps the windows aligned with each other on move, resize, minimize and restore. `window:update-draggable-zones` and `mpv:video-visibility-change` also exist because of this layout. The README reports Z-order problems on some Linux window managers and Wayland compositors, and macOS is untested.
-
-mpv's own subtitle rendering can be toggled on or off (`useMpvSubtitles`, `showSubtitles`/`hideSubtitles`). Otherwise subtitles are rendered in the renderer, with ASS via assjs. The subtitles lookup uses a further `BrowserWindow` or `WebContentsView`.
+mpv's own subtitle rendering can be toggled on or off (`useMpvSubtitles`, `showSubtitles`/`hideSubtitles`). Otherwise subtitles are rendered in the renderer, with ASS via assjs. The subtitles lookup uses a further `BrowserWindow` or `WebContentsView`, parented to `mainWindow`. libmpv does not run on Linux yet, and macOS shows the readback picture.
 
 ### Angular renderer (`src/app`)
 

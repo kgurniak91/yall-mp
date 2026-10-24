@@ -2,11 +2,13 @@ import {expect, test} from './support/app';
 import {seedProject} from './support/seed';
 import {waitForPlayer} from './support/playback';
 import {canvasMatchesContainer, capturePage, isRed, pictureRect} from './support/capture';
-import {getWindowStates, rectsClose, withWindows} from './support/windows';
+import {getWindowStates, withWindows} from './support/windows';
 
 const hardAssert = process.platform === 'win32';
+const MIN_WIDTH = 800;
+const MIN_HEIGHT = 600;
 
-test('setBounds resize: ui follows, the canvas re-fits and the paused picture is redrawn', async ({launch}) => {
+test('setBounds resize: the layout follows, the canvas re-fits and the paused picture is redrawn', async ({launch}) => {
   const {app, ui} = await launch({seed: dir => seedProject(dir, {lastPlaybackTime: 1.0})});
   await waitForPlayer(ui);
 
@@ -15,10 +17,7 @@ test('setBounds resize: ui follows, the canvas re-fits and the paused picture is
     mainWindow.setBounds({x: b.x, y: b.y, width: 1000, height: 700});
   });
 
-  await expect.poll(async () => {
-    const {main, ui: uiWin} = await getWindowStates(app);
-    return !!main && !!uiWin && rectsClose(main.bounds, uiWin.bounds, 2) && Math.abs(main.bounds.width - 1000) <= 2;
-  }, {timeout: 10_000}).toBe(true);
+  await expect.poll(async () => Math.abs((await getWindowStates(app)).main!.bounds.width - 1000) <= 2, {timeout: 10_000}).toBe(true);
 
   await expect.poll(() => ui.evaluate(() => window.innerWidth)).toBeGreaterThan(900);
 
@@ -41,14 +40,19 @@ test('setBounds resize: ui follows, the canvas re-fits and the paused picture is
     }
   });
 
-  // Below the 800x600 minimum: recorded, not asserted
+  // Below the 800x600 minimum the window is clamped
   await withWindows(app, ({mainWindow}) => {
     const b = mainWindow.getBounds();
     mainWindow.setBounds({x: b.x, y: b.y, width: 600, height: 400});
   });
-  await new Promise(r => setTimeout(r, 500));
+  await expect.poll(async () => {
+    const small = (await getWindowStates(app)).main!.bounds;
+    return small.width >= MIN_WIDTH && small.height >= MIN_HEIGHT;
+  }, {timeout: 10_000}).toBe(true);
   const small = (await getWindowStates(app)).main!.bounds;
-  test.info().annotations.push({type: 'baseline', description: `setBounds(600x400) result: ${small.width}x${small.height}`});
+  expect(small.width).toBeLessThanOrEqual(MIN_WIDTH + 16);
+  expect(small.height).toBeLessThanOrEqual(MIN_HEIGHT + 16);
+  await expect.poll(async () => (await canvasMatchesContainer(ui)).ok, {timeout: 10_000}).toBe(true);
 });
 
 test('resize stress: no draw errors, no send failures, the slots come back', async ({launch}) => {

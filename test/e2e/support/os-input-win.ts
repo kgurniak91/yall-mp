@@ -19,6 +19,11 @@ public static class YallInput {
     System.Threading.Thread.Sleep(150);
     mouse_event(UP, 0, 0, 0, UIntPtr.Zero);
   }
+  public static void DoubleClick(int x, int y) {
+    SetProcessDpiAwareness(2);
+    SetCursorPos(x, y); System.Threading.Thread.Sleep(80);
+    for (int i = 0; i < 2; i++) { mouse_event(DOWN, 0, 0, 0, UIntPtr.Zero); mouse_event(UP, 0, 0, 0, UIntPtr.Zero); System.Threading.Thread.Sleep(60); }
+  }
   public static void Click(int x, int y) {
     SetProcessDpiAwareness(2);
     SetCursorPos(x, y); System.Threading.Thread.Sleep(80);
@@ -38,4 +43,8 @@ export function dragMouse(from: { x: number; y: number }, to: { x: number; y: nu
 
 export function clickMouse(at: { x: number; y: number }): void {
   run(`[YallInput]::Click(${Math.round(at.x)}, ${Math.round(at.y)})`);
+}
+
+export function doubleClickMouse(at: { x: number; y: number }): void {
+  run(`[YallInput]::DoubleClick(${Math.round(at.x)}, ${Math.round(at.y)})`);
 }

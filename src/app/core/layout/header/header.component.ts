@@ -1,17 +1,14 @@
 import {
-  AfterViewInit,
   ChangeDetectionStrategy,
   Component,
   computed,
-  ElementRef,
   inject,
   OnDestroy,
   OnInit,
-  signal,
-  viewChild
+  signal
 } from '@angular/core';
 import {ConfirmationService, MenuItem} from 'primeng/api';
-import {NavigationEnd, NavigationStart, Router} from '@angular/router';
+import {NavigationEnd, Router} from '@angular/router';
 import {AppStateService} from '../../../state/app/app-state.service';
 import {filter} from 'rxjs';
 import {Project} from '../../../model/project.types';
@@ -37,7 +34,7 @@ import {DEFAULT_CONFIRMATION} from '../../../shared/types/confirmation.types';
   styleUrl: './header.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
+export class HeaderComponent implements OnInit, OnDestroy {
   protected readonly isProjectDetailsView = signal(false);
   protected readonly isMaximized = signal(false);
   protected readonly isFullScreen = signal(false);
@@ -47,29 +44,17 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
   protected readonly mediaFileName = computed(() => this.currentProject()?.mediaFileName || 'Loading media...');
   protected readonly subtitleFileName = computed(() => this.currentProject()?.subtitleFileName || 'Loading subtitles...');
   protected readonly menuItems = computed<MenuItem[]>(() => this.computeMenuItems());
-  protected readonly lastFilename = viewChild<ElementRef<HTMLDivElement>>('lastFilename');
-  protected readonly menuWrapper = viewChild.required<ElementRef<HTMLDivElement>>('menuWrapper');
-  protected readonly dragHandle = viewChild.required<ElementRef<HTMLDivElement>>('dragHandle');
   private readonly router = inject(Router);
   private readonly appStateService = inject(AppStateService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly dialogOrchestrationService = inject(DialogOrchestrationService);
   private readonly headerCurrentProjectActionBridgeService = inject(HeaderCurrentProjectActionBridgeService);
-  private resizeObserver: ResizeObserver | undefined;
-  private resizeDebounceTimer: any;
   private cleanupMaximizedListener: (() => void) | null = null;
   private cleanupFullScreenListener: (() => void) | null = null;
 
   ngOnInit() {
     this.cleanupMaximizedListener = window.electronAPI.onWindowMaximizedStateChanged((isMaximized: boolean) => this.isMaximized.set(isMaximized));
     this.cleanupFullScreenListener = window.electronAPI.onWindowFullScreenStateChanged((isFullScreen: boolean) => this.isFullScreen.set(isFullScreen));
-
-    this.router.events.pipe(
-      filter((event): event is NavigationStart => event instanceof NavigationStart)
-    ).subscribe(() => {
-      // On navigation start, immediately apply a minimal, safe shape to prevent flicker
-      this.updateDraggableShapes(true);
-    });
 
     this.router.events.pipe(
       filter((event): event is NavigationEnd => event instanceof NavigationEnd)
@@ -81,22 +66,10 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
       }
       const isDetailsView = route.snapshot.routeConfig?.path === 'project/:id';
       this.isProjectDetailsView.set(isDetailsView);
-      // After navigation, wait a moment for the DOM to stabilize, then calculate the full shape
-      setTimeout(() => this.updateDraggableShapes(), 100);
     });
-  }
-
-  ngAfterViewInit() {
-    this.resizeObserver = new ResizeObserver(() => {
-      this.updateDraggableShapes();
-    });
-    this.resizeObserver.observe(this.menuWrapper().nativeElement);
-    this.updateDraggableShapes();
   }
 
   ngOnDestroy() {
-    this.resizeObserver?.disconnect();
-    clearTimeout(this.resizeDebounceTimer);
     if (this.cleanupMaximizedListener) {
       this.cleanupMaximizedListener();
     }
@@ -262,44 +235,6 @@ export class HeaderComponent implements OnInit, AfterViewInit, OnDestroy {
     );
 
     return menu;
-  }
-
-  private updateDraggableShapes(isMinimal: boolean = false) {
-    clearTimeout(this.resizeDebounceTimer);
-    this.resizeDebounceTimer = setTimeout(() => {
-      const dragHandleEl = this.dragHandle().nativeElement;
-      const dragHandleRect = dragHandleEl.getBoundingClientRect();
-
-      // Start with the permanent drag handle, which is always present
-      const shapes = [
-        {
-          x: Math.round(dragHandleRect.x),
-          y: Math.round(dragHandleRect.y),
-          width: Math.round(dragHandleRect.width),
-          height: Math.round(dragHandleRect.height),
-        }
-      ];
-
-      const lastFilenameEl = this.lastFilename()?.nativeElement;
-
-      // In "full" mode, if the filename element exists, calculate the empty space and add it as a second draggable shape.
-      if (!isMinimal && lastFilenameEl) {
-        const lastFilenameRect = lastFilenameEl.getBoundingClientRect();
-        const emptySpaceX = lastFilenameRect.right;
-        const emptySpaceWidth = dragHandleRect.left - emptySpaceX;
-
-        if (emptySpaceWidth > 0) {
-          shapes.push({
-            x: Math.round(emptySpaceX),
-            y: Math.round(dragHandleRect.y),
-            width: Math.round(emptySpaceWidth),
-            height: Math.round(dragHandleRect.height),
-          });
-        }
-      }
-
-      window.electronAPI.windowUpdateDraggableZones(shapes);
-    }, 50);
   }
 
 }

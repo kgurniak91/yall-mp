@@ -847,7 +847,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     if (this.clickTimeout) {
       clearTimeout(this.clickTimeout);
       this.clickTimeout = null;
-      window.electronAPI.windowHandleDoubleClick();
+      window.electronAPI.windowToggleFullScreen();
     } else {
       this.clickTimeout = setTimeout(() => {
         this.togglePlayPause();

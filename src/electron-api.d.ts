@@ -27,13 +27,9 @@ export interface IElectronAPI {
   windowToggleMaximize: () => void;
   windowToggleFullScreen: () => void;
   windowEscape: () => void;
-  windowHandleDoubleClick: () => void;
   windowClose: () => void;
-  windowStartManualResize: (direction: string) => void;
-  windowStopManualResize: () => void;
   onWindowMaximizedStateChanged: (callback: (isMaximized: boolean) => void) => (() => void);
   onWindowFullScreenStateChanged: (callback: (isFullScreen: boolean) => void) => (() => void);
-  windowUpdateDraggableZones: (shapes: { x: number, y: number, width: number, height: number }[]) => Promise<void>;
   openInSystemBrowser: (url: string) => Promise<void>;
   // --- Subtitles Lookup
   openSubtitlesLookupWindow: (data: {
@@ -94,7 +90,6 @@ export interface IElectronAPI {
   mpvHideSubtitles: () => Promise<void>;
   onMpvDestroyViewport: () => Promise<void>;
   onMpvEvent: (callback: (status: any) => void) => (() => void);
-  onMainWindowMovedOrResized: (callback: () => void) => (() => void);
   onMpvManagerReady: (callback: () => void) => (() => void);
   onMpvInitialSeekComplete: (callback: () => void) => (() => void);
   /** One subscriber; the page owns every delivered frame and must `close()` it. Returns the unsubscribe function. */

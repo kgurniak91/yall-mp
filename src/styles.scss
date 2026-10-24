@@ -51,6 +51,7 @@ html, body {
   margin: 0;
   padding: 0;
   height: 100%;
+  background: var(--app-bg);
   color: var(--app-text);
   overflow: hidden;
   font-family: var(--app-font-family), sans-serif;
@@ -255,4 +256,20 @@ p-contextmenu .p-contextmenu-item .p-contextmenu-item-content:hover p-badge,
   .text-gray-400, .text-gray-500, .text-gray-600, .text-500, .text-600 {
     color: var(--p-text-color-secondary) !important;
   }
+}
+
+// The header drags the window; popups appended to the body that overlap it must keep receiving clicks
+.p-dialog,
+.p-dialog-mask,
+.p-drawer,
+.p-drawer-mask,
+.p-confirm-dialog-mask,
+.p-overlay-mask,
+.p-menu-overlay,
+.p-contextmenu,
+.p-popover,
+.p-tooltip,
+.p-toast,
+.menu-backdrop {
+  -webkit-app-region: no-drag;
 }

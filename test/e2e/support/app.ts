@@ -27,7 +27,7 @@ export async function getUiPage(app: ElectronApplication, timeoutMs = 30_000): P
   while (Date.now() < deadline) {
     for (const page of app.windows()) {
       const url = page.url();
-      if (!url.includes('/dist/yall-mp/browser/') || url.includes('draggable-host')) {
+      if (!url.includes('/dist/yall-mp/browser/')) {
         continue;
       }
 

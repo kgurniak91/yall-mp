@@ -214,7 +214,7 @@ export async function probeVideoColor(app: ElectronApplication, ui: Page): Promi
     }, {b64: png.toString('base64'), x: cx, y: cy, vw: viewportWidth});
   }
 
-  const content = await app.evaluate(() => (globalThis as any).__yallE2E.getWindows().uiWindow.getContentBounds());
+  const content = await app.evaluate(() => (globalThis as any).__yallE2E.getWindows().mainWindow.getContentBounds());
   return (await captureComposited(app, [{x: content.x + cx, y: content.y + cy}])).colors[0];
 }
 
@@ -258,7 +258,7 @@ export async function whitePixelsInSubtitleBand(app: ElectronApplication, ui: Pa
   }
   const left = box.x + (box.width - width) / 2;
   const top = box.y + (box.height - height) / 2;
-  const content = await app.evaluate(() => (globalThis as any).__yallE2E.getWindows().uiWindow.getContentBounds());
+  const content = await app.evaluate(() => (globalThis as any).__yallE2E.getWindows().mainWindow.getContentBounds());
 
   const probes: { x: number; y: number }[] = [];
   for (let ix = 0; ix < 60; ix++) {
