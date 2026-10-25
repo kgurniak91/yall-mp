@@ -37,19 +37,19 @@ Alternatively, view the [GitHub release list](https://github.com/kgurniak91/yall
 
 **Y'ALL MP is primarily developed and optimized for Windows.**
 
-Because this application relies on complex window management (transparent UI overlays stacked on top of a hardware-accelerated mpv window etc.), performance varies significantly across operating systems and window managers.
+The video is rendered by libmpv into a canvas inside the single application window, so subtitles, the timeline and dialogs stack the same way on every platform. What differs is how the picture reaches the screen: Windows hands GPU textures straight to the window, Linux copies frames from a separate libmpv process, and macOS copies frames too (a GPU path exists but is opt-in until it has been seen working on a real Mac).
 
 | Platform    | Status                   | Notes                                                                                                                                                                   |
 |:------------|:-------------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Windows** | ✅&nbsp;**Stable**        | Fully supported. Recommended experience.                                                                                                                                |
-| **Linux**   | 🧪&nbsp;**Experimental** | **Known Issues:** Window stacking (Z-order) bugs on certain Window Managers (e.g., Lubuntu/LXQt, some Wayland compositors). The video may obscure the UI or vice-versa. |
-| **macOS**   | 🧪&nbsp;**Experimental** | **Untested:** Requires manual terminal commands to run (see installation instructions). Stacking issues may occur.                                                      |
+| **Linux**   | 🧪&nbsp;**Experimental** | Needs libmpv (see below). Tested on Ubuntu 24.04 (GNOME, X11 and Wayland), Lubuntu (LXQt) and Fedora 44 (KDE Wayland), all in virtual machines without a GPU. |
+| **macOS**   | 🧪&nbsp;**Experimental** | **Not tested on a real Mac:** only on a CI virtual machine. Requires manual terminal commands to run (see installation instructions).                                   |
 
 ### 🤝 Call for Contributors
 
 **Y'ALL MP** is developed and tested primarily on Windows.
-As I do not have access to **macOS** hardware, specific layout quirks or pathing issues may occur on Mac.
-**Linux** support is also experimental; testing has been limited to Lubuntu, where some window management issues were observed.
+As I do not have access to **macOS** hardware, the app is only verified on GitHub's virtual Macs, which have no GPU. The GPU video path can be tried with `YALL_MP_VIDEO_BACKEND=iosurface-shared` (reports welcome, the log is `video.log` in the app data folder).
+**Linux** support is also experimental; it was tested in virtual machines only, not on real desktops with a GPU.
 **Contributions to improve cross-platform support are greatly appreciated!**
 
 ---
@@ -91,7 +91,7 @@ Depending on your operating system, you may need to install external dependencie
 
 ### 🐧 Linux
 
-1. **Install mpv:**
+1. **Install libmpv** (the player library that ships with the mpv packages, `libmpv2` on Debian/Ubuntu, `mpv-libs` on Fedora):
     See official instructions: [https://mpv.io/installation/](https://mpv.io/installation/)
 
 > **⚠️ Important:** Default package managers (like `apt` on Ubuntu) often ship outdated versions of mpv (e.g., 0.32.x or 0.37.x) that lack required JSON IPC features or may crash the application.
@@ -140,7 +140,7 @@ sudo chmod +x ./<filename>.AppImage
 
 ### 🍎 macOS
 
-1. **Install mpv:**
+1. **Install mpv** (this provides libmpv, which the app loads at runtime):
    See official instructions: [https://mpv.io/installation/](https://mpv.io/installation/)
 
 ```bash

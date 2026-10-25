@@ -70,3 +70,11 @@ In one change:
 2. Re-vendor the headers from the same mpv commit: `node scripts/vendor-mpv-headers.js <commit>`.
 3. Update the commit in `scripts/generate-licenses.js`.
 4. Create the mirror release for the new archive (see the comment above `LIBMPV`), then run `npm run native:build && npm run test:native`.
+
+## macOS GPU backend (`iosurface-shared`)
+
+`src/render/iosurface_shared.mm`: a CGL 3.2 core context (accelerated pixel format first, Apple's software renderer second), a pool of IOSurface-backed FBOs, mpv's OpenGL render API with `FLIP_Y=0`, `glFinish` before a frame is handed out. `Init` builds and frees a 16x16 target first, so a missing IOSurface path fails the attach (`RENDER_INIT_FAILED`) and the frame sender falls back to readback. A software GL renderer is refused unless `YALL_MP_ALLOW_SOFTWARE_GL=1` (hosted CI Macs have nothing else).
+
+- No Mac is needed for the usual work: CI (`native` job on macOS) runs the `iosurface-shared` suite in `test/native/render.test.ts`, which reads pixels with `addon.readSurfacePixel(handle, x, y)` inside the frame callback (a slot is rendered into again right after its release). Its log shows the GL renderer, the sampled colours and `glErrors`.
+- `YALL_MP_GL_DEBUG=1` prints the backend's GL notes and errors to stderr; the same notes are in `stats().note` and in `video.log`.
+- The app uses readback on macOS by default; `YALL_MP_VIDEO_BACKEND=iosurface-shared` opts in to the GPU backend.

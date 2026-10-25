@@ -174,7 +174,12 @@ function logVideo(message: string): void {
 /** `YALL_MP_VIDEO_BACKEND` (auto, readback, d3d11-shared, iosurface-shared) for diagnostics and CI. */
 function preferredVideoBackend(): PreferredBackend {
   const value = process.env.YALL_MP_VIDEO_BACKEND as PreferredBackend | undefined;
-  return value && VIDEO_BACKENDS.includes(value) ? value : 'auto';
+  if (value && VIDEO_BACKENDS.includes(value)) {
+    return value;
+  }
+  // The macOS GPU backend is verified on a software GL renderer only (CI has no Mac with a GPU): readback stays the
+  // default there until it was seen working on real hardware; `YALL_MP_VIDEO_BACKEND=iosurface-shared` opts in.
+  return process.platform === 'darwin' ? 'readback' : 'auto';
 }
 
 /** `YALL_MP_VIDEO_ADAPTER=warp` forces the software adapter (what the GPU-less CI runner has). */

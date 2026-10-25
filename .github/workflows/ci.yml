@@ -172,11 +172,10 @@ jobs:
       - run: npm run test:native
         if: runner.os != 'macOS'
 
-      # No Mac to look at: this run is the evidence for the iosurface-shared backend. It never stops the job, so the
-      # smoke runs below always happen; the log (GL version/renderer, pixel values, GL errors) is uploaded.
+      # No Mac to look at: the log (GL version/renderer, pixel values, GL errors) is the evidence for the
+      # iosurface-shared backend and is uploaded with the smoke results.
       - name: Native tests (macOS)
         if: runner.os == 'macOS'
-        continue-on-error: true
         env:
           YALL_MP_GL_DEBUG: 1
           # Hosted runners only have Apple's software OpenGL renderer; the backend refuses it by default.
