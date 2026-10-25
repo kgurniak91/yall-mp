@@ -3,7 +3,7 @@
 import {EventEmitter} from 'events';
 import * as fs from 'fs';
 import * as path from 'path';
-import {createHostAddon, hostCandidates} from './libmpv-host';
+import {createHostAddon, FdPassAddon, fdpassCandidates, hostCandidates} from './libmpv-host';
 
 export type LibmpvErrorCode = 'ADDON_NOT_FOUND' | 'LIB_NOT_FOUND' | 'LIB_TOO_OLD' | 'INIT_FAILED';
 
@@ -43,7 +43,8 @@ export interface NativeMpvCore {
   unobserveProperty(id: number): void;
   requestLogMessages(level: string): void;
   destroy(): Promise<void>;
-  attachRenderer(options: AttachRendererOptions, onFrame: (frame: RenderFrame) => void): AttachResult;
+  /** The in-process addon answers at once, the Linux host with the host's own answer. */
+  attachRenderer(options: AttachRendererOptions, onFrame: (frame: RenderFrame) => void): AttachResult | Promise<AttachResult>;
   resize(width: number, height: number): void;
   releaseSlot(attachId: number, slotId: number, serial: number): void;
   detachRenderer(): void;
@@ -52,7 +53,7 @@ export interface NativeMpvCore {
 
 // ---- render API ----
 
-export type RenderBackendName = 'd3d11-shared' | 'iosurface-shared' | 'readback';
+export type RenderBackendName = 'd3d11-shared' | 'iosurface-shared' | 'dmabuf-shared' | 'readback';
 
 /** The backends that hand out GPU surfaces (`RenderFrame.handle`) instead of pixels. */
 export type SharedBackendName = Exclude<RenderBackendName, 'readback'>;
@@ -94,7 +95,7 @@ export interface AttachResult {
 
 /**
  * One rendered frame. Shared backends carry `handle` (8-byte value: an NT handle for d3d11-shared, an IOSurfaceRef for
- * iosurface-shared), readback ones `pixels` (BGRA).
+ * iosurface-shared) or `dmabuf` (dmabuf-shared), readback ones `pixels` (BGRA).
  */
 export interface RenderFrame {
   attachId: number;
@@ -104,7 +105,21 @@ export interface RenderFrame {
   width: number;
   height: number;
   handle?: Buffer;
+  /** The slot's dma-buf plane. The descriptor stays owned by the host client: import it (Electron dups it), do not close it. */
+  dmabuf?: DmabufPlane;
+  /** GL shared backends, first frames only: BGRA of five points the host read from the rendered buffer (20 numbers). */
+  probe?: number[];
   pixels?: Buffer;
+}
+
+/** One dma-buf plane of a shared slot. */
+export interface DmabufPlane {
+  fd: number;
+  stride: number;
+  offset: number;
+  size: number;
+  /** DRM format modifier as a decimal string (what Electron's `nativePixmap.modifier` expects). */
+  modifier: string;
 }
 
 export interface Percentiles {
@@ -142,9 +157,9 @@ export interface RenderStats {
   threadWallMs: number;
   /** Detached attaches that are still draining their in-flight slots. */
   draining: number;
-  /** iosurface-shared: glGetError() results other than GL_NO_ERROR. */
+  /** GL backends: glGetError() results other than GL_NO_ERROR. */
   glErrors?: number;
-  /** iosurface-shared: GL version/renderer and the first GL errors, for logs. */
+  /** GL backends: GL version/renderer and the first GL errors, for logs. */
   note?: string;
 }
 
@@ -213,6 +228,8 @@ export interface LoadAddonOptions {
   /** Linux talks to the `yall-mpv-host` executable instead of loading an addon. Default: `process.platform`. */
   platform?: NodeJS.Platform;
   hostPath?: string;
+  /** The yall_fdpass addon of the dma-buf backend: a path, or false to run without it. */
+  fdpassPath?: string | false;
   /** Where a packaged app keeps the host. Default: `process.resourcesPath`. */
   resourcesPath?: string;
 }
@@ -266,7 +283,31 @@ const loadHostAddon = (options: LoadAddonOptions): NativeAddon => {
       `The libmpv host (yall-mpv-host) could not be found. Run "npm run native:build". Tried:
 ${formatTried(tried)}`, tried);
   }
-  return createHostAddon({hostPath: found});
+  return createHostAddon({hostPath: found, fdpass: options.fdpassPath === false ? null : loadFdPass(options)});
+};
+
+/**
+ * The descriptor receiver is optional: when it is missing or does not load, only the dma-buf backend is lost.
+ * It links neither libmpv nor ffmpeg, so unlike libmpv it can live in this process.
+ */
+const loadFdPass = (options: LoadAddonOptions): FdPassAddon | null => {
+  const candidates = fdpassCandidates({appRoot: options.appRoot ?? __dirname});
+  if (options.fdpassPath) {
+    candidates.unshift(options.fdpassPath);
+  }
+  for (const candidate of candidates.map(toUnpackedPath)) {
+    if (!fs.existsSync(candidate)) {
+      continue;
+    }
+    try {
+      const module = {exports: {} as unknown};
+      process.dlopen(module as NodeJS.Module, candidate);
+      return module.exports as FdPassAddon;
+    } catch {
+      // try the next candidate
+    }
+  }
+  return null;
 };
 
 // ---- libmpv discovery ----
@@ -387,7 +428,10 @@ export class Libmpv extends EventEmitter {
     return this.platform === 'win32' && compareApiVersion(this.apiVersion, D3D11_API_VERSION) >= 0;
   }
 
-  /** The GPU-surface backend of this platform, or null where only readback exists (Linux). */
+  /**
+   * The GPU-surface backend that `auto` picks, or null where readback is the default. Linux has `dmabuf-shared`, but
+   * only on request (`preferred: 'dmabuf-shared'`) until a working real GPU has been reported.
+   */
   sharedBackendName(): SharedBackendName | null {
     if (this.supportsD3D11()) {
       return 'd3d11-shared';
@@ -422,10 +466,10 @@ export class Libmpv extends EventEmitter {
 
   /**
    * Starts rendering into frames delivered to `onFrame` (on the main thread). Attaching again detaches the
-   * previous attach first. Throws an Error with a `code` (LIB_TOO_OLD, RENDER_INIT_FAILED, ...).
+   * previous attach first. Rejects with an Error with a `code` (LIB_TOO_OLD, RENDER_INIT_FAILED, ...).
    */
-  attachRenderer(options: AttachRendererOptions, onFrame: (frame: RenderFrame) => void): AttachResult {
-    const result = this.core.attachRenderer(options, onFrame);
+  async attachRenderer(options: AttachRendererOptions, onFrame: (frame: RenderFrame) => void): Promise<AttachResult> {
+    const result = await this.core.attachRenderer(options, onFrame);
     if (result.impl === 'd3d11' && result.adapter.software) {
       // WARP rasterises mpv's default scalers on the CPU at ~55 ms per 960x540 frame (17 fps). The built-in
       // "fast" profile (bilinear scalers, no dithering) brings it to full frame rate.

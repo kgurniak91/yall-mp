@@ -94,6 +94,10 @@ export interface IElectronAPI {
   onMpvInitialSeekComplete: (callback: () => void) => (() => void);
   /** One subscriber; the page owns every delivered frame and must `close()` it. Returns the unsubscribe function. */
   onVideoFrame: (callback: (frame: VideoFrame) => void) => (() => void);
+  /** Main asks for the next `frames` drawn frames to be checked for a black picture (see `videoProbeReport`). */
+  onVideoProbeStart: (callback: (frames: number) => void) => (() => void);
+  /** Whether all probe points of one drawn frame were black. */
+  videoProbeReport: (black: boolean) => void;
   /** Frames the preload could not build or import. */
   getDroppedVideoFrames: () => number;
   /** Canvas backing size in device pixels; the renderer in main resizes the frames to it. */

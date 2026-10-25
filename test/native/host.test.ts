@@ -1,6 +1,6 @@
 import {execFileSync} from 'child_process';
 import {afterEach, describe, expect, it} from 'vitest';
-import {Libmpv, LibmpvEvent} from '../../libmpv-bridge';
+import {Libmpv, LibmpvEvent, RenderFrame} from '../../libmpv-bridge';
 import {createPlayer, describeNative, EventLog, SAMPLE_MP4, sleep, waitFor} from './support/native';
 
 // The out-of-process libmpv host exists on Linux only.
@@ -72,7 +72,7 @@ if (process.platform === 'linux') {
       const player = await createPlayer(env, {vo: 'libmpv', pause: 'no', hwdec: 'no', 'loop-file': 'inf'});
       players.push(player);
       let received = 0;
-      player.attachRenderer({backend: 'readback', width: 320, height: 180}, (frame) => {
+      await player.attachRenderer({backend: 'readback', width: 320, height: 180}, (frame) => {
         received++;
         expect(frame.pixels!.length).toBe(frame.width * frame.height * 4);
       });
@@ -82,6 +82,60 @@ if (process.platform === 'linux') {
       const mark = received;
       await sleep(500);
       expect(received).toBeGreaterThan(mark);
+    });
+
+    // Needs a DRM node whose GBM/EGL can allocate buffers. Machines without one (CI, WSL without /dev/dri access)
+    // must get a truthful error that names the reason, which is what the frame sender falls back on.
+    it('attaches dmabuf-shared and delivers dma-bufs per slot, or refuses with a reason', async () => {
+      const player = await createPlayer(env, {vo: 'libmpv', pause: 'no', hwdec: 'no', 'loop-file': 'inf'});
+      players.push(player);
+      const frames: RenderFrame[] = [];
+      let attach;
+      try {
+        attach = await player.attachRenderer({backend: 'dmabuf-shared', width: 320, height: 180}, (frame) => {
+          frames.push(frame);
+          player.releaseSlot(frame.attachId, frame.slotId, frame.serial);
+        });
+      } catch (error) {
+        const {code, message} = error as { code: string; message: string };
+        console.log(`dmabuf-shared refused: ${code}: ${message}`);
+        expect(['RENDER_INIT_FAILED', 'BACKEND_UNSUPPORTED']).toContain(code);
+        expect(message.length).toBeGreaterThan(10);
+        expect(env.addon.liveCounts().slots).toBe(0);
+        // A refused attach leaves the core usable: readback still works on it.
+        let pixels = 0;
+        await player.attachRenderer({backend: 'readback', width: 160, height: 90}, () => pixels++);
+        await player.command(['loadfile', SAMPLE_MP4, 'replace']);
+        await waitFor(() => pixels > 0, 15000, 'a readback frame after the refusal');
+        return;
+      }
+      expect(attach).toMatchObject({backend: 'dmabuf-shared', impl: 'gl', gpuWaitImpl: 'finish'});
+      expect(attach.adapter.name.length).toBeGreaterThan(0);
+      await player.command(['loadfile', SAMPLE_MP4, 'replace']);
+      await waitFor(() => frames.length >= 10, 15000, '10 shared frames');
+      for (const frame of frames) {
+        expect(frame.pixels).toBeUndefined();
+        expect(frame.dmabuf!.fd).toBeGreaterThanOrEqual(0);
+        expect(frame.dmabuf!.stride).toBeGreaterThanOrEqual(frame.width * 4);
+        expect(frame.dmabuf!.size).toBeGreaterThanOrEqual(frame.dmabuf!.stride * frame.height);
+        expect(frame.dmabuf!.modifier).toMatch(/^[0-9]+$/);
+      }
+      // The first frames carry five BGRA probe samples (20 bytes); the sample video has a picture in them.
+      expect(frames[0].probe).toHaveLength(20);
+      expect(frames[0].probe!.every(v => v >= 0 && v <= 255)).toBe(true);
+      expect(frames.slice(0, 10).some(f => f.probe?.some((v, i) => i % 4 !== 3 && v > 0))).toBe(true);
+      const first = frames[0];
+      expect(new Set(frames.map(f => f.slotId)).size).toBeLessThanOrEqual(4);
+
+      // A resize replaces the buffers: new generation, new size, and the stats stay clean.
+      player.resize(400, 225);
+      await waitFor(() => frames.some(f => f.generation > first.generation && f.width === 400), 15000, 'a frame at the new size');
+      await waitFor(() => player.stats()?.rendered !== undefined && player.stats()!.rendered > 10, 5000, 'stats');
+      const stats = player.stats()!;
+      expect(stats.backend).toBe('dmabuf-shared');
+      expect(stats.glErrors ?? 0).toBe(0);
+      expect(stats.note).toContain('/dev/dri/');
+      expect(env.addon.liveCounts().slots).toBe(0); // slots live in the host process, not in this one
     });
   });
 } else {

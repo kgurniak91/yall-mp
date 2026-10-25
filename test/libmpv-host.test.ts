@@ -4,12 +4,15 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {
   createHostAddon,
   encodeMessage,
+  FdPassAddon,
+  FdTable,
+  fdpassCandidates,
   HostMessage,
   hostCandidates,
   MessageParser,
   MessageType
 } from '../libmpv-host';
-import type {LibmpvEvent, NativeMpvCore, RenderFrame} from '../libmpv-bridge';
+import type {AttachRendererOptions, AttachResult, LibmpvEvent, NativeMpvCore, RenderFrame} from '../libmpv-bridge';
 
 const collect = (chunks: Buffer[]): HostMessage[] => {
   const out: HostMessage[] = [];
@@ -73,6 +76,78 @@ describe('hostCandidates', () => {
     expect(list[2]).toMatch(/res[\\/]yall-mpv-host$/);
     expect(list[3]).toMatch(/build[\\/]Release[\\/]yall-mpv-host$/);
     expect(list[4]).toMatch(/linux-x64[\\/]yall-mpv-host$/);
+  });
+});
+
+describe('fdpassCandidates', () => {
+  it('prefers the environment, then the build output and the prebuilt addon', () => {
+    const list = fdpassCandidates({env: {YALL_FDPASS_ADDON: '/env/fdpass.node'}, appRoot: '/app', arch: 'arm64'});
+    expect(list[0]).toBe('/env/fdpass.node');
+    expect(list[1]).toMatch(/build[\\/]Release[\\/]yall_fdpass\.node$/);
+    expect(list[2]).toMatch(/linux-arm64[\\/]yall_fdpass\.node$/);
+  });
+});
+
+describe('FdTable', () => {
+  const entry = (fd: number) => ({fd, stride: 256, offset: 0, size: 1024, modifier: '0'});
+  let closed: number[];
+  let table: FdTable;
+
+  beforeEach(() => {
+    closed = [];
+    table = new FdTable(fd => closed.push(fd));
+  });
+
+  it('answers a wait at once when the descriptor is there', async () => {
+    table.add(1, 0, entry(10));
+    await expect(table.wait(1, 0, 1000)).resolves.toEqual(entry(10));
+  });
+
+  it('resolves a wait that was registered before the descriptor arrived', async () => {
+    const waiting = table.wait(1, 3, 1000);
+    table.add(1, 3, entry(11));
+    await expect(waiting).resolves.toEqual(entry(11));
+  });
+
+  it('resolves null after the timeout', async () => {
+    vi.useFakeTimers();
+    try {
+      const waiting = table.wait(2, 2, 250);
+      await vi.advanceTimersByTimeAsync(251);
+      await expect(waiting).resolves.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('keeps slots of different attaches apart', () => {
+    table.add(1, 0, entry(10));
+    table.add(2, 0, entry(20));
+    expect(table.get(1, 0)?.fd).toBe(10);
+    expect(table.get(2, 0)?.fd).toBe(20);
+  });
+
+  it('closes the descriptor it replaces and the one of a removed slot', () => {
+    table.add(1, 0, entry(10));
+    table.add(1, 0, entry(11));
+    expect(closed).toEqual([10]);
+    table.remove(1, 0);
+    table.remove(1, 0);
+    expect(closed).toEqual([10, 11]);
+    expect(table.size).toBe(0);
+  });
+
+  it('closes everything, releases the waiters and closes descriptors that come later', async () => {
+    table.add(1, 0, entry(10));
+    table.add(1, 1, entry(11));
+    const waiting = table.wait(1, 2, 60000);
+    table.closeAll();
+    expect(closed.sort()).toEqual([10, 11]);
+    await expect(waiting).resolves.toBeNull();
+    table.add(1, 3, entry(12));
+    expect(closed).toContain(12);
+    expect(table.size).toBe(0);
+    await expect(table.wait(1, 3, 1000)).resolves.toBeNull();
   });
 });
 
@@ -241,18 +316,30 @@ describe('host client', () => {
 
   describe('rendering', () => {
     const attach = (onFrame: (f: RenderFrame) => void) =>
-      core.attachRenderer({backend: 'readback', width: 640, height: 360}, onFrame);
+      core.attachRenderer({backend: 'readback', width: 640, height: 360}, onFrame) as Promise<AttachResult>;
 
-    it('answers an attach at once, confirms it with the host and delivers frames with an ack', async () => {
+    /** Starts an attach and answers it like the host does. */
+    const attachAnswered = async (onFrame: (f: RenderFrame) => void, value: unknown = {attachId: 1}): Promise<AttachResult> => {
+      const pending = attach(onFrame);
+      await tick();
+      child.socket.send(MessageType.reply, {id: lastSent(MessageType.attach).json.id, value});
+      return pending;
+    };
+
+    it('resolves with the answer of the host and delivers frames with an ack', async () => {
       await createCore();
       const frames: RenderFrame[] = [];
-      const result = attach(f => frames.push(f));
-      expect(result).toMatchObject({attachId: 1, backend: 'readback', impl: 'sw', gpuWaitImpl: 'none'});
-      expect(result.adapter.software).toBe(true);
+      const pending = attach(f => frames.push(f));
       await tick();
       const sent = lastSent(MessageType.attach).json;
       expect(sent).toMatchObject({attachId: 1, backend: 'readback', width: 640, height: 360});
-      child.socket.send(MessageType.reply, {id: sent.id, value: {attachId: 1}});
+      child.socket.send(MessageType.reply, {
+        id: sent.id,
+        value: {attachId: 1, backend: 'readback', impl: 'sw', gpuWaitImpl: 'none', adapter: {name: 'host adapter', software: true}}
+      });
+      const result = await pending;
+      expect(result).toMatchObject({attachId: 1, backend: 'readback', impl: 'sw', gpuWaitImpl: 'none'});
+      expect(result.adapter).toMatchObject({name: 'host adapter', software: true});
 
       child.socket.send(MessageType.frame, {attachId: 1, slotId: -1, serial: 3, generation: 2, width: 2, height: 1},
         Buffer.from([9, 8, 7, 6, 5, 4, 3, 2]));
@@ -263,37 +350,63 @@ describe('host client', () => {
       expect(lastSent(MessageType.frameAck).json).toEqual({count: 1});
     });
 
+    it('describes the attach as readback with the software renderer when the host says nothing more', async () => {
+      await createCore();
+      const result = await attachAnswered(() => undefined);
+      expect(result).toMatchObject({attachId: 1, backend: 'readback', impl: 'sw', gpuWaitImpl: 'none'});
+      expect(result.adapter.software).toBe(true);
+    });
+
+    it('delivers a frame that overtook the answer only after the attach resolved', async () => {
+      await createCore();
+      const order: string[] = [];
+      const pending = attach(() => order.push('frame'));
+      await tick();
+      const id = lastSent(MessageType.attach).json.id;
+      child.socket.send(MessageType.frame, {attachId: 1, slotId: -1, serial: 1, width: 1, height: 1}, Buffer.alloc(4));
+      child.socket.send(MessageType.reply, {id, value: {attachId: 1}});
+      void pending.then(() => order.push('attached'));
+      await tick();
+      await tick();
+      expect(order).toEqual(['attached', 'frame']);
+      expect(child.socket.fromClient.filter(m => m.type === MessageType.frameAck)).toHaveLength(1);
+    });
+
     it('acknowledges a frame even when the handler throws', async () => {
       await createCore();
-      attach(() => {
+      await attachAnswered(() => {
         throw new Error('handler failed');
       });
-      await tick();
       expect(() => child.socket.send(MessageType.frame, {attachId: 1, width: 1, height: 1}, Buffer.alloc(4))).not.toThrow();
       await tick();
       expect(child.socket.fromClient.some(m => m.type === MessageType.frameAck)).toBe(true);
     });
 
-    it('reports a failed attach as a log message', async () => {
+    it('rejects with the code of the host when the attach fails and acknowledges the frames it held', async () => {
       await createCore();
-      attach(() => undefined);
+      const frames: RenderFrame[] = [];
+      const pending = attach(f => frames.push(f));
       await tick();
-      child.socket.send(MessageType.reply, {id: lastSent(MessageType.attach).json.id, error: {code: 'RENDER_INIT_FAILED', message: 'no context'}});
+      const id = lastSent(MessageType.attach).json.id;
+      child.socket.send(MessageType.frame, {attachId: 1, slotId: -1, serial: 1, width: 1, height: 1}, Buffer.alloc(4));
+      child.socket.send(MessageType.reply, {id, error: {code: 'RENDER_INIT_FAILED', message: 'no context'}});
+      await expect(pending).rejects.toMatchObject({code: 'RENDER_INIT_FAILED', message: 'no context'});
       await tick();
-      expect(events.find(e => e.event === 'log-message')).toMatchObject({level: 'error', text: expect.stringContaining('no context')});
+      expect(frames).toHaveLength(0);
+      expect(child.socket.fromClient.filter(m => m.type === MessageType.frameAck)).toHaveLength(1);
     });
 
     it('refuses backends the host does not have', async () => {
       await createCore();
-      expect(() => core.attachRenderer({backend: 'd3d11-shared', width: 1, height: 1}, () => undefined))
-        .toThrowError(expect.objectContaining({code: 'BACKEND_UNSUPPORTED'}));
-      expect(() => core.attachRenderer({backend: 'readback', impl: 'd3d11', width: 1, height: 1}, () => undefined))
-        .toThrowError(expect.objectContaining({code: 'BACKEND_UNSUPPORTED'}));
+      await expect(core.attachRenderer({backend: 'd3d11-shared', width: 1, height: 1}, () => undefined))
+        .rejects.toMatchObject({code: 'BACKEND_UNSUPPORTED'});
+      await expect(core.attachRenderer({backend: 'readback', impl: 'd3d11', width: 1, height: 1}, () => undefined))
+        .rejects.toMatchObject({code: 'BACKEND_UNSUPPORTED'});
     });
 
     it('forwards resize, release and detach, and keeps the last stats snapshot', async () => {
       await createCore();
-      attach(() => undefined);
+      await attachAnswered(() => undefined);
       core.resize(320, 180);
       core.releaseSlot(1, 2, 3);
       expect(core.stats()).toBeNull();
@@ -307,6 +420,206 @@ describe('host client', () => {
       expect(core.stats()).toBeNull();
       await tick();
       expect(child.socket.fromClient.some(m => m.type === MessageType.detach)).toBe(true);
+    });
+  });
+
+  describe('descriptor channel', () => {
+    interface FdCore {
+      slotFds: FdTable;
+      canPassFds: boolean;
+    }
+
+    const fdpass = () => {
+      let receiver: ((fd: number, meta: string) => void) | undefined;
+      const addon = {
+        createFdChannel: vi.fn(() => ({parentFd: 40, childFd: 41})),
+        startReceiver: vi.fn((_socket: number, onMessage: (fd: number, meta: string) => void) => {
+          receiver = onMessage;
+          return 9;
+        }),
+        stopReceiver: vi.fn(),
+        closeFd: vi.fn(),
+        sendFd: vi.fn(),
+        readFd: vi.fn(() => Buffer.alloc(0))
+      };
+      return {addon: addon as FdPassAddon & typeof addon, deliver: (fd: number, meta: string) => receiver?.(fd, meta)};
+    };
+
+    const withChannel = async (addon: FdPassAddon): Promise<{ spawn: ReturnType<typeof vi.fn> }> => {
+      const spawn = vi.fn(() => child);
+      const host = createHostAddon({hostPath: '/host', spawn: spawn as never, spawnSync: spawnSync as never, fdpass: addon});
+      spawnSync.mockReturnValue({status: 0, stdout: JSON.stringify({path: 'libmpv.so.2', apiVersion: [2, 5]}), stderr: ''});
+      host.loadLibrary('libmpv.so.2');
+      core = new host.MpvCore();
+      const init = core.initialize();
+      await tick();
+      child.socket.send(MessageType.reply, {id: lastSent(MessageType.create).json.id, value: {}});
+      await init;
+      return {spawn};
+    };
+
+    it('hands the child end of a channel to the host as stdio 4 and keeps the parent end', async () => {
+      const {addon} = fdpass();
+      const {spawn} = await withChannel(addon);
+      expect(spawn.mock.calls[0][2]).toMatchObject({stdio: ['ignore', 'ignore', 'pipe', 'pipe', 41]});
+      expect(addon.closeFd).toHaveBeenCalledWith(41);
+      expect(addon.closeFd).not.toHaveBeenCalledWith(40);
+      expect(addon.startReceiver).toHaveBeenCalledWith(40, expect.any(Function));
+      expect((core as unknown as FdCore).canPassFds).toBe(true);
+    });
+
+    it('starts the host without a channel when there is no addon', async () => {
+      await createCore();
+      expect((core as unknown as FdCore).canPassFds).toBe(false);
+    });
+
+    it('keeps received descriptors by attach and slot until the host closes the slot', async () => {
+      const {addon, deliver} = fdpass();
+      await withChannel(addon);
+      const table = (core as unknown as FdCore).slotFds;
+      deliver(77, JSON.stringify({attachId: 1, slotId: 2, stride: 2560, offset: 0, size: 921600, modifier: 0}));
+      expect(table.get(1, 2)).toEqual({fd: 77, stride: 2560, offset: 0, size: 921600, modifier: '0'});
+      expect(table.size).toBe(1);
+      child.socket.send(MessageType.slotClosed, {attachId: 1, slotId: 2});
+      await tick();
+      expect(table.size).toBe(0);
+      expect(addon.closeFd).toHaveBeenCalledWith(77);
+    });
+
+    it('closes a descriptor that arrives with unusable text', async () => {
+      const {addon, deliver} = fdpass();
+      await withChannel(addon);
+      deliver(78, 'not json');
+      deliver(79, JSON.stringify({attachId: 1}));
+      deliver(-1, JSON.stringify({attachId: 1, slotId: 1}));
+      expect(addon.closeFd).toHaveBeenCalledWith(78);
+      expect(addon.closeFd).toHaveBeenCalledWith(79);
+      expect((core as unknown as FdCore).slotFds.size).toBe(0);
+    });
+
+    it('closes every descriptor, stops the receiver and closes the channel on destroy, and refuses late ones', async () => {
+      const {addon, deliver} = fdpass();
+      await withChannel(addon);
+      deliver(80, JSON.stringify({attachId: 1, slotId: 0}));
+      deliver(81, JSON.stringify({attachId: 1, slotId: 1}));
+      const done = core.destroy();
+      await tick();
+      child.exit(0);
+      await done;
+      expect(addon.closeFd).toHaveBeenCalledWith(80);
+      expect(addon.closeFd).toHaveBeenCalledWith(81);
+      expect(addon.stopReceiver).toHaveBeenCalledWith(9);
+      expect(addon.closeFd).toHaveBeenCalledWith(40);
+      deliver(82, JSON.stringify({attachId: 1, slotId: 2}));
+      expect(addon.closeFd).toHaveBeenCalledWith(82);
+    });
+
+    it('releases the descriptors when the host dies', async () => {
+      const {addon, deliver} = fdpass();
+      await withChannel(addon);
+      deliver(83, JSON.stringify({attachId: 1, slotId: 0}));
+      child.exit(null, 'SIGSEGV');
+      expect(addon.closeFd).toHaveBeenCalledWith(83);
+      expect(addon.stopReceiver).toHaveBeenCalledWith(9);
+    });
+
+    describe('dmabuf-shared rendering', () => {
+      const attachDmabuf = async (onFrame: (f: RenderFrame) => void, options: Partial<AttachRendererOptions> = {}) => {
+        const pending = core.attachRenderer({backend: 'dmabuf-shared', width: 640, height: 360, ...options}, onFrame) as Promise<AttachResult>;
+        await tick();
+        child.socket.send(MessageType.reply, {
+          id: lastSent(MessageType.attach).json.id,
+          value: {attachId: 1, backend: 'dmabuf-shared', impl: 'gl', gpuWaitImpl: 'finish', adapter: {name: 'SVGA3D', software: false}}
+        });
+        return pending;
+      };
+      const descriptor = (slotId: number, generation: number) =>
+        JSON.stringify({attachId: 1, slotId, generation, stride: 2560, offset: 0, size: 921600, modifier: '0'});
+      const sharedFrame = (slotId: number, generation: number, serial = 1) =>
+        ({attachId: 1, slotId, serial, generation, width: 640, height: 360, shared: true});
+
+      it('is unsupported without a descriptor channel', async () => {
+        await createCore();
+        await expect(core.attachRenderer({backend: 'dmabuf-shared', width: 1, height: 1}, () => undefined))
+          .rejects.toMatchObject({code: 'BACKEND_UNSUPPORTED', message: expect.stringContaining('descriptor channel')});
+        expect(child.socket.fromClient.some(m => m.type === MessageType.attach)).toBe(false);
+      });
+
+      it('sends the GPU as plain ids, resolves with the host answer and surfaces its failure truthfully', async () => {
+        const {addon} = fdpass();
+        await withChannel(addon);
+        const result = await attachDmabuf(() => undefined, {adapter: {vendorId: 0x10de, deviceId: 0x1e04}});
+        expect(result).toMatchObject({backend: 'dmabuf-shared', impl: 'gl', gpuWaitImpl: 'finish'});
+        const sent = lastSent(MessageType.attach).json;
+        expect(sent).toMatchObject({backend: 'dmabuf-shared', vendorId: 0x10de, deviceId: 0x1e04, attachId: 1});
+        expect(sent).not.toHaveProperty('adapter');
+
+        const failing = core.attachRenderer({backend: 'dmabuf-shared', width: 640, height: 360}, () => undefined) as Promise<AttachResult>;
+        await tick();
+        child.socket.send(MessageType.reply, {
+          id: lastSent(MessageType.attach).json.id, error: {code: 'RENDER_INIT_FAILED', message: '/dev/dri/renderD128: gbm_bo_create failed'}
+        });
+        await expect(failing).rejects.toMatchObject({code: 'RENDER_INIT_FAILED', message: expect.stringContaining('gbm_bo_create')});
+      });
+
+      it('delivers a shared frame with its dma-buf plane and sends no pixel ack', async () => {
+        const {addon, deliver} = fdpass();
+        await withChannel(addon);
+        const frames: RenderFrame[] = [];
+        await attachDmabuf(f => frames.push(f));
+        deliver(90, descriptor(2, 1));
+        child.socket.send(MessageType.frame, sharedFrame(2, 1, 5));
+        await tick();
+        expect(frames).toHaveLength(1);
+        expect(frames[0]).toMatchObject({attachId: 1, slotId: 2, serial: 5, generation: 1, width: 640, height: 360});
+        expect(frames[0].dmabuf).toEqual({fd: 90, stride: 2560, offset: 0, size: 921600, modifier: '0'});
+        expect(frames[0].pixels).toBeUndefined();
+        expect(child.socket.fromClient.some(m => m.type === MessageType.frameAck)).toBe(false);
+      });
+
+      it('holds a frame that overtook its descriptor and delivers it when the descriptor arrives', async () => {
+        const {addon, deliver} = fdpass();
+        await withChannel(addon);
+        const frames: RenderFrame[] = [];
+        await attachDmabuf(f => frames.push(f));
+        child.socket.send(MessageType.frame, sharedFrame(0, 1));
+        await tick();
+        expect(frames).toHaveLength(0);
+        deliver(91, descriptor(0, 1));
+        await tick();
+        expect(frames).toHaveLength(1);
+        expect(frames[0].dmabuf?.fd).toBe(91);
+      });
+
+      it('does not draw a frame with the buffer from before a resize', async () => {
+        const {addon, deliver} = fdpass();
+        await withChannel(addon);
+        const frames: RenderFrame[] = [];
+        await attachDmabuf(f => frames.push(f));
+        deliver(92, descriptor(0, 1));
+        child.socket.send(MessageType.frame, sharedFrame(0, 2));
+        await tick();
+        expect(frames).toHaveLength(0);
+        deliver(93, descriptor(0, 2));
+        await tick();
+        expect(frames.map(f => f.dmabuf?.fd)).toEqual([93]);
+        expect(addon.closeFd).toHaveBeenCalledWith(92);
+      });
+
+      it('releases the slot and reports it when the descriptor never arrives', async () => {
+        const {addon} = fdpass();
+        await withChannel(addon);
+        events = [];
+        core.onEvent(e => events.push(e));
+        const frames: RenderFrame[] = [];
+        await attachDmabuf(f => frames.push(f));
+        child.socket.send(MessageType.frame, sharedFrame(3, 1, 8));
+        await new Promise(resolve => setTimeout(resolve, 320));
+        expect(frames).toHaveLength(0);
+        expect(lastSent(MessageType.releaseSlot).json).toEqual({attachId: 1, slotId: 3, serial: 8});
+        expect(events.some(e => e.event === 'log-message' && /no descriptor for slot 3/.test(String(e.text)))).toBe(true);
+        expect((core as unknown as { sharedFrameFailures: number }).sharedFrameFailures).toBe(1);
+      });
     });
   });
 

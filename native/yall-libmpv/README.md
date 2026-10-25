@@ -28,6 +28,8 @@ Linux does not build the addon, only `yall-mpv-host` (plain CMake, no Node heade
 - Shared core only: `cmake -S native/yall-libmpv -B /tmp/core -DYALL_BUILD_ADDON=OFF -DYALL_BUILD_HOST=OFF && cmake --build /tmp/core`.
 - Host build: `npm run native:build` (writes `build/Release/yall-mpv-host`).
 
+Render-node permission: the dma-buf backend opens `/dev/dri/renderD*` (or `card*`), so the user must be in the `render`/`video` group. On WSL2 the nodes are root-only after every restart: `wsl -d <distro> -u root -- chmod 666 /dev/dri/*` (without it the dma-buf tests log the reason and pass). Build deps for the backend are only the `EGL/egl.h` and `gbm.h` headers (`libegl-dev libgbm-dev`); without them CMake leaves it out and the host reports `BACKEND_UNSUPPORTED`. `npm run test:native -- test/native/egl.test.ts` prints what a machine offers (`yall-mpv-host --egl-selftest`).
+
 ## Layout
 
 - `yall_core` (static library, no Node dependency, shared by the addon and the Linux host): `mpv_loader`, `node_value`, `live_counts`, `thread_cpu`, `render/*`.
@@ -36,7 +38,7 @@ Linux does not build the addon, only `yall-mpv-host` (plain CMake, no Node heade
 - `src/core.*`, `src/addon.cpp`: `MpvCore`, one per instance. Options, `initialize`, promise-based `command` / `getProperty` / `setProperty` (`mpv_*_async` reply ids, the promise map is only touched on the JS thread), property observation, and one event thread (the only `mpv_wait_event` caller) feeding a single ThreadSafeFunction.
 - `src/core_render.cpp`, `src/render/*`: render core.
   - `render_thread`: one per attach. Waits on the mpv update callback, renders, hands frames to JS.
-  - `d3d11_shared`: 4-slot pool of shared NT-handle textures (Windows). `d3d11_readback`: staging-texture readback. `sw_readback`: mpv SW render API, default readback off Windows. macOS/Linux GPU backends are not implemented yet.
+  - `d3d11_shared`: 4-slot pool of shared NT-handle textures (Windows). `d3d11_readback`: staging-texture readback. `sw_readback`: mpv SW render API, default readback off Windows. `dmabuf_shared` + `egl_context` (Linux host only): EGL on a GBM render node (libEGL/libgbm loaded with `dlopen`, so a host without them still runs readback), pool of up to 4 dma-buf render targets, mpv's OpenGL render API, `glFinish` before hand-off; the first 30 frames carry five probe pixels so the client can tell a black import from a black video. Opt-in via `YALL_MP_VIDEO_BACKEND=dmabuf-shared`. Descriptors travel once per slot over a second `SOCK_SEQPACKET` socket (fd 4, `host/fd_sender.*`) to the libmpv-free `yall_fdpass` addon (`fdpass/`, built by `scripts/build-native.js` with cmake-js, loaded lazily). macOS: `iosurface_shared`.
   - `d3d11_device`: adapter match by vendor/device id and the `GpuWaiter` (fence, then `EnqueueSetEvent`, then query + `Sleep(1)`; never a busy spin).
 - `ring_stats.h`, `thread_cpu.*`: `stats()` percentiles and per-thread CPU time.
 - `src/event_msg.*`: the Node-free conversion of an mpv event into an owned message, used by the addon and the host.

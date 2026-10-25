@@ -4,8 +4,8 @@
 //
 // Differences from the in-process addon that callers can observe:
 //  - `initialize()` and the first round trip are asynchronous (the host has to start);
-//  - `attachRenderer` answers with the result it expects and confirms with the host afterwards; a failure shows
-//    up as a `log-message` event (prefix `yall-host`, level `error`);
+//  - `attachRenderer` returns a promise for the host's own answer, so a backend that cannot work on this machine
+//    rejects with the host's error code (the frame sender falls back to another backend on it);
 //  - `stats()` returns the last snapshot received from the host (refreshed while a renderer is attached).
 import {ChildProcess, spawn, spawnSync} from 'child_process';
 import * as fs from 'fs';
@@ -19,6 +19,7 @@ import type {
   LibmpvPropertyValue,
   NativeAddon,
   NativeMpvCore,
+  DmabufPlane,
   RenderFrame,
   RenderStats
 } from './libmpv-bridge';
@@ -42,7 +43,8 @@ export const MessageType = {
   destroy: 14,
   reply: 101,
   event: 102,
-  frame: 103
+  frame: 103,
+  slotClosed: 104
 } as const;
 
 const HEADER_BYTES = 12;
@@ -150,6 +152,130 @@ export class MessageParser {
   }
 }
 
+// ---- descriptors of shared GPU buffers ----
+
+/** The yall_fdpass addon (native/yall-libmpv/fdpass): receives the descriptors the host sends over its fd 4. */
+export interface FdPassAddon {
+  createFdChannel(): { parentFd: number; childFd: number };
+  /** The callback runs on the main thread and owns the received descriptor (`fd` is -1 for a text-only message). */
+  startReceiver(socketFd: number, onMessage: (fd: number, meta: string) => void): number;
+  stopReceiver(receiverId: number): void;
+  closeFd(fd: number): void;
+  /** Test support. */
+  sendFd(socketFd: number, fd: number, meta: string): void;
+  readFd(fd: number, length?: number): Buffer;
+}
+
+/** One dma-buf plane of a shared slot, as the host reported it. The table owns `fd`. */
+export interface SlotFd extends DmabufPlane {
+  /** The size generation of the buffer (a resize replaces a slot's buffer). Absent in tests that do not care. */
+  generation?: number;
+}
+
+const slotKey = (attachId: number, slotId: number): string => `${attachId}:${slotId}`;
+
+interface FdWaiter {
+  generation?: number;
+  settle: (entry: SlotFd | null) => void;
+}
+
+/** How long a shared frame waits for a descriptor that is still on its way on the second socket. */
+const FD_WAIT_MS = 250;
+
+/**
+ * The descriptors the host sent, by attach and slot. Slots are a fixed pool, so a descriptor arrives once and then
+ * serves every frame of that slot. A frame can overtake its descriptor (two sockets), hence `wait`.
+ */
+export class FdTable {
+  private readonly entries = new Map<string, SlotFd>();
+  private readonly waiters = new Map<string, Set<FdWaiter>>();
+  private closed = false;
+
+  constructor(private readonly closeFd: (fd: number) => void) {
+  }
+
+  get size(): number {
+    return this.entries.size;
+  }
+
+  add(attachId: number, slotId: number, entry: SlotFd): void {
+    if (this.closed) {
+      this.closeFd(entry.fd);
+      return;
+    }
+    const key = slotKey(attachId, slotId);
+    const previous = this.entries.get(key);
+    if (previous) {
+      this.closeFd(previous.fd);
+    }
+    this.entries.set(key, entry);
+    const waiting = this.waiters.get(key);
+    if (waiting) {
+      for (const waiter of [...waiting]) {
+        if (waiter.generation === undefined || waiter.generation === entry.generation) {
+          waiter.settle(entry);
+        }
+      }
+    }
+  }
+
+  get(attachId: number, slotId: number): SlotFd | undefined {
+    return this.entries.get(slotKey(attachId, slotId));
+  }
+
+  /**
+   * Resolves with the slot's descriptor, or null after `timeoutMs` (or when the table is closed). With `generation`
+   * a descriptor of another generation (a buffer from before a resize) does not count.
+   */
+  wait(attachId: number, slotId: number, timeoutMs: number, generation?: number): Promise<SlotFd | null> {
+    const key = slotKey(attachId, slotId);
+    const existing = this.entries.get(key);
+    if (existing && (generation === undefined || existing.generation === generation)) {
+      return Promise.resolve(existing);
+    }
+    if (this.closed) {
+      return Promise.resolve(null);
+    }
+    return new Promise(resolve => {
+      const waiter: FdWaiter = {
+        generation,
+        settle: (entry: SlotFd | null): void => {
+          clearTimeout(timer);
+          this.waiters.get(key)?.delete(waiter);
+          resolve(entry);
+        }
+      };
+      const timer = setTimeout(() => waiter.settle(null), timeoutMs);
+      timer.unref?.();
+      const set = this.waiters.get(key) ?? new Set();
+      set.add(waiter);
+      this.waiters.set(key, set);
+    });
+  }
+
+  remove(attachId: number, slotId: number): void {
+    const key = slotKey(attachId, slotId);
+    const entry = this.entries.get(key);
+    if (entry) {
+      this.entries.delete(key);
+      this.closeFd(entry.fd);
+    }
+  }
+
+  /** Closes every descriptor and refuses later ones (their sender is gone). */
+  closeAll(): void {
+    this.closed = true;
+    for (const entry of this.entries.values()) {
+      this.closeFd(entry.fd);
+    }
+    this.entries.clear();
+    for (const set of this.waiters.values()) {
+      [...set].forEach(waiter => waiter.settle(null));
+    }
+    this.waiters.clear();
+  }
+}
+
 // ---- host discovery ----
 
 export interface HostCandidateOptions {
@@ -173,6 +299,17 @@ export const hostCandidates = (options: HostCandidateOptions): string[] => {
     path.join(addonDir, 'prebuilds', `linux-${arch}`, 'yall-mpv-host')
   ];
   return candidates.filter((c): c is string => !!c);
+};
+
+/** Where the yall_fdpass addon may be (Linux). */
+export const fdpassCandidates = (options: HostCandidateOptions): string[] => {
+  const {env = process.env, appRoot, arch = process.arch} = options;
+  const addonDir = path.join(appRoot, 'native', 'yall-libmpv');
+  return [
+    env['YALL_FDPASS_ADDON'],
+    path.join(addonDir, 'build', 'Release', 'yall_fdpass.node'),
+    path.join(addonDir, 'prebuilds', `linux-${arch}`, 'yall_fdpass.node')
+  ].filter((c): c is string => !!c);
 };
 
 // ---- the client ----
@@ -221,9 +358,36 @@ class HostMpvCore implements NativeMpvCore {
   private statsEpoch = 0;
   private statsTimer: ReturnType<typeof setInterval> | null = null;
 
-  constructor(hostPath: string, private readonly libraryPath: string, spawnHost: typeof spawn) {
+  /** Frames that arrived before the answer to their attach; delivered after it so the caller knows the attach. */
+  private readonly heldFrames = new Map<number, HostMessage[]>();
+  private readonly fdTable: FdTable;
+  /** Shared frames dropped because their descriptor never arrived. */
+  sharedFrameFailures = 0;
+  private fdChannel: { parentFd: number; receiverId: number } | null = null;
+
+  constructor(hostPath: string, private readonly libraryPath: string, spawnHost: typeof spawn,
+              private readonly fdpass: FdPassAddon | null) {
     liveHosts++;
-    this.child = spawnHost(hostPath, [], {stdio: ['ignore', 'ignore', 'pipe', 'pipe']});
+    this.fdTable = new FdTable(fd => this.fdpass?.closeFd(fd));
+    // Descriptors travel on a second socket (the host's fd 4): fd 3 belongs to Node, which would discard them.
+    let channel: { parentFd: number; childFd: number } | null = null;
+    try {
+      channel = fdpass?.createFdChannel() ?? null;
+    } catch {
+      channel = null;
+    }
+    this.child = spawnHost(hostPath, [], {
+      stdio: ['ignore', 'ignore', 'pipe', 'pipe', ...(channel ? [channel.childFd] : [])]
+    });
+    if (channel && fdpass) {
+      fdpass.closeFd(channel.childFd);
+      try {
+        const receiverId = fdpass.startReceiver(channel.parentFd, (fd, meta) => this.handleFd(fd, meta));
+        this.fdChannel = {parentFd: channel.parentFd, receiverId};
+      } catch {
+        fdpass.closeFd(channel.parentFd);
+      }
+    }
     this.socket = this.child.stdio[3] as Socket;
     this.parser = new MessageParser(message => this.handleMessage(message));
 
@@ -294,8 +458,49 @@ class HostMpvCore implements NativeMpvCore {
     }
     this.rejectAll(codedError('DESTROYED', 'destroyed'));
     this.socket.destroy();
+    this.closeFdChannel();
     this.listener = null;
     this.frameHandlers.clear();
+    this.heldFrames.clear();
+  }
+
+  private closeFdChannel(): void {
+    const channel = this.fdChannel;
+    this.fdChannel = null;
+    // Closed first: descriptors still queued in the receiver are then closed by the table when they arrive.
+    this.fdTable.closeAll();
+    if (channel && this.fdpass) {
+      this.fdpass.stopReceiver(channel.receiverId);
+      this.fdpass.closeFd(channel.parentFd);
+    }
+  }
+
+  /** A descriptor from the host: `meta` is {attachId, slotId, stride, offset, size, modifier}. */
+  private handleFd(fd: number, meta: string): void {
+    try {
+      const info = JSON.parse(meta) as Partial<SlotFd> & { attachId?: number; slotId?: number };
+      if (fd < 0 || typeof info.attachId !== 'number' || typeof info.slotId !== 'number') {
+        throw new Error('incomplete descriptor message');
+      }
+      this.fdTable.add(info.attachId, info.slotId, {
+        fd, stride: info.stride ?? 0, offset: info.offset ?? 0, size: info.size ?? 0, modifier: String(info.modifier ?? '0'),
+        generation: info.generation
+      });
+    } catch {
+      if (fd >= 0) {
+        this.fdpass?.closeFd(fd);
+      }
+    }
+  }
+
+  /** The descriptors received so far, by attach and slot. */
+  get slotFds(): FdTable {
+    return this.fdTable;
+  }
+
+  /** True when the host was started with a descriptor channel, which the dma-buf backend needs. */
+  get canPassFds(): boolean {
+    return this.fdChannel !== null;
   }
 
   private handleExit(reason: string): void {
@@ -305,6 +510,7 @@ class HostMpvCore implements NativeMpvCore {
     this.exited = true;
     liveHosts--;
     this.stopStatsTimer();
+    this.closeFdChannel();
     if (this.destroyed) {
       this.rejectAll(codedError('DESTROYED', 'destroyed'));
       return;
@@ -385,9 +591,13 @@ class HostMpvCore implements NativeMpvCore {
 
   // ---- rendering ----
 
-  attachRenderer(options: AttachRendererOptions, onFrame: (frame: RenderFrame) => void): AttachResult {
-    if (options.backend !== 'readback' || options.impl === 'd3d11') {
-      throw codedError('BACKEND_UNSUPPORTED', 'the Linux host only provides the readback backend with the software renderer');
+  async attachRenderer(options: AttachRendererOptions, onFrame: (frame: RenderFrame) => void): Promise<AttachResult> {
+    const dmabuf = options.backend === 'dmabuf-shared';
+    if ((!dmabuf && options.backend !== 'readback') || options.impl === 'd3d11') {
+      throw codedError('BACKEND_UNSUPPORTED', 'the Linux host provides the readback backend (software renderer) and dmabuf-shared');
+    }
+    if (dmabuf && !this.canPassFds) {
+      throw codedError('BACKEND_UNSUPPORTED', 'the descriptor channel to the host is not available (yall_fdpass addon missing)');
     }
     if (this.destroyed) {
       throw codedError('DESTROYED', 'destroyed');
@@ -395,17 +605,41 @@ class HostMpvCore implements NativeMpvCore {
     const attachId = this.nextAttachId++;
     this.statsEpoch++;
     this.frameHandlers.set(attachId, onFrame);
+    this.heldFrames.set(attachId, []);
     // A handful of finished attaches may still deliver frames that were in flight.
     for (const staleId of [...this.frameHandlers.keys()].slice(0, -4)) {
       this.frameHandlers.delete(staleId);
     }
-    this.request(MessageType.attach, {...options, attachId}).catch((error: Error) => {
-      if (!this.destroyed) {
-        this.emit({event: 'log-message', prefix: 'yall-host', level: 'error', text: `attachRenderer failed: ${error.message}`});
-      }
-    });
+    let reply: Partial<AttachResult>;
+    try {
+      // The host picks the DRM node from Chromium's active GPU; it knows no D3D11 style adapter option.
+      const {adapter, ...rest} = options;
+      const gpu = typeof adapter === 'object' ? {vendorId: adapter.vendorId, deviceId: adapter.deviceId} : {};
+      reply = (await this.request(MessageType.attach, {...rest, ...gpu, attachId})) as Partial<AttachResult>;
+    } catch (error) {
+      this.frameHandlers.delete(attachId);
+      this.releaseHeldFrames(attachId, false);
+      throw error;
+    }
     this.startStatsTimer();
-    return {attachId, backend: 'readback', impl: 'sw', gpuWaitImpl: 'none', adapter: {...SOFTWARE_ADAPTER}};
+    // The caller learns the attach from this promise: frames that overtook the answer follow it.
+    setImmediate(() => this.releaseHeldFrames(attachId, true));
+    return {
+      attachId, backend: reply.backend ?? options.backend, impl: reply.impl ?? 'sw', gpuWaitImpl: reply.gpuWaitImpl ?? 'none',
+      adapter: reply.adapter ?? {...SOFTWARE_ADAPTER}
+    };
+  }
+
+  private releaseHeldFrames(attachId: number, deliver: boolean): void {
+    const held = this.heldFrames.get(attachId);
+    this.heldFrames.delete(attachId);
+    for (const message of held ?? []) {
+      if (deliver) {
+        this.deliverFrame(message);
+      } else {
+        this.send(MessageType.frameAck, {count: 1});
+      }
+    }
   }
 
   resize(width: number, height: number): void {
@@ -477,25 +711,79 @@ class HostMpvCore implements NativeMpvCore {
         this.emit(message.json as LibmpvEvent);
         break;
       case MessageType.frame: {
-        const meta = message.json;
-        const handler = this.frameHandlers.get(meta.attachId);
-        try {
-          handler?.({
-            attachId: meta.attachId, slotId: meta.slotId, serial: meta.serial, generation: meta.generation,
-            width: meta.width, height: meta.height, pixels: message.bin
-          });
-        } finally {
-          // The frame is taken over, so the host may send the next one.
-          this.send(MessageType.frameAck, {count: 1});
+        const held = this.heldFrames.get(message.json.attachId);
+        if (held) {
+          held.push(message);
+        } else {
+          this.deliverFrame(message);
         }
         break;
       }
+      case MessageType.slotClosed:
+        this.fdTable.remove(message.json.attachId, message.json.slotId);
+        break;
     }
+  }
+
+  private deliverFrame(message: HostMessage): void {
+    const meta = message.json;
+    if (meta.shared) {
+      this.deliverSharedFrame(meta);
+      return;
+    }
+    const handler = this.frameHandlers.get(meta.attachId);
+    try {
+      handler?.({
+        attachId: meta.attachId, slotId: meta.slotId, serial: meta.serial, generation: meta.generation,
+        width: meta.width, height: meta.height, pixels: message.bin
+      });
+    } catch (error) {
+      // A broken consumer must not take the socket (or, from a timer, the process) down with it.
+      this.emit({event: 'log-message', prefix: 'yall-host', level: 'error', text: `frame handler failed: ${(error as Error).message}`});
+    } finally {
+      // The frame is taken over, so the host may send the next one.
+      this.send(MessageType.frameAck, {count: 1});
+    }
+  }
+
+  /** A frame in a shared buffer: the descriptor arrived (or is about to) on the second socket. No pixel ack: the pool bounds the frames. */
+  private deliverSharedFrame(meta: any): void {
+    const handler = this.frameHandlers.get(meta.attachId);
+    if (!handler) {
+      return;
+    }
+    const deliver = (plane: SlotFd | null): void => {
+      if (!plane) {
+        // Without its descriptor the frame is useless: give the slot back instead of holding it until the timeout.
+        this.sharedFrameFailures++;
+        this.releaseSlot(meta.attachId, meta.slotId, meta.serial);
+        this.emit({event: 'log-message', prefix: 'yall-host', level: 'error',
+          text: `no descriptor for slot ${meta.slotId} (generation ${meta.generation}) within ${FD_WAIT_MS} ms`});
+        return;
+      }
+      try {
+        handler({
+          attachId: meta.attachId, slotId: meta.slotId, serial: meta.serial, generation: meta.generation,
+          width: meta.width, height: meta.height, probe: Array.isArray(meta.probe) ? meta.probe : undefined,
+          dmabuf: {fd: plane.fd, stride: plane.stride, offset: plane.offset, size: plane.size, modifier: plane.modifier}
+        });
+      } catch (error) {
+        this.emit({event: 'log-message', prefix: 'yall-host', level: 'error', text: `frame handler failed: ${(error as Error).message}`});
+      }
+    };
+    const known = this.fdTable.get(meta.attachId, meta.slotId);
+    if (known && known.generation === meta.generation) {
+      deliver(known);
+      return;
+    }
+    void this.fdTable.wait(meta.attachId, meta.slotId, FD_WAIT_MS, meta.generation).then(deliver);
   }
 }
 
 export interface HostAddonOptions {
   hostPath: string;
+  /** The descriptor receiver; without it the host runs without the dma-buf backend. */
+  fdpass?: FdPassAddon | null;
   /** Test seams. */
   spawn?: typeof spawn;
   spawnSync?: typeof spawnSync;
@@ -510,7 +798,7 @@ export const createHostAddon = (options: HostAddonOptions): NativeAddon => {
       if (!loaded) {
         throw new Error('libmpv is not loaded, call loadLibrary() first');
       }
-      super(options.hostPath, loaded.path, options.spawn ?? spawn);
+      super(options.hostPath, loaded.path, options.spawn ?? spawn, options.fdpass ?? null);
     }
   }
 

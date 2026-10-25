@@ -22,7 +22,7 @@ import {AnkiBatchExportRequest, AnkiCard, AnkiFieldMappingSource} from './src/ap
 import {v4 as uuidv4} from 'uuid';
 import {ChildProcess, execFile, spawn} from 'child_process';
 import {ensureLibmpv, LibmpvManager} from './libmpv-manager';
-import {GpuInfoLike, LibmpvFrameSender, PreferredBackend} from './libmpv-frame-sender';
+import {GpuInfoLike, LibmpvFrameSender, PreferredBackend, PROBE_REPORT_CHANNEL} from './libmpv-frame-sender';
 import type {AdapterOption} from './libmpv-bridge';
 import {FontData, ParsedSubtitlesData} from './src/electron-api';
 import {AppData, CoreConfig, Project, SubtitleSelection, SupportedLanguage} from './src/app/model/project.types';
@@ -99,6 +99,8 @@ let initialSeekFrameBaseline = 0;
 let videoSender: LibmpvFrameSender | null = null;
 // Last canvas backing size (CSS px x scale factor) reported by the page.
 let videoCanvasSize: { width: number; height: number } | null = null;
+// Set when Chromium's GPU process died: shared textures are not trusted again until the app restarts.
+let gpuProcessGone = false;
 let gpuInfoPromise: Promise<GpuInfoLike | null> | null = null;
 let isSaving = false;
 let displaySleepBlockerId: number | null = null;
@@ -150,7 +152,7 @@ function finishInitialSeek() {
   hasRequestedInitialSeek = false;
 }
 
-const VIDEO_BACKENDS: PreferredBackend[] = ['auto', 'readback', 'd3d11-shared', 'iosurface-shared'];
+const VIDEO_BACKENDS: PreferredBackend[] = ['auto', 'readback', 'd3d11-shared', 'iosurface-shared', 'dmabuf-shared'];
 const VIDEO_LOG_PATH = path.join(app.getPath('userData'), 'video.log');
 const VIDEO_LOG_MAX_BYTES = 256 * 1024;
 let isVideoLogReset = false;
@@ -171,14 +173,17 @@ function logVideo(message: string): void {
   }
 }
 
-/** `YALL_MP_VIDEO_BACKEND` (auto, readback, d3d11-shared, iosurface-shared) for diagnostics and CI. */
+/** `YALL_MP_VIDEO_BACKEND` (auto, readback, d3d11-shared, iosurface-shared, dmabuf-shared) for diagnostics and CI. */
 function preferredVideoBackend(): PreferredBackend {
+  if (gpuProcessGone) {
+    return 'readback';
+  }
   const value = process.env.YALL_MP_VIDEO_BACKEND as PreferredBackend | undefined;
   if (value && VIDEO_BACKENDS.includes(value)) {
     return value;
   }
   // The macOS GPU backend is verified on a software GL renderer only (CI has no Mac with a GPU): readback stays the
-  // default there until it was seen working on real hardware; `YALL_MP_VIDEO_BACKEND=iosurface-shared` opts in.
+  // default there until it was seen working on real hardware; `YALL_MP_VIDEO_BACKEND=iosurface-shared` opts in; Linux `dmabuf-shared` is opt-in the same way (auto resolves to readback there).
   return process.platform === 'darwin' ? 'readback' : 'auto';
 }
 
@@ -902,13 +907,22 @@ if (!gotTheLock) {
       mpvManager = new LibmpvManager({
         basePath: app.isPackaged ? process.resourcesPath : app.getAppPath(),
         customLibmpvPath: customExecutables.libmpv,
-        attachVideo: libmpv => {
+        attachVideo: async libmpv => {
           const sender = new LibmpvFrameSender({
             libmpv, webContents: pageContents, gpuInfo: gpuInfo ?? undefined, adapter: videoAdapterOverride(),
             log: logVideo
           });
-          const attach = sender.start({...initialSize, preferred: preferredVideoBackend()});
           videoSender = sender;
+          let attach;
+          try {
+            attach = await sender.start({...initialSize, preferred: preferredVideoBackend()});
+          } catch (error) {
+            sender.stop();
+            if (videoSender === sender) {
+              videoSender = null;
+            }
+            throw error;
+          }
           const a = attach.adapter;
           const info = libmpv.info;
           logVideo(`[Main Process] Video: backend=${attach.backend} impl=${attach.impl} gpuWait=${attach.gpuWaitImpl} ` +
@@ -984,6 +998,20 @@ if (!gotTheLock) {
         console.error('[Main Process] Critical error during MPV startup:', error);
         // Re-throw the error so the renderer process's Promise is rejected.
         throw error;
+      }
+    });
+
+    ipcMain.on(PROBE_REPORT_CHANNEL, (event, black: unknown) => {
+      if (typeof black === 'boolean' && event.sender === mainWindow?.webContents) {
+        videoSender?.reportPageProbe(black);
+      }
+    });
+
+    app.on('child-process-gone', (_event, details) => {
+      if (details.type === 'GPU' && details.reason !== 'clean-exit') {
+        gpuProcessGone = true;
+        logVideo(`[Main Process] GPU process gone (${details.reason}, exit code ${details.exitCode})`);
+        videoSender?.gpuProcessGone(details.reason);
       }
     });
 

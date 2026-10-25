@@ -38,7 +38,7 @@ export interface LibmpvManagerOptions {
    * context freed later takes mpv's video output with it) and switches `vo` to `libmpv`. The returned function
    * undoes it and runs first in `stop()`. Without it there is no video output (`vo=null`).
    */
-  attachVideo?: (libmpv: Libmpv) => (() => void) | void;
+  attachVideo?: (libmpv: Libmpv) => (() => void) | void | Promise<(() => void) | void>;
 }
 
 interface LoadedRuntime {
@@ -160,7 +160,7 @@ export class LibmpvManager extends EventEmitter {
       this.resetState();
       const libmpv = await this.createPlayer(options, platform);
       this.libmpv = libmpv;
-      this.detachVideo = this.config.attachVideo?.(libmpv) ?? null;
+      this.detachVideo = (await this.config.attachVideo?.(libmpv)) ?? null;
       libmpv.on('event', (event: LibmpvEvent) => this.handleEvent(event));
       libmpv.requestLogMessages('warn');
       for (const property of OBSERVED_PROPERTIES) {

@@ -68,6 +68,21 @@ describe('VideoSurfaceRenderer', () => {
     expect(renderer.stats.drawn).toBe(1);
   });
 
+  it('reports whether the probe points of the next frames are black, and then stops', () => {
+    if (renderer.stats.backend !== 'webgl2') {
+      pending('needs WebGL2');
+    }
+    const reports: boolean[] = [];
+    renderer.startProbe(2, black => reports.push(black));
+    renderer.present(solidFrame(160, 90, [0, 0, 0]));
+    renderer.renderNow();
+    renderer.present(solidFrame(160, 90, [0, 200, 0]));
+    renderer.renderNow();
+    renderer.present(solidFrame(160, 90, [0, 0, 0]));
+    renderer.renderNow();
+    expect(reports).toEqual([true, false]);
+  });
+
   it('letterboxes a frame of another aspect ratio with opaque black', () => {
     renderer.present(solidFrame(90, 90, [0, 255, 0]));
     renderer.renderNow();

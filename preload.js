@@ -4,6 +4,10 @@ const {contextBridge, ipcRenderer, sharedTexture, webUtils} = require('electron'
 // readback path), so the page has one draw routine. Without a subscriber only the newest frame is kept, because the
 // first paused frame can arrive before the canvas exists.
 const READBACK_CHANNEL = 'libmpv:readback-frame';
+const PROBE_START_CHANNEL = 'libmpv:probe-start';
+const PROBE_REPORT_CHANNEL = 'libmpv:probe';
+let probeSink = null;
+let pendingProbe = null;
 let frameSink = null;
 let heldFrame = null;
 let droppedFrames = 0;
@@ -41,6 +45,14 @@ ipcRenderer.on(READBACK_CHANNEL, (_event, message) => {
     }));
   } catch (error) {
     droppedFrames++;
+  }
+});
+
+ipcRenderer.on(PROBE_START_CHANNEL, (_event, message) => {
+  if (probeSink) {
+    probeSink(message.frames);
+  } else {
+    pendingProbe = message.frames;
   }
 });
 
@@ -150,6 +162,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
       }
     };
   },
+  // Main asks for the next `frames` drawn frames to be checked for black; the page answers through `videoProbeReport`.
+  onVideoProbeStart: (callback) => {
+    probeSink = callback;
+    if (pendingProbe !== null) {
+      const frames = pendingProbe;
+      pendingProbe = null;
+      callback(frames);
+    }
+    return () => {
+      if (probeSink === callback) {
+        probeSink = null;
+      }
+    };
+  },
+  videoProbeReport: (black) => ipcRenderer.send(PROBE_REPORT_CHANNEL, black === true),
   getDroppedVideoFrames: () => droppedFrames,
   videoSurfaceSetSize: (width, height) => ipcRenderer.send('video:set-canvas-size', width, height),
   // --- Storage

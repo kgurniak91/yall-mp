@@ -18,6 +18,10 @@ struct Frame {
   int height = 0;
   uint64_t handle = 0;       // shared backends: NT handle value / IOSurfaceRef
   std::shared_ptr<std::vector<uint8_t>> pixels;  // readback: tightly packed BGRA, alpha = 255
+  // GL shared backends, first frames only: BGRA of five points (centre and the four quarter points) read from the
+  // rendered buffer, so the client can tell a black import from a black video.
+  bool hasProbe = false;
+  uint8_t probe[20] = {};
 };
 
 struct AdapterInfo {

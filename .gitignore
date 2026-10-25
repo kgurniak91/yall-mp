@@ -73,6 +73,7 @@ public/THIRD-PARTY-NOTICES.txt
 
 # Native addon (yall-libmpv)
 /native/yall-libmpv/build/
+/native/yall-libmpv/build-fdpass/
 /native/yall-libmpv/prebuilds/
 /libmpv-bridge.js
 /libmpv-bridge.js.map

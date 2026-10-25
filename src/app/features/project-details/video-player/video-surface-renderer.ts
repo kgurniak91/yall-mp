@@ -81,6 +81,8 @@ export class VideoSurfaceRenderer {
   private disposed = false;
   private contextLost = false;
   private textureHoldsCurrent = false;
+  private probeFrames = 0;
+  private probeReport: ((black: boolean) => void) | null = null;
 
   private readonly onContextLost = (event: Event): void => {
     event.preventDefault();
@@ -145,6 +147,38 @@ export class VideoSurfaceRenderer {
     this.stats.lastFrameWidth = frame.displayWidth;
     this.stats.lastFrameHeight = frame.displayHeight;
     this.draw();
+    this.probeDrawnFrame();
+  }
+
+  /** Reports, for each of the next `frames` newly drawn frames, whether five points of the picture are black. */
+  public startProbe(frames: number, report: (black: boolean) => void): void {
+    this.probeFrames = frames;
+    this.probeReport = report;
+  }
+
+  private probeDrawnFrame(): void {
+    const report = this.probeReport;
+    const frame = this.current;
+    if (!report || this.probeFrames <= 0 || !frame || this.contextLost || !this.gl) {
+      return;
+    }
+    if (--this.probeFrames === 0) {
+      this.probeReport = null;
+    }
+    try {
+      const fit = this.fit(frame);
+      const xs = [0.5, 0.25, 0.75, 0.25, 0.75];
+      const ys = [0.5, 0.25, 0.25, 0.75, 0.75];
+      const black = xs.every((fx, i) => {
+        const x = Math.min(this.canvas.width - 1, Math.round(fit.x + fit.width * fx));
+        const y = Math.min(this.canvas.height - 1, Math.round(fit.y + fit.height * ys[i]));
+        const [r, g, b] = this.readPixel(x, y);
+        return r === 0 && g === 0 && b === 0;
+      });
+      report(black);
+    } catch {
+      // a failed probe is no evidence either way
+    }
   }
 
   /**

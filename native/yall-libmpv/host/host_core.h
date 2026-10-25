@@ -7,12 +7,14 @@
 #include <thread>
 #include <vector>
 #include "event_msg.h"
+#include "fd_sender.h"
 #include "protocol.h"
 #include "render/render_thread.h"
 
 class HostCore {
  public:
-  explicit HostCore(proto::Channel& channel) : channel_(channel) {}
+  // `fdSender` (optional, outlives the core) carries the descriptors of GPU buffers to the client.
+  explicit HostCore(proto::Channel& channel, FdSender* fdSender = nullptr) : channel_(channel), fdSender_(fdSender) {}
   ~HostCore();
 
   // Returns false once the host should exit (kDestroy was handled).
@@ -50,6 +52,7 @@ class HostCore {
   void TearDown();
 
   proto::Channel& channel_;
+  FdSender* fdSender_;
   mpv_handle* handle_ = nullptr;
   bool initialized_ = false;
   bool destroyed_ = false;

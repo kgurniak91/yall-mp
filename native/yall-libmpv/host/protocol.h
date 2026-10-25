@@ -31,8 +31,13 @@ enum Type : uint32_t {
   // Host -> node
   kReply = 101,      // {id, value} or {id, error: {code, message, mpvError?}}
   kEvent = 102,      // {event, ...}: the shape of LibmpvEvent
-  kFrame = 103       // {attachId, slotId, serial, generation, width, height} + BGRA pixels
+  kFrame = 103,      // {attachId, slotId, serial, generation, width, height} + BGRA pixels, or shared: true and no pixels
+  kSlotClosed = 104  // {attachId, slotId}: the host closed that slot's descriptor, the client closes its copy
 };
+
+// The child's fd 4 is a SOCK_SEQPACKET socket on which the host sends the descriptors of shared GPU buffers
+// (SCM_RIGHTS, one per message, the text part is JSON: {attachId, slotId, stride, offset, size, modifier}).
+constexpr int kFdChannelFd = 4;
 
 constexpr uint32_t kMaxJsonBytes = 16u << 20;
 constexpr uint32_t kMaxBinBytes = 64u << 20;

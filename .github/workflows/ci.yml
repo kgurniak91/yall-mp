@@ -111,6 +111,8 @@ jobs:
             find dist_electron/mac*/*.app -name yall_libmpv.node | grep -q .
           else
             test -x "$RES/yall-mpv-host"
+            # the descriptor receiver of the dma-buf path must be unpacked from the asar, or it cannot be loaded
+            find dist_electron/linux-unpacked -name yall_fdpass.node -path '*app.asar.unpacked*' | grep -q .
           fi
 
   native:
@@ -196,6 +198,8 @@ jobs:
           elif [ "${{ runner.os }}" = "Linux" ]; then
             # libmpv runs in the yall-mpv-host process, so Electron's bundled ffmpeg does not interfere.
             xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:native:smoke -- --backend=readback --seconds=4 --min-fps=10 --no-sandbox --json=test-results/smoke/linux.json
+            # No render node on the hosted runner: dmabuf-shared must fail truthfully and the picture must stay (readback).
+            xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:native:smoke -- --backend=dmabuf-shared --allow-fallback --seconds=4 --min-fps=3 --no-sandbox --json=test-results/smoke/linux-dmabuf.json
           else
             export YALL_MP_GL_DEBUG=1
             status=0

@@ -74,6 +74,37 @@ const findCmake = () => {
 };
 
 const cmakePath = findCmake();
+const electronVersion = require(path.join(ROOT, 'node_modules', 'electron', 'package.json')).version;
+const cmakeJs = path.join(ROOT, 'node_modules', 'cmake-js', 'bin', 'cmake-js');
+
+// yall_fdpass receives the descriptors of the host's dma-buf slots in the Electron process. It is optional: without
+// it the player only loses the dma-buf backend, so a failed build is a warning. Returns the built file or null.
+const buildFdpass = () => {
+  const outDir = path.join(ADDON_DIR, 'build-fdpass');
+  const cmakeJsArgs = [
+    cmakeJs, 'compile', '-d', ADDON_DIR, '-O', outDir,
+    '--runtime=electron', `--runtime-version=${electronVersion}`, `--arch=${arch}`,
+    '--CDYALL_BUILD_FDPASS=ON', '--CDYALL_BUILD_HOST=OFF', '--CDYALL_BUILD_ADDON=OFF'
+  ];
+  if (debug) {
+    cmakeJsArgs.push('--debug');
+  }
+  if (cmakePath) {
+    cmakeJsArgs.push('--cmake-path', cmakePath);
+  }
+  console.log('Building yall_fdpass');
+  const result = spawnSync(process.execPath, cmakeJsArgs, {stdio: 'inherit', cwd: ROOT});
+  const built = path.join(outDir, debug ? 'Debug' : 'Release', 'yall_fdpass.node');
+  if (result.status !== 0 || !fs.existsSync(built)) {
+    console.warn('WARNING: yall_fdpass could not be built; the dma-buf video backend will be unavailable.');
+    return null;
+  }
+  const dest = path.join(ADDON_DIR, 'build', 'Release', 'yall_fdpass.node');
+  fs.mkdirSync(path.dirname(dest), {recursive: true});
+  fs.copyFileSync(built, dest);
+  console.log(`Built ${dest}`);
+  return dest;
+};
 
 // Linux has no in-process addon (libmpv cannot share Electron's process): build the plain
 // CMake host executable instead, no cmake-js or Node headers involved.
@@ -96,20 +127,21 @@ if (process.platform === 'linux') {
   fs.mkdirSync(path.dirname(hostDest), {recursive: true});
   fs.copyFileSync(builtHost, hostDest);
   fs.chmodSync(hostDest, 0o755);
+  const fdpass = buildFdpass();
   if (prebuild) {
     const destDir = path.join(ADDON_DIR, 'prebuilds', `linux-${arch}`);
     fs.mkdirSync(destDir, {recursive: true});
     fs.copyFileSync(builtHost, path.join(destDir, 'yall-mpv-host'));
     fs.chmodSync(path.join(destDir, 'yall-mpv-host'), 0o755);
+    if (fdpass) {
+      fs.copyFileSync(fdpass, path.join(destDir, 'yall_fdpass.node'));
+    }
     console.log(`Prebuild copied to ${destDir}`);
   }
   console.log(`Built ${hostDest}`);
   process.exit(0);
 }
 
-const electronVersion = require(path.join(ROOT, 'node_modules', 'electron', 'package.json')).version;
-
-const cmakeJs = path.join(ROOT, 'node_modules', 'cmake-js', 'bin', 'cmake-js');
 const cmakeJsArgs = [
   cmakeJs, 'compile',
   '-d', ADDON_DIR,

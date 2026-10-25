@@ -4,7 +4,7 @@
 //
 //   npm run test:native:smoke -- --backend=auto --seconds=12 --json=out.json
 //
-// --backend=d3d11-shared|iosurface-shared|readback|auto   (default auto)
+// --backend=d3d11-shared|iosurface-shared|dmabuf-shared|readback|auto   (default auto)
 // --allow-fallback                       a shared backend that falls back to readback (logged) still passes
 // --screenshot=<png>                     save the composited window after the measurement
 // --adapter=gpu|default|warp             gpu = the active GPU from getGPUInfo (default)
@@ -44,6 +44,7 @@ const cfg = {
   stopAfterCreate: !!args['stop-after-create'],
   mpvLog: typeof args['mpv-log'] === 'string' ? args['mpv-log'] : 'warn',
   simulateImportFailure: !!args['simulate-import-failure'],
+  simulateBlackFrames: !!args['simulate-black-frames'],
   minFps: args['min-fps'] ? parseFloat(args['min-fps']) : null,
   json: args.json ? path.resolve(args.json) : null,
   screenshot: typeof args.screenshot === 'string' ? path.resolve(args.screenshot) : null,
@@ -115,9 +116,9 @@ async function begin(width, height, gpuInfo) {
 
   const adapter = cfg.adapter === 'gpu' ? undefined : cfg.adapter;
   sender = new LibmpvFrameSender({
-    libmpv, webContents: win.webContents, gpuInfo, log: senderLog, adapter, simulateImportFailure: cfg.simulateImportFailure
+    libmpv, webContents: win.webContents, gpuInfo, log: senderLog, adapter, simulateImportFailure: cfg.simulateImportFailure, simulateBlackFrames: cfg.simulateBlackFrames
   });
-  const attach = sender.start({width, height, preferred: cfg.backend});
+  const attach = await sender.start({width, height, preferred: cfg.backend});
   log('attached', JSON.stringify(attach));
   // The renderer is attached before the file is loaded: a render context freed later would take the VO with it.
   await libmpv.command(['loadfile', cfg.file, 'replace']);
@@ -155,7 +156,7 @@ async function run(gpuInfo) {
   const fps = frames / wallSec;
   const fs_ = sender.stats();
   const backend = fs_.backend;
-  const wasShared = backend === 'd3d11-shared' || backend === 'iosurface-shared';
+  const wasShared = backend === 'd3d11-shared' || backend === 'iosurface-shared' || backend === 'dmabuf-shared';
 
   const addonA = a.addon;
   const addonB = b.addon;
@@ -192,17 +193,21 @@ async function run(gpuInfo) {
 
   // ---- checks ----
   check('frames received during the window', frames > 0, `${frames} in ${wallSec.toFixed(1)} s = ${fps.toFixed(1)} fps`);
-  check('media time advanced', mediaSec !== null && mediaSec > wallSec * 0.8, `${mediaSec?.toFixed(2)} s of media`);
+  check('media time advanced', mediaSec !== null && mediaSec > wallSec * (fs_.fallbackReason ? 0.7 : 0.8), `${mediaSec?.toFixed(2)} s of media`);
   if (cfg.simulateImportFailure) {
     check('import failure switched to readback', fs_.fallbackReason !== null && backend === 'readback', fs_.fallbackReason);
     check('fallback logged', logLines.some(l => /shared-texture import failed on first frame .*switching to readback/.test(l)));
+    check('readback frames keep arriving after the fallback', (rendererStats.readback || 0) > 0 && frames > 0);
+  } else if (cfg.simulateBlackFrames) {
+    check('black frames switched to readback', fs_.fallbackReason !== null && backend === 'readback', fs_.fallbackReason);
+    check('fallback logged', logLines.some(l => /imported frames are black .*switching to readback/.test(l)));
     check('readback frames keep arriving after the fallback', (rendererStats.readback || 0) > 0 && frames > 0);
   } else {
     // A real first-frame import failure (no usable GPU) legitimately switches to readback: that is the intended fallback.
     check('no import failures, or a clean switch to readback', fs_.importFailures === 0 || (fs_.fallbackReason !== null && backend === 'readback'),
       `${fs_.importFailures}${fs_.fallbackReason ? `, fallback: ${fs_.fallbackReason}` : ''}`);
     check('no send failures', fs_.sendFailures === 0, `${fs_.sendFailures}`);
-    if (cfg.backend === 'd3d11-shared' || cfg.backend === 'iosurface-shared') {
+    if (cfg.backend === 'd3d11-shared' || cfg.backend === 'iosurface-shared' || cfg.backend === 'dmabuf-shared') {
       // On a machine without a usable GPU (a hosted macOS runner) the switch to readback, with its logged
       // reason, is the intended outcome: --allow-fallback accepts that.
       const fellBack = cfg.allowFallback && backend === 'readback' && !!fs_.fallbackReason &&

@@ -53,6 +53,7 @@
       "libmpv-host.js",
       "libmpv-frame-sender.js",
       "native/yall-libmpv/build/Release/yall_libmpv.node",
+      "native/yall-libmpv/build/Release/yall_fdpass.node",
       "playback-manager.js",
       "yomitan-manager.js",
       "shared/**/*.js",

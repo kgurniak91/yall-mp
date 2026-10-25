@@ -33,6 +33,7 @@ export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
   private renderer: VideoSurfaceRenderer | undefined;
   private resizeObserver: ResizeObserver | undefined;
   private unsubscribeFrames: (() => void) | undefined;
+  private unsubscribeProbe: (() => void) | undefined;
   private resizeTimer: ReturnType<typeof setTimeout> | undefined;
   private hasSize = false;
   private isReadyEmitted = false;
@@ -43,6 +44,8 @@ export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
     const renderer = new VideoSurfaceRenderer(this.canvasRef().nativeElement);
     this.renderer = renderer;
     this.unsubscribeFrames = window.electronAPI.onVideoFrame(frame => renderer.present(frame));
+    this.unsubscribeProbe = window.electronAPI.onVideoProbeStart(
+      frames => renderer.startProbe(frames, black => window.electronAPI.videoProbeReport(black)));
     this.resizeObserver = new ResizeObserver(entries => this.onResize(entries[entries.length - 1]));
     try {
       this.resizeObserver.observe(this.videoContainerRef().nativeElement, {box: 'device-pixel-content-box'});
@@ -55,6 +58,7 @@ export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
     this.resizeObserver?.disconnect();
     clearTimeout(this.resizeTimer);
     this.unsubscribeFrames?.();
+    this.unsubscribeProbe?.();
     this.renderer?.dispose();
   }
 

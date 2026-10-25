@@ -17,6 +17,10 @@ import {computeReadbackSize} from './libmpv-bridge';
 
 /** Channel of the readback frames: `{attachId, width, height, data: Uint8Array}` (BGRA, alpha 255). */
 export const READBACK_CHANNEL = 'libmpv:readback-frame';
+/** Main -> page: `{attachId, frames}`; the page then reports, for that many drawn frames, whether its probe points were black. */
+export const PROBE_START_CHANNEL = 'libmpv:probe-start';
+/** Page -> main: `black: boolean`. */
+export const PROBE_REPORT_CHANNEL = 'libmpv:probe';
 
 export type PreferredBackend = SharedBackendName | 'readback' | 'auto';
 
@@ -26,6 +30,15 @@ export interface FrameSenderLibmpv extends Pick<Libmpv, 'sharedBackendName' | 'a
   off(event: 'property-change' | 'end-file', listener: (event: LibmpvEvent) => void): unknown;
 }
 
+/** Electron's `nativePixmap` handle (Linux dma-buf). The modifier is a decimal string; Electron dups every plane fd. */
+export interface NativePixmapHandle {
+  planes: Array<{ fd: number; stride: number; offset: number; size: number }>;
+  modifier: string;
+  supportsZeroCopyWebGpuImport: boolean;
+}
+
+export type SharedTextureHandle = { ntHandle: Buffer } | { ioSurface: Buffer } | { nativePixmap: NativePixmapHandle };
+
 export interface SharedTextureImportedLike {
   release(): void;
 }
@@ -33,7 +46,7 @@ export interface SharedTextureImportedLike {
 /** The part of `electron.sharedTexture` the sender uses. */
 export interface SharedTextureApi {
   importSharedTexture(options: {
-    textureInfo: { pixelFormat: 'bgra'; codedSize: Size; handle: { ntHandle: Buffer } | { ioSurface: Buffer } };
+    textureInfo: { pixelFormat: 'bgra'; codedSize: Size; handle: SharedTextureHandle };
     allReferencesReleased?: () => void;
   }): SharedTextureImportedLike;
 
@@ -59,6 +72,8 @@ export interface FrameSenderOptions {
   sharedTexture?: SharedTextureApi;
   /** Test and smoke hook: every shared-texture import throws. */
   simulateImportFailure?: boolean;
+  /** Test and smoke hook: every shared frame in the validation window counts as imported black. */
+  simulateBlackFrames?: boolean;
   /** Adapter override, e.g. 'warp' in CI. */
   adapter?: AdapterOption;
 }
@@ -84,6 +99,12 @@ const RECOVERY_WINDOW_MS = 5000;
 // Attach errors that mean "this machine cannot do the shared backend" rather than a broken player.
 const FALLBACK_ATTACH_CODES = ['RENDER_INIT_FAILED', 'BACKEND_UNSUPPORTED'];
 
+// A shared import can "succeed" and still show black. Until the page showed a picture, or this long, the first
+// frames are checked against what the host rendered.
+const VALIDATION_WINDOW_MS = 5000;
+const VALIDATION_FRAMES = 30;
+const BLACK_STREAK_LIMIT = 3;
+
 // "No receiver registered yet" is a timing problem of the page, not a broken GPU path.
 const NO_RECEIVER = /receiver/i;
 
@@ -95,6 +116,7 @@ export class LibmpvFrameSender {
   private readonly log: (message: string) => void;
   private readonly sharedTexture: () => SharedTextureApi;
   private readonly simulateImportFailure: boolean;
+  private readonly simulateBlackFrames: boolean;
   private readonly adapterOverride?: AdapterOption;
   private readonly activeGpu?: { vendorId: number; deviceId: number };
 
@@ -104,6 +126,10 @@ export class LibmpvFrameSender {
   private readbackSize: Size | null = null;
   private firstFrameDone = false;
   private switching = false;
+  /** True from `stop()` until the next `start()`: an attach that finishes meanwhile is undone. */
+  private stopped = true;
+  private attachTicket = 0;
+  private validation: { attachId: number; hostNonBlack: boolean; blackStreak: number; timer: ReturnType<typeof setTimeout> } | null = null;
   private observeIds: number[] = [];
   private recoveryListener: ((event: LibmpvEvent) => void) | null = null;
   private recoveryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -121,6 +147,7 @@ export class LibmpvFrameSender {
     this.target = options.webContents;
     this.log = options.log ?? (() => undefined);
     this.simulateImportFailure = options.simulateImportFailure ?? false;
+    this.simulateBlackFrames = options.simulateBlackFrames ?? false;
     this.adapterOverride = options.adapter;
     const injected = options.sharedTexture;
     this.sharedTexture = () => injected ?? (require('electron') as typeof import('electron')).sharedTexture as unknown as SharedTextureApi;
@@ -130,8 +157,9 @@ export class LibmpvFrameSender {
     }
   }
 
-  start(options: StartOptions): AttachResult {
+  async start(options: StartOptions): Promise<AttachResult> {
     this.stop();
+    this.stopped = false;
     this.canvas = {width: options.width, height: options.height};
     this.fallbackReason = null;
     this.libmpv.on('property-change', this.onPropertyChange);
@@ -143,7 +171,7 @@ export class LibmpvFrameSender {
       return this.attachBackend('readback');
     }
     try {
-      return this.attachBackend(shared);
+      return await this.attachBackend(shared);
     } catch (error) {
       if (!FALLBACK_ATTACH_CODES.includes((error as { code?: string }).code ?? '')) {
         throw error;
@@ -194,10 +222,12 @@ export class LibmpvFrameSender {
   }
 
   stop(): void {
+    this.stopped = true;
     for (const waiter of [...this.frameWaiters]) {
       waiter.settle(false);
     }
     this.cancelRecovery();
+    this.endValidation();
     this.libmpv.off('property-change', this.onPropertyChange);
     for (const id of this.observeIds) {
       try {
@@ -236,11 +266,23 @@ export class LibmpvFrameSender {
     return this.adapterOverride ?? this.activeGpu ?? 'default';
   }
 
-  private attachBackend(backend: RenderBackendName): AttachResult {
+  private async attachBackend(backend: RenderBackendName): Promise<AttachResult> {
     this.firstFrameDone = false;
     const size = backend === 'readback' ? this.computeReadback(false) : this.canvas;
     const options: AttachRendererOptions = {backend, width: size.width, height: size.height, adapter: this.adapterOption()};
-    const result = this.libmpv.attachRenderer(options, frame => this.onFrame(frame));
+    const ticket = ++this.attachTicket;
+    const result = await this.libmpv.attachRenderer(options, frame => this.onFrame(frame));
+    if (ticket !== this.attachTicket || this.stopped) {
+      // stop() or a newer attach came first. A newer attach replaces this one in the core by itself.
+      if (this.stopped) {
+        try {
+          this.libmpv.detachRenderer();
+        } catch {
+          // the core may already be destroyed
+        }
+      }
+      return result;
+    }
     this.attach = result;
     if (backend !== 'readback') {
       this.logBackendNote(`${backend} attached`);
@@ -339,6 +381,10 @@ export class LibmpvFrameSender {
     const isFirst = !this.firstFrameDone;
     this.firstFrameDone = true;
     let imported: SharedTextureImportedLike;
+    if (isFirst) {
+      this.beginValidation(attach);
+    }
+    this.noteHostProbe(frame);
     try {
       if (this.simulateImportFailure) {
         throw new Error('simulated shared-texture import failure');
@@ -346,7 +392,7 @@ export class LibmpvFrameSender {
       imported = this.sharedTexture().importSharedTexture({
         textureInfo: {
           pixelFormat: 'bgra', codedSize: {width: frame.width, height: frame.height},
-          handle: attach.backend === 'iosurface-shared' ? {ioSurface: frame.handle!} : {ntHandle: frame.handle!}
+          handle: this.textureHandle(frame, attach)
         },
         allReferencesReleased: () => this.release(frame)
       });
@@ -354,11 +400,15 @@ export class LibmpvFrameSender {
       this.importFailures++;
       this.release(frame);
       if (isFirst) {
-        this.fallBackToReadback(attach, errorMessage(error));
+        void this.fallBackToReadback(attach, errorMessage(error));
       }
       return;
     }
     this.countSent();
+    if (this.simulateBlackFrames && this.validation) {
+      this.validation.hostNonBlack = true;
+      this.handlePageProbe(true);
+    }
     if (isFirst) {
       this.logBackendNote(`first ${attach.backend} frame ${frame.width}x${frame.height} sent`);
     }
@@ -367,7 +417,7 @@ export class LibmpvFrameSender {
       imported.release();
       this.release(frame);
       if (isFirst && !NO_RECEIVER.test(errorMessage(error))) {
-        this.fallBackToReadback(attach, errorMessage(error));
+        void this.fallBackToReadback(attach, errorMessage(error));
       }
     };
     try {
@@ -380,24 +430,111 @@ export class LibmpvFrameSender {
     }
   }
 
-  private fallBackToReadback(failed: AttachResult, message: string): void {
+  private textureHandle(frame: RenderFrame, attach: AttachResult): SharedTextureHandle {
+    if (frame.dmabuf) {
+      const {fd, stride, offset, size, modifier} = frame.dmabuf;
+      // We draw with WebGL2, not WebGPU, so the zero-copy WebGPU import is not needed.
+      return {nativePixmap: {planes: [{fd, stride, offset, size}], modifier, supportsZeroCopyWebGpuImport: false}};
+    }
+    return attach.backend === 'iosurface-shared' ? {ioSurface: frame.handle!} : {ntHandle: frame.handle!};
+  }
+
+  /** The page's verdict on one drawn frame of the validation window: were all its probe points black? */
+  reportPageProbe(black: boolean): void {
+    this.handlePageProbe(black);
+  }
+
+  /** Chromium's GPU process died: the shared textures are gone with it, so the rest of the session uses readback. */
+  gpuProcessGone(reason: string): void {
+    const attach = this.attach;
+    if (attach && attach.backend !== 'readback') {
+      void this.fallBackToReadback(attach, `GPU process gone (${reason})`, 'the GPU process is gone');
+    }
+  }
+
+  private beginValidation(attach: AttachResult): void {
+    this.endValidation();
+    const timer = setTimeout(() => {
+      if (this.validation?.attachId === attach.attachId) {
+        this.log(`[libmpv] ${attach.backend}: first frames not confirmed within ${VALIDATION_WINDOW_MS} ms, accepting`);
+        this.endValidation();
+      }
+    }, VALIDATION_WINDOW_MS);
+    timer.unref?.();
+    this.validation = {attachId: attach.attachId, hostNonBlack: false, blackStreak: 0, timer};
+    try {
+      this.target.send(PROBE_START_CHANNEL, {attachId: attach.attachId, frames: VALIDATION_FRAMES});
+    } catch {
+      // the page is gone: nothing to validate against
+    }
+  }
+
+  private endValidation(): void {
+    if (this.validation) {
+      clearTimeout(this.validation.timer);
+      this.validation = null;
+    }
+  }
+
+  private noteHostProbe(frame: RenderFrame): void {
+    const v = this.validation;
+    if (!v || !frame.probe) {
+      return;
+    }
+    for (let i = 0; i + 2 < frame.probe.length; i += 4) {
+      // BGRA: any non-zero colour channel means the host rendered a picture
+      if (frame.probe[i] || frame.probe[i + 1] || frame.probe[i + 2]) {
+        v.hostNonBlack = true;
+        return;
+      }
+    }
+  }
+
+  private handlePageProbe(black: boolean): void {
+    const v = this.validation;
+    const attach = this.attach;
+    if (!v || !attach || attach.attachId !== v.attachId) {
+      return;
+    }
+    if (!black) {
+      this.endValidation();
+      return;
+    }
+    if (!v.hostNonBlack) {
+      // The video itself is black so far: nothing to compare with.
+      v.blackStreak = 0;
+      return;
+    }
+    if (++v.blackStreak >= BLACK_STREAK_LIMIT) {
+      this.endValidation();
+      void this.fallBackToReadback(attach, `the page read black from ${attach.backend} frames the host rendered non-black`,
+        'imported frames are black');
+    }
+  }
+
+  private async fallBackToReadback(failed: AttachResult, message: string, what = 'shared-texture import failed on first frame'): Promise<void> {
     // Only the attach that failed may trigger the switch (a late rejection of an older one must not).
     if (this.switching || this.attach?.attachId !== failed.attachId) {
       return;
     }
     this.switching = true;
+    this.endValidation();
     try {
       this.fallbackReason = message;
       const a = failed.adapter;
-      this.log(`[libmpv] shared-texture import failed on first frame (${message}), switching to readback; ` +
+      this.log(`[libmpv] ${what} (${message}), switching to readback; ` +
         `backend=${failed.backend} platform=${process.platform} adapter=${a.name} vendor/device=${a.vendorId}/${a.deviceId}`);
       // Asked before the first context is freed: on a slow machine the video output gives up (VO_INIT_FAILED)
       // while the second context is still being created, and then the file has to be loaded again.
       const snapshot = Promise.all(['path', 'time-pos', 'pause'].map(name => this.libmpv.getProperty(name).catch(() => undefined)));
       this.armRecovery(snapshot);
-      this.attachBackend('readback');
+      // Frames of the failed attach that are still on their way are stale from here on.
+      this.attach = null;
+      await this.attachBackend('readback');
       // The first render context took the video output with it when it was freed.
       this.libmpv.reinitVideo().catch((error: unknown) => this.log(`[libmpv] could not re-create the video output: ${errorMessage(error)}`));
+    } catch (error) {
+      this.log(`[libmpv] readback could not be attached after the fallback: ${errorMessage(error)}`);
     } finally {
       this.switching = false;
     }

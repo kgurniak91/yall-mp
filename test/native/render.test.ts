@@ -59,7 +59,7 @@ describeNative('libmpv render API', (env: NativeEnv) => {
       player, log, frames, samples: new WeakMap(), attachId: 0,
       release: (frame) => player.releaseSlot(frame.attachId, frame.slotId, frame.serial)
     };
-    const result = player.attachRenderer({width: 320, height: 180, ...attach}, (frame) => {
+    const result = await player.attachRenderer({width: 320, height: 180, ...attach}, (frame) => {
       // A frame is only safe to read until it is released: the next render reuses the slot.
       if (frame.handle && options.sample && env.addon.readSurfacePixel) {
         rig.samples.set(frame, options.sample.map(([x, y]) => env.addon.readSurfacePixel!(frame.handle!, x, y)));
@@ -148,7 +148,7 @@ describeNative('libmpv render API', (env: NativeEnv) => {
     const rig = await open({backend: 'readback', impl: 'sw'});
     await waitFor(() => rig.frames.length > 3, 10000, 'first frames');
     const second: RenderFrame[] = [];
-    const again = rig.player.attachRenderer({backend: 'readback', impl: 'sw', width: 160, height: 90}, f => second.push(f));
+    const again = await rig.player.attachRenderer({backend: 'readback', impl: 'sw', width: 160, height: 90}, f => second.push(f));
     expect(again.attachId).not.toBe(rig.attachId);
     // Freeing the first render context took mpv's video output with it.
     await rig.player.reinitVideo();

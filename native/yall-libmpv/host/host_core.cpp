@@ -4,6 +4,9 @@
 #include "live_counts.h"
 #include "mpv_loader.h"
 #include "render/sw_readback.h"
+#ifdef YALL_HAVE_DMABUF
+#include "render/dmabuf_shared.h"
+#endif
 #include "socket_sink.h"
 
 using proto::Json;
@@ -54,7 +57,8 @@ Json StatsToJson(const RenderThreadStats& s, size_t draining) {
           {"renderMs", PercentilesToJson(b.renderMs)}, {"gpuWaitMs", PercentilesToJson(b.gpuWaitMs)},
           {"releaseMs", PercentilesToJson(b.releaseMs)}, {"copyMs", PercentilesToJson(b.copyMs)},
           {"renderCpuMs", b.renderCpuMs}, {"waitCpuMs", b.waitCpuMs}, {"threadCpuMs", s.threadCpuMs},
-          {"threadWallMs", s.threadWallMs}, {"draining", draining}};
+          {"threadWallMs", s.threadWallMs}, {"draining", draining},
+          {"glErrors", b.glErrors}, {"note", b.note}};
 }
 
 // A scalar JSON value as an mpv_node. The string pointer borrows from the JSON value.
@@ -270,10 +274,22 @@ void HostCore::Attach(const Json& args) {
   if (!Ready(id)) return;
   const std::string backendName = args.value("backend", std::string());
   const std::string impl = args.value("impl", std::string());
-  if (backendName != "readback" || (!impl.empty() && impl != "sw")) {
-    SendError(id, "BACKEND_UNSUPPORTED", "the Linux host only provides the readback backend with the software renderer");
+  const bool dmabuf = backendName == "dmabuf-shared";
+  if (!dmabuf && (backendName != "readback" || (!impl.empty() && impl != "sw"))) {
+    SendError(id, "BACKEND_UNSUPPORTED", "the Linux host provides the readback backend (software renderer) and dmabuf-shared");
     return;
   }
+#ifndef YALL_HAVE_DMABUF
+  if (dmabuf) {
+    SendError(id, "BACKEND_UNSUPPORTED", "this host was built without EGL/GBM headers");
+    return;
+  }
+#else
+  if (dmabuf && (!fdSender_ || !fdSender_->Available())) {
+    SendError(id, "BACKEND_UNSUPPORTED", "the descriptor channel (fd 4) is not available");
+    return;
+  }
+#endif
   const int width = args.value("width", 0);
   const int height = args.value("height", 0);
   if (width <= 0 || height <= 0) {
@@ -295,7 +311,25 @@ void HostCore::Attach(const Json& args) {
   }
 
   const uint64_t attachId = args.value("attachId", static_cast<uint64_t>(renderers_.size() + 1));
-  auto renderer = std::make_shared<RenderThread>(attachId, std::make_unique<SwReadbackBackend>(),
+  std::unique_ptr<RenderBackend> backend;
+#ifdef YALL_HAVE_DMABUF
+  if (dmabuf) {
+    EglOptions egl;
+    egl.vendorId = args.value("vendorId", 0u);
+    egl.deviceId = args.value("deviceId", 0u);
+    egl.node = args.value("node", std::string());
+    FdSender* sender = fdSender_;
+    proto::Channel& channel = channel_;
+    backend = std::make_unique<DmabufSharedBackend>(
+        attachId, std::max(2, args.value("slots", 4)), egl,
+        [sender](int fd, const std::string& meta) { return sender->Send(fd, meta); },
+        [&channel, attachId](int slotId) {
+          channel.Write(proto::kSlotClosed, {{"attachId", attachId}, {"slotId", slotId}});
+        });
+  }
+#endif
+  if (!backend) backend = std::make_unique<SwReadbackBackend>();
+  auto renderer = std::make_shared<RenderThread>(attachId, std::move(backend),
                                                  std::make_unique<SocketSink>(channel_, outstanding_), width, height,
                                                  slotTimeoutMs);
   std::string err = renderer->Start(handle_);
