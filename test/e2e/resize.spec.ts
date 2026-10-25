@@ -2,15 +2,18 @@ import {expect, test} from './support/app';
 import {seedProject} from './support/seed';
 import {waitForPlayer} from './support/playback';
 import {canvasMatchesContainer, capturePage, isRed, pictureRect} from './support/capture';
-import {getWindowStates, withWindows} from './support/windows';
+import {getWindowStates, restoreIfMaximized, withWindows} from './support/windows';
 
 const hardAssert = process.platform === 'win32';
 const MIN_WIDTH = 800;
 const MIN_HEIGHT = 600;
+// Wayland compositors add a shadow margin to the frameless window
+const SLACK = process.platform === 'linux' ? 32 : 16;
 
 test('setBounds resize: the layout follows, the canvas re-fits and the paused picture is redrawn', async ({launch}) => {
   const {app, ui} = await launch({seed: dir => seedProject(dir, {lastPlaybackTime: 1.0})});
   await waitForPlayer(ui);
+  await restoreIfMaximized(app);
 
   await withWindows(app, ({mainWindow}) => {
     const b = mainWindow.getBounds();
@@ -50,8 +53,8 @@ test('setBounds resize: the layout follows, the canvas re-fits and the paused pi
     return small.width >= MIN_WIDTH && small.height >= MIN_HEIGHT;
   }, {timeout: 10_000}).toBe(true);
   const small = (await getWindowStates(app)).main!.bounds;
-  expect(small.width).toBeLessThanOrEqual(MIN_WIDTH + 16);
-  expect(small.height).toBeLessThanOrEqual(MIN_HEIGHT + 16);
+  expect(small.width).toBeLessThanOrEqual(MIN_WIDTH + SLACK);
+  expect(small.height).toBeLessThanOrEqual(MIN_HEIGHT + SLACK);
   await expect.poll(async () => (await canvasMatchesContainer(ui)).ok, {timeout: 10_000}).toBe(true);
 });
 

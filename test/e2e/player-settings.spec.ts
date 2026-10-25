@@ -1,5 +1,5 @@
 import {expect, test} from './support/app';
-import {CLIPS, inClip} from './support/clips';
+import {CLIPS, inClip, NEAR_END} from './support/clips';
 import {
   describeSteps, launchClips, markHistory, mpvPaused, mpvString, mpvTime, press, snapshot, startPlaying, stepsSince, waitForState, waitForTime
 } from './support/player';
@@ -48,7 +48,7 @@ test('toggling hardware decoding during playback switches the decoder and playba
 });
 
 test('extending the clip end while auto-paused there: the auto-pause moves to the new end', async ({launch}) => {
-  const {ui} = await launchClips(launch, {lastPlaybackTime: inClip(3, 0.7), settings: {autoPauseAtEnd: true}});
+  const {ui} = await launchClips(launch, {lastPlaybackTime: inClip(3, NEAR_END), settings: {autoPauseAtEnd: true}});
   await startPlaying(ui);
   await waitForState(ui, 'AutoPausedAtEnd');
   const oldEnd = CLIPS[3].end;
@@ -74,7 +74,7 @@ test('extending the clip end while auto-paused there: the auto-pause moves to th
 });
 
 test('shortening the clip while auto-paused at its end keeps it auto-paused at the new end', async ({launch}) => {
-  const {ui} = await launchClips(launch, {lastPlaybackTime: inClip(3, 0.7), settings: {autoPauseAtEnd: true}});
+  const {ui} = await launchClips(launch, {lastPlaybackTime: inClip(3, NEAR_END), settings: {autoPauseAtEnd: true}});
   await startPlaying(ui);
   await waitForState(ui, 'AutoPausedAtEnd');
 

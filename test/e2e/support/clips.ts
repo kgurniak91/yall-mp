@@ -27,6 +27,9 @@ export const SUBTITLED: ClipSpec[] = CLIPS.filter(c => c.hasSubtitle);
 /** Index of the clip the given media time falls into (end exclusive). */
 export const clipIndexAt = (time: number): number => CLIPS.findIndex(c => time >= c.start && time < c.end);
 
+/** How far into a clip the "almost at its end" scenarios start; a slow VM needs more of the clip left than a desktop to see the playing state before the end */
+export const NEAR_END = process.platform === 'linux' ? 0.4 : 0.7;
+
 /** A time safely inside the clip, `fraction` of the way through it. */
 export const inClip = (index: number, fraction = 0.5): number => {
   const c = CLIPS[index];

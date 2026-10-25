@@ -72,3 +72,17 @@ export const rectContains = (outer: Rect, inner: Rect, tolerance = 2): boolean =
   inner.x >= outer.x - tolerance && inner.y >= outer.y - tolerance &&
   inner.x + inner.width <= outer.x + outer.width + tolerance &&
   inner.y + inner.height <= outer.y + outer.height + tolerance;
+
+/** Mutter maximizes a new window that covers most of the screen; tests that need the normal state call this first. */
+export async function restoreIfMaximized(app: ElectronApplication): Promise<void> {
+  await new Promise(r => setTimeout(r, 1000));
+  if ((await getWindowStates(app)).main!.isMaximized) {
+    await withWindows(app, ({mainWindow}) => mainWindow.unmaximize());
+    const deadline = Date.now() + 10_000;
+    while ((await getWindowStates(app)).main!.isMaximized && Date.now() < deadline) {
+      await new Promise(r => setTimeout(r, 100));
+    }
+    // The compositor still animates the restore; the bounds are only final afterwards
+    await new Promise(r => setTimeout(r, 1000));
+  }
+}

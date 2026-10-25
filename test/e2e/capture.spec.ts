@@ -18,6 +18,20 @@ const osName = process.platform === 'win32' ? 'win' : process.platform === 'darw
 // macOS takes the capped readback path until its GPU backend exists, so its pixels are a baseline, not a gate
 const hardAssert = process.platform === 'win32';
 
+// Wayland has no unattended screen capture (the portal waits for the user), so the composited screenshot is skipped there
+const noScreenCapture = process.env.XDG_SESSION_TYPE === 'wayland';
+const compositedShot = async (app: Parameters<typeof withWindows>[0]) => {
+  if (noScreenCapture) {
+    return null;
+  }
+  return captureComposited(app, []).catch(e => {
+    if (hardAssert) {
+      throw e;
+    }
+    return null;
+  });
+};
+
 const artifactsDir = path.join(REPO_ROOT, 'e2e-artifacts');
 
 const backendOf = async (app: Parameters<typeof withWindows>[0]): Promise<string> =>
@@ -43,9 +57,11 @@ test('the canvas shows the video colours under the UI', async ({launch}) => {
       throw e;
     }
   });
-  const redShot = await captureComposited(app, []);
-  fs.writeFileSync(path.join(artifactsDir, `${osName}-composited.png`), redShot.png);
-  await test.info().attach('composited.png', {body: redShot.png, contentType: 'image/png'});
+  const redShot = await compositedShot(app);
+  if (redShot) {
+    fs.writeFileSync(path.join(artifactsDir, `${osName}-composited.png`), redShot.png);
+    await test.info().attach('composited.png', {body: redShot.png, contentType: 'image/png'});
+  }
 
   await ui.evaluate(() => (window as any).electronAPI.playbackSeek(4));
   await expect.poll(async () => (await latestPlayback(ui))?.currentTime ?? 0, {timeout: 10_000}).toBeGreaterThan(3.5);
@@ -55,7 +71,10 @@ test('the canvas shows the video colours under the UI', async ({launch}) => {
       throw e;
     }
   });
-  fs.writeFileSync(path.join(artifactsDir, `${osName}-composited-green.png`), (await captureComposited(app, [])).png);
+  const greenShot = await compositedShot(app);
+  if (greenShot) {
+    fs.writeFileSync(path.join(artifactsDir, `${osName}-composited-green.png`), greenShot.png);
+  }
 
   console.log(`[e2e] ${osName} (${backend}) probes: t=1s ${JSON.stringify(red)}, t=4s ${JSON.stringify(green)}`);
   test.info().annotations.push({type: 'probe', description: `${backend}: t=1s centre ${JSON.stringify(red)}, t=4s centre ${JSON.stringify(green)}`});

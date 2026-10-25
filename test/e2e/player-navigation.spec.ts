@@ -1,11 +1,15 @@
 import {expect, test} from './support/app';
-import {CLIPS, inClip} from './support/clips';
+import {CLIPS, inClip, NEAR_END} from './support/clips';
 import {
   containsInOrder, describeSteps, launchClips, markHistory, mpvPaused, mpvTime, press, quiet, repeatCompletions, snapshot, startPlaying,
   stepsSince, waitForState, waitForTime
 } from './support/player';
 
 // Jumping between subtitled clips (Ctrl+Left / Ctrl+Right) and repeating the current clip (Up).
+
+// The clip plays on while the checks run; a VM needs more time than a desktop
+const landingSlack = process.platform === 'linux' ? 1.5 : 0.6;
+const restartSlack = process.platform === 'linux' ? 2 : 0.5;
 
 for (const atStart of [false, true]) {
   test(`Ctrl+Right and Ctrl+Left jump between subtitled clips, skipping gaps (auto-pause at start=${atStart})`, async ({launch}) => {
@@ -18,7 +22,7 @@ for (const atStart of [false, true]) {
       await waitForState(ui, atStart ? 'AutoPausedAtStart' : 'Playing');
       expect(await mpvPaused(ui)).toBe(atStart);
       expect(await mpvTime(ui)).toBeGreaterThan(CLIPS[index].start - 0.05);
-      expect(await mpvTime(ui)).toBeLessThan(CLIPS[index].start + 0.6);
+      expect(await mpvTime(ui)).toBeLessThan(CLIPS[index].start + landingSlack);
     };
 
     await press(ui, 'Control+ArrowRight');
@@ -103,7 +107,7 @@ test('Up repeats a clip that was paused by the user and plays it', async ({launc
 });
 
 test('Up after an auto-pause at the end replays the clip and auto-pauses at its end again', async ({launch}) => {
-  const {ui} = await launchClips(launch, {lastPlaybackTime: inClip(3, 0.7), settings: {autoPauseAtEnd: true}});
+  const {ui} = await launchClips(launch, {lastPlaybackTime: inClip(3, NEAR_END), settings: {autoPauseAtEnd: true}});
   await startPlaying(ui);
   await waitForState(ui, 'AutoPausedAtEnd');
   const mark = await markHistory(ui);
@@ -125,7 +129,7 @@ test('repeating twice in a row restarts the clip each time', async ({launch}) =>
     await press(ui, 'ArrowUp');
     await expect.poll(() => repeatCompletions(ui), {message: `repeat ${i} completes`}).toBe(i);
     await waitForState(ui, 'Playing');
-    await waitForTime(ui, t => t >= CLIPS[4].start && t < inClip(4, 0.5), `playback restarted after repeat ${i}`);
+    await waitForTime(ui, t => t >= CLIPS[4].start && t < inClip(4, restartSlack), `playback restarted after repeat ${i}`);
     await quiet(600); // longer than the key throttle, and lets the clip move on a little
   }
 });

@@ -28,14 +28,8 @@ export const latestPlayback = (ui: Page): Promise<PlaybackSnapshot | undefined> 
 export const playbackHistory = (ui: Page): Promise<PlaybackSnapshot[]> =>
   ui.evaluate(() => (window as any).__e2eHistory ?? []);
 
-/** Linux has no libmpv playback until the out-of-process host exists, so specs that open a project skip there. */
-export function skipWithoutLibmpv(): void {
-  test.skip(process.platform === 'linux', 'libmpv playback is unsupported on Linux until the host exists');
-}
-
 /** Waits until the loading spinner is gone, i.e. libmpv reached the resume position (mpv:initial-seek-complete). */
 export async function waitForPlayer(ui: Page): Promise<void> {
-  skipWithoutLibmpv();
   await expect(ui.locator('#video-container')).toBeAttached({timeout: 30_000});
   await expect(ui.locator('#video-container .resizing-overlay')).toHaveCount(0, {timeout: 30_000});
   await expect(ui.locator('.interaction-blocker')).toHaveCount(0, {timeout: 30_000});

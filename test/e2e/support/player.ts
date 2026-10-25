@@ -157,7 +157,14 @@ export async function closeProjectSettings(ui: Page): Promise<void> {
   // Shortcuts ignore key presses while an input has focus
   await ui.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
   await press(ui, 'p');
-  await expect(ui.locator('#auto-pause-end')).toHaveCount(0);
+  // A slow machine can swallow the key press while the drawer is still animating open: press once more if it stays open
+  try {
+    await expect(ui.locator('#auto-pause-end')).toHaveCount(0, {timeout: 4_000});
+  } catch {
+    await ui.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    await press(ui, 'p');
+    await expect(ui.locator('#auto-pause-end')).toHaveCount(0);
+  }
 }
 
 // --- Navigation

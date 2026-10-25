@@ -1,5 +1,5 @@
 import {expect, test} from './support/app';
-import {CLIPS, inClip} from './support/clips';
+import {CLIPS, inClip, NEAR_END} from './support/clips';
 import {
   describeSteps, expectDomSubtitle, launchClips, mpvPaused, mpvTime, press, quiet, setProjectSwitch, snapshot, startPlaying, stepsSince,
   waitForState, type Step
@@ -149,7 +149,7 @@ test('switching auto-pause on while a clip is playing takes effect at its end', 
 });
 
 test('Down arrow continues from an auto-pause at the end of a clip', async ({launch}) => {
-  const {ui} = await launchClips(launch, {lastPlaybackTime: inClip(3, 0.7), settings: {autoPauseAtEnd: true}});
+  const {ui} = await launchClips(launch, {lastPlaybackTime: inClip(3, NEAR_END), settings: {autoPauseAtEnd: true}});
   await startPlaying(ui);
   await waitForState(ui, 'AutoPausedAtEnd');
 
@@ -163,7 +163,7 @@ test('Down arrow continues from an auto-pause at the end of a clip', async ({lau
 
 test('turning auto-pause off while auto-paused leaves the player paused by the user', async ({launch}) => {
   // At the end of a clip
-  const end = await launchClips(launch, {lastPlaybackTime: inClip(3, 0.7), settings: {autoPauseAtEnd: true}});
+  const end = await launchClips(launch, {lastPlaybackTime: inClip(3, NEAR_END), settings: {autoPauseAtEnd: true}});
   await startPlaying(end.ui);
   await waitForState(end.ui, 'AutoPausedAtEnd');
   await setProjectSwitch(end.ui, 'auto-pause-end', false);
@@ -171,7 +171,7 @@ test('turning auto-pause off while auto-paused leaves the player paused by the u
   expect(await mpvPaused(end.ui)).toBe(true);
 
   // At the start of a clip
-  const start = await launchClips(launch, {lastPlaybackTime: inClip(3, 0.7), settings: {autoPauseAtStart: true}});
+  const start = await launchClips(launch, {lastPlaybackTime: inClip(3, NEAR_END), settings: {autoPauseAtStart: true}});
   await startPlaying(start.ui);
   await waitForState(start.ui, 'AutoPausedAtStart', 20_000);
   await setProjectSwitch(start.ui, 'auto-pause-start', false);

@@ -3,11 +3,16 @@ import {expect, test} from './support/app';
 import {seedProject} from './support/seed';
 import {waitForPlayer} from './support/playback';
 import {expectPictureFillsContainer} from './support/capture';
-import {getWindowStates, rectsClose, withWindows} from './support/windows';
+import {getWindowStates, rectsClose, restoreIfMaximized, withWindows} from './support/windows';
 import {VIDEO_AREA, mpvPaused} from './support/player';
 
 const icon = (ui: Page, name: string) => ui.locator(`.window-controls-wrapper .${name}`);
 const state = async (app: Parameters<typeof getWindowStates>[0]) => (await getWindowStates(app)).main!;
+// Electron on Wayland reports a work area that ignores the panel and dock
+const linux = process.platform === 'linux';
+const workAreaTolerance = linux ? 96 : 16;
+// Mutter restores a slightly smaller window than the one that was maximized
+const restoreTolerance = linux ? 64 : 4;
 const appRegion = (ui: Page) => ui.locator('.header-wrapper').evaluate(el => getComputedStyle(el).getPropertyValue('-webkit-app-region'));
 
 test.describe('window state', () => {
@@ -18,18 +23,21 @@ test.describe('window state', () => {
     await expectPictureFillsContainer(app, ui);
     expect((await getWindowStates(app)).visibleWindows).toBe(1);
 
+    if (linux) {
+      await restoreIfMaximized(app);
+    }
     const initial = await state(app);
 
     await ui.evaluate(() => (window as any).electronAPI.windowToggleMaximize());
     await expect.poll(async () => (await state(app)).isMaximized, {timeout: 10_000}).toBe(true);
     // Native maximize fills the work area of the window's own display
-    await expect.poll(async () => rectsClose((await state(app)).bounds, initial.display.workArea, 16), {timeout: 10_000}).toBe(true);
+    await expect.poll(async () => rectsClose((await state(app)).bounds, initial.display.workArea, workAreaTolerance), {timeout: 10_000}).toBe(true);
     await expect(icon(ui, 'fa-window-restore')).toBeVisible();
     await expectPictureFillsContainer(app, ui);
 
     await ui.evaluate(() => (window as any).electronAPI.windowToggleMaximize());
     await expect.poll(async () => (await state(app)).isMaximized, {timeout: 10_000}).toBe(false);
-    await expect.poll(async () => rectsClose((await state(app)).bounds, initial.bounds, 4), {timeout: 10_000}).toBe(true);
+    await expect.poll(async () => rectsClose((await state(app)).bounds, initial.bounds, restoreTolerance), {timeout: 10_000}).toBe(true);
     await expect(icon(ui, 'fa-window-maximize')).toBeVisible();
     await expectPictureFillsContainer(app, ui);
 
@@ -67,6 +75,9 @@ test.describe('window state', () => {
   test('Escape chain: fullscreen, then unmaximize, then minimize', async ({launch}) => {
     const {app, ui} = await launch({seed: dir => seedProject(dir)});
     await waitForPlayer(ui);
+    if (linux) {
+      await restoreIfMaximized(app);
+    }
 
     await ui.evaluate(() => (window as any).electronAPI.windowToggleMaximize());
     await expect.poll(async () => (await state(app)).isMaximized, {timeout: 10_000}).toBe(true);
@@ -76,6 +87,8 @@ test.describe('window state', () => {
     await ui.keyboard.press('Escape');
     await expect.poll(async () => (await state(app)).isFullScreen, {timeout: 10_000}).toBe(false);
     expect((await state(app)).isMinimized).toBe(false);
+    // Leaving fullscreen puts the maximized state back; the next key press has to find it settled
+    await expect.poll(async () => (await state(app)).isMaximized, {timeout: 10_000}).toBe(true);
 
     await ui.keyboard.press('Escape');
     await expect.poll(async () => (await state(app)).isMaximized, {timeout: 10_000}).toBe(false);
