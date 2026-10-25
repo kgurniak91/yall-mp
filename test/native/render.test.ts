@@ -393,9 +393,6 @@ describeNative('libmpv render API', (env: NativeEnv) => {
     it('resizes: the generation bumps and new frames are new surfaces of the new size, also while paused', async () => {
       if (!await needGl()) return;
       const rig = await open({backend: 'iosurface-shared'}, {file: ensureSplitClip({width: 320, height: 180})});
-      const mpvLog: string[] = [];
-      rig.player.requestLogMessages('warn');
-      rig.player.on('event', e => { if (e.event === 'log-message') mpvLog.push(`${e.prefix}/${e.level}: ${String(e.text).trim()}`); });
       await waitFor(() => rig.frames.length > 3, 15000, 'frames');
       const generation = rig.player.stats()!.generation;
       await rig.player.setProperty('pause', true);
@@ -405,24 +402,6 @@ describeNative('libmpv render API', (env: NativeEnv) => {
       expect(rig.player.stats()!.generation).toBeGreaterThan(generation);
       const newest = rig.frames.filter(f => f.width === 400).pop()!;
       expect(newest.generation).toBeGreaterThan(rig.frames[0].generation);
-      // Evidence: how does each further paused redraw look? (the first one at a new size came out black on CI)
-      const redraws: string[] = [`400x224 ${JSON.stringify(pixel(newest, 200, 20))}`];
-      for (const [w, h] of [[402, 226], [404, 228], [402, 226]]) {
-        rig.player.resize(w, h);
-        await waitFor(() => rig.frames.some(f => f.width === w && f.height === h), 5000, `a ${w}x${h} frame`);
-        await sleep(300);
-        const f = rig.frames.filter(x => x.width === w && x.height === h).pop()!;
-        redraws.push(`${w}x${h} slot${f.slotId} ${JSON.stringify(pixel(f, 200, 20))}`);
-      }
-      console.log(`paused redraws: ${redraws.join(' ; ')}`);
-      // Evidence: is the paused redraw empty, or is every frame of the new size?
-      const pausedFrames = rig.frames.filter(f => f.width === 400).length;
-      await rig.player.setProperty('pause', false);
-      await sleep(1500);
-      const lastNew = rig.frames.filter(f => f.width === 400).pop()!;
-      console.log(`resize: ${pausedFrames} frames of the new size while paused, ${rig.frames.filter(f => f.width === 400).length} after resuming; after resuming top=${JSON.stringify(pixel(lastNew, 200, 20))} mpvLog=${mpvLog.slice(-20).join(' ; ')}`);
-      const at = (f: RenderFrame) => JSON.stringify([pixel(f, 200, 20), pixel(f, 200, 200), pixel(f, 0, 0), pixel(f, 399, 223)]);
-      console.log(`resized frames: ${rig.frames.filter(f => f.width === 400).map(f => `gen${f.generation}/slot${f.slotId}/s${f.serial} ${at(f)}`).join(' ; ')}`);
       expect(isRed(pixel(newest, 200, 20))).toBe(true);
       expect(isBlue(pixel(newest, 200, 200))).toBe(true);
       expect(env.addon.readSurfacePixel!(newest.handle!, 399, 223)).not.toBeNull();
