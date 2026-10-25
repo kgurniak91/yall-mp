@@ -391,6 +391,9 @@ describeNative('libmpv render API', (env: NativeEnv) => {
     it('resizes: the generation bumps and new frames are new surfaces of the new size, also while paused', async () => {
       if (!await needGl()) return;
       const rig = await open({backend: 'iosurface-shared'}, {file: ensureSplitClip({width: 320, height: 180})});
+      const mpvLog: string[] = [];
+      rig.player.requestLogMessages('warn');
+      rig.player.on('event', e => { if (e.event === 'log-message') mpvLog.push(`${e.prefix}/${e.level}: ${String(e.text).trim()}`); });
       await waitFor(() => rig.frames.length > 3, 15000, 'frames');
       const generation = rig.player.stats()!.generation;
       await rig.player.setProperty('pause', true);
@@ -400,6 +403,12 @@ describeNative('libmpv render API', (env: NativeEnv) => {
       expect(rig.player.stats()!.generation).toBeGreaterThan(generation);
       const newest = rig.frames.filter(f => f.width === 400).pop()!;
       expect(newest.generation).toBeGreaterThan(rig.frames[0].generation);
+      // Evidence: is the paused redraw empty, or is every frame of the new size?
+      const pausedFrames = rig.frames.filter(f => f.width === 400).length;
+      await rig.player.setProperty('pause', false);
+      await sleep(1500);
+      const lastNew = rig.frames.filter(f => f.width === 400).pop()!;
+      console.log(`resize: ${pausedFrames} frames of the new size while paused, ${rig.frames.filter(f => f.width === 400).length} after resuming; after resuming top=${JSON.stringify(pixel(lastNew, 200, 20))} mpvLog=${mpvLog.slice(-20).join(' ; ')}`);
       const at = (f: RenderFrame) => JSON.stringify([pixel(f, 200, 20), pixel(f, 200, 200), pixel(f, 0, 0), pixel(f, 399, 223)]);
       console.log(`resized frames: ${rig.frames.filter(f => f.width === 400).map(f => `gen${f.generation}/slot${f.slotId}/s${f.serial} ${at(f)}`).join(' ; ')}`);
       expect(isRed(pixel(newest, 200, 20))).toBe(true);
