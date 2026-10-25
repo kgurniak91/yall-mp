@@ -78,3 +78,5 @@ public/THIRD-PARTY-NOTICES.txt
 /libmpv-bridge.js.map
 /libmpv-frame-sender.js
 /libmpv-frame-sender.js.map
+/libmpv-host.js
+/libmpv-host.js.map

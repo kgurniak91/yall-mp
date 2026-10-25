@@ -97,13 +97,6 @@ describe('LibmpvManager', () => {
     expect(fake.setProperty).toHaveBeenLastCalledWith('sub-visibility', false);
   });
 
-  it('refuses to start on Linux without touching the addon', async () => {
-    const factory = vi.fn();
-    create({platform: 'linux', libmpvFactory: factory});
-    await expect(start()).rejects.toThrow(/not supported on Linux/);
-    expect(factory).not.toHaveBeenCalled();
-  });
-
   it('emits ready after the file loaded and observes the properties', async () => {
     const ready = vi.fn();
     manager.on('ready', ready);

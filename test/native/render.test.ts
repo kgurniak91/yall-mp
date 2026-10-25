@@ -34,7 +34,7 @@ describeNative('libmpv render API', (env: NativeEnv) => {
     attach: Omit<AttachRendererOptions, 'width' | 'height'> & { width?: number; height?: number },
     options: { autoRelease?: boolean; file?: string; extra?: Record<string, string> } = {}
   ): Promise<Rig> => {
-    const player = Libmpv.create(env.addon, {
+    const player = await Libmpv.create(env.addon, {
       options: {
         vo: 'libmpv', ao: 'null', idle: 'yes', pause: 'no', 'keep-open': 'always', 'loop-file': 'inf', hwdec: 'no',
         'terminal': 'no', 'input-default-bindings': 'no', 'sub-visibility': 'no', ...options.extra
@@ -114,12 +114,14 @@ describeNative('libmpv render API', (env: NativeEnv) => {
       rig.frames.length = 0;
       rig.player.resize(200, 120);
       await waitFor(() => rig.frames.some(f => f.width === 200 && f.height === 120), 5000, 'a 200x120 frame');
-      expect(rig.player.stats()!.generation).toBeGreaterThan(1);
+      // The Linux host answers stats() from its last snapshot, so wait for the new generation to show up.
+      await waitFor(() => (rig.player.stats()?.generation ?? 0) > 1, 5000, 'the new generation in the stats');
     });
 
     it('reports its stats', async () => {
       const rig = await open({backend: 'readback', ...options});
       await waitFor(() => rig.frames.length > 10, 10000, 'frames');
+      await waitFor(() => (rig.player.stats()?.rendered ?? 0) > 10, 5000, 'rendered frames in the stats');
       const stats = rig.player.stats()!;
       expect(stats.backend).toBe('readback');
       expect(stats.rendered).toBeGreaterThan(10);

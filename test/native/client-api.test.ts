@@ -15,7 +15,7 @@ describeNative('libmpv client API', (env) => {
 
   /** Loads the sample paused and waits until it is ready, observing the usual properties. */
   const openSample = async (extra: Record<string, string> = {}) => {
-    const player = track(createPlayer(env, extra));
+    const player = track(await createPlayer(env, extra));
     const log = new EventLog(player);
     for (const name of ['time-pos', 'pause', 'duration', 'eof-reached', 'user-data/auto-pause-fired']) {
       player.observeProperty(name);
@@ -109,8 +109,8 @@ describeNative('libmpv client API', (env) => {
     await expect(player.setProperty('volume', 'loud')).rejects.toMatchObject({mpvError: expect.any(Number)});
   });
 
-  it('rejects an unsupported option when creating', () => {
-    expect(() => createPlayer(env, {'no-such-option-at-all': 'x'})).toThrowError(LibmpvError);
+  it('rejects an unsupported option when creating', async () => {
+    await expect(createPlayer(env, {'no-such-option-at-all': 'x'})).rejects.toBeInstanceOf(LibmpvError);
   });
 
   it('resolves 200 concurrent getProperty calls', async () => {
@@ -135,7 +135,7 @@ describeNative('libmpv client API', (env) => {
 
   it('does not leak across 20 create, play, destroy cycles', async () => {
     const cycle = async () => {
-      const player = createPlayer(env);
+      const player = await createPlayer(env);
       const log = new EventLog(player);
       await player.command(['loadfile', SAMPLE_MP4, 'replace']);
       await log.wait(() => log.has('playback-restart'), 'playback-restart');

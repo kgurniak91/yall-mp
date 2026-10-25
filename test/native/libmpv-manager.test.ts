@@ -9,8 +9,7 @@ import {describeNative, ROOT, SAMPLE_51_MKV, SAMPLE_MP4, sleep, waitFor} from '.
 
 const NO_SUBTITLES = {type: 'none'} as unknown as SubtitleSelection;
 
-// Linux playback is gated (libmpv cannot run inside the Electron process there), so the manager refuses to start
-(process.platform === 'linux' ? describe.skip : describe)('LibmpvManager with a real libmpv', () => {
+describe('LibmpvManager with a real libmpv', () => {
   describeNative('libmpv', () => {
   const managers: LibmpvManager[] = [];
   let tempDir: string | undefined;

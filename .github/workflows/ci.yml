@@ -79,12 +79,16 @@ jobs:
 
       - run: npm ci
 
-      # Linux playback is gated until it has its own libmpv host, so only macOS packages the addon
+      # macOS packages the addon, Linux the libmpv host executable
       - name: Build the native addon
         if: matrix.os == 'macos-latest'
         run: |
           brew install cmake
           npm run native:build
+
+      - name: Build the libmpv host
+        if: matrix.os == 'ubuntu-latest'
+        run: npm run native:build
 
       - run: npm run electron:build
 
@@ -105,6 +109,8 @@ jobs:
           test -f "$RES/THIRD-PARTY-NOTICES.txt"
           if [ "${{ matrix.os }}" = "macos-latest" ]; then
             find dist_electron/mac*/*.app -name yall_libmpv.node | grep -q .
+          else
+            test -x "$RES/yall-mpv-host"
           fi
 
   native:
@@ -173,20 +179,8 @@ jobs:
           if [ "${{ runner.os }}" = "Windows" ]; then
             npm run test:native:smoke -- --backend=auto --adapter=default --seconds=6 --mpv-log=v --json=test-results/smoke/windows.json
           elif [ "${{ runner.os }}" = "Linux" ]; then
-            # Known-blocked: libmpv inside the Electron main process exits in mpv_initialize because it binds to Electron's
-            # bundled libffmpeg.so (libavcodec 63) instead of the system libavcodec 60. The diagnostics below keep that evidence
-            # in the log; the probe is expected to fail under Electron and pass under plain node.
-            echo "::group::ffmpeg scope diagnostics (expected: node ok, Electron fails)"
-            ELECTRON_BIN=node_modules/electron/dist/electron
-            ldd "$ELECTRON_BIN" | grep -iE "ffmpeg|libav" || echo "ldd: no ffmpeg/libav entry"
-            echo "--- probe under plain node"
-            node test/native/support/ffmpeg-scope-probe.js 2>&1 | grep -v "dbus" | tail -25 || echo "node probe exit $?"
-            echo "--- probe as Electron main (LD_DEBUG=bindings)"
-            mkdir -p "$RUNNER_TEMP/ld"
-            LD_DEBUG=bindings LD_DEBUG_OUTPUT="$RUNNER_TEMP/ld/main" xvfb-run -a -s "-screen 0 1920x1080x24" "$ELECTRON_BIN" test/native/support/ffmpeg-scope-probe.js --no-sandbox 2>&1 | grep -v "dbus" | tail -25 || echo "electron probe exit $?"
-            grep -hE "avcodec_version|avutil_version" "$RUNNER_TEMP"/ld/main.* 2>/dev/null | head -4 || true
-            echo "::endgroup::"
-            echo "Linux Electron smoke skipped: libmpv in the Electron main process is unsupported on Linux for now"
+            # libmpv runs in the yall-mpv-host process, so Electron's bundled ffmpeg does not interfere.
+            xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:native:smoke -- --backend=readback --seconds=4 --min-fps=10 --no-sandbox --json=test-results/smoke/linux.json
           else
             npm run test:native:smoke -- --backend=readback --seconds=4 --min-fps=10 --json=test-results/smoke/macos.json
           fi

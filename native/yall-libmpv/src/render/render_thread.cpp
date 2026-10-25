@@ -1,7 +1,7 @@
 #include "render_thread.h"
 #include <algorithm>
 #include <chrono>
-#include "../core.h"
+#include "../live_counts.h"
 #include "../thread_cpu.h"
 
 using Clock = std::chrono::steady_clock;

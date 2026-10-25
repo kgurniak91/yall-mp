@@ -17,15 +17,30 @@ Prerequisites are listed in the root README (MSVC v142+, CMake 3.20+, system lib
 
 On Windows libmpv is `electron-resources/windows/libmpv-2.dll`, downloaded by `npm install`. On macOS and Linux the system library is used. `YALL_LIBMPV_ADDON` overrides the addon path and `YALL_LIBMPV_PATH` the library path in tests. Set `YALL_NATIVE_REQUIRED=1` to make `test:native` fail instead of skip when the addon or libmpv is missing (CI does).
 
+## Linux dev loop
+
+Linux does not build the addon, only `yall-mpv-host` (plain CMake, no Node headers). The inner loop is WSL2 (WSLg for Electron), with VMs for real X11 and Wayland sessions.
+
+- Distros: `wsl.exe --install Ubuntu` and `wsl.exe --install Debian` (different libmpv generations). Call them explicitly with `wsl.exe -d <name>`, the Windows default distro may be something else. Run `wsl.exe --update` first if the first start fails with `E_UNEXPECTED`.
+- Packages: `build-essential cmake git curl pkg-config libmpv-dev mpv libfontconfig1-dev xvfb gdb rsync xz-utils`, plus Node 22 from nodejs.org (the distro Node can be too old for node-gyp).
+- Work in a clone or rsync copy on ext4 (`~/yall-mp`) with its own `node_modules`, not under `/mnt/c`:
+  `rsync -a --delete --exclude node_modules --exclude build --exclude electron-resources --exclude 'dist*' --exclude .git /mnt/c/<repo>/ ~/yall-mp/`
+- Shared core only: `cmake -S native/yall-libmpv -B /tmp/core -DYALL_BUILD_ADDON=OFF -DYALL_BUILD_HOST=OFF && cmake --build /tmp/core`.
+- Host build: `npm run native:build` (writes `build/Release/yall-mpv-host`).
+
 ## Layout
 
+- `yall_core` (static library, no Node dependency, shared by the addon and the Linux host): `mpv_loader`, `node_value`, `live_counts`, `thread_cpu`, `render/*`.
 - `src/mpv_loader.*`: `LoadLibraryExW` / `dlopen` and the symbol table, so a missing library is an error and not a crash.
+- `src/node_value.*`: `NodeValue` copy of an `mpv_node` and `MpvErrorName`. `src/node_convert.*`: the N-API half (`ToJs`, `ScalarToNode`).
 - `src/core.*`, `src/addon.cpp`: `MpvCore`, one per instance. Options, `initialize`, promise-based `command` / `getProperty` / `setProperty` (`mpv_*_async` reply ids, the promise map is only touched on the JS thread), property observation, and one event thread (the only `mpv_wait_event` caller) feeding a single ThreadSafeFunction.
 - `src/core_render.cpp`, `src/render/*`: render core.
   - `render_thread`: one per attach. Waits on the mpv update callback, renders, hands frames to JS.
   - `d3d11_shared`: 4-slot pool of shared NT-handle textures (Windows). `d3d11_readback`: staging-texture readback. `sw_readback`: mpv SW render API, default readback off Windows. macOS/Linux GPU backends are not implemented yet.
   - `d3d11_device`: adapter match by vendor/device id and the `GpuWaiter` (fence, then `EnqueueSetEvent`, then query + `Sleep(1)`; never a busy spin).
 - `ring_stats.h`, `thread_cpu.*`: `stats()` percentiles and per-thread CPU time.
+- `src/event_msg.*`: the Node-free conversion of an mpv event into an owned message, used by the addon and the host.
+- `host/*` (Linux only): `yall-mpv-host`, libmpv in its own process. `protocol.*` frames messages over the unix socket the client passes as fd 3 (`[u32 type][u32 jsonLen][u32 binLen][json][bin]`, JSON through the vendored `third_party/nlohmann/json.hpp`), `host_core.*` is the counterpart of `MpvCore` (create, command/get/set with reply ids, observe, attach, destroy), `socket_sink.*` writes readback frames to the socket. `yall-mpv-host --probe <path>` loads a library and prints its client API version. The host exits when the socket closes (`PR_SET_PDEATHSIG` covers a killed parent). The TypeScript client is `libmpv-host.ts`; it presents the host as a `NativeAddon`, so nothing above `libmpv-bridge.ts` knows which transport is used. `test/libmpv-host.test.ts` tests the client against a scripted host on any OS, `test/native/host.test.ts` the real process on Linux.
 
 ### Slot lifecycle (shared backend)
 

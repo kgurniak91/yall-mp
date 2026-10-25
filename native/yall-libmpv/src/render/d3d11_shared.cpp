@@ -1,6 +1,6 @@
 #ifdef _WIN32
 #include "d3d11_shared.h"
-#include "../core.h"
+#include "../live_counts.h"
 #include "../thread_cpu.h"
 
 using Microsoft::WRL::ComPtr;

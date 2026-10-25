@@ -102,6 +102,17 @@ describe('libmpv-bridge', () => {
       }
     });
 
+    it('reports the missing host on Linux instead of looking for an addon', () => {
+      try {
+        loadLibmpvAddon({platform: 'linux', hostPath: '/nope/yall-mpv-host', appRoot: '/nope', resourcesPath: '/nope/res'});
+        expect.unreachable();
+      } catch (error) {
+        expect((error as LibmpvError).code).toBe('ADDON_NOT_FOUND');
+        expect((error as LibmpvError).message).toContain('yall-mpv-host');
+        expect((error as LibmpvError).tried.map(t => t.path)).toContain('/nope/yall-mpv-host');
+      }
+    });
+
     it('returns the exports of the first candidate that loads', () => {
       const addon = {marker: true};
       const dlopen = vi.fn().mockImplementation((module: { exports: unknown }, file: string) => {
@@ -158,10 +169,10 @@ describe('libmpv-bridge', () => {
   });
 
   describe('Libmpv', () => {
-    it('sets options, initializes and forwards events under their own name', () => {
+    it('sets options, initializes and forwards events under their own name', async () => {
       let listener: (event: unknown) => void = () => undefined;
       const core = fakeCore({onEvent: vi.fn().mockImplementation((l) => listener = l)});
-      const libmpv = Libmpv.create(fakeAddon(core), {options: {vo: 'null', ao: 'null'}, apiVersion: [2, 6]});
+      const libmpv = await Libmpv.create(fakeAddon(core), {options: {vo: 'null', ao: 'null'}, apiVersion: [2, 6]});
       expect(core.setOption).toHaveBeenCalledWith('vo', 'null');
       expect(core.setOption).toHaveBeenCalledWith('ao', 'null');
       expect(core.initialize).toHaveBeenCalledTimes(1);
@@ -175,14 +186,14 @@ describe('libmpv-bridge', () => {
       expect(seek).toHaveBeenCalledTimes(1);
     });
 
-    it('wraps a failing initialize in INIT_FAILED and destroys the core', () => {
+    it('wraps a failing initialize in INIT_FAILED and destroys the core', async () => {
       const core = fakeCore({
         initialize: vi.fn().mockImplementation(() => {
           throw new Error('invalid parameter');
         })
       });
       try {
-        Libmpv.create(fakeAddon(core), {options: {}, apiVersion: [2, 6]});
+        await Libmpv.create(fakeAddon(core), {options: {}, apiVersion: [2, 6]});
         expect.unreachable();
       } catch (error) {
         expect((error as LibmpvError).code).toBe('INIT_FAILED');
@@ -191,18 +202,30 @@ describe('libmpv-bridge', () => {
       expect(core.destroy).toHaveBeenCalled();
     });
 
-    it('supports D3D11 only on Windows with client API 2.6+', () => {
-      const make = (platform: NodeJS.Platform, apiVersion: [number, number]) =>
-        Libmpv.create(fakeAddon(fakeCore()), {options: {}, apiVersion, platform}).supportsD3D11();
-      expect(make('win32', [2, 6])).toBe(true);
-      expect(make('win32', [2, 5])).toBe(false);
-      expect(make('linux', [2, 6])).toBe(false);
-      expect(make('darwin', [2, 9])).toBe(false);
+    it('supports D3D11 only on Windows with client API 2.6+', async () => {
+      const make = async (platform: NodeJS.Platform, apiVersion: [number, number]) =>
+        (await Libmpv.create(fakeAddon(fakeCore()), {options: {}, apiVersion, platform})).supportsD3D11();
+      expect(await make('win32', [2, 6])).toBe(true);
+      expect(await make('win32', [2, 5])).toBe(false);
+      expect(await make('linux', [2, 6])).toBe(false);
+      expect(await make('darwin', [2, 9])).toBe(false);
+    });
+
+    it('waits for an asynchronous initialize (the Linux host)', async () => {
+      let release: () => void = () => undefined;
+      const core = fakeCore({initialize: vi.fn().mockReturnValue(new Promise<void>(resolve => release = resolve))});
+      let created = false;
+      const pending = Libmpv.create(fakeAddon(core), {options: {}, apiVersion: [2, 6]}).then(() => created = true);
+      await Promise.resolve();
+      expect(created).toBe(false);
+      release();
+      await pending;
+      expect(created).toBe(true);
     });
 
     it('destroys the core once', async () => {
       const core = fakeCore();
-      const libmpv = Libmpv.create(fakeAddon(core), {options: {}, apiVersion: [2, 6]});
+      const libmpv = await Libmpv.create(fakeAddon(core), {options: {}, apiVersion: [2, 6]});
       await libmpv.destroy();
       await libmpv.destroy();
       expect(core.destroy).toHaveBeenCalledTimes(1);

@@ -287,6 +287,8 @@ async function createWindow() {
     minWidth,
     minHeight,
     backgroundColor: '#1e1e1e',
+    // Without it the taskbar/dock shows Electron's default icon when running unpackaged and on Linux window managers
+    icon: path.join(__dirname, 'build', 'icon.png'),
     frame: false,
     show: false,
     webPreferences: {
@@ -336,9 +338,14 @@ async function createWindow() {
     app.quit();
   });
 
-  mainWindow.on('ready-to-show', () => {
-    mainWindow?.show();
-  });
+  const showMainWindow = () => {
+    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
+      mainWindow.show();
+    }
+  };
+  mainWindow.once('ready-to-show', showMainWindow);
+  // An unmapped window does not paint on every Linux compositor, so ready-to-show may never fire
+  mainWindow.webContents.once('did-finish-load', showMainWindow);
 
   mainWindow.loadFile(path.join(__dirname, './dist/yall-mp/browser/index.html'));
 
@@ -2539,16 +2546,16 @@ async function checkSystemDependencies() {
     }
   ];
 
-  // Linux playback is gated until it has its own libmpv host, so only macOS needs the library here.
-  if (process.platform === 'darwin') {
-    dependencies.unshift({
-      name: 'libmpv',
-      installCmd: 'brew install mpv',
-      check: async () => {
-        ensureLibmpv(app.getAppPath(), customExecutables.libmpv, process.platform);
-      }
-    });
-  }
+  // Playback loads libmpv from the system: in-process on macOS, through the yall-mpv-host executable on Linux.
+  dependencies.unshift({
+    name: 'libmpv',
+    installCmd: process.platform === 'darwin'
+      ? 'brew install mpv'
+      : 'sudo apt install libmpv2 (Debian/Ubuntu) or sudo dnf install mpv-libs (Fedora, RPM Fusion)',
+    check: async () => {
+      ensureLibmpv(app.getAppPath(), customExecutables.libmpv, process.platform);
+    }
+  });
 
   const missing: string[] = [];
 

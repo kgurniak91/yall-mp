@@ -29,7 +29,7 @@
     "electron:watch:run": "nodemon",
     "package:win": "npm run native:build && npm run electron:build && electron-builder --win",
     "package:mac": "npm run native:build && npm run electron:build && electron-builder --mac",
-    "package:linux": "npm run electron:build && electron-builder --linux",
+    "package:linux": "npm run native:build && npm run electron:build && electron-builder --linux",
     "build:github-pages": "node github-pages/build.js",
     "postinstall": "node scripts/download-dependencies.js && install-electron && npm run generate:licenses",
     "native:build": "node scripts/build-native.js",
@@ -50,6 +50,7 @@
       "electron-main.js",
       "libmpv-manager.js",
       "libmpv-bridge.js",
+      "libmpv-host.js",
       "libmpv-frame-sender.js",
       "native/yall-libmpv/build/Release/yall_libmpv.node",
       "playback-manager.js",
@@ -57,6 +58,7 @@
       "shared/**/*.js",
       "src/app/model/**/*.js",
       "preload.js",
+      "build/icon.png",
       "subtitles-lookup-host-preload.js",
       "subtitles-lookup-preload.js"
     ],
@@ -227,6 +229,10 @@
           "filter": [
             "**/*.lua"
           ]
+        },
+        {
+          "from": "native/yall-libmpv/build/Release/yall-mpv-host",
+          "to": "yall-mpv-host"
         }
       ]
     },

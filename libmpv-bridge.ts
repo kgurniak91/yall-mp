@@ -3,6 +3,7 @@
 import {EventEmitter} from 'events';
 import * as fs from 'fs';
 import * as path from 'path';
+import {createHostAddon, hostCandidates} from './libmpv-host';
 
 export type LibmpvErrorCode = 'ADDON_NOT_FOUND' | 'LIB_NOT_FOUND' | 'LIB_TOO_OLD' | 'INIT_FAILED';
 
@@ -32,7 +33,8 @@ export type LibmpvPropertyValue = boolean | number | string;
 
 export interface NativeMpvCore {
   setOption(name: string, value: string): void;
-  initialize(): void;
+  /** The in-process addon initializes synchronously, the Linux host asynchronously. */
+  initialize(): void | Promise<void>;
   onEvent(listener: (event: LibmpvEvent) => void): void;
   command(args: string[]): Promise<unknown>;
   getProperty(name: string): Promise<unknown>;
@@ -194,6 +196,11 @@ export interface LoadAddonOptions {
   appRoot?: string;
   /** Replaceable for tests. */
   dlopen?: (module: { exports: unknown }, file: string) => void;
+  /** Linux talks to the `yall-mpv-host` executable instead of loading an addon. Default: `process.platform`. */
+  platform?: NodeJS.Platform;
+  hostPath?: string;
+  /** Where a packaged app keeps the host. Default: `process.resourcesPath`. */
+  resourcesPath?: string;
 }
 
 let cachedAddon: NativeAddon | null = null;
@@ -201,6 +208,9 @@ let cachedAddon: NativeAddon | null = null;
 export const loadLibmpvAddon = (options: LoadAddonOptions = {}): NativeAddon => {
   if (cachedAddon && !options.dlopen) {
     return cachedAddon;
+  }
+  if ((options.platform ?? process.platform) === 'linux' && !options.dlopen) {
+    return cachedAddon = loadHostAddon(options);
   }
   const dlopen = options.dlopen ?? ((module, file) => process.dlopen(module as NodeJS.Module, file));
   const candidates = addonCandidates({explicitPath: options.addonPath, appRoot: options.appRoot ?? __dirname});
@@ -226,6 +236,23 @@ export const loadLibmpvAddon = (options: LoadAddonOptions = {}): NativeAddon => 
 
   throw new LibmpvError('ADDON_NOT_FOUND',
     `The libmpv native addon could not be loaded. Run "npm run native:build". Tried:\n${formatTried(tried)}`, tried);
+};
+
+/** Linux: libmpv cannot live in the Electron process, so it runs in the host executable. */
+const loadHostAddon = (options: LoadAddonOptions): NativeAddon => {
+  const candidates = hostCandidates({
+    explicitPath: options.hostPath,
+    appRoot: options.appRoot ?? __dirname,
+    resourcesPath: options.resourcesPath ?? (process as { resourcesPath?: string }).resourcesPath
+  }).map(toUnpackedPath);
+  const found = candidates.find(candidate => fs.existsSync(candidate));
+  if (!found) {
+    const tried = candidates.map((candidate): TriedPath => ({path: candidate, error: 'file does not exist'}));
+    throw new LibmpvError('ADDON_NOT_FOUND',
+      `The libmpv host (yall-mpv-host) could not be found. Run "npm run native:build". Tried:
+${formatTried(tried)}`, tried);
+  }
+  return createHostAddon({hostPath: found});
 };
 
 // ---- libmpv discovery ----
@@ -306,15 +333,15 @@ export class Libmpv extends EventEmitter {
     super();
   }
 
-  /** Sets the options, initializes the core and starts the event pump. Throws `LibmpvError('INIT_FAILED')`. */
-  static create(addon: NativeAddon, create: LibmpvCreateOptions): Libmpv {
+  /** Sets the options, initializes the core and starts the event pump. Rejects with `LibmpvError('INIT_FAILED')`. */
+  static async create(addon: NativeAddon, create: LibmpvCreateOptions): Promise<Libmpv> {
     let core: NativeMpvCore | undefined;
     try {
       core = new addon.MpvCore();
       for (const [name, value] of Object.entries(create.options)) {
         core.setOption(name, value);
       }
-      core.initialize();
+      await core.initialize();
     } catch (error) {
       void core?.destroy().catch(() => undefined);
       throw new LibmpvError('INIT_FAILED', `libmpv failed to initialize: ${errorMessage(error)}`);

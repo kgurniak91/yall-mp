@@ -8,41 +8,11 @@
 #include <thread>
 #include <unordered_map>
 #include <vector>
+#include "event_msg.h"
+#include "live_counts.h"
 #include "mpv_loader.h"
 #include "node_convert.h"
 #include "render/render_thread.h"
-
-// Live object counts, for leak tests (exported as liveCounts()).
-struct LiveCounts {
-  std::atomic<int> cores{0};
-  std::atomic<int> eventThreads{0};
-  std::atomic<int> renderers{0};
-  std::atomic<int> renderThreads{0};
-  std::atomic<int> slots{0};
-};
-LiveCounts& Counts();
-
-// A message from the mpv event thread to the JS thread. Command/get/set replies are resolved
-// against the pending-promise map and never reach the JS listener.
-struct EventMsg {
-  enum class Kind { Event, Reply };
-  Kind kind = Kind::Event;
-
-  // Reply
-  uint64_t replyId = 0;
-  int error = 0;
-  NodeValue value;
-
-  // Event
-  std::string event;  // mpv event name: property-change, end-file, seek, ...
-  uint64_t observeId = 0;
-  std::string propertyName;
-  std::string reason;      // end-file: eof | stop | quit | error | redirect
-  std::string errorName;   // end-file with reason error
-  std::string errorText;
-  std::string prefix, level, text;  // log-message
-  std::vector<std::string> args;    // client-message
-};
 
 // State shared between the JS thread and the TSFN callback. Kept alive by the TSFN finalizer so
 // queued messages never see a destroyed context. Only touched on the JS thread.

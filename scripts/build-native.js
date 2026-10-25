@@ -73,8 +73,41 @@ const findCmake = () => {
     'Install CMake (or the Visual Studio C++ CMake tools) or set CMAKE_PATH.');
 };
 
-const electronVersion = require(path.join(ROOT, 'node_modules', 'electron', 'package.json')).version;
 const cmakePath = findCmake();
+
+// Linux has no in-process addon (libmpv cannot share Electron's process): build the plain
+// CMake host executable instead, no cmake-js or Node headers involved.
+if (process.platform === 'linux') {
+  const buildDir = path.join(ADDON_DIR, 'build');
+  const config = debug ? 'Debug' : 'Release';
+  const cmake = cmakePath || 'cmake';
+  console.log(`Building yall-mpv-host (linux-${arch}, ${config})`);
+  const run = (cmakeArgs) => spawnSync(cmake, cmakeArgs, {stdio: 'inherit', cwd: ROOT});
+  let step = run(['-S', ADDON_DIR, '-B', buildDir, `-DCMAKE_BUILD_TYPE=${config}`,
+    '-DYALL_BUILD_ADDON=OFF', '-DYALL_BUILD_HOST=ON']);
+  if (step.status === 0) {
+    step = run(['--build', buildDir, '--target', 'yall-mpv-host', '--parallel']);
+  }
+  if (step.status !== 0) {
+    process.exit(step.status || 1);
+  }
+  const builtHost = path.join(buildDir, 'yall-mpv-host');
+  const hostDest = path.join(buildDir, 'Release', 'yall-mpv-host');
+  fs.mkdirSync(path.dirname(hostDest), {recursive: true});
+  fs.copyFileSync(builtHost, hostDest);
+  fs.chmodSync(hostDest, 0o755);
+  if (prebuild) {
+    const destDir = path.join(ADDON_DIR, 'prebuilds', `linux-${arch}`);
+    fs.mkdirSync(destDir, {recursive: true});
+    fs.copyFileSync(builtHost, path.join(destDir, 'yall-mpv-host'));
+    fs.chmodSync(path.join(destDir, 'yall-mpv-host'), 0o755);
+    console.log(`Prebuild copied to ${destDir}`);
+  }
+  console.log(`Built ${hostDest}`);
+  process.exit(0);
+}
+
+const electronVersion = require(path.join(ROOT, 'node_modules', 'electron', 'package.json')).version;
 
 const cmakeJs = path.join(ROOT, 'node_modules', 'cmake-js', 'bin', 'cmake-js');
 const cmakeJsArgs = [

@@ -32,7 +32,7 @@ export interface LibmpvManagerOptions {
   /** mpv options that override the defaults (the integration tests use `ao: 'null'`). */
   options?: Record<string, string>;
   /** Test seam: creates the player from the final option map instead of loading the addon and the library. */
-  libmpvFactory?: (options: Record<string, string>) => Libmpv;
+  libmpvFactory?: (options: Record<string, string>) => Libmpv | Promise<Libmpv>;
   /**
    * Gives the video a surface. It runs after the player is created and before the file is loaded (a render
    * context freed later takes mpv's video output with it) and switches `vo` to `libmpv`. The returned function
@@ -107,10 +107,6 @@ export class LibmpvManager extends EventEmitter {
   ): Promise<void> {
     this.mediaPath = mediaPath;
     const platform = this.config.platform ?? process.platform;
-    if (platform === 'linux') {
-      throw new LibmpvError('INIT_FAILED',
-        'Playback is not supported on Linux by this build yet. Linux support is planned before the 1.0 release.');
-    }
 
     const options: Record<string, string> = {
       // Without a surface `null` still decodes, so seeking behaves.
@@ -162,7 +158,7 @@ export class LibmpvManager extends EventEmitter {
       await this.stop();
       this.stopping = false;
       this.resetState();
-      const libmpv = this.createPlayer(options, platform);
+      const libmpv = await this.createPlayer(options, platform);
       this.libmpv = libmpv;
       this.detachVideo = this.config.attachVideo?.(libmpv) ?? null;
       libmpv.on('event', (event: LibmpvEvent) => this.handleEvent(event));
@@ -197,12 +193,12 @@ export class LibmpvManager extends EventEmitter {
     }
   }
 
-  private createPlayer(options: Record<string, string>, platform: NodeJS.Platform): Libmpv {
+  private async createPlayer(options: Record<string, string>, platform: NodeJS.Platform): Promise<Libmpv> {
     if (this.config.libmpvFactory) {
       return this.config.libmpvFactory(options);
     }
     const {addon, apiVersion} = ensureLibmpv(this.config.basePath, this.config.customLibmpvPath, platform);
-    return Libmpv.create(addon, {options, apiVersion, platform});
+    return await Libmpv.create(addon, {options, apiVersion, platform});
   }
 
   private resetState(): void {

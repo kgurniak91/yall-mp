@@ -186,6 +186,7 @@ This application is not code-signed (which requires a paid Apple Developer accou
     *   **Windows:** Visual Studio 2019 (16.11+) or 2022 Build Tools with "Desktop development with C++" (MSVC v142 or newer), the Windows 10 SDK and CMake 3.20+ (the CMake bundled with Visual Studio is found automatically).
     *   **macOS:** Xcode Command Line Tools, `brew install mpv cmake`.
     *   **Linux:** `build-essential`, `cmake`, and libmpv with Lua (`libmpv2` / `libmpv-dev`, from the mpv PPA on Ubuntu).
+    *   **Fedora:** `sudo dnf install gcc-c++ cmake libstdc++-static mpv-libs-devel`, and for H.264 playback the full ffmpeg from RPM Fusion (`sudo dnf swap ffmpeg-free ffmpeg --allowerasing`, `sudo dnf install libavcodec-freeworld`). `audiowaveform` is not packaged for Fedora and has to be built from https://github.com/bbc/audiowaveform.
     *   Build with `npm run native:build`, run the integration tests with `npm run test:native` and the Electron smoke harness with `npm run test:native:smoke`.
 
 ### Setup

@@ -93,7 +93,7 @@ async function begin(width, height, gpuInfo) {
     options[k] = v.join('=');
   }
   log('creating the mpv core');
-  libmpv = Libmpv.create(addon, {options, apiVersion: loaded.apiVersion});
+  libmpv = await Libmpv.create(addon, {options, apiVersion: loaded.apiVersion});
   log('mpv core created');
   if (cfg.stopAfterCreate) {
     await libmpv.destroy();

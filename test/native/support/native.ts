@@ -93,7 +93,7 @@ export const headlessOptions = (extra: Record<string, string> = {}): Record<stri
   ...extra
 });
 
-export const createPlayer = (env: NativeEnv, extra: Record<string, string> = {}): Libmpv =>
+export const createPlayer = (env: NativeEnv, extra: Record<string, string> = {}): Promise<Libmpv> =>
   Libmpv.create(env.addon, {options: headlessOptions(extra), apiVersion: env.apiVersion});
 
 /** Records every event of a player so tests can wait for and inspect them. */
