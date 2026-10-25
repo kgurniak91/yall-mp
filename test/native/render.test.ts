@@ -40,7 +40,9 @@ describeNative('libmpv render API', (env: NativeEnv) => {
     const player = await Libmpv.create(env.addon, {
       options: {
         vo: 'libmpv', ao: 'null', idle: 'yes', pause: 'no', 'keep-open': 'always', 'loop-file': 'inf', hwdec: 'no',
-        'terminal': 'no', 'input-default-bindings': 'no', 'sub-visibility': 'no', ...options.extra
+        'terminal': 'no', 'input-default-bindings': 'no', 'sub-visibility': 'no',
+        // Apple's software OpenGL renderer (hosted CI) needs 30+ ms per frame with mpv's default scalers
+        ...(attach.backend === 'iosurface-shared' ? {profile: 'fast'} : {}), ...options.extra
       },
       apiVersion: env.apiVersion
     });
