@@ -21,6 +21,12 @@ endif()
 find_package(Threads REQUIRED)
 
 # yall_core: everything that does not depend on Node, shared by the addon and the host.
+if(APPLE)
+  enable_language(OBJCXX)
+  set(CMAKE_OBJCXX_STANDARD 17)
+  set(CMAKE_OBJCXX_STANDARD_REQUIRED ON)
+endif()
+
 set(CORE_SOURCES
   src/event_msg.cpp
   src/live_counts.cpp
@@ -37,6 +43,10 @@ if(WIN32)
     src/render/d3d11_readback.cpp)
 endif()
 
+if(APPLE)
+  list(APPEND CORE_SOURCES src/render/iosurface_shared.mm)
+endif()
+
 add_library(yall_core STATIC ${CORE_SOURCES})
 set_target_properties(yall_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(yall_core PUBLIC
@@ -49,6 +59,9 @@ target_compile_definitions(yall_core PUBLIC
   _CRT_SECURE_NO_WARNINGS)
 if(WIN32)
   target_link_libraries(yall_core PUBLIC d3d11 dxgi)
+elseif(APPLE)
+  target_link_libraries(yall_core PUBLIC ${CMAKE_DL_LIBS} Threads::Threads
+    "-framework OpenGL" "-framework IOSurface" "-framework CoreFoundation")
 else()
   target_link_libraries(yall_core PUBLIC ${CMAKE_DL_LIBS} Threads::Threads)
 endif()

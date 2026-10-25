@@ -4,7 +4,9 @@
 //
 //   npm run test:native:smoke -- --backend=auto --seconds=12 --json=out.json
 //
-// --backend=d3d11-shared|readback|auto   (default auto)
+// --backend=d3d11-shared|iosurface-shared|readback|auto   (default auto)
+// --allow-fallback                       a shared backend that falls back to readback (logged) still passes
+// --screenshot=<png>                     save the composited window after the measurement
 // --adapter=gpu|default|warp             gpu = the active GPU from getGPUInfo (default)
 // --file=<path> | --clip=<WxH>@<fps>     media (default test/e2e/fixtures/sample.mp4); clips are generated on demand
 // --seconds=N  --warmup=N  --width=N --height=N  --hwdec=auto|no  --ao=<driver>  --subs  --simulate-import-failure
@@ -44,6 +46,8 @@ const cfg = {
   simulateImportFailure: !!args['simulate-import-failure'],
   minFps: args['min-fps'] ? parseFloat(args['min-fps']) : null,
   json: args.json ? path.resolve(args.json) : null,
+  screenshot: typeof args.screenshot === 'string' ? path.resolve(args.screenshot) : null,
+  allowFallback: !!args['allow-fallback'],
   file: path.join(ROOT, 'test', 'e2e', 'fixtures', 'sample.mp4')
 };
 if (args.file) {
@@ -151,7 +155,7 @@ async function run(gpuInfo) {
   const fps = frames / wallSec;
   const fs_ = sender.stats();
   const backend = fs_.backend;
-  const wasShared = backend === 'd3d11-shared';
+  const wasShared = backend === 'd3d11-shared' || backend === 'iosurface-shared';
 
   const addonA = a.addon;
   const addonB = b.addon;
@@ -170,8 +174,21 @@ async function run(gpuInfo) {
     sender: {...fs_, addon: undefined},
     addon: addonB,
     renderer: rendererStats,
-    centre: rendererStats.centre
+    centre: rendererStats.centre,
+    gl: addonB && addonB.note ? {glErrors: addonB.glErrors, note: addonB.note} : null,
+    senderLog: logLines
   };
+  if (cfg.screenshot) {
+    // The composited window (video canvas + DOM) as the user would see it, evidence for the GPU backends.
+    try {
+      const image = await win.webContents.capturePage();
+      fs.mkdirSync(path.dirname(cfg.screenshot), {recursive: true});
+      fs.writeFileSync(cfg.screenshot, image.toPNG());
+      summary.screenshot = {path: cfg.screenshot, size: image.getSize()};
+    } catch (error) {
+      summary.screenshot = {error: String(error)};
+    }
+  }
 
   // ---- checks ----
   check('frames received during the window', frames > 0, `${frames} in ${wallSec.toFixed(1)} s = ${fps.toFixed(1)} fps`);
@@ -185,8 +202,13 @@ async function run(gpuInfo) {
     check('no import failures, or a clean switch to readback', fs_.importFailures === 0 || (fs_.fallbackReason !== null && backend === 'readback'),
       `${fs_.importFailures}${fs_.fallbackReason ? `, fallback: ${fs_.fallbackReason}` : ''}`);
     check('no send failures', fs_.sendFailures === 0, `${fs_.sendFailures}`);
-    if (cfg.backend === 'd3d11-shared') {
-      check('shared backend kept (no fallback)', wasShared, fs_.fallbackReason ?? '');
+    if (cfg.backend === 'd3d11-shared' || cfg.backend === 'iosurface-shared') {
+      // On a machine without a usable GPU (a hosted macOS runner) the switch to readback, with its logged
+      // reason, is the intended outcome: --allow-fallback accepts that.
+      const fellBack = cfg.allowFallback && backend === 'readback' && !!fs_.fallbackReason &&
+        logLines.some(l => /platform=/.test(l) && /readback/.test(l));
+      check('shared backend kept (no fallback)', wasShared || fellBack,
+        fellBack ? `fell back: ${fs_.fallbackReason}` : (fs_.fallbackReason ?? ''));
     }
   }
   const minFps = cfg.minFps ?? (wasShared && expected ? null : Math.min(24, (vfFps || 24) * 0.95));
@@ -195,7 +217,7 @@ async function run(gpuInfo) {
   } else {
     check('received >= 95 % of the expected frames', expected && frames >= expected * 0.95, `${frames} / ${expected?.toFixed(0)}`);
   }
-  if (wasShared) {
+  if (backend === 'd3d11-shared') {
     const total = summary.renderThreadCpuPct.total;
     check('render thread < 1 % of one core', total !== null && total < 1,
       `total ${total?.toFixed(2)} % = render ${summary.renderThreadCpuPct.render?.toFixed(2)} + wait ${summary.renderThreadCpuPct.wait?.toFixed(2)}; gpuWaitImpl=${attach.gpuWaitImpl}`);

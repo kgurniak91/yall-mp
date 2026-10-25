@@ -16,7 +16,7 @@ struct Frame {
   uint32_t generation = 0;   // bumped by resize()
   int width = 0;
   int height = 0;
-  uint64_t handle = 0;       // shared backends: NT handle value
+  uint64_t handle = 0;       // shared backends: NT handle value / IOSurfaceRef
   std::shared_ptr<std::vector<uint8_t>> pixels;  // readback: tightly packed BGRA, alpha = 255
 };
 
@@ -38,9 +38,9 @@ struct PercentileStats {
 inline PercentileStats Summarize(const RingStats& r) { return {r.Percentile(0.5), r.Percentile(0.95), r.Max()}; }
 
 struct BackendStats {
-  std::string backend;     // d3d11-shared | readback
-  std::string impl;        // d3d11 | sw
-  std::string gpuWaitImpl; // fence | enqueue-event | query-poll | none
+  std::string backend;     // d3d11-shared | iosurface-shared | readback
+  std::string impl;        // d3d11 | gl | sw
+  std::string gpuWaitImpl; // fence | enqueue-event | query-poll | finish | none
   AdapterInfo adapter;
   int poolSize = 0;
   int inFlight = 0;
@@ -53,6 +53,8 @@ struct BackendStats {
   PercentileStats renderMs, gpuWaitMs, releaseMs, copyMs;
   double renderCpuMs = 0;  // render-thread CPU spent inside mpv_render_context_render
   double waitCpuMs = 0;    // render-thread CPU spent waiting for the GPU (about 0 when event based)
+  uint64_t glErrors = 0;   // GL backends: glGetError() results other than GL_NO_ERROR
+  std::string note;        // backend-specific diagnostics (GL version/renderer, first GL errors), for logs
 };
 
 // Reusable pixel buffers, so a steady stream of readback frames does not allocate per frame.
@@ -95,6 +97,11 @@ class RenderBackend {
   virtual mpv_render_context* Context() = 0;
   // Clears the update callback and frees the render context (render thread, before the core is destroyed).
   virtual void FreeContext() = 0;
+  // First and last thing the render thread does for this backend (GL backends make their context current
+  // there and give it up again). Init() runs on the thread that attaches, so a GL backend releases the
+  // context at the end of Init(). OnThreadStop runs after FreeContext() and before the drain phase.
+  virtual void OnThreadStart() {}
+  virtual void OnThreadStop() {}
 
   // Renders one frame at w x h. False when the frame was skipped (pool exhausted, GPU wait timeout, ...).
   virtual bool Render(int w, int h, uint32_t generation, Frame& out) = 0;

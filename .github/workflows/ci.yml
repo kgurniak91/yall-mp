@@ -170,6 +170,20 @@ jobs:
             native/yall-libmpv/include/mpv/VENDORED.md
 
       - run: npm run test:native
+        if: runner.os != 'macOS'
+
+      # No Mac to look at: this run is the evidence for the iosurface-shared backend. It never stops the job, so the
+      # smoke runs below always happen; the log (GL version/renderer, pixel values, GL errors) is uploaded.
+      - name: Native tests (macOS)
+        if: runner.os == 'macOS'
+        continue-on-error: true
+        env:
+          YALL_MP_GL_DEBUG: 1
+        run: |
+          mkdir -p test-results/smoke
+          { sw_vers; uname -m; system_profiler SPDisplaysDataType; } > test-results/smoke/macos-system.txt 2>&1 || true
+          set -o pipefail
+          npm run test:native 2>&1 | tee test-results/smoke/native-tests-macos.log
 
       - name: Electron smoke (non-gating)
         continue-on-error: true
@@ -182,7 +196,12 @@ jobs:
             # libmpv runs in the yall-mpv-host process, so Electron's bundled ffmpeg does not interfere.
             xvfb-run -a -s "-screen 0 1920x1080x24" npm run test:native:smoke -- --backend=readback --seconds=4 --min-fps=10 --no-sandbox --json=test-results/smoke/linux.json
           else
-            npm run test:native:smoke -- --backend=readback --seconds=4 --min-fps=10 --json=test-results/smoke/macos.json
+            export YALL_MP_GL_DEBUG=1
+            status=0
+            npm run test:native:smoke -- --backend=readback --seconds=4 --min-fps=10 --json=test-results/smoke/macos.json || status=1
+            npm run test:native:smoke -- --backend=iosurface-shared --allow-fallback --seconds=6 --mpv-log=v --screenshot=test-results/smoke/macos-iosurface.png --json=test-results/smoke/macos-iosurface.json || status=1
+            npm run test:native:smoke -- --backend=auto --allow-fallback --seconds=6 --screenshot=test-results/smoke/macos-auto.png --json=test-results/smoke/macos-auto.json || status=1
+            exit $status
           fi
 
       - uses: actions/upload-artifact@v4

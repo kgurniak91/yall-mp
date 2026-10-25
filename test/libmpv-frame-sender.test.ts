@@ -99,6 +99,13 @@ describe('LibmpvFrameSender', () => {
     expect(libmpv.attaches[0].options.backend).toBe('iosurface-shared');
   });
 
+  it('logs the GL diagnostics of a shared backend when it attaches', () => {
+    const libmpv = fakeLibmpv({shared: 'iosurface-shared'});
+    (libmpv.stats as ReturnType<typeof vi.fn>).mockReturnValue({glErrors: 2, note: 'GL 4.1 | Apple M1'});
+    create(libmpv).start({width: 800, height: 450, preferred: 'auto'});
+    expect(log).toHaveBeenCalledWith('[libmpv] iosurface-shared attached: glErrors=2 GL 4.1 | Apple M1');
+  });
+
   it('keeps readback when asked for it, whatever the platform offers', () => {
     const libmpv = fakeLibmpv();
     create(libmpv).start({width: 800, height: 450, preferred: 'readback'});

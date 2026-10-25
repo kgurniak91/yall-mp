@@ -242,12 +242,27 @@ export class LibmpvFrameSender {
     const options: AttachRendererOptions = {backend, width: size.width, height: size.height, adapter: this.adapterOption()};
     const result = this.libmpv.attachRenderer(options, frame => this.onFrame(frame));
     this.attach = result;
+    if (backend !== 'readback') {
+      this.logBackendNote(`${backend} attached`);
+    }
     if (backend === 'readback') {
       this.readbackSize = size;
       // The software cap is only known once the adapter is: shrink the frame size if needed.
       this.applySize();
     }
     return result;
+  }
+
+  /** GL version/renderer and GL errors of a shared backend, for video.log (empty for backends without notes). */
+  private logBackendNote(what: string): void {
+    try {
+      const stats = this.libmpv.stats();
+      if (stats?.note) {
+        this.log(`[libmpv] ${what}: glErrors=${stats.glErrors ?? 0} ${stats.note}`);
+      }
+    } catch {
+      // diagnostics only
+    }
   }
 
   private computeReadback(softwareKnown: boolean): Size {
@@ -344,6 +359,9 @@ export class LibmpvFrameSender {
       return;
     }
     this.countSent();
+    if (isFirst) {
+      this.logBackendNote(`first ${attach.backend} frame ${frame.width}x${frame.height} sent`);
+    }
     const onSendError = (error: unknown): void => {
       this.sendFailures++;
       imported.release();

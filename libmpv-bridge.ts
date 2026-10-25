@@ -87,8 +87,8 @@ export interface AdapterDescription {
 export interface AttachResult {
   attachId: number;
   backend: RenderBackendName;
-  impl: 'd3d11' | 'sw';
-  gpuWaitImpl: 'fence' | 'enqueue-event' | 'query-poll' | 'none';
+  impl: 'd3d11' | 'gl' | 'sw';
+  gpuWaitImpl: 'fence' | 'enqueue-event' | 'query-poll' | 'finish' | 'none';
   adapter: AdapterDescription;
 }
 
@@ -116,7 +116,7 @@ export interface Percentiles {
 export interface RenderStats {
   attachId: number;
   backend: RenderBackendName;
-  impl: 'd3d11' | 'sw';
+  impl: 'd3d11' | 'gl' | 'sw';
   gpuWaitImpl: string;
   adapter: AdapterDescription;
   width: number;
@@ -142,6 +142,10 @@ export interface RenderStats {
   threadWallMs: number;
   /** Detached attaches that are still draining their in-flight slots. */
   draining: number;
+  /** iosurface-shared: glGetError() results other than GL_NO_ERROR. */
+  glErrors?: number;
+  /** iosurface-shared: GL version/renderer and the first GL errors, for logs. */
+  note?: string;
 }
 
 export interface LiveCounts {
@@ -158,6 +162,8 @@ export interface NativeAddon {
   loadLibrary(libraryPath: string): { path: string; apiVersion: [number, number] };
   apiVersion(): [number, number] | null;
   liveCounts(): LiveCounts;
+  /** macOS only, test support: the BGRA pixel at (x, y) of a live IOSurface frame handle, null when out of range. */
+  readSurfacePixel?(handle: Buffer, x: number, y: number): { r: number; g: number; b: number; a: number } | null;
   MpvCore: new () => NativeMpvCore;
 }
 

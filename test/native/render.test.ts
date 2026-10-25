@@ -2,9 +2,12 @@ import {afterAll, afterEach, describe, expect, it} from 'vitest';
 import {AttachRendererOptions, Libmpv, RenderFrame} from '../../libmpv-bridge';
 import {describeNative, EventLog, NativeEnv, SAMPLE_MP4, sleep, waitFor} from './support/native';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const {ensureClip} = require('./support/bench-media.js') as { ensureClip: (o?: object) => string };
+const {ensureClip, ensureSplitClip} = require('./support/bench-media.js') as {
+  ensureClip: (o?: object) => string; ensureSplitClip: (o?: object) => string;
+};
 
 const isWindows = process.platform === 'win32';
+const isMac = process.platform === 'darwin';
 
 interface Rig {
   player: Libmpv;
@@ -82,6 +85,7 @@ describeNative('libmpv render API', (env: NativeEnv) => {
   };
 
   const isRed = (c: ReturnType<typeof centre>) => c.r > 200 && c.g < 60 && c.b < 60 && c.a === 255;
+  const isBlue = (c: ReturnType<typeof centre>) => c.b > 200 && c.r < 60 && c.g < 60 && c.a === 255;
   // ffmpeg's "green" is (0, 128, 0).
   const isGreen = (c: ReturnType<typeof centre>) => c.g > 90 && c.r < 60 && c.b < 60 && c.a === 255;
 
@@ -226,6 +230,157 @@ describeNative('libmpv render API', (env: NativeEnv) => {
       expect(rig.player.stats()!.generation).toBeGreaterThan(generation);
       const newest = rig.frames.filter(f => f.width === 400).pop()!;
       expect(newest.generation).toBeGreaterThan(rig.frames[0].generation);
+    });
+  });
+
+  // The macOS backend needs a CGL context. Hosted CI runners may not offer one; then the attach must fail with
+  // RENDER_INIT_FAILED and a reason (the frame sender turns that into the readback fallback), which the first
+  // test asserts. The remaining tests need the backend and say so in the log when they are skipped.
+  describe.runIf(isMac)('iosurface-shared', () => {
+    let glReason: string | null = null;
+    let probed = false;
+
+    const probe = async (): Promise<void> => {
+      if (probed) return;
+      probed = true;
+      try {
+        const rig = await open({backend: 'iosurface-shared'});
+        await waitFor(() => rig.frames.length > 0, 15000, 'a first iosurface frame');
+        const stats = rig.player.stats()!;
+        console.log(`iosurface-shared stats: ${JSON.stringify({
+          backend: stats.backend, impl: stats.impl, adapter: stats.adapter, glErrors: stats.glErrors, note: stats.note,
+          renderMs: stats.renderMs, gpuWaitMs: stats.gpuWaitMs
+        })}`);
+        await rig.player.destroy();
+        players.splice(players.indexOf(rig.player), 1);
+      } catch (error) {
+        const e = error as Error & { code?: string };
+        if (e.code !== 'RENDER_INIT_FAILED') {
+          throw error;
+        }
+        glReason = e.message;
+        console.log(`iosurface-shared unavailable on this machine (RENDER_INIT_FAILED): ${e.message}`);
+      }
+    };
+
+    const needGl = async (): Promise<boolean> => {
+      await probe();
+      if (glReason !== null) {
+        console.log(`skipping: no GL (${glReason})`);
+        return false;
+      }
+      return true;
+    };
+
+    const pixel = (frame: RenderFrame, x: number, y: number) => env.addon.readSurfacePixel!(frame.handle!, x, y)!;
+
+    it('attaches, or fails with RENDER_INIT_FAILED and a reason', async () => {
+      await probe();
+      if (glReason !== null) {
+        expect(glReason.length).toBeGreaterThan(0);
+      }
+      expect(typeof env.addon.readSurfacePixel).toBe('function');
+    });
+
+    it('hands out IOSurface handles that hold the picture the right way up', async () => {
+      if (!await needGl()) return;
+      const clip = ensureSplitClip({width: 320, height: 180});
+      const rig = await open({backend: 'iosurface-shared'}, {file: clip});
+      await waitFor(() => rig.frames.length > 5, 15000, 'shared frames');
+      const frame = rig.frames[rig.frames.length - 1];
+      expect(frame.handle!.length).toBe(8);
+      expect(frame.handle!.readBigUInt64LE()).not.toBe(0n);
+      expect(frame.pixels).toBeUndefined();
+      const stats = rig.player.stats()!;
+      expect(stats.backend).toBe('iosurface-shared');
+      expect(stats.impl).toBe('gl');
+      expect(stats.gpuWaitTimeouts).toBe(0);
+
+      const top = pixel(frame, 160, 20);
+      const bottom = pixel(frame, 160, 160);
+      console.log(`iosurface-shared pixels: top ${JSON.stringify(top)} bottom ${JSON.stringify(bottom)} ` +
+        `corners ${JSON.stringify([pixel(frame, 0, 0), pixel(frame, 319, 0), pixel(frame, 0, 179), pixel(frame, 319, 179)])} ` +
+        `glErrors=${stats.glErrors} note=${stats.note}`);
+      expect(isRed(top)).toBe(true);
+      expect(isBlue(bottom)).toBe(true);
+      expect(stats.glErrors).toBe(0);
+    });
+
+    it('shows the colours of the sample, also after a seek', async () => {
+      if (!await needGl()) return;
+      const rig = await open({backend: 'iosurface-shared'});
+      const centrePixel = () => pixel(rig.frames[rig.frames.length - 1], 160, 90);
+      await waitFor(() => timePos(rig) >= 1.0 && timePos(rig) < 2.4 && isRed(centrePixel()), 15000, 'red segment');
+      await rig.player.command(['seek', '4', 'absolute+exact']);
+      await waitFor(() => timePos(rig) >= 4.0 && timePos(rig) < 5.4 && isGreen(centrePixel()), 15000, 'green segment');
+    });
+
+    it('holds exactly 4 in flight, then skips frames until a slot is released', async () => {
+      if (!await needGl()) return;
+      const rig = await open({backend: 'iosurface-shared', slotTimeoutMs: 60000}, {autoRelease: false});
+      await waitFor(() => (rig.player.stats()?.exhausted ?? 0) > 3, 15000, 'pool exhaustion');
+      const stats = rig.player.stats()!;
+      expect(stats.inFlight).toBe(4);
+      expect(stats.poolSize).toBe(4);
+      expect(rig.frames).toHaveLength(4);
+      rig.release(rig.frames[0]);
+      await waitFor(() => rig.frames.length > 4, 10000, 'frames to resume after a release');
+      expect(rig.player.stats()!.released).toBeGreaterThanOrEqual(1);
+    });
+
+    it('reclaims slots that are never released after the timeout and keeps delivering', async () => {
+      if (!await needGl()) return;
+      const rig = await open({backend: 'iosurface-shared', slotTimeoutMs: 300}, {autoRelease: false});
+      await waitFor(() => (rig.player.stats()?.reclaimed ?? 0) >= 4, 15000, 'reclaimed slots');
+      await waitFor(() => rig.frames.length > 8, 15000, 'frames after reclaim');
+      expect(rig.player.stats()!.inFlight).toBeLessThanOrEqual(4);
+    });
+
+    it('ignores a release with a stale serial', async () => {
+      if (!await needGl()) return;
+      const rig = await open({backend: 'iosurface-shared', slotTimeoutMs: 60000}, {autoRelease: false});
+      await waitFor(() => rig.frames.length >= 2, 15000, 'frames');
+      const frame = rig.frames[0];
+      await rig.player.setProperty('pause', true);
+      await sleep(300);
+      const before = rig.player.stats()!;
+      rig.player.releaseSlot(frame.attachId, frame.slotId, frame.serial + 99);
+      await sleep(100);
+      const after = rig.player.stats()!;
+      expect(after.lateReleases).toBe(before.lateReleases + 1);
+      expect(after.inFlight).toBe(before.inFlight);
+    });
+
+    it('resizes: the generation bumps and new frames are new surfaces of the new size, also while paused', async () => {
+      if (!await needGl()) return;
+      const rig = await open({backend: 'iosurface-shared'}, {file: ensureSplitClip({width: 320, height: 180})});
+      await waitFor(() => rig.frames.length > 3, 15000, 'frames');
+      const generation = rig.player.stats()!.generation;
+      await rig.player.setProperty('pause', true);
+      await sleep(300);
+      rig.player.resize(400, 224);
+      await waitFor(() => rig.frames.some(f => f.width === 400 && f.height === 224), 5000, 'a 400x224 frame');
+      expect(rig.player.stats()!.generation).toBeGreaterThan(generation);
+      const newest = rig.frames.filter(f => f.width === 400).pop()!;
+      expect(newest.generation).toBeGreaterThan(rig.frames[0].generation);
+      expect(isRed(pixel(newest, 200, 20))).toBe(true);
+      expect(isBlue(pixel(newest, 200, 200))).toBe(true);
+      expect(env.addon.readSurfacePixel!(newest.handle!, 399, 223)).not.toBeNull();
+      expect(env.addon.readSurfacePixel!(newest.handle!, 400, 0)).toBeNull();
+    });
+
+    it('detaches with all slots in flight, accepts late releases and drains', async () => {
+      if (!await needGl()) return;
+      const rig = await open({backend: 'iosurface-shared', slotTimeoutMs: 60000}, {autoRelease: false});
+      await waitFor(() => rig.player.stats()!.inFlight === 4, 15000, 'a full pool');
+      const held = rig.frames.slice(0, 4);
+      rig.player.detachRenderer();
+      await waitFor(() => env.addon.liveCounts().renderers === 0, 10000, 'the render context to be freed');
+      expect(env.addon.liveCounts().renderThreads).toBe(1);
+      expect(env.addon.liveCounts().slots).toBe(4);
+      for (const frame of held) rig.release(frame);
+      await waitFor(() => env.addon.liveCounts().renderThreads === 0, 10000, 'the drain to end');
+      expect(env.addon.liveCounts().slots).toBe(0);
     });
   });
 

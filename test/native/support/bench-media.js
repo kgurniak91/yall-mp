@@ -25,7 +25,28 @@ function ensureClip({size = '1920x1080', fps = 30, seconds = 20, bitrate = '8M'}
   return dest;
 }
 
-module.exports = {ensureClip};
+/**
+ * Returns the path of a short clip whose top half is pure red and bottom half pure blue, for orientation checks
+ * of GPU render targets (a flipped picture swaps the halves).
+ */
+function ensureSplitClip({width = 320, height = 180, fps = 25, seconds = 4} = {}) {
+  const name = `split-red-blue-${width}x${height}-${fps}fps-${seconds}s.mp4`;
+  const dest = path.join(OUT, name);
+  if (fs.existsSync(dest) && fs.statSync(dest).size > 1e3) return dest;
+  fs.mkdirSync(OUT, {recursive: true});
+  const half = height / 2;
+  const graph = `color=c=red:s=${width}x${half}:r=${fps}:d=${seconds}[t];` +
+    `color=c=blue:s=${width}x${half}:r=${fps}:d=${seconds}[b];[t][b]vstack`;
+  const args = ['-y', '-hide_banner', '-loglevel', 'error', '-filter_complex', graph,
+    '-c:v', 'libx264', '-preset', 'veryfast', '-pix_fmt', 'yuv420p', '-an', '-t', String(seconds), dest];
+  const result = spawnSync(ffmpeg, args, {stdio: 'inherit'});
+  if (result.status !== 0) {
+    throw new Error(`ffmpeg failed (${result.status}) while generating ${name}`);
+  }
+  return dest;
+}
+
+module.exports = {ensureClip, ensureSplitClip};
 
 if (require.main === module) {
   const [size, fps, seconds] = process.argv.slice(2);

@@ -116,6 +116,7 @@ RenderThreadStats RenderThread::Stats() {
 
 void RenderThread::Run() {
   Counts().renderThreads++;
+  backend_->OnThreadStart();
   const auto startWall = Clock::now();
   const double startCpu = ThreadCpuMs();
   auto publishCpu = [&] {
@@ -171,6 +172,7 @@ void RenderThread::Run() {
 
   // Detach: free the render context on this thread (render.h), then stop posting.
   backend_->FreeContext();
+  backend_->OnThreadStop();
   Counts().renderers--;
   contextFreed_ = true;
   sink_->Close();

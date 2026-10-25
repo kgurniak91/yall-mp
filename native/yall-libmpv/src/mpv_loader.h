@@ -6,6 +6,9 @@
 #ifdef _WIN32
 #include <mpv/render_d3d11.h>
 #endif
+#ifdef __APPLE__
+#include <mpv/render_gl.h>
+#endif
 #include <string>
 
 #define YALL_MPV_FUNCS(X)                              \

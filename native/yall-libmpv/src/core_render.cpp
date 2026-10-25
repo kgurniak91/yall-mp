@@ -6,6 +6,9 @@
 #include "render/d3d11_readback.h"
 #include "render/d3d11_shared.h"
 #endif
+#ifdef __APPLE__
+#include "render/iosurface_shared.h"
+#endif
 
 Napi::Error MakeCodedError(Napi::Env env, const char* code, const std::string& message) {
   Napi::Error e = Napi::Error::New(env, message);
@@ -147,6 +150,8 @@ Napi::Object StatsToJs(Napi::Env env, const RenderThreadStats& s, size_t drainin
   o.Set("threadCpuMs", Napi::Number::New(env, s.threadCpuMs));
   o.Set("threadWallMs", Napi::Number::New(env, s.threadWallMs));
   o.Set("draining", Napi::Number::New(env, static_cast<double>(draining)));
+  o.Set("glErrors", Napi::Number::New(env, static_cast<double>(b.glErrors)));
+  o.Set("note", b.note);
   return o;
 }
 
@@ -176,7 +181,7 @@ void MpvCore::ForceStopRenderers() {
 }
 
 // attachRenderer({backend, width, height, slots?, slotTimeoutMs?, impl?, adapter?}, onFrame(frame))
-//   backend: 'd3d11-shared' | 'readback'; impl (readback only): 'd3d11' | 'sw'
+//   backend: 'd3d11-shared' (Windows) | 'iosurface-shared' (macOS) | 'readback'; impl (readback only): 'd3d11' | 'sw'
 //   adapter: 'default' | 'warp' | {vendorId, deviceId}
 // Returns {attachId, backend, impl, adapter}.
 Napi::Value MpvCore::AttachRenderer(const Napi::CallbackInfo& info) {
@@ -190,8 +195,8 @@ Napi::Value MpvCore::AttachRenderer(const Napi::CallbackInfo& info) {
   Napi::Function onFrame = info[1].As<Napi::Function>();
 
   std::string backendName = opts.Get("backend").IsString() ? opts.Get("backend").As<Napi::String>().Utf8Value() : "";
-  if (backendName != "d3d11-shared" && backendName != "readback") {
-    throw Napi::TypeError::New(env, "backend must be 'd3d11-shared' or 'readback'");
+  if (backendName != "d3d11-shared" && backendName != "iosurface-shared" && backendName != "readback") {
+    throw Napi::TypeError::New(env, "backend must be 'd3d11-shared', 'iosurface-shared' or 'readback'");
   }
   int width = 0, height = 0;
   if (!GetInt(opts, "width", width) || !GetInt(opts, "height", height) || width <= 0 || height <= 0) {
@@ -209,6 +214,9 @@ Napi::Value MpvCore::AttachRenderer(const Napi::CallbackInfo& info) {
 
   std::unique_ptr<RenderBackend> backend;
 #ifdef _WIN32
+  if (backendName == "iosurface-shared") {
+    throw MakeCodedError(env, "BACKEND_UNSUPPORTED", "the iosurface-shared backend is only available on macOS");
+  }
   AdapterRequest adapter;
   Napi::Value adapterOpt = opts.Get("adapter");
   if (adapterOpt.IsString()) {
@@ -243,7 +251,18 @@ Napi::Value MpvCore::AttachRenderer(const Napi::CallbackInfo& info) {
   if (backendName == "d3d11-shared") {
     throw MakeCodedError(env, "BACKEND_UNSUPPORTED", "the d3d11-shared backend is only available on Windows");
   }
+#ifdef __APPLE__
+  if (backendName == "iosurface-shared") {
+    backend = std::make_unique<IOSurfaceSharedBackend>(slots);
+  } else {
+    backend = std::make_unique<SwReadbackBackend>();
+  }
+#else
+  if (backendName == "iosurface-shared") {
+    throw MakeCodedError(env, "BACKEND_UNSUPPORTED", "the iosurface-shared backend is only available on macOS");
+  }
   backend = std::make_unique<SwReadbackBackend>();
+#endif
 #endif
 
   // Only one render context may exist per core: wait for the previous attach to free its own (short).
