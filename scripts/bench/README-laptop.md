@@ -44,8 +44,8 @@ If your old app has another name than `Y'ALL Media Player` in the task manager, 
 
 ## What to send back
 
-`bench\bench-results.zip` (made by the script; the second run overwrites the first, so copy the new-build one away
-before running `-Legacy`, for example rename it to `bench-results-new.zip`).
+`bench\bench-results.zip`, made by the script after the last run. It contains the results of both the new and the old
+build (they pile up in the `results` folder), so send only the final zip.
 
 ## Gate (for the maintainer)
 
