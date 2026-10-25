@@ -8,7 +8,9 @@ import type {
   Libmpv,
   LibmpvEvent,
   RenderFrame,
+  RenderBackendName,
   RenderStats,
+  SharedBackendName,
   Size
 } from './libmpv-bridge';
 import {computeReadbackSize} from './libmpv-bridge';
@@ -16,9 +18,9 @@ import {computeReadbackSize} from './libmpv-bridge';
 /** Channel of the readback frames: `{attachId, width, height, data: Uint8Array}` (BGRA, alpha 255). */
 export const READBACK_CHANNEL = 'libmpv:readback-frame';
 
-export type PreferredBackend = 'd3d11-shared' | 'readback' | 'auto';
+export type PreferredBackend = SharedBackendName | 'readback' | 'auto';
 
-export interface FrameSenderLibmpv extends Pick<Libmpv, 'supportsD3D11' | 'attachRenderer' | 'resize' | 'releaseSlot'
+export interface FrameSenderLibmpv extends Pick<Libmpv, 'sharedBackendName' | 'attachRenderer' | 'resize' | 'releaseSlot'
   | 'detachRenderer' | 'stats' | 'observeProperty' | 'unobserveProperty' | 'reinitVideo' | 'getProperty' | 'command'> {
   on(event: 'property-change' | 'end-file', listener: (event: LibmpvEvent) => void): unknown;
   off(event: 'property-change' | 'end-file', listener: (event: LibmpvEvent) => void): unknown;
@@ -31,7 +33,7 @@ export interface SharedTextureImportedLike {
 /** The part of `electron.sharedTexture` the sender uses. */
 export interface SharedTextureApi {
   importSharedTexture(options: {
-    textureInfo: { pixelFormat: 'bgra'; codedSize: Size; handle: { ntHandle: Buffer } };
+    textureInfo: { pixelFormat: 'bgra'; codedSize: Size; handle: { ntHandle: Buffer } | { ioSurface: Buffer } };
     allReferencesReleased?: () => void;
   }): SharedTextureImportedLike;
 
@@ -78,6 +80,9 @@ export interface FrameSenderStats {
 
 // How long after a fallback a failed video output is still blamed on the switch and repaired by reloading the file.
 const RECOVERY_WINDOW_MS = 5000;
+
+// Attach errors that mean "this machine cannot do the shared backend" rather than a broken player.
+const FALLBACK_ATTACH_CODES = ['RENDER_INIT_FAILED', 'BACKEND_UNSUPPORTED'];
 
 // "No receiver registered yet" is a timing problem of the page, not a broken GPU path.
 const NO_RECEIVER = /receiver/i;
@@ -133,8 +138,21 @@ export class LibmpvFrameSender {
     for (const name of ['dwidth', 'dheight']) {
       this.observeIds.push(this.libmpv.observeProperty(name));
     }
-    const shared = options.preferred === 'd3d11-shared' || (options.preferred === 'auto' && this.libmpv.supportsD3D11());
-    return this.attachBackend(shared ? 'd3d11-shared' : 'readback');
+    const shared = options.preferred === 'auto' ? this.libmpv.sharedBackendName() : options.preferred;
+    if (!shared || shared === 'readback') {
+      return this.attachBackend('readback');
+    }
+    try {
+      return this.attachBackend(shared);
+    } catch (error) {
+      if (!FALLBACK_ATTACH_CODES.includes((error as { code?: string }).code ?? '')) {
+        throw error;
+      }
+      // No frame was produced and no render context took the video output, so there is nothing to repair.
+      this.fallbackReason = errorMessage(error);
+      this.log(`[libmpv] ${shared} could not be attached (${errorMessage(error)}), using readback; platform=${process.platform}`);
+      return this.attachBackend('readback');
+    }
   }
 
   /** Canvas backing size (CSS px x devicePixelRatio). Debouncing is the caller's job. */
@@ -218,7 +236,7 @@ export class LibmpvFrameSender {
     return this.adapterOverride ?? this.activeGpu ?? 'default';
   }
 
-  private attachBackend(backend: 'd3d11-shared' | 'readback'): AttachResult {
+  private attachBackend(backend: RenderBackendName): AttachResult {
     this.firstFrameDone = false;
     const size = backend === 'readback' ? this.computeReadback(false) : this.canvas;
     const options: AttachRendererOptions = {backend, width: size.width, height: size.height, adapter: this.adapterOption()};
@@ -244,7 +262,7 @@ export class LibmpvFrameSender {
     if (!this.attach || this.canvas.width <= 0 || this.canvas.height <= 0) {
       return;
     }
-    if (this.attach.backend === 'd3d11-shared') {
+    if (this.attach.backend !== 'readback') {
       this.libmpv.resize(this.canvas.width, this.canvas.height);
       return;
     }
@@ -311,7 +329,10 @@ export class LibmpvFrameSender {
         throw new Error('simulated shared-texture import failure');
       }
       imported = this.sharedTexture().importSharedTexture({
-        textureInfo: {pixelFormat: 'bgra', codedSize: {width: frame.width, height: frame.height}, handle: {ntHandle: frame.handle!}},
+        textureInfo: {
+          pixelFormat: 'bgra', codedSize: {width: frame.width, height: frame.height},
+          handle: attach.backend === 'iosurface-shared' ? {ioSurface: frame.handle!} : {ntHandle: frame.handle!}
+        },
         allReferencesReleased: () => this.release(frame)
       });
     } catch (error) {
@@ -351,7 +372,7 @@ export class LibmpvFrameSender {
       this.fallbackReason = message;
       const a = failed.adapter;
       this.log(`[libmpv] shared-texture import failed on first frame (${message}), switching to readback; ` +
-        `adapter=${a.name} vendor/device=${a.vendorId}/${a.deviceId}`);
+        `backend=${failed.backend} platform=${process.platform} adapter=${a.name} vendor/device=${a.vendorId}/${a.deviceId}`);
       // Asked before the first context is freed: on a slow machine the video output gives up (VO_INIT_FAILED)
       // while the second context is still being created, and then the file has to be loaded again.
       const snapshot = Promise.all(['path', 'time-pos', 'pause'].map(name => this.libmpv.getProperty(name).catch(() => undefined)));

@@ -52,7 +52,10 @@ export interface NativeMpvCore {
 
 // ---- render API ----
 
-export type RenderBackendName = 'd3d11-shared' | 'readback';
+export type RenderBackendName = 'd3d11-shared' | 'iosurface-shared' | 'readback';
+
+/** The backends that hand out GPU surfaces (`RenderFrame.handle`) instead of pixels. */
+export type SharedBackendName = Exclude<RenderBackendName, 'readback'>;
 
 /** 'default' = the system default adapter, 'warp' = the software rasteriser, or a vendor/device to match. */
 export type AdapterOption = 'default' | 'warp' | { vendorId: number; deviceId: number };
@@ -61,7 +64,7 @@ export interface AttachRendererOptions {
   backend: RenderBackendName;
   width: number;
   height: number;
-  /** d3d11-shared pool size, 1..8. Default 4. */
+  /** Shared backends' pool size, 1..8. Default 4. */
   slots?: number;
   /** In-flight slots older than this are abandoned instead of reused. Default 3000. */
   slotTimeoutMs?: number;
@@ -89,7 +92,10 @@ export interface AttachResult {
   adapter: AdapterDescription;
 }
 
-/** One rendered frame. Shared backends carry `handle` (8-byte NT handle value), readback ones `pixels` (BGRA). */
+/**
+ * One rendered frame. Shared backends carry `handle` (8-byte value: an NT handle for d3d11-shared, an IOSurfaceRef for
+ * iosurface-shared), readback ones `pixels` (BGRA).
+ */
 export interface RenderFrame {
   attachId: number;
   slotId: number;
@@ -147,6 +153,8 @@ export interface LiveCounts {
 }
 
 export interface NativeAddon {
+  /** 'host' when libmpv runs in the `yall-mpv-host` child process (Linux), absent for the in-process addon. */
+  kind?: 'host';
   loadLibrary(libraryPath: string): { path: string; apiVersion: [number, number] };
   apiVersion(): [number, number] | null;
   liveCounts(): LiveCounts;
@@ -317,6 +325,16 @@ export interface LibmpvCreateOptions {
   options: Record<string, string>;
   apiVersion: ApiVersion;
   platform?: NodeJS.Platform;
+  /** The libmpv library that was loaded, for diagnostics. */
+  libraryPath?: string;
+}
+
+/** Where libmpv runs and which one it is, for the video log. */
+export interface LibmpvInfo {
+  kind: 'addon' | 'host';
+  platform: NodeJS.Platform;
+  apiVersion: ApiVersion;
+  libraryPath?: string;
 }
 
 /**
@@ -329,7 +347,8 @@ export class Libmpv extends EventEmitter {
   private constructor(
     private readonly core: NativeMpvCore,
     readonly apiVersion: ApiVersion,
-    private readonly platform: NodeJS.Platform) {
+    private readonly platform: NodeJS.Platform,
+    readonly info: LibmpvInfo) {
     super();
   }
 
@@ -346,7 +365,10 @@ export class Libmpv extends EventEmitter {
       void core?.destroy().catch(() => undefined);
       throw new LibmpvError('INIT_FAILED', `libmpv failed to initialize: ${errorMessage(error)}`);
     }
-    const libmpv = new Libmpv(core, create.apiVersion, create.platform ?? process.platform);
+    const platform = create.platform ?? process.platform;
+    const libmpv = new Libmpv(core, create.apiVersion, platform, {
+      kind: addon.kind ?? 'addon', platform, apiVersion: create.apiVersion, libraryPath: create.libraryPath
+    });
     core.onEvent((event) => {
       libmpv.emit('event', event);
       libmpv.emit(event.event, event);
@@ -357,6 +379,15 @@ export class Libmpv extends EventEmitter {
   /** The D3D11 render API exists from client API 2.6, and only on Windows. */
   supportsD3D11(): boolean {
     return this.platform === 'win32' && compareApiVersion(this.apiVersion, D3D11_API_VERSION) >= 0;
+  }
+
+  /** The GPU-surface backend of this platform, or null where only readback exists (Linux). */
+  sharedBackendName(): SharedBackendName | null {
+    if (this.supportsD3D11()) {
+      return 'd3d11-shared';
+    }
+    // The OpenGL render API the macOS backend uses exists in every client API we accept.
+    return this.platform === 'darwin' ? 'iosurface-shared' : null;
   }
 
   command(args: string[]): Promise<unknown> {

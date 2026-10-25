@@ -6,7 +6,7 @@ import {
   READBACK_CHANNEL,
   SharedTextureApi
 } from '../libmpv-frame-sender';
-import {AttachRendererOptions, AttachResult, LibmpvEvent, RenderFrame} from '../libmpv-bridge';
+import {AttachRendererOptions, AttachResult, LibmpvEvent, RenderFrame, SharedBackendName} from '../libmpv-bridge';
 
 const adapter = (software = false) => ({
   name: 'Test GPU', vendorId: 4318, deviceId: 7684, luid: '0:1', software, matched: true, selection: 'match'
@@ -17,14 +17,19 @@ interface FakeLibmpv extends FrameSenderLibmpv {
   emit(event: LibmpvEvent): void;
 }
 
-const fakeLibmpv = (opts: { d3d11?: boolean; software?: boolean } = {}): FakeLibmpv => {
+const fakeLibmpv = (opts: {
+  d3d11?: boolean; shared?: SharedBackendName; software?: boolean; attachError?: { code: string; message: string };
+} = {}): FakeLibmpv => {
   const listeners = new Set<(event: LibmpvEvent) => void>();
   const attaches: FakeLibmpv['attaches'] = [];
   let observeId = 0;
   return {
     attaches,
-    supportsD3D11: () => opts.d3d11 ?? true,
+    sharedBackendName: () => opts.d3d11 === false ? null : opts.shared ?? 'd3d11-shared',
     attachRenderer: vi.fn((options: AttachRendererOptions, onFrame: (frame: RenderFrame) => void) => {
+      if (opts.attachError && options.backend !== 'readback') {
+        throw Object.assign(new Error(opts.attachError.message), {code: opts.attachError.code});
+      }
       const result: AttachResult = {
         attachId: attaches.length + 1, backend: options.backend, impl: options.backend === 'readback' && opts.software ? 'sw' : 'd3d11',
         gpuWaitImpl: 'fence', adapter: adapter(opts.software)
@@ -86,6 +91,64 @@ describe('LibmpvFrameSender', () => {
     const noGpu = fakeLibmpv({d3d11: false});
     create(noGpu).start({width: 800, height: 450, preferred: 'auto'});
     expect(noGpu.attaches[0].options.backend).toBe('readback');
+  });
+
+  it('picks iosurface-shared for auto on macOS', () => {
+    const libmpv = fakeLibmpv({shared: 'iosurface-shared'});
+    create(libmpv).start({width: 800, height: 450, preferred: 'auto'});
+    expect(libmpv.attaches[0].options.backend).toBe('iosurface-shared');
+  });
+
+  it('keeps readback when asked for it, whatever the platform offers', () => {
+    const libmpv = fakeLibmpv();
+    create(libmpv).start({width: 800, height: 450, preferred: 'readback'});
+    expect(libmpv.attaches.map(a => a.options.backend)).toEqual(['readback']);
+  });
+
+  it.each(['RENDER_INIT_FAILED', 'BACKEND_UNSUPPORTED'])('attaches readback and logs the reason when the shared attach fails with %s', (code) => {
+    const libmpv = fakeLibmpv({shared: 'iosurface-shared', attachError: {code, message: 'no usable GPU'}});
+    const sender = create(libmpv);
+    const result = sender.start({width: 800, height: 450, preferred: 'auto'});
+    expect(result.backend).toBe('readback');
+    expect(libmpv.attaches.map(a => a.options.backend)).toEqual(['readback']);
+    expect(sender.stats().backend).toBe('readback');
+    expect(sender.stats().fallbackReason).toBe('no usable GPU');
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('iosurface-shared could not be attached (no usable GPU), using readback'));
+    expect(libmpv.reinitVideo).not.toHaveBeenCalled();
+  });
+
+  it('falls back from an explicitly requested shared backend that cannot attach', () => {
+    const libmpv = fakeLibmpv({attachError: {code: 'BACKEND_UNSUPPORTED', message: 'not on this platform'}});
+    expect(create(libmpv).start({width: 800, height: 450, preferred: 'iosurface-shared'}).backend).toBe('readback');
+  });
+
+  it('does not hide attach errors that are not about the backend', () => {
+    const libmpv = fakeLibmpv({attachError: {code: 'DESTROYED', message: 'destroyed'}});
+    expect(() => create(libmpv).start({width: 800, height: 450, preferred: 'auto'})).toThrow('destroyed');
+    expect(libmpv.attaches).toHaveLength(0);
+  });
+
+  it('imports macOS frames as an IOSurface and Windows frames as an NT handle', () => {
+    const handle = Buffer.from([1, 2, 3, 4, 5, 6, 7, 8]);
+    const handleOf = () => (texture.importSharedTexture as ReturnType<typeof vi.fn>).mock.calls.at(-1)![0].textureInfo.handle;
+
+    const mac = fakeLibmpv({shared: 'iosurface-shared'});
+    create(mac).start({width: 800, height: 450, preferred: 'auto'});
+    mac.attaches[0].onFrame({...sharedFrame(1), handle});
+    expect(handleOf()).toEqual({ioSurface: handle});
+
+    const win = fakeLibmpv();
+    create(win).start({width: 800, height: 450, preferred: 'auto'});
+    win.attaches[0].onFrame({...sharedFrame(1), handle});
+    expect(handleOf()).toEqual({ntHandle: handle});
+  });
+
+  it('resizes a shared backend to the canvas, not to a readback cap', () => {
+    const libmpv = fakeLibmpv({shared: 'iosurface-shared'});
+    const sender = create(libmpv);
+    sender.start({width: 800, height: 450, preferred: 'auto'});
+    sender.setCanvasSize(3000, 2000);
+    expect(libmpv.resize).toHaveBeenCalledWith(3000, 2000);
   });
 
   it('passes the active GPU of getGPUInfo as the adapter', () => {
@@ -160,7 +223,7 @@ describe('LibmpvFrameSender', () => {
     expect(libmpv.reinitVideo).toHaveBeenCalledTimes(1);
     expect(sender.stats().fallbackReason).toBe('Unable to duplicate handle');
     expect(sender.stats().backend).toBe('readback');
-    expect(log).toHaveBeenCalledWith(expect.stringContaining('shared-texture import failed on first frame (Unable to duplicate handle), switching to readback; adapter=Test GPU vendor/device=4318/7684'));
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('shared-texture import failed on first frame (Unable to duplicate handle), switching to readback; backend=d3d11-shared platform=' + process.platform + ' adapter=Test GPU vendor/device=4318/7684'));
 
     // Frames of the abandoned shared attach are now stale.
     libmpv.attaches[0].onFrame(sharedFrame(1, 2, 9));

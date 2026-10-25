@@ -515,6 +515,7 @@ export const createHostAddon = (options: HostAddonOptions): NativeAddon => {
   }
 
   return {
+    kind: 'host',
     loadLibrary(libraryPath: string) {
       // Loaded in a throwaway process, so a missing or broken library never costs more than an error.
       const probe = (options.spawnSync ?? spawnSync)(options.hostPath, ['--probe', libraryPath], {encoding: 'utf8', timeout: 10000});

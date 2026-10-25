@@ -1,5 +1,5 @@
 import {execFileSync} from 'child_process';
-import {afterEach, expect, it} from 'vitest';
+import {afterEach, describe, expect, it} from 'vitest';
 import {Libmpv, LibmpvEvent} from '../../libmpv-bridge';
 import {createPlayer, describeNative, EventLog, SAMPLE_MP4, sleep, waitFor} from './support/native';
 
@@ -84,4 +84,6 @@ if (process.platform === 'linux') {
       expect(received).toBeGreaterThan(mark);
     });
   });
+} else {
+  describe.skip('libmpv host process (Linux only)', () => undefined);
 }

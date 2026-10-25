@@ -4,6 +4,7 @@ import {
   dialog,
   ipcMain,
   Menu,
+  nativeImage,
   nativeTheme,
   powerSaveBlocker,
   screen,
@@ -149,7 +150,7 @@ function finishInitialSeek() {
   hasRequestedInitialSeek = false;
 }
 
-const VIDEO_BACKENDS: PreferredBackend[] = ['auto', 'readback', 'd3d11-shared'];
+const VIDEO_BACKENDS: PreferredBackend[] = ['auto', 'readback', 'd3d11-shared', 'iosurface-shared'];
 const VIDEO_LOG_PATH = path.join(app.getPath('userData'), 'video.log');
 const VIDEO_LOG_MAX_BYTES = 256 * 1024;
 let isVideoLogReset = false;
@@ -170,7 +171,7 @@ function logVideo(message: string): void {
   }
 }
 
-/** `YALL_MP_VIDEO_BACKEND` (auto, readback, d3d11-shared) for diagnostics and CI. */
+/** `YALL_MP_VIDEO_BACKEND` (auto, readback, d3d11-shared, iosurface-shared) for diagnostics and CI. */
 function preferredVideoBackend(): PreferredBackend {
   const value = process.env.YALL_MP_VIDEO_BACKEND as PreferredBackend | undefined;
   return value && VIDEO_BACKENDS.includes(value) ? value : 'auto';
@@ -268,6 +269,12 @@ function blockDefaultBrowserShortcuts(event: Electron.Event, input: Electron.Inp
   }
 }
 
+function getWindowIcon(): Electron.NativeImage {
+  const icon = nativeImage.createFromPath(path.join(__dirname, 'build', 'icon.png'));
+  // On X11 Chromium drops window icons above 128 px, so the 1024 px source would leave the default icon
+  return process.platform === 'linux' && !icon.isEmpty() ? icon.resize({width: 128, height: 128}) : icon;
+}
+
 async function createWindow() {
   const workArea = screen.getPrimaryDisplay().workArea;
 
@@ -288,7 +295,7 @@ async function createWindow() {
     minHeight,
     backgroundColor: '#1e1e1e',
     // Without it the taskbar/dock shows Electron's default icon when running unpackaged and on Linux window managers
-    icon: path.join(__dirname, 'build', 'icon.png'),
+    icon: getWindowIcon(),
     frame: false,
     show: false,
     webPreferences: {
@@ -898,8 +905,10 @@ if (!gotTheLock) {
           const attach = sender.start({...initialSize, preferred: preferredVideoBackend()});
           videoSender = sender;
           const a = attach.adapter;
+          const info = libmpv.info;
           logVideo(`[Main Process] Video: backend=${attach.backend} impl=${attach.impl} gpuWait=${attach.gpuWaitImpl} ` +
-            `adapter=${a.name} (${a.vendorId}/${a.deviceId}${a.software ? ', software' : ''}) canvas=${initialSize.width}x${initialSize.height}`);
+            `adapter=${a.name} (${a.vendorId}/${a.deviceId}${a.software ? ', software' : ''}) canvas=${initialSize.width}x${initialSize.height} ` +
+            `platform=${info.platform} libmpv=${info.kind} api=${info.apiVersion.join('.')} lib=${info.libraryPath ?? 'unknown'}`);
           return () => {
             sender.stop();
             if (videoSender === sender) {

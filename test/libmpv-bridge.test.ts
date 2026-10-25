@@ -211,6 +211,22 @@ describe('libmpv-bridge', () => {
       expect(await make('darwin', [2, 9])).toBe(false);
     });
 
+    it('names the shared backend of the platform', async () => {
+      const make = async (platform: NodeJS.Platform, apiVersion: [number, number]) =>
+        (await Libmpv.create(fakeAddon(fakeCore()), {options: {}, apiVersion, platform})).sharedBackendName();
+      expect(await make('win32', [2, 6])).toBe('d3d11-shared');
+      expect(await make('win32', [2, 5])).toBeNull();
+      expect(await make('darwin', [2, 0])).toBe('iosurface-shared');
+      expect(await make('linux', [2, 9])).toBeNull();
+    });
+
+    it('describes where libmpv runs', async () => {
+      const inProcess = await Libmpv.create(fakeAddon(fakeCore()), {options: {}, apiVersion: [2, 6], platform: 'win32', libraryPath: 'C:\libmpv-2.dll'});
+      expect(inProcess.info).toEqual({kind: 'addon', platform: 'win32', apiVersion: [2, 6], libraryPath: 'C:\libmpv-2.dll'});
+      const host = await Libmpv.create({...fakeAddon(fakeCore()), kind: 'host'}, {options: {}, apiVersion: [2, 3], platform: 'linux'});
+      expect(host.info.kind).toBe('host');
+    });
+
     it('waits for an asynchronous initialize (the Linux host)', async () => {
       let release: () => void = () => undefined;
       const core = fakeCore({initialize: vi.fn().mockReturnValue(new Promise<void>(resolve => release = resolve))});

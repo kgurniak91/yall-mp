@@ -197,8 +197,8 @@ export class LibmpvManager extends EventEmitter {
     if (this.config.libmpvFactory) {
       return this.config.libmpvFactory(options);
     }
-    const {addon, apiVersion} = ensureLibmpv(this.config.basePath, this.config.customLibmpvPath, platform);
-    return await Libmpv.create(addon, {options, apiVersion, platform});
+    const {addon, apiVersion, path: libraryPath} = ensureLibmpv(this.config.basePath, this.config.customLibmpvPath, platform);
+    return await Libmpv.create(addon, {options, apiVersion, platform, libraryPath});
   }
 
   private resetState(): void {
