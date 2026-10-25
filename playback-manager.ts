@@ -43,7 +43,21 @@ export class PlaybackManager extends EventEmitter {
     private uiWindow: BrowserWindow,
   ) {
     super();
-    this.mpvManager.on('status', (status) => this.handleMpvEvent(status));
+    this.mpvManager.on('status', this.onMpvStatus);
+  }
+
+  private readonly onMpvStatus = (status: any) => this.handleMpvEvent(status);
+
+  /** Position of the playback state machine, for restarting the engine where it stopped. */
+  public get position(): number {
+    return this.currentTime;
+  }
+
+  /** Continues on a new engine (after a restart) without losing the loaded clips and settings. */
+  public rebind(mpvManager: LibmpvManager): void {
+    this.mpvManager.off('status', this.onMpvStatus);
+    this.mpvManager = mpvManager;
+    this.mpvManager.on('status', this.onMpvStatus);
   }
 
   public setInitialVolumeState(volume: number, isMuted: boolean): void {

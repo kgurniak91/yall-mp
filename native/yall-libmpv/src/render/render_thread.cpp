@@ -82,6 +82,23 @@ void RenderThread::Release(int slotId, uint64_t serial) {
   cv_.notify_all();  // wakes the drain phase
 }
 
+void RenderThread::SimulateLost() {
+  simulateLost_ = true;
+  cv_.notify_all();
+}
+
+void RenderThread::PostLost(const std::string& reason) {
+  lostPosted_ = true;
+  Frame frame;
+  frame.attachId = attachId_;
+  frame.lost = true;
+  frame.lostReason = reason;
+  if (!sink_->Post(std::move(frame))) {
+    std::lock_guard<std::mutex> lock(statsMu_);
+    postFailures_++;
+  }
+}
+
 bool RenderThread::WaitContextFreed(int timeoutMs) {
   auto deadline = Clock::now() + std::chrono::milliseconds(timeoutMs);
   while (!contextFreed_ && started_ && !finished_) {
@@ -131,7 +148,7 @@ void RenderThread::Run() {
     uint32_t gen;
     {
       std::unique_lock<std::mutex> lock(mu_);
-      cv_.wait_for(lock, kTick, [&] { return updatePending_ || force_ || stop_; });
+      cv_.wait_for(lock, kTick, [&] { return updatePending_ || force_ || stop_ || simulateLost_; });
       if (stop_) break;
       force = force_;
       force_ = false;
@@ -141,6 +158,13 @@ void RenderThread::Run() {
       gen = gen_;
     }
     backend_->ReclaimExpired(slotTimeoutMs_);
+
+    if (simulateLost_ && !lostPosted_) PostLost("SIMULATED device lost");
+    if (lostPosted_) {
+      // The device is gone: keep answering mpv's update callbacks, but draw nothing until the client re-attaches.
+      mpv.render_context_update(backend_->Context());
+      continue;
+    }
 
     // render.h: mpv_render_context_update() must be called after every update callback.
     uint64_t flags = mpv.render_context_update(backend_->Context());
@@ -166,6 +190,9 @@ void RenderThread::Run() {
       }
       mpv.render_context_report_swap(backend_->Context());
     }
+    // Checked after every frame, not only skipped ones: a removed device can still "complete" its waits.
+    std::string reason;
+    if (backend_->CheckDeviceLost(reason)) PostLost(reason);
     publishCpu();
   }
   publishCpu();

@@ -14,7 +14,7 @@ const {spawn} = require('child_process');
 const {_electron} = require('@playwright/test');
 
 const REPO = path.resolve(__dirname, '..');
-const SAMPLER = path.join(REPO, 'spikes', 'libmpv-poc', 'bench', 'sampler.ps1');
+const SAMPLER = path.join(REPO, 'scripts', 'bench', 'sampler.ps1');
 const args = Object.fromEntries(process.argv.slice(2).map(a => {
   const [k, v] = a.slice(2).split('=');
   return [k, v === undefined ? true : v];

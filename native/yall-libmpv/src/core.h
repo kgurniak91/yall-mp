@@ -50,6 +50,7 @@ class MpvCore : public Napi::ObjectWrap<MpvCore> {
   Napi::Value Resize(const Napi::CallbackInfo& info);
   Napi::Value ReleaseSlot(const Napi::CallbackInfo& info);
   Napi::Value DetachRenderer(const Napi::CallbackInfo& info);
+  Napi::Value SimulateDeviceLost(const Napi::CallbackInfo& info);
   Napi::Value Stats(const Napi::CallbackInfo& info);
   // Non-blocking: asks every render thread to stop; each frees its render context and then drains.
   void DetachAllRenderers();

@@ -44,6 +44,8 @@ struct D3D11Device {
   // Returns an error message, empty on success. A failing hardware device falls back to WARP.
   std::string Init(const AdapterRequest& request);
   void Reset();
+  // True (with "DEVICE_REMOVED 0x887A0005"-style text) once the device was removed or reset (TDR, driver update).
+  bool IsRemoved(std::string& reason) const;
 };
 
 std::string WideToUtf8(const std::wstring& w);

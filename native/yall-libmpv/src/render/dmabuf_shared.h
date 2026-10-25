@@ -14,8 +14,6 @@
 
 class DmabufSharedBackend : public RenderBackend {
  public:
-  static constexpr int kProbeFrames = 30;
-
   // Called when a slot gets (or loses) its buffer. `SendFd` delivers a descriptor and its JSON description to the
   // client; both run on the render thread.
   using SendFd = std::function<bool(int fd, const std::string& meta)>;

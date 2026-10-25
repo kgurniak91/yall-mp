@@ -1,5 +1,6 @@
 # External CPU/GPU sampler for one bench run.
-# CPU: TotalProcessorTime deltas of the process tree under RootPid (grouped by process name) plus dwm.exe.
+# CPU: TotalProcessorTime deltas of the process tree under RootPid (grouped by process name). dwm.exe runs under another
+# account, so its TotalProcessorTime reads 0: it is sampled with the Win32_PerfFormattedData_PerfProc_Process class (not Get-Counter, whose paths are localized).
 # GPU: '\GPU Engine(*)\Utilization Percentage' summed per engine type for the same pids.
 # Idle mode (-RootPid 0) measures only dwm.exe and the whole-GPU totals, for a baseline.
 param(
@@ -29,9 +30,8 @@ function Get-Tree([int]$root) {
 function Get-CpuSnapshot($pids) {
   $snap = @{}
   foreach ($p in (Get-Process)) {
-    if ($pids -contains $p.Id -or $p.ProcessName -eq 'dwm') {
-      $name = if ($p.ProcessName -eq 'dwm') { 'dwm' } else { $p.ProcessName }
-      $snap[$p.Id] = @{ name = $name; cpu = $p.TotalProcessorTime.TotalSeconds }
+    if ($pids -contains $p.Id) {
+      $snap[$p.Id] = @{ name = $p.ProcessName; cpu = $p.TotalProcessorTime.TotalSeconds }
     }
   }
   return $snap
@@ -62,6 +62,8 @@ while ((Get-Date) -lt $end) {
       $byName[$n] += $d / $dt * 100.0   # % of one core
     }
   }
+  $dwm = Get-CimInstance Win32_PerfFormattedData_PerfProc_Process -Filter "Name='dwm'"
+  if ($dwm) { $byName['dwm'] = [double]($dwm | Measure-Object -Property PercentProcessorTime -Sum).Sum }
   $cpuSamples += , $byName
   $prev = $now
   $prevT = $nowT

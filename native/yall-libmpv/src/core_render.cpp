@@ -42,11 +42,23 @@ void FrameCallJs(Napi::Env env, Napi::Function, FrameCtx* ctx, FrameMsg* rawMsg)
     const Frame& f = msg->frame;
     Napi::Object obj = Napi::Object::New(env);
     obj.Set("attachId", Napi::Number::New(env, static_cast<double>(f.attachId)));
+    if (f.lost) {
+      // No picture: only the attach and why its device is gone.
+      obj.Set("lost", f.lostReason);
+      obj.Set("slotId", Napi::Number::New(env, -1));
+      ctx->callback.Call({obj});
+      return;
+    }
     obj.Set("slotId", Napi::Number::New(env, f.slotId));
     obj.Set("serial", Napi::Number::New(env, static_cast<double>(f.serial)));
     obj.Set("generation", Napi::Number::New(env, f.generation));
     obj.Set("width", Napi::Number::New(env, f.width));
     obj.Set("height", Napi::Number::New(env, f.height));
+    if (f.hasProbe) {
+      Napi::Array probe = Napi::Array::New(env, sizeof(f.probe));
+      for (uint32_t i = 0; i < sizeof(f.probe); i++) probe.Set(i, Napi::Number::New(env, f.probe[i]));
+      obj.Set("probe", probe);
+    }
     if (f.pixels) {
       // Electron's V8 memory cage forbids external ArrayBuffers, so the bytes have to be copied.
       obj.Set("pixels", Napi::Buffer<uint8_t>::Copy(env, f.pixels->data(), f.pixels->size()));
@@ -331,6 +343,20 @@ Napi::Value MpvCore::ReleaseSlot(const Napi::CallbackInfo& info) {
     }
   }
   return env.Undefined();
+}
+
+// simulateDeviceLost(attachId) -> boolean. Test support: the attach posts its lost frame as if its device was removed.
+Napi::Value MpvCore::SimulateDeviceLost(const Napi::CallbackInfo& info) {
+  Napi::Env env = info.Env();
+  if (info.Length() < 1 || !info[0].IsNumber()) throw Napi::TypeError::New(env, "simulateDeviceLost(attachId)");
+  uint64_t attachId = static_cast<uint64_t>(info[0].As<Napi::Number>().DoubleValue());
+  for (const auto& r : renderers_) {
+    if (r->AttachId() == attachId && !r->IsDetached()) {
+      r->SimulateLost();
+      return Napi::Boolean::New(env, true);
+    }
+  }
+  return Napi::Boolean::New(env, false);
 }
 
 Napi::Value MpvCore::DetachRenderer(const Napi::CallbackInfo& info) {

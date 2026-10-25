@@ -159,7 +159,7 @@ export class VideoSurfaceRenderer {
   private probeDrawnFrame(): void {
     const report = this.probeReport;
     const frame = this.current;
-    if (!report || this.probeFrames <= 0 || !frame || this.contextLost || !this.gl) {
+    if (!report || this.probeFrames <= 0 || !frame || (this.gl ? this.contextLost : !this.ctx2d)) {
       return;
     }
     if (--this.probeFrames === 0) {

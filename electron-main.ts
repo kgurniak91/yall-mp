@@ -1,6 +1,7 @@
 import {
   app,
   BrowserWindow,
+  crashReporter,
   dialog,
   ipcMain,
   Menu,
@@ -22,7 +23,7 @@ import {AnkiBatchExportRequest, AnkiCard, AnkiFieldMappingSource} from './src/ap
 import {v4 as uuidv4} from 'uuid';
 import {ChildProcess, execFile, spawn} from 'child_process';
 import {ensureLibmpv, LibmpvManager} from './libmpv-manager';
-import {GpuInfoLike, LibmpvFrameSender, PreferredBackend, PROBE_REPORT_CHANNEL} from './libmpv-frame-sender';
+import {backendAfterGpuLoss, GpuInfoLike, LibmpvFrameSender, PreferredBackend, PROBE_REPORT_CHANNEL} from './libmpv-frame-sender';
 import type {AdapterOption} from './libmpv-bridge';
 import {FontData, ParsedSubtitlesData} from './src/electron-api';
 import {AppData, CoreConfig, Project, SubtitleSelection, SupportedLanguage} from './src/app/model/project.types';
@@ -33,6 +34,8 @@ import {
   mergeKaraokeSubtitles
 } from './shared/utils/subtitle-parsing';
 import {PlaybackManager} from './playback-manager';
+import {EngineRestartPolicy} from './engine-restart';
+import {BenchConfig, loadBenchConfig} from './bench-config';
 import type fontkit from 'fontkit';
 import {
   SUPPORTED_MEDIA_TYPES,
@@ -57,6 +60,9 @@ if (process.env.YALL_MP_USER_DATA_DIR) {
   app.setPath('userData', userDataPath);
   console.log(`[Main] Development mode detected. Data path set to: ${userDataPath}`);
 }
+
+// A native crash (libmpv runs in this process) leaves a minidump in the crash dumps folder; nothing is uploaded.
+crashReporter.start({uploadToServer: false});
 
 interface AvailableFont {
   family: string;
@@ -97,10 +103,14 @@ let hasRequestedInitialSeek = false;
 // Frames sent when the first seek was requested: the picture at the resume position is the first one after it.
 let initialSeekFrameBaseline = 0;
 let videoSender: LibmpvFrameSender | null = null;
+let viewportArgs: ViewportArgs | null = null;
+const engineRestartPolicy = new EngineRestartPolicy();
 // Last canvas backing size (CSS px x scale factor) reported by the page.
 let videoCanvasSize: { width: number; height: number } | null = null;
-// Set when Chromium's GPU process died: shared textures are not trusted again until the app restarts.
-let gpuProcessGone = false;
+// Chromium GPU-process losses: the first one costs the open project the shared backend, the next project tries it
+// again (if GPU compositing is still enabled), a second loss means readback until the app restarts.
+let gpuLossCount = 0;
+let gpuLossSinceOpen = 0;
 let gpuInfoPromise: Promise<GpuInfoLike | null> | null = null;
 let isSaving = false;
 let displaySleepBlockerId: number | null = null;
@@ -143,13 +153,257 @@ async function ensureFFmpegPaths(): Promise<void> {
   }
 }
 
+let benchConfig: BenchConfig | null = null;
+let benchStarted = false;
+if (process.env.YALL_MP_BENCH) {
+  try {
+    benchConfig = loadBenchConfig(process.env.YALL_MP_BENCH);
+  } catch (error) {
+    console.error('[Bench] Could not read YALL_MP_BENCH:', error);
+  }
+}
+
+const delay = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+
+/**
+ * Benchmark mode: once the first frame at the resume position is out, size the window, play, and after the warm-up
+ * collect the counters of one measuring window into a json file, then quit. Needs no test runner, so it also runs in a packaged build.
+ */
+async function runBench(config: BenchConfig): Promise<void> {
+  const window = mainWindow;
+  if (!window || window.isDestroyed()) {
+    return;
+  }
+  const readPage = <T>(expression: string): Promise<T | null> =>
+    window.webContents.executeJavaScript(expression).catch(() => null);
+  const pageStats = () => readPage<Record<string, number>>('window.__yallVideoStats ? {...window.__yallVideoStats} : null');
+  const mpvProperty = (name: string) => (mpvManager?.getProperty(name) ?? Promise.resolve(null)).catch(() => null);
+  try {
+    logVideo(`[Bench] Starting: ${JSON.stringify(config)}`);
+    if (window.isMaximized() || window.isFullScreen()) {
+      window.setFullScreen(false);
+      window.unmaximize();
+    }
+    const bounds = window.getBounds();
+    window.setBounds({x: bounds.x, y: bounds.y, width: config.width, height: config.height});
+    await delay(800);
+    playbackManager?.play();
+    await delay(config.warmupSec * 1000);
+    const before = await pageStats();
+    const startedAt = Date.now();
+    // Tells an external sampler that the measuring window has begun
+    writeFileSync(`${config.out}.measuring`, '');
+    await delay(config.measureSec * 1000);
+    const after = await pageStats();
+    const seconds = (Date.now() - startedAt) / 1000;
+    const sender = videoSender?.stats();
+    const gpu = await app.getGPUInfo('basic').catch(() => null) as { gpuDevice?: Array<Record<string, unknown>> } | null;
+    const result = {
+      config, seconds, platform: process.platform, version: app.getVersion(),
+      presentedFps: before && after ? (after.drawn - before.drawn) / seconds : null,
+      page: after,
+      sender,
+      mpv: {
+        frameDrops: await mpvProperty('frame-drop-count'),
+        delayedFrames: await mpvProperty('vo-delayed-frame-count'),
+        decoderDrops: await mpvProperty('decoder-frame-drop-count'),
+        avsync: await mpvProperty('avsync'),
+        hwdecCurrent: await mpvProperty('hwdec-current')
+      },
+      activeGpu: gpu?.gpuDevice?.find(device => device.active) ?? null,
+      gpuCompositing: app.getGPUFeatureStatus().gpu_compositing,
+      videoLogHasFallback: Boolean(sender?.fallbackReason)
+    };
+    writeFileSync(config.out, JSON.stringify(result, null, 2));
+    logVideo(`[Bench] Done, result in ${config.out}`);
+  } catch (error) {
+    logVideo(`[Bench] Failed: ${error instanceof Error ? error.message : error}`);
+    try {
+      writeFileSync(config.out, JSON.stringify({error: String(error)}));
+    } catch {
+      // nothing more to report
+    }
+  } finally {
+    app.quit();
+  }
+}
+
 function finishInitialSeek() {
   if (!mainWindow || mainWindow.isDestroyed()) {
     return;
   }
+  if (benchConfig && !benchStarted) {
+    benchStarted = true;
+    void runBench(benchConfig);
+  }
   console.log('[Main Process] First frame at the resume position is out. Notifying UI.');
   mainWindow.webContents.send('mpv:initial-seek-complete');
   hasRequestedInitialSeek = false;
+}
+
+interface ViewportArgs {
+  mediaPath: string;
+  audioTrackIndex: number | null;
+  subtitleSelection: SubtitleSelection;
+  subtitleTracks: MediaTrack[];
+  useMpvSubtitles: boolean;
+  subtitlesVisible: boolean;
+  hardwareAcceleration: boolean;
+  volume: number;
+  isMuted: boolean;
+}
+
+type EngineErrorState = 'restarting' | 'failed';
+
+function sendEngineError(state: EngineErrorState): void {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('mpv:engine-error', state);
+  }
+}
+
+/**
+ * Creates the playback engine for the open project. With `resumeAt` it replaces an engine that stopped unexpectedly:
+ * the playback state machine is kept and the file is loaded again, paused, at that position.
+ */
+async function launchEngine(args: ViewportArgs, resumeAt?: number): Promise<void> {
+  const window = mainWindow;
+  if (!window) {
+    return;
+  }
+  const gpuInfo = await gpuInfoPromise;
+  const pageContents = window.webContents;
+  const initialSize = initialVideoCanvasSize(window);
+
+  const manager = new LibmpvManager({
+    basePath: app.isPackaged ? process.resourcesPath : app.getAppPath(),
+    customLibmpvPath: customExecutables.libmpv,
+    attachVideo: async libmpv => {
+      const sender = new LibmpvFrameSender({
+        libmpv, webContents: pageContents, gpuInfo: gpuInfo ?? undefined, adapter: videoAdapterOverride(),
+        log: logVideo, preferredAfterDeviceLoss: preferredVideoBackend, simulateBlackFrames: isE2E && process.env.YALL_MP_E2E_SIMULATE_BLACK_FRAMES === '1'
+      });
+      videoSender = sender;
+      let attach;
+      try {
+        attach = await sender.start({...initialSize, preferred: preferredVideoBackend()});
+      } catch (error) {
+        sender.stop();
+        if (videoSender === sender) {
+          videoSender = null;
+        }
+        throw error;
+      }
+      logVideo(`[Main Process] Video backend policy at project open: preferred=${preferredVideoBackend()} ` +
+        `gpuLosses=${gpuLossCount} gpu_compositing=${app.getGPUFeatureStatus().gpu_compositing}`);
+      const a = attach.adapter;
+      const info = libmpv.info;
+      logVideo(`[Main Process] Video: backend=${attach.backend} impl=${attach.impl} gpuWait=${attach.gpuWaitImpl} ` +
+        `adapter=${a.name} (${a.vendorId}/${a.deviceId}${a.software ? ', software' : ''}) canvas=${initialSize.width}x${initialSize.height} ` +
+        `platform=${info.platform} libmpv=${info.kind} api=${info.apiVersion.join('.')} lib=${info.libraryPath ?? 'unknown'}`);
+      return () => {
+        sender.stop();
+        if (videoSender === sender) {
+          videoSender = null;
+        }
+      };
+    }
+  });
+  mpvManager = manager;
+
+  if (resumeAt === undefined || !playbackManager) {
+    playbackManager = new PlaybackManager(manager, window);
+    playbackManager.setInitialVolumeState(args.volume, args.isMuted);
+    playbackManager.on('repeat-seek-completed', () => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('playback:repeat-seek-completed');
+      }
+    });
+  } else {
+    playbackManager.rebind(manager);
+  }
+
+  manager.on('status', (status) => {
+    if (mainWindow) {
+      mainWindow.webContents.send('mpv:event', status)
+    }
+  });
+
+  manager.on('status', (status) => {
+    if (status.event === 'property-change' && status.name === 'pause') {
+      setDisplaySleepBlocked(status.data === false);
+    } else if (status.event === 'end-file') {
+      setDisplaySleepBlocked(false);
+    }
+  });
+
+  const onMpvStatus = (status: any) => {
+    // Listen for confirmation only if seek requested
+    // This ignores the premature playback-restart at t=0.
+    if (status.event === 'playback-restart' && hasRequestedInitialSeek) {
+      console.log('[Main Process] Confirmed playback-restart AFTER seek request.');
+
+      // This is only needed once:
+      manager.removeListener('status', onMpvStatus);
+
+      // Wait for the picture of that seek; a file without video never produces one, so the wait is bounded.
+      const sender = videoSender;
+      const arrived = sender ? sender.waitForFrame(initialSeekFrameBaseline, 1000) : Promise.resolve(false);
+      void arrived.then(() => {
+        if (manager === mpvManager) {
+          finishInitialSeek();
+        }
+      });
+    }
+  };
+  manager.on('status', onMpvStatus);
+
+  manager.on('error', (err) => {
+    console.error("MPV Error:", err);
+    setDisplaySleepBlocked(false);
+    void restartEngineAfterError(manager);
+  });
+  manager.on('ready', () => {
+    console.log('[Main Process] LibmpvManager is ready. Notifying renderer.');
+    if (mainWindow) {
+      mainWindow.webContents.send('mpv:managerReady');
+    }
+  });
+
+  try {
+    await manager.start(args.mediaPath, args.audioTrackIndex, args.subtitleSelection, args.subtitleTracks, args.useMpvSubtitles, args.subtitlesVisible, args.hardwareAcceleration, args.volume, args.isMuted);
+  } catch (error) {
+    console.error('[Main Process] Critical error during MPV startup:', error);
+    // Re-throw the error so the renderer process's Promise is rejected.
+    throw error;
+  }
+
+  if (resumeAt !== undefined && manager === mpvManager) {
+    await manager.sendCommand(['seek', resumeAt, 'absolute', 'exact']);
+    playbackManager?.pause();
+  }
+}
+
+/** The engine stopped by itself (libmpv shut down, or the Linux host process died): start a new one at the same position, once a minute at most. */
+async function restartEngineAfterError(failed: LibmpvManager): Promise<void> {
+  if (failed !== mpvManager || !viewportArgs) {
+    return;
+  }
+  const args = viewportArgs;
+  const position = playbackManager?.position ?? 0;
+  await failed.stop();
+  if (!engineRestartPolicy.tryRestart()) {
+    logVideo('[Main Process] Playback engine stopped again within a minute; not restarting.');
+    sendEngineError('failed');
+    return;
+  }
+  logVideo(`[Main Process] Playback engine stopped unexpectedly; restarting at ${position.toFixed(2)} s.`);
+  sendEngineError('restarting');
+  try {
+    await launchEngine(args, position);
+  } catch (error) {
+    logVideo(`[Main Process] Playback engine could not restart: ${error instanceof Error ? error.message : error}`);
+    sendEngineError('failed');
+  }
 }
 
 const VIDEO_BACKENDS: PreferredBackend[] = ['auto', 'readback', 'd3d11-shared', 'iosurface-shared', 'dmabuf-shared'];
@@ -175,9 +429,15 @@ function logVideo(message: string): void {
 
 /** `YALL_MP_VIDEO_BACKEND` (auto, readback, d3d11-shared, iosurface-shared, dmabuf-shared) for diagnostics and CI. */
 function preferredVideoBackend(): PreferredBackend {
-  if (gpuProcessGone) {
-    return 'readback';
-  }
+  return backendAfterGpuLoss({
+    configured: configuredVideoBackend(),
+    lossCount: gpuLossCount,
+    lossSinceOpen: gpuLossSinceOpen,
+    compositingEnabled: String(app.getGPUFeatureStatus().gpu_compositing).startsWith('enabled')
+  });
+}
+
+function configuredVideoBackend(): PreferredBackend {
   const value = process.env.YALL_MP_VIDEO_BACKEND as PreferredBackend | undefined;
   if (value && VIDEO_BACKENDS.includes(value)) {
     return value;
@@ -368,7 +628,15 @@ async function createWindow() {
 
   if (isE2E) {
     // Read-only probe so e2e tests can inspect the window without URL heuristics
-    (globalThis as any).__yallE2E = {getWindows: () => ({mainWindow}), getVideoStats: () => videoSender?.stats() ?? null, isDisplaySleepBlocked: () => displaySleepBlockerId !== null};
+    (globalThis as any).__yallE2E = {
+      getWindows: () => ({mainWindow}),
+      getVideoStats: () => videoSender?.stats() ?? null,
+      isDisplaySleepBlocked: () => displaySleepBlockerId !== null,
+      simulateDeviceLost: () => videoSender?.simulateDeviceLost() ?? false,
+      simulateEngineError: () => mpvManager?.emit('error', new Error('simulated engine failure')) ?? false,
+      crashProcess: () => process.crash(),
+      getCrashDumpsPath: () => app.getPath('crashDumps')
+    };
   }
 
   if (isDev && !isE2E) {
@@ -895,110 +1163,18 @@ if (!gotTheLock) {
       }
 
       hasRequestedInitialSeek = false;
+      gpuLossSinceOpen = 0;
+      engineRestartPolicy.reset();
 
       // Clean up any old instance
       setDisplaySleepBlocked(false);
       await mpvManager?.stop();
 
-      const gpuInfo = await gpuInfoPromise;
-      const pageContents = mainWindow.webContents;
-      const initialSize = initialVideoCanvasSize(mainWindow);
-
-      mpvManager = new LibmpvManager({
-        basePath: app.isPackaged ? process.resourcesPath : app.getAppPath(),
-        customLibmpvPath: customExecutables.libmpv,
-        attachVideo: async libmpv => {
-          const sender = new LibmpvFrameSender({
-            libmpv, webContents: pageContents, gpuInfo: gpuInfo ?? undefined, adapter: videoAdapterOverride(),
-            log: logVideo
-          });
-          videoSender = sender;
-          let attach;
-          try {
-            attach = await sender.start({...initialSize, preferred: preferredVideoBackend()});
-          } catch (error) {
-            sender.stop();
-            if (videoSender === sender) {
-              videoSender = null;
-            }
-            throw error;
-          }
-          const a = attach.adapter;
-          const info = libmpv.info;
-          logVideo(`[Main Process] Video: backend=${attach.backend} impl=${attach.impl} gpuWait=${attach.gpuWaitImpl} ` +
-            `adapter=${a.name} (${a.vendorId}/${a.deviceId}${a.software ? ', software' : ''}) canvas=${initialSize.width}x${initialSize.height} ` +
-            `platform=${info.platform} libmpv=${info.kind} api=${info.apiVersion.join('.')} lib=${info.libraryPath ?? 'unknown'}`);
-          return () => {
-            sender.stop();
-            if (videoSender === sender) {
-              videoSender = null;
-            }
-          };
-        }
-      });
-      playbackManager = new PlaybackManager(mpvManager, mainWindow);
-      playbackManager.setInitialVolumeState(volume, isMuted);
-
-      playbackManager.on('repeat-seek-completed', () => {
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('playback:repeat-seek-completed');
-        }
-      });
-
-      mpvManager.on('status', (status) => {
-        if (mainWindow) {
-          mainWindow.webContents.send('mpv:event', status)
-        }
-      });
-
-      mpvManager.on('status', (status) => {
-        if (status.event === 'property-change' && status.name === 'pause') {
-          setDisplaySleepBlocked(status.data === false);
-        } else if (status.event === 'end-file') {
-          setDisplaySleepBlocked(false);
-        }
-      });
-
-      const onMpvStatus = (status: any) => {
-        // Listen for confirmation only if seek requested
-        // This ignores the premature playback-restart at t=0.
-        if (status.event === 'playback-restart' && hasRequestedInitialSeek) {
-          console.log('[Main Process] Confirmed playback-restart AFTER seek request.');
-
-          // This is only needed once:
-          mpvManager?.removeListener('status', onMpvStatus);
-
-          // Wait for the picture of that seek; a file without video never produces one, so the wait is bounded.
-          const manager = mpvManager;
-          const sender = videoSender;
-          const arrived = sender ? sender.waitForFrame(initialSeekFrameBaseline, 1000) : Promise.resolve(false);
-          void arrived.then(() => {
-            if (manager === mpvManager) {
-              finishInitialSeek();
-            }
-          });
-        }
+      viewportArgs = {
+        mediaPath, audioTrackIndex, subtitleSelection, subtitleTracks, useMpvSubtitles, subtitlesVisible,
+        hardwareAcceleration, volume, isMuted
       };
-      mpvManager.on('status', onMpvStatus);
-
-      mpvManager.on('error', (err) => {
-        console.error("MPV Error:", err);
-        setDisplaySleepBlocked(false);
-      });
-      mpvManager.on('ready', () => {
-        console.log('[Main Process] LibmpvManager is ready. Notifying renderer.');
-        if (mainWindow) {
-          mainWindow.webContents.send('mpv:managerReady');
-        }
-      });
-
-      try {
-        await mpvManager.start(mediaPath, audioTrackIndex, subtitleSelection, subtitleTracks, useMpvSubtitles, subtitlesVisible, hardwareAcceleration, volume, isMuted);
-      } catch (error) {
-        console.error('[Main Process] Critical error during MPV startup:', error);
-        // Re-throw the error so the renderer process's Promise is rejected.
-        throw error;
-      }
+      await launchEngine(viewportArgs);
     });
 
     ipcMain.on(PROBE_REPORT_CHANNEL, (event, black: unknown) => {
@@ -1009,8 +1185,9 @@ if (!gotTheLock) {
 
     app.on('child-process-gone', (_event, details) => {
       if (details.type === 'GPU' && details.reason !== 'clean-exit') {
-        gpuProcessGone = true;
-        logVideo(`[Main Process] GPU process gone (${details.reason}, exit code ${details.exitCode})`);
+        gpuLossCount++;
+        gpuLossSinceOpen++;
+        logVideo(`[Main Process] GPU process gone (${details.reason}, exit code ${details.exitCode}), loss #${gpuLossCount} of this run`);
         videoSender?.gpuProcessGone(details.reason);
       }
     });
@@ -1050,6 +1227,7 @@ if (!gotTheLock) {
       await mpvManager?.stop();
       mpvManager = null;
       playbackManager = null;
+      viewportArgs = null;
 
       // Cleanup subtitles lookup window if open
       if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {

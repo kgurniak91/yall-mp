@@ -290,6 +290,19 @@ bool IOSurfaceSharedBackend::Render(int w, int h, uint32_t gen, Frame& out) {
   std::lock_guard<std::mutex> lock(mu_);
   CheckGl("render");
   Slot& s = slots_[static_cast<size_t>(index)];
+  if (probeFramesLeft_ > 0) {
+    probeFramesLeft_--;
+    const int xs[5] = {w / 2, w / 4, w * 3 / 4, w / 4, w * 3 / 4};
+    const int ys[5] = {h / 2, h / 4, h / 4, h * 3 / 4, h * 3 / 4};
+    glBindFramebuffer(GL_FRAMEBUFFER, s.fbo);
+    while (glGetError() != GL_NO_ERROR) {
+    }
+    for (int i = 0; i < 5; i++) {
+      glReadPixels(xs[i], ys[i], 1, 1, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, out.probe + i * 4);
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    out.hasProbe = glGetError() == GL_NO_ERROR;
+  }
   renderCpuMs_ += cpu1 - cpu0;
   waitCpuMs_ += cpu2 - cpu1;
   s.state = State::InFlight;

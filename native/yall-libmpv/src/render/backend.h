@@ -9,6 +9,10 @@
 #include "../mpv_loader.h"
 #include "../ring_stats.h"
 
+// Number of frames after an attach that carry probe samples. Keep equal to VALIDATION_FRAMES in
+// libmpv-frame-sender.ts (the client's validation window).
+constexpr int kProbeFrames = 30;
+
 struct Frame {
   uint64_t attachId = 0;
   int slotId = -1;           // shared backends: pool slot; readback: -1
@@ -18,10 +22,13 @@ struct Frame {
   int height = 0;
   uint64_t handle = 0;       // shared backends: NT handle value / IOSurfaceRef
   std::shared_ptr<std::vector<uint8_t>> pixels;  // readback: tightly packed BGRA, alpha = 255
-  // GL shared backends, first frames only: BGRA of five points (centre and the four quarter points) read from the
+  // Shared backends, first frames only: BGRA of five points (centre and the four quarter points) read from the
   // rendered buffer, so the client can tell a black import from a black video.
   bool hasProbe = false;
   uint8_t probe[20] = {};
+  // The GPU device behind this attach is gone: no picture, slotId = -1. Posted once, then the render thread idles.
+  bool lost = false;
+  std::string lostReason;
 };
 
 struct AdapterInfo {
@@ -119,4 +126,7 @@ class RenderBackend {
 
   virtual bool IsReadback() const = 0;
   virtual void FillStats(BackendStats& out) = 0;
+  // Render thread, after a skipped frame: true (with a reason) when the device was removed or reset (TDR).
+  // Backends without such a signal keep the default.
+  virtual bool CheckDeviceLost(std::string& reason) { (void)reason; return false; }
 };

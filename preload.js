@@ -143,6 +143,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('mpv:managerReady', subscription);
     return () => ipcRenderer.removeListener('mpv:managerReady', subscription);
   },
+  onMpvEngineError: (callback) => {
+    const subscription = (_event, state) => callback(state);
+    ipcRenderer.on('mpv:engine-error', subscription);
+    return () => ipcRenderer.removeListener('mpv:engine-error', subscription);
+  },
   onMpvInitialSeekComplete: (callback) => {
     const subscription = () => callback();
     ipcRenderer.on('mpv:initial-seek-complete', subscription);

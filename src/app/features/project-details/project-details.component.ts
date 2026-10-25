@@ -416,6 +416,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   private hasSetInitialClip = false;
   private cleanupInitialSeekListener: (() => void) | null = null;
   private cleanupMpvReadyListener: (() => void) | null = null;
+  private cleanupEngineErrorListener: (() => void) | null = null;
   private cleanupAddNoteListener: (() => void) | null = null;
   private clickTimeout: any = null;
   private hideCursorTimeout: any;
@@ -531,6 +532,14 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     this.cleanupMpvReadyListener = window.electronAPI.onMpvManagerReady(() => {
       console.log('[ProjectDetails] Received mpv:managerReady signal!');
       this.isMpvReady.set(true);
+    });
+
+    this.cleanupEngineErrorListener = window.electronAPI.onMpvEngineError((state) => {
+      if (state === 'restarting') {
+        this.toastService.warn('Playback engine stopped, restarting');
+      } else {
+        this.toastService.error('Playback engine stopped and could not restart, reopen the project');
+      }
     });
 
     this.headerCurrentProjectActionBridgeService.registerOffsetDialogOpener(() => this.openSubtitleOffsetDialog());
@@ -649,6 +658,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     if (this.cleanupMpvReadyListener) {
       this.cleanupMpvReadyListener();
     }
+    this.cleanupEngineErrorListener?.();
     if (this.cleanupInitialSeekListener) {
       this.cleanupInitialSeekListener();
     }

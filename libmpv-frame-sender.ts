@@ -24,8 +24,32 @@ export const PROBE_REPORT_CHANNEL = 'libmpv:probe';
 
 export type PreferredBackend = SharedBackendName | 'readback' | 'auto';
 
+export interface GpuLossPolicyInput {
+  /** What the platform and the environment would pick without any loss. */
+  configured: PreferredBackend;
+  /** Chromium GPU-process losses in this run. */
+  lossCount: number;
+  /** Losses since the current project was opened. */
+  lossSinceOpen: number;
+  /** `app.getGPUFeatureStatus().gpu_compositing` starts with "enabled". */
+  compositingEnabled: boolean;
+}
+
+/**
+ * Retry once: the first GPU-process loss costs the current project the shared backend (readback for the rest of
+ * it); the next project tries it again if Chromium reports GPU compositing as enabled. A second loss in the same run
+ * means readback until the app restarts.
+ */
+export function backendAfterGpuLoss(input: GpuLossPolicyInput): PreferredBackend {
+  if (input.lossSinceOpen > 0 || input.lossCount >= 2 || (input.lossCount === 1 && !input.compositingEnabled)) {
+    return 'readback';
+  }
+  return input.configured;
+}
+
 export interface FrameSenderLibmpv extends Pick<Libmpv, 'sharedBackendName' | 'attachRenderer' | 'resize' | 'releaseSlot'
   | 'detachRenderer' | 'stats' | 'observeProperty' | 'unobserveProperty' | 'reinitVideo' | 'getProperty' | 'command'> {
+  simulateDeviceLost?(attachId: number): boolean;
   on(event: 'property-change' | 'end-file', listener: (event: LibmpvEvent) => void): unknown;
   off(event: 'property-change' | 'end-file', listener: (event: LibmpvEvent) => void): unknown;
 }
@@ -76,6 +100,11 @@ export interface FrameSenderOptions {
   simulateBlackFrames?: boolean;
   /** Adapter override, e.g. 'warp' in CI. */
   adapter?: AdapterOption;
+  /**
+   * The backend to attach again after the GPU device behind a shared attach was lost (TDR). Main answers it from its
+   * GPU-loss policy, so a healthy Chromium goes back to the shared backend and a dead one to readback. Default: `auto`.
+   */
+  preferredAfterDeviceLoss?: () => PreferredBackend;
 }
 
 export interface StartOptions extends Size {
@@ -90,6 +119,8 @@ export interface FrameSenderStats {
   importFailures: number;
   staleDropped: number;
   fallbackReason: string | null;
+  /** Black-frame check of the current shared attach: pending while it runs, then how it ended (null: no check ran). */
+  validation: 'pending' | 'confirmed' | 'accepted' | 'black' | null;
   addon: RenderStats | null;
 }
 
@@ -102,8 +133,14 @@ const FALLBACK_ATTACH_CODES = ['RENDER_INIT_FAILED', 'BACKEND_UNSUPPORTED'];
 // A shared import can "succeed" and still show black. Until the page showed a picture, or this long, the first
 // frames are checked against what the host rendered.
 const VALIDATION_WINDOW_MS = 5000;
+// Equal to kProbeFrames in native/yall-libmpv/src/render/backend.h.
 const VALIDATION_FRAMES = 30;
 const BLACK_STREAK_LIMIT = 3;
+
+// A device that keeps getting lost is not worth another try: after this many re-attaches within the window the
+// sender stays on readback.
+const REATTACH_LIMIT = 3;
+const REATTACH_WINDOW_MS = 60000;
 
 // "No receiver registered yet" is a timing problem of the page, not a broken GPU path.
 const NO_RECEIVER = /receiver/i;
@@ -118,6 +155,8 @@ export class LibmpvFrameSender {
   private readonly simulateImportFailure: boolean;
   private readonly simulateBlackFrames: boolean;
   private readonly adapterOverride?: AdapterOption;
+  private readonly preferredAfterDeviceLoss?: () => PreferredBackend;
+  private reattachTimes: number[] = [];
   private readonly activeGpu?: { vendorId: number; deviceId: number };
 
   private attach: AttachResult | null = null;
@@ -140,6 +179,7 @@ export class LibmpvFrameSender {
   private importFailures = 0;
   private staleDropped = 0;
   private fallbackReason: string | null = null;
+  private validationVerdict: 'confirmed' | 'accepted' | 'black' | null = null;
   private frameWaiters = new Set<{ afterSent: number; settle: (arrived: boolean) => void }>();
 
   constructor(options: FrameSenderOptions) {
@@ -149,6 +189,7 @@ export class LibmpvFrameSender {
     this.simulateImportFailure = options.simulateImportFailure ?? false;
     this.simulateBlackFrames = options.simulateBlackFrames ?? false;
     this.adapterOverride = options.adapter;
+    this.preferredAfterDeviceLoss = options.preferredAfterDeviceLoss;
     const injected = options.sharedTexture;
     this.sharedTexture = () => injected ?? (require('electron') as typeof import('electron')).sharedTexture as unknown as SharedTextureApi;
     const active = options.gpuInfo?.gpuDevice?.find(d => d.active);
@@ -162,6 +203,7 @@ export class LibmpvFrameSender {
     this.stopped = false;
     this.canvas = {width: options.width, height: options.height};
     this.fallbackReason = null;
+    this.reattachTimes = [];
     this.libmpv.on('property-change', this.onPropertyChange);
     for (const name of ['dwidth', 'dheight']) {
       this.observeIds.push(this.libmpv.observeProperty(name));
@@ -258,6 +300,7 @@ export class LibmpvFrameSender {
       importFailures: this.importFailures,
       staleDropped: this.staleDropped,
       fallbackReason: this.fallbackReason,
+      validation: this.validation ? 'pending' : this.validationVerdict,
       addon: this.libmpv.stats()
     };
   }
@@ -362,6 +405,10 @@ export class LibmpvFrameSender {
       this.release(frame);
       return;
     }
+    if (frame.lost !== undefined) {
+      void this.reattachAfterDeviceLoss(this.attach, frame.lost);
+      return;
+    }
     if (frame.pixels) {
       try {
         this.target.send(READBACK_CHANNEL, {
@@ -452,11 +499,35 @@ export class LibmpvFrameSender {
     }
   }
 
+  /** Test support: makes the current attach report its device as lost. False when nothing can be simulated. */
+  simulateDeviceLost(): boolean {
+    return this.attach ? this.libmpv.simulateDeviceLost?.(this.attach.attachId) ?? false : false;
+  }
+
+  /** The GPU device behind a shared attach was removed (TDR): attach again on a new device, or readback. */
+  private async reattachAfterDeviceLoss(lost: AttachResult, reason: string): Promise<void> {
+    const now = Date.now();
+    this.reattachTimes = this.reattachTimes.filter(t => now - t < REATTACH_WINDOW_MS);
+    if (lost.backend === 'readback' || this.attach?.attachId !== lost.attachId) {
+      return;
+    }
+    let target: PreferredBackend = this.preferredAfterDeviceLoss?.() ?? 'auto';
+    if (this.reattachTimes.length >= REATTACH_LIMIT) {
+      this.log(`[libmpv] the GPU device was lost ${REATTACH_LIMIT} times within ${REATTACH_WINDOW_MS / 1000} s, staying on readback`);
+      target = 'readback';
+    } else {
+      this.reattachTimes.push(now);
+    }
+    await this.switchBackend(lost, `GPU device lost (${reason})`, 'the GPU device was lost', target);
+  }
+
   private beginValidation(attach: AttachResult): void {
     this.endValidation();
+    this.validationVerdict = null;
     const timer = setTimeout(() => {
       if (this.validation?.attachId === attach.attachId) {
         this.log(`[libmpv] ${attach.backend}: first frames not confirmed within ${VALIDATION_WINDOW_MS} ms, accepting`);
+        this.validationVerdict = 'accepted';
         this.endValidation();
       }
     }, VALIDATION_WINDOW_MS);
@@ -497,6 +568,8 @@ export class LibmpvFrameSender {
       return;
     }
     if (!black) {
+      this.log(`[libmpv] ${attach.backend}: first frames confirmed by the page`);
+      this.validationVerdict = 'confirmed';
       this.endValidation();
       return;
     }
@@ -506,13 +579,18 @@ export class LibmpvFrameSender {
       return;
     }
     if (++v.blackStreak >= BLACK_STREAK_LIMIT) {
+      this.validationVerdict = 'black';
       this.endValidation();
       void this.fallBackToReadback(attach, `the page read black from ${attach.backend} frames the host rendered non-black`,
         'imported frames are black');
     }
   }
 
-  private async fallBackToReadback(failed: AttachResult, message: string, what = 'shared-texture import failed on first frame'): Promise<void> {
+  private fallBackToReadback(failed: AttachResult, message: string, what = 'shared-texture import failed on first frame'): Promise<void> {
+    return this.switchBackend(failed, message, what, 'readback');
+  }
+
+  private async switchBackend(failed: AttachResult, message: string, what: string, target: PreferredBackend): Promise<void> {
     // Only the attach that failed may trigger the switch (a late rejection of an older one must not).
     if (this.switching || this.attach?.attachId !== failed.attachId) {
       return;
@@ -520,9 +598,11 @@ export class LibmpvFrameSender {
     this.switching = true;
     this.endValidation();
     try {
+      const shared = target === 'auto' ? this.libmpv.sharedBackendName() : target;
+      const next: RenderBackendName = shared && shared !== 'readback' ? shared : 'readback';
       this.fallbackReason = message;
       const a = failed.adapter;
-      this.log(`[libmpv] ${what} (${message}), switching to readback; ` +
+      this.log(`[libmpv] ${what} (${message}), switching to ${next}; ` +
         `backend=${failed.backend} platform=${process.platform} adapter=${a.name} vendor/device=${a.vendorId}/${a.deviceId}`);
       // Asked before the first context is freed: on a slow machine the video output gives up (VO_INIT_FAILED)
       // while the second context is still being created, and then the file has to be loaded again.
@@ -530,11 +610,19 @@ export class LibmpvFrameSender {
       this.armRecovery(snapshot);
       // Frames of the failed attach that are still on their way are stale from here on.
       this.attach = null;
-      await this.attachBackend('readback');
+      try {
+        await this.attachBackend(next);
+      } catch (error) {
+        if (next === 'readback' || !FALLBACK_ATTACH_CODES.includes((error as { code?: string }).code ?? '')) {
+          throw error;
+        }
+        this.log(`[libmpv] ${next} could not be attached again (${errorMessage(error)}), using readback`);
+        await this.attachBackend('readback');
+      }
       // The first render context took the video output with it when it was freed.
       this.libmpv.reinitVideo().catch((error: unknown) => this.log(`[libmpv] could not re-create the video output: ${errorMessage(error)}`));
     } catch (error) {
-      this.log(`[libmpv] readback could not be attached after the fallback: ${errorMessage(error)}`);
+      this.log(`[libmpv] the video backend could not be attached after the switch: ${errorMessage(error)}`);
     } finally {
       this.switching = false;
     }

@@ -79,5 +79,10 @@ public/THIRD-PARTY-NOTICES.txt
 /libmpv-bridge.js.map
 /libmpv-frame-sender.js
 /libmpv-frame-sender.js.map
+/engine-restart.js
+/engine-restart.js.map
+/bench-config.js
+/bench-config.js.map
 /libmpv-host.js
 /libmpv-host.js.map
+scripts/bench/results/

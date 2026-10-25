@@ -92,6 +92,7 @@ export interface IElectronAPI {
   onMpvEvent: (callback: (status: any) => void) => (() => void);
   onMpvManagerReady: (callback: () => void) => (() => void);
   onMpvInitialSeekComplete: (callback: () => void) => (() => void);
+  onMpvEngineError: (callback: (state: 'restarting' | 'failed') => void) => (() => void);
   /** One subscriber; the page owns every delivered frame and must `close()` it. Returns the unsubscribe function. */
   onVideoFrame: (callback: (frame: VideoFrame) => void) => (() => void);
   /** Main asks for the next `frames` drawn frames to be checked for a black picture (see `videoProbeReport`). */

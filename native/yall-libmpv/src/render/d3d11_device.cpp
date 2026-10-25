@@ -1,6 +1,7 @@
 #ifdef _WIN32
 #include "d3d11_device.h"
 #include <dxgi.h>
+#include <cstdio>
 
 using Microsoft::WRL::ComPtr;
 
@@ -160,5 +161,15 @@ std::string D3D11Device::Init(const AdapterRequest& request) {
 void D3D11Device::Reset() {
   context.Reset();
   device.Reset();
+}
+
+bool D3D11Device::IsRemoved(std::string& reason) const {
+  if (!device) return false;
+  HRESULT hr = device->GetDeviceRemovedReason();
+  if (hr == S_OK) return false;
+  char text[40];
+  std::snprintf(text, sizeof(text), "DEVICE_REMOVED 0x%08lX", static_cast<unsigned long>(hr));
+  reason = text;
+  return true;
 }
 #endif

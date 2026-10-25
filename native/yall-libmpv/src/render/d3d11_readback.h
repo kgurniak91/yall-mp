@@ -21,6 +21,7 @@ class D3D11ReadbackBackend : public RenderBackend {
   void ReleaseAll() override;
   bool IsReadback() const override { return true; }
   void FillStats(BackendStats& out) override;
+  bool CheckDeviceLost(std::string& reason) override { return d3d_ && d3d_->IsRemoved(reason); }
 
  private:
   AdapterRequest adapterRequest_;

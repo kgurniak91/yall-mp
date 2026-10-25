@@ -44,6 +44,8 @@ class RenderThread {
   void Detach();
   void Resize(int w, int h);
   void Release(int slotId, uint64_t serial);
+  // Test support: behaves as if the backend's device was removed (posts the lost frame, then idles).
+  void SimulateLost();
   RenderThreadStats Stats();
 
   uint64_t AttachId() const { return attachId_; }
@@ -62,6 +64,8 @@ class RenderThread {
  private:
   static void OnUpdate(void* self);
   void Run();
+  // Posts the one lost frame of this attach and makes the loop idle from then on.
+  void PostLost(const std::string& reason);
 
   const uint64_t attachId_;
   std::unique_ptr<RenderBackend> backend_;
@@ -81,6 +85,8 @@ class RenderThread {
   std::atomic<bool> contextFreed_{false};
   std::atomic<bool> finished_{false};
   std::atomic<bool> started_{false};
+  std::atomic<bool> simulateLost_{false};
+  bool lostPosted_ = false;  // render thread only
   std::thread thread_;
 
   std::mutex statsMu_;

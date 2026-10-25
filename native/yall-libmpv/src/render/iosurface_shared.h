@@ -50,6 +50,7 @@ class IOSurfaceSharedBackend : public RenderBackend {
   void Note(const std::string& text);  // mu_ held, or single-threaded (Init)
 
   int maxSlots_;
+  int probeFramesLeft_ = kProbeFrames;
   CGLContextObj ctx_ = nullptr;
   mpv_render_context* rc_ = nullptr;
 

@@ -176,6 +176,17 @@ describeNative('libmpv render API', (env: NativeEnv) => {
       }
     });
 
+    it('probes five points of the first frames, not of later ones', async () => {
+      const rig = await open({backend: 'd3d11-shared', adapter});
+      await waitFor(() => rig.frames.length > 45, 15000, 'shared frames');
+      const probed = rig.frames.filter(f => f.probe);
+      expect(probed.length).toBe(30);
+      expect(rig.frames.slice(0, 30).every(f => f.probe?.length === 20)).toBe(true);
+      expect(rig.frames.slice(30).some(f => f.probe)).toBe(false);
+      // BGRA: the sample opens on red, so some probed frame has a lit red channel (index 2) at the centre
+      expect(probed.some(f => f.probe![2] > 200 && f.probe![0] < 60 && f.probe![1] < 60)).toBe(true);
+    });
+
     it('detaches with all slots in flight, accepts late releases and drains', async () => {
       const rig = await open({backend: 'd3d11-shared', adapter, slotTimeoutMs: 60000}, {autoRelease: false});
       await waitFor(() => rig.player.stats()!.inFlight === 4, 15000, 'a full pool');
@@ -189,6 +200,27 @@ describeNative('libmpv render API', (env: NativeEnv) => {
 
       for (const frame of held) rig.release(frame);
       await waitFor(() => env.addon.liveCounts().renderThreads === 0, 10000, 'the drain to end');
+      expect(env.addon.liveCounts().slots).toBe(0);
+    });
+
+    it('posts one lost frame when the device is reported lost, then idles and detaches cleanly', async () => {
+      const rig = await open({backend: 'd3d11-shared', adapter});
+      await waitFor(() => rig.frames.length > 5, 15000, 'shared frames');
+      expect(rig.player.simulateDeviceLost(rig.attachId + 1)).toBe(false);
+      expect(rig.player.simulateDeviceLost(rig.attachId)).toBe(true);
+      await waitFor(() => rig.frames.some(f => f.lost !== undefined), 5000, 'the lost frame');
+      await sleep(400);
+      const lost = rig.frames.filter(f => f.lost !== undefined);
+      expect(lost).toHaveLength(1);
+      expect(lost[0]).toMatchObject({attachId: rig.attachId, slotId: -1, lost: expect.stringContaining('SIMULATED')});
+      expect(lost[0].handle).toBeUndefined();
+      // nothing is rendered after it
+      const rendered = rig.player.stats()!.rendered;
+      await sleep(400);
+      expect(rig.player.stats()!.rendered).toBe(rendered);
+
+      rig.player.detachRenderer();
+      await waitFor(() => env.addon.liveCounts().renderThreads === 0, 15000, 'the drain to end');
       expect(env.addon.liveCounts().slots).toBe(0);
     });
   });
@@ -328,6 +360,17 @@ describeNative('libmpv render API', (env: NativeEnv) => {
       expect(stats.glErrors).toBe(0);
     });
 
+    it('probes five points of the first frames, not of later ones', async () => {
+      if (!await needGl()) return;
+      const rig = await open({backend: 'iosurface-shared'});
+      await waitFor(() => rig.frames.length > 45, 15000, 'shared frames');
+      const probed = rig.frames.filter(f => f.probe);
+      expect(probed.length).toBe(30);
+      expect(rig.frames.slice(0, 30).every(f => f.probe?.length === 20)).toBe(true);
+      expect(rig.frames.slice(30).some(f => f.probe)).toBe(false);
+      expect(probed.some(f => f.probe![2] > 200 && f.probe![0] < 60 && f.probe![1] < 60)).toBe(true);
+    });
+
     it('shows the colours of the sample, also after a seek', async () => {
       if (!await needGl()) return;
       const rig = await open({backend: 'iosurface-shared'}, {sample: [[160, 90]]});
@@ -410,6 +453,28 @@ describeNative('libmpv render API', (env: NativeEnv) => {
       expect(env.addon.liveCounts().slots).toBe(4);
       for (const frame of held) rig.release(frame);
       await waitFor(() => env.addon.liveCounts().renderThreads === 0, 10000, 'the drain to end');
+      expect(env.addon.liveCounts().slots).toBe(0);
+    });
+
+    it('posts one lost frame when the device is reported lost, then idles and detaches cleanly', async () => {
+      if (!await needGl()) return;
+      const rig = await open({backend: 'iosurface-shared'});
+      await waitFor(() => rig.frames.length > 5, 15000, 'shared frames');
+      expect(rig.player.simulateDeviceLost(rig.attachId + 1)).toBe(false);
+      expect(rig.player.simulateDeviceLost(rig.attachId)).toBe(true);
+      await waitFor(() => rig.frames.some(f => f.lost !== undefined), 5000, 'the lost frame');
+      await sleep(400);
+      const lost = rig.frames.filter(f => f.lost !== undefined);
+      expect(lost).toHaveLength(1);
+      expect(lost[0]).toMatchObject({attachId: rig.attachId, slotId: -1, lost: expect.stringContaining('SIMULATED')});
+      expect(lost[0].handle).toBeUndefined();
+      // nothing is rendered after it
+      const rendered = rig.player.stats()!.rendered;
+      await sleep(400);
+      expect(rig.player.stats()!.rendered).toBe(rendered);
+
+      rig.player.detachRenderer();
+      await waitFor(() => env.addon.liveCounts().renderThreads === 0, 15000, 'the drain to end');
       expect(env.addon.liveCounts().slots).toBe(0);
     });
   });

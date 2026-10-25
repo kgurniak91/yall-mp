@@ -24,6 +24,7 @@ class D3D11SharedBackend : public RenderBackend {
   void ReleaseAll() override;
   bool IsReadback() const override { return false; }
   void FillStats(BackendStats& out) override;
+  bool CheckDeviceLost(std::string& reason) override { return d3d_ && d3d_->IsRemoved(reason); }
 
  private:
   enum class State { Free, Rendering, InFlight };
@@ -45,6 +46,9 @@ class D3D11SharedBackend : public RenderBackend {
   int maxSlots_;
   std::unique_ptr<D3D11Device> d3d_;
   mpv_render_context* rc_ = nullptr;
+  // 5x1 CPU-readable texture the probe points are copied into (first kProbeFrames frames only).
+  Microsoft::WRL::ComPtr<ID3D11Texture2D> probeTex_;
+  int probeFramesLeft_ = kProbeFrames;
 
   std::mutex mu_;
   std::vector<Slot> slots_;

@@ -2,6 +2,7 @@
 #include "d3d11_shared.h"
 #include "../live_counts.h"
 #include "../thread_cpu.h"
+#include <cstring>
 
 using Microsoft::WRL::ComPtr;
 using Clock = std::chrono::steady_clock;
@@ -33,6 +34,17 @@ std::string D3D11SharedBackend::Init(mpv_handle* handle) {
   int rc = mpv.render_context_create(&rc_, handle, params);
   if (rc < 0) return std::string("mpv_render_context_create: ") + mpv.error_string(rc);
   slots_.reserve(static_cast<size_t>(maxSlots_));
+  D3D11_TEXTURE2D_DESC pd{};
+  pd.Width = 5;
+  pd.Height = 1;
+  pd.MipLevels = 1;
+  pd.ArraySize = 1;
+  pd.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+  pd.SampleDesc.Count = 1;
+  pd.Usage = D3D11_USAGE_STAGING;
+  pd.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+  // Without it the frames simply carry no probe.
+  if (FAILED(d3d_->device->CreateTexture2D(&pd, nullptr, &probeTex_))) probeTex_.Reset();
   return "";
 }
 
@@ -124,6 +136,17 @@ bool D3D11SharedBackend::Render(int w, int h, uint32_t gen, Frame& out) {
   mpv_d3d11_fbo fbo{tex};
   mpv_render_param rp[] = {{MPV_RENDER_PARAM_D3D11_FBO, &fbo}, {MPV_RENDER_PARAM_INVALID, nullptr}};
   mpv.render_context_render(rc_, rp);
+  // Five points (centre and the four quarter points) are copied before the wait, so one wait covers them too.
+  const bool probing = probeFramesLeft_ > 0 && probeTex_;
+  if (probing) {
+    const int xs[5] = {w / 2, w / 4, w * 3 / 4, w / 4, w * 3 / 4};
+    const int ys[5] = {h / 2, h / 4, h / 4, h * 3 / 4, h * 3 / 4};
+    for (int i = 0; i < 5; i++) {
+      D3D11_BOX box{static_cast<UINT>(xs[i]), static_cast<UINT>(ys[i]), 0, static_cast<UINT>(xs[i] + 1),
+                    static_cast<UINT>(ys[i] + 1), 1};
+      d3d_->context->CopySubresourceRegion(probeTex_.Get(), 0, static_cast<UINT>(i), 0, 0, tex, 0, &box);
+    }
+  }
   double cpu1 = ThreadCpuMs();
   auto t1 = Clock::now();
   bool done = d3d_->waiter.Wait(kGpuWaitTimeoutMs);
@@ -145,6 +168,16 @@ bool D3D11SharedBackend::Render(int w, int h, uint32_t gen, Frame& out) {
   rendered_++;
   renderMs_.Push(std::chrono::duration<double, std::milli>(t1 - t0).count());
   gpuWaitMs_.Push(std::chrono::duration<double, std::milli>(t2 - t1).count());
+
+  if (probing) {
+    probeFramesLeft_--;
+    D3D11_MAPPED_SUBRESOURCE mapped{};
+    if (SUCCEEDED(d3d_->context->Map(probeTex_.Get(), 0, D3D11_MAP_READ, 0, &mapped))) {
+      std::memcpy(out.probe, mapped.pData, sizeof(out.probe));
+      d3d_->context->Unmap(probeTex_.Get(), 0);
+      out.hasProbe = true;
+    }
+  }
 
   out.slotId = index;
   out.serial = s.serial;

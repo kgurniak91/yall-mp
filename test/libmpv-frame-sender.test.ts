@@ -1,8 +1,10 @@
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 import {
+  backendAfterGpuLoss,
   FrameSenderLibmpv,
   FrameTarget,
   LibmpvFrameSender,
+  PreferredBackend,
   PROBE_START_CHANNEL,
   READBACK_CHANNEL,
   SharedTextureApi
@@ -449,28 +451,32 @@ describe('LibmpvFrameSender', () => {
       await expect(waiting).resolves.toBe(false);
     });
   });
-  describe('dmabuf frames and the validation of the first frames', () => {
+  describe.each(['d3d11-shared', 'iosurface-shared', 'dmabuf-shared'] as const)('%s: validation of the first frames', backend => {
     // BGRA of five points: all black, or one lit pixel
     const blackProbe = Array(20).fill(0);
     const litProbe = [0, 0, 0, 255, 10, 20, 30, 255, ...Array(12).fill(0)];
     const dmabufFrame = (probe: number[] | undefined, slotId = 0, serial = 1): RenderFrame => ({
       attachId: 1, slotId, serial, generation: 1, width: 640, height: 360, probe,
-      dmabuf: {fd: 42, stride: 2560, offset: 0, size: 921600, modifier: '0'}
+      ...(backend === 'dmabuf-shared' ? {dmabuf: {fd: 42, stride: 2560, offset: 0, size: 921600, modifier: '0'}} : {handle: Buffer.alloc(8)})
     });
     const started = async (extra: Partial<ConstructorParameters<typeof LibmpvFrameSender>[0]> = {}) => {
-      const libmpv = fakeLibmpv({shared: 'dmabuf-shared'});
+      const libmpv = fakeLibmpv({shared: backend});
       const sender = create(libmpv, extra);
-      await sender.start({width: 800, height: 450, preferred: 'dmabuf-shared'});
+      await sender.start({width: 800, height: 450, preferred: backend});
       return {libmpv, sender};
     };
 
-    it('imports a dma-buf frame as a nativePixmap and asks the page to probe', async () => {
+    it('imports the frame and asks the page to probe', async () => {
       const {libmpv} = await started();
       libmpv.attaches[0].onFrame(dmabufFrame(litProbe));
       const info = (texture.importSharedTexture as ReturnType<typeof vi.fn>).mock.calls[0][0].textureInfo;
-      expect(info.handle).toEqual({nativePixmap: {
-        planes: [{fd: 42, stride: 2560, offset: 0, size: 921600}], modifier: '0', supportsZeroCopyWebGpuImport: false
-      }});
+      if (backend === 'dmabuf-shared') {
+        expect(info.handle).toEqual({nativePixmap: {
+          planes: [{fd: 42, stride: 2560, offset: 0, size: 921600}], modifier: '0', supportsZeroCopyWebGpuImport: false
+        }});
+      } else {
+        expect(info.handle).toEqual(backend === 'iosurface-shared' ? {ioSurface: expect.anything()} : {ntHandle: expect.anything()});
+      }
       expect(target.send).toHaveBeenCalledWith(PROBE_START_CHANNEL, {attachId: 1, frames: 30});
     });
 
@@ -482,8 +488,9 @@ describe('LibmpvFrameSender', () => {
       expect(libmpv.attaches).toHaveLength(1);
       sender.reportPageProbe(true);
       await flush();
-      expect(libmpv.attaches.map(a => a.options.backend)).toEqual(['dmabuf-shared', 'readback']);
+      expect(libmpv.attaches.map(a => a.options.backend)).toEqual([backend, 'readback']);
       expect(sender.stats().fallbackReason).toContain('page read black');
+      expect(sender.stats().validation).toBe('black');
       expect(log).toHaveBeenCalledWith(expect.stringContaining('imported frames are black'));
       expect(libmpv.reinitVideo).toHaveBeenCalled();
     });
@@ -491,6 +498,7 @@ describe('LibmpvFrameSender', () => {
     it('does not fall back when the page shows a picture', async () => {
       const {libmpv, sender} = await started();
       libmpv.attaches[0].onFrame(dmabufFrame(litProbe));
+      expect(sender.stats().validation).toBe('pending');
       sender.reportPageProbe(true);
       sender.reportPageProbe(false);
       sender.reportPageProbe(true);
@@ -498,6 +506,8 @@ describe('LibmpvFrameSender', () => {
       sender.reportPageProbe(true);
       await flush();
       expect(libmpv.attaches).toHaveLength(1);
+      expect(sender.stats().validation).toBe('confirmed');
+      expect(log).toHaveBeenCalledWith(expect.stringContaining('confirmed by the page'));
     });
 
     it('is inconclusive while the video itself is black, and accepts after the window', async () => {
@@ -511,6 +521,7 @@ describe('LibmpvFrameSender', () => {
         await vi.advanceTimersByTimeAsync(5001);
         expect(libmpv.attaches).toHaveLength(1);
         expect(log).toHaveBeenCalledWith(expect.stringContaining('not confirmed within 5000 ms, accepting'));
+        expect(sender.stats().validation).toBe('accepted');
         // after the window nothing is checked any more
         libmpv.attaches[0].onFrame(dmabufFrame(litProbe, 1, 2));
         for (let i = 0; i < 5; i++) {
@@ -540,7 +551,7 @@ describe('LibmpvFrameSender', () => {
         libmpv.attaches[0].onFrame(dmabufFrame(undefined, i, i + 1));
       }
       await flush();
-      expect(libmpv.attaches.map(a => a.options.backend)).toEqual(['dmabuf-shared', 'readback']);
+      expect(libmpv.attaches.map(a => a.options.backend)).toEqual([backend, 'readback']);
       expect(sender.stats().fallbackReason).toContain('page read black');
     });
 
@@ -549,7 +560,7 @@ describe('LibmpvFrameSender', () => {
       libmpv.attaches[0].onFrame(dmabufFrame(litProbe));
       sender.gpuProcessGone('crashed');
       await flush();
-      expect(libmpv.attaches.map(a => a.options.backend)).toEqual(['dmabuf-shared', 'readback']);
+      expect(libmpv.attaches.map(a => a.options.backend)).toEqual([backend, 'readback']);
       expect(sender.stats().fallbackReason).toBe('GPU process gone (crashed)');
       expect(log).toHaveBeenCalledWith(expect.stringContaining('the GPU process is gone'));
       sender.gpuProcessGone('crashed');
@@ -557,10 +568,102 @@ describe('LibmpvFrameSender', () => {
       expect(libmpv.attaches).toHaveLength(2);
     });
 
-    it('a dmabuf attach failure falls back to readback', async () => {
-      const libmpv = fakeLibmpv({shared: 'dmabuf-shared', attachError: {code: 'RENDER_INIT_FAILED', message: 'no render node'}});
-      const result = await create(libmpv).start({width: 800, height: 450, preferred: 'dmabuf-shared'});
+    it('an attach failure falls back to readback', async () => {
+      const libmpv = fakeLibmpv({shared: backend, attachError: {code: 'RENDER_INIT_FAILED', message: 'no render node'}});
+      const result = await create(libmpv).start({width: 800, height: 450, preferred: backend});
       expect(result.backend).toBe('readback');
+    });
+  });
+
+  describe.each(['d3d11-shared', 'iosurface-shared'] as const)('%s: the GPU device behind the attach is lost', backend => {
+    const lostFrame = (attachId: number, reason = 'DEVICE_REMOVED 0x887A0005'): RenderFrame =>
+      ({attachId, slotId: -1, serial: 0, generation: 0, width: 0, height: 0, lost: reason});
+    const started = async (preferredAfter: () => PreferredBackend = () => backend) => {
+      const libmpv = fakeLibmpv({shared: backend});
+      const sender = create(libmpv, {preferredAfterDeviceLoss: preferredAfter});
+      await sender.start({width: 800, height: 450, preferred: backend});
+      return {libmpv, sender};
+    };
+    const lose = async (libmpv: FakeLibmpv, attachId: number) => {
+      libmpv.attaches[attachId - 1].onFrame(lostFrame(attachId));
+      await flush();
+    };
+
+    it('attaches the preferred backend again and re-creates the video output', async () => {
+      const {libmpv, sender} = await started();
+      await lose(libmpv, 1);
+      expect(libmpv.attaches.map(a => a.options.backend)).toEqual([backend, backend]);
+      expect(libmpv.reinitVideo).toHaveBeenCalledTimes(1);
+      expect(sender.stats().fallbackReason).toBe('GPU device lost (DEVICE_REMOVED 0x887A0005)');
+      expect(log).toHaveBeenCalledWith(expect.stringContaining('the GPU device was lost'));
+    });
+
+    it('goes to readback when the policy says the GPU is not trusted anymore', async () => {
+      const {libmpv} = await started(() => 'readback');
+      await lose(libmpv, 1);
+      expect(libmpv.attaches.map(a => a.options.backend)).toEqual([backend, 'readback']);
+    });
+
+    it('uses readback when the new shared attach fails', async () => {
+      const {libmpv} = await started();
+      (libmpv.attachRenderer as ReturnType<typeof vi.fn>).mockImplementationOnce(async () => {
+        throw Object.assign(new Error('device still resetting'), {code: 'RENDER_INIT_FAILED'});
+      });
+      await lose(libmpv, 1);
+      expect(libmpv.attaches.map(a => a.options.backend)).toEqual([backend, 'readback']);
+    });
+
+    it('ignores a lost frame of an attach that was replaced', async () => {
+      const {libmpv} = await started();
+      await lose(libmpv, 1);
+      await lose(libmpv, 1);
+      expect(libmpv.attaches).toHaveLength(2);
+    });
+
+    it('stays on readback once the device was lost three times within a minute', async () => {
+      const {libmpv} = await started();
+      for (let attachId = 1; attachId <= 4; attachId++) {
+        await lose(libmpv, attachId);
+      }
+      expect(libmpv.attaches.map(a => a.options.backend)).toEqual([backend, backend, backend, backend, 'readback']);
+      expect(log).toHaveBeenCalledWith(expect.stringContaining('staying on readback'));
+    });
+
+    it('simulateDeviceLost asks the core for a lost frame of the current attach', async () => {
+      const {libmpv, sender} = await started();
+      expect(sender.simulateDeviceLost()).toBe(false);
+      libmpv.simulateDeviceLost = vi.fn().mockReturnValue(true);
+      expect(sender.simulateDeviceLost()).toBe(true);
+      expect(libmpv.simulateDeviceLost).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe('backendAfterGpuLoss', () => {
+    const base = {configured: 'auto' as PreferredBackend, lossCount: 0, lossSinceOpen: 0, compositingEnabled: true};
+
+    it('keeps the configured backend while the GPU process never died', () => {
+      expect(backendAfterGpuLoss(base)).toBe('auto');
+      expect(backendAfterGpuLoss({...base, configured: 'dmabuf-shared'})).toBe('dmabuf-shared');
+    });
+
+    it('uses readback for the rest of the project after the first loss', () => {
+      expect(backendAfterGpuLoss({...base, lossCount: 1, lossSinceOpen: 1})).toBe('readback');
+    });
+
+    it('tries the shared backend again on the next project when GPU compositing is enabled', () => {
+      expect(backendAfterGpuLoss({...base, lossCount: 1})).toBe('auto');
+    });
+
+    it('stays on readback on the next project when GPU compositing is disabled', () => {
+      expect(backendAfterGpuLoss({...base, lossCount: 1, compositingEnabled: false})).toBe('readback');
+    });
+
+    it('uses readback until restart after a second loss', () => {
+      expect(backendAfterGpuLoss({...base, lossCount: 2})).toBe('readback');
+    });
+
+    it('does not turn an explicit readback into a shared backend', () => {
+      expect(backendAfterGpuLoss({...base, configured: 'readback', lossCount: 1})).toBe('readback');
     });
   });
 });

@@ -129,6 +129,7 @@ void MpvCore::Init(Napi::Env env, Napi::Object exports) {
     InstanceMethod("resize", &MpvCore::Resize),
     InstanceMethod("releaseSlot", &MpvCore::ReleaseSlot),
     InstanceMethod("detachRenderer", &MpvCore::DetachRenderer),
+    InstanceMethod("simulateDeviceLost", &MpvCore::SimulateDeviceLost),
     InstanceMethod("stats", &MpvCore::Stats),
   });
   exports.Set("MpvCore", ctor);

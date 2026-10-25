@@ -49,6 +49,8 @@ export interface NativeMpvCore {
   releaseSlot(attachId: number, slotId: number, serial: number): void;
   detachRenderer(): void;
   stats(): RenderStats | null;
+  /** Test support (in-process addon only): the attach posts a `lost` frame as if its GPU device was removed. */
+  simulateDeviceLost?(attachId: number): boolean;
 }
 
 // ---- render API ----
@@ -107,9 +109,14 @@ export interface RenderFrame {
   handle?: Buffer;
   /** The slot's dma-buf plane. The descriptor stays owned by the host client: import it (Electron dups it), do not close it. */
   dmabuf?: DmabufPlane;
-  /** GL shared backends, first frames only: BGRA of five points the host read from the rendered buffer (20 numbers). */
+  /** Shared backends, first frames only: BGRA of five points the host read from the rendered buffer (20 numbers). */
   probe?: number[];
   pixels?: Buffer;
+  /**
+   * Set instead of a picture (`slotId` is -1) when the GPU device behind the attach was removed (TDR), e.g.
+   * `DEVICE_REMOVED 0x887A0005`. Posted once per attach.
+   */
+  lost?: string;
 }
 
 /** One dma-buf plane of a shared slot. */
@@ -504,6 +511,11 @@ export class Libmpv extends EventEmitter {
   /** Non-blocking. Slots handed out earlier stay valid until released or timed out. */
   detachRenderer(): void {
     this.core.detachRenderer();
+  }
+
+  /** Test support: false when the core cannot simulate it (Linux host) or the attach is gone. */
+  simulateDeviceLost(attachId: number): boolean {
+    return this.core.simulateDeviceLost?.(attachId) ?? false;
   }
 
   stats(): RenderStats | null {

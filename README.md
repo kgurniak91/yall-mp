@@ -53,6 +53,10 @@ As I do not have access to **macOS** hardware, the app is only verified on GitHu
 The Linux GPU video path (OpenGL into a dma-buf, imported by Chromium) can be tried with `YALL_MP_VIDEO_BACKEND=dmabuf-shared`. It needs a DRM render node (`/dev/dri/renderD*`) and a working Chromium GPU process; if either is missing, or the first frames come out black, the player switches to the normal copy path and says why in `video.log` in the app data folder. Reports are welcome, please attach `video.log` and name your GPU, driver and session (X11 or Wayland). NVIDIA's proprietary driver needs `nvidia-drm.modeset=1`; Electron currently has an open bug with dma-buf frames on some NVIDIA setups (electron/electron#53271), so expect that to be the hardest case.
 **Contributions to improve cross-platform support are greatly appreciated!**
 
+#### Reporting problems
+
+If the app crashes, please attach what it left in the app data folder: `video.log` (the video backend and why) and the minidumps in the `Crashpad` subfolder (`reports` on Windows, `completed` elsewhere). Dumps stay on your machine; nothing is uploaded unless you send it. If the playback engine stops by itself the player restarts it at the same position once, and says so in a message.
+
 ---
 
 ## ✨ Key Features

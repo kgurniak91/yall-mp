@@ -83,6 +83,29 @@ describe('VideoSurfaceRenderer', () => {
     expect(reports).toEqual([true, false]);
   });
 
+  it('probes on the 2d fallback too', () => {
+    const plain = document.createElement('canvas');
+    plain.width = 160;
+    plain.height = 90;
+    document.body.appendChild(plain);
+    // a canvas that already has a 2d context cannot get a WebGL one
+    plain.getContext('2d');
+    const fallback = new VideoSurfaceRenderer(plain);
+    try {
+      expect(fallback.stats.backend).toBe('2d');
+      const reports: boolean[] = [];
+      fallback.startProbe(2, black => reports.push(black));
+      fallback.present(solidFrame(160, 90, [0, 0, 0]));
+      fallback.renderNow();
+      fallback.present(solidFrame(160, 90, [0, 200, 0]));
+      fallback.renderNow();
+      expect(reports).toEqual([true, false]);
+    } finally {
+      fallback.dispose();
+      plain.remove();
+    }
+  });
+
   it('letterboxes a frame of another aspect ratio with opaque black', () => {
     renderer.present(solidFrame(90, 90, [0, 255, 0]));
     renderer.renderNow();
