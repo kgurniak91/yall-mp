@@ -325,6 +325,9 @@ describeNative('libmpv render API', (env: NativeEnv) => {
       if (!await needGl()) return;
       const rig = await open({backend: 'iosurface-shared'});
       const centrePixel = () => pixel(rig.frames[rig.frames.length - 1], 160, 90);
+      const mpvLog: string[] = [];
+      rig.player.requestLogMessages('warn');
+      rig.player.on('event', e => { if (e.event === 'log-message') mpvLog.push(`${e.prefix}/${e.level}: ${String(e.text).trim()}`); });
       const trace: string[] = [];
       const centreOf = () => {
         const c = centrePixel();
@@ -334,6 +337,14 @@ describeNative('libmpv render API', (env: NativeEnv) => {
       try {
         await waitFor(() => timePos(rig) >= 1.0 && timePos(rig) < 2.4 && isRed(centreOf()), 15000, 'red segment');
       } catch (error) {
+        const props: Record<string, unknown> = {};
+        for (const name of ['video-params', 'hwdec-current', 'estimated-vf-fps', 'frame-drop-count', 'vo-delayed-frame-count', 'width', 'dwidth', 'video-format', 'audio-pts', 'avsync']) {
+          props[name] = await rig.player.getProperty(name).catch((e: Error) => `ERR ${e.message}`);
+        }
+        const last = rig.frames[rig.frames.length - 1];
+        let lit = 0;
+        for (let y = 0; y < last.height; y += 10) for (let x = 0; x < last.width; x += 10) { const c = pixel(last, x, y); if (c.r + c.g + c.b > 30) lit++; }
+        console.log(`iosurface-shared diagnosis: litSamples=${lit} props=${JSON.stringify(props)} mpvLog=${mpvLog.slice(-20).join(' ; ')}`);
         console.log(`iosurface-shared red segment never seen: ${trace.filter((_, i) => i % 50 === 0).slice(-20).join(' ; ')} stats ${JSON.stringify(rig.player.stats())}`);
         throw error;
       }
