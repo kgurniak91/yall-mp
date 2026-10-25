@@ -190,16 +190,21 @@ async function runBench(config: BenchConfig): Promise<void> {
     playbackManager?.play();
     await delay(config.warmupSec * 1000);
     const before = await pageStats();
+    const timePosBefore = await mpvProperty('time-pos');
     const startedAt = Date.now();
     // Tells an external sampler that the measuring window has begun
     writeFileSync(`${config.out}.measuring`, '');
     await delay(config.measureSec * 1000);
     const after = await pageStats();
+    const timePosAfter = await mpvProperty('time-pos');
     const seconds = (Date.now() - startedAt) / 1000;
     const sender = videoSender?.stats();
     const gpu = await app.getGPUInfo('basic').catch(() => null) as { gpuDevice?: Array<Record<string, unknown>> } | null;
     const result = {
       config, seconds, platform: process.platform, version: app.getVersion(),
+      // Media seconds played per wall-clock second: below 1 means the machine cannot keep real time
+      playbackSpeedRatio: typeof timePosBefore === 'number' && typeof timePosAfter === 'number' ? (timePosAfter - timePosBefore) / seconds : null,
+      mpvSpeed: await mpvProperty('speed'),
       presentedFps: before && after ? (after.drawn - before.drawn) / seconds : null,
       page: after,
       sender,
