@@ -86,3 +86,4 @@ public/THIRD-PARTY-NOTICES.txt
 /libmpv-host.js
 /libmpv-host.js.map
 scripts/bench/results/
+scripts/bench/bench-results.zip
