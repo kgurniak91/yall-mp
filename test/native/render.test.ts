@@ -363,6 +363,9 @@ describeNative('libmpv render API', (env: NativeEnv) => {
       expect(rig.player.stats()!.generation).toBeGreaterThan(generation);
       const newest = rig.frames.filter(f => f.width === 400).pop()!;
       expect(newest.generation).toBeGreaterThan(rig.frames[0].generation);
+      const at = (f: RenderFrame) => JSON.stringify([pixel(f, 200, 20), pixel(f, 200, 200), pixel(f, 0, 0), pixel(f, 399, 223)]);
+      console.log(`resized frames: ${rig.frames.filter(f => f.width === 400).map(f => `gen${f.generation}/slot${f.slotId}/s${f.serial} ${at(f)}`).join('
+')}`);
       expect(isRed(pixel(newest, 200, 20))).toBe(true);
       expect(isBlue(pixel(newest, 200, 200))).toBe(true);
       expect(env.addon.readSurfacePixel!(newest.handle!, 399, 223)).not.toBeNull();
