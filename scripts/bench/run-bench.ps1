@@ -122,7 +122,8 @@ public static class Win32Window {
 '@ -ErrorAction SilentlyContinue
   Write-Host ""
   Write-Host "=== LEGACY $name (run $run of $Runs) ==="
-  Write-Host "In the old app: open (or create a project from) '$($item.File)' from the media folder, subtitles: the embedded ASS track. Pause at the start."
+  $subtitleHint = if ($item.Sub -ge 0) { "pick the embedded ASS subtitle track" } else { "this file has no subtitles, create the project without any" }
+  Write-Host "In the old app: open (or create a project from) '$($item.File)' from the media folder; $subtitleHint. Pause at the start."
   Write-Host "Then press Enter here."
   [void](Read-Host)
   $proc = Get-Process | Where-Object { $_.ProcessName -eq $LegacyProcessName -and $_.MainWindowHandle -ne 0 } | Select-Object -First 1

@@ -36,8 +36,8 @@ Install or keep the old release as it was. Then:
 .\run-bench.ps1 -Legacy
 ```
 
-For each run the script tells you which file to open in the old app (drag it in and create the project; pick the
-embedded subtitle track). It resizes the window, you press Space when asked, then do not touch anything for a minute
+For each run the script tells you which file to open in the old app (drag it in and create the project; for the two episodes pick the
+embedded subtitle track, the 1080p60 clip has no subtitles). It resizes the window, you press Space when asked, then do not touch anything for a minute
 and say whether playback looked smooth. Do this six times in total (two files, three runs each).
 
 If your old app has another name than `Y'ALL Media Player` in the task manager, add `-LegacyProcessName "<name>"`.
