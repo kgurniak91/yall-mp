@@ -287,6 +287,24 @@ describeNative('libmpv render API', (env: NativeEnv) => {
       const clip = ensureSplitClip({width: 320, height: 180});
       const rig = await open({backend: 'iosurface-shared'}, {file: clip});
       await waitFor(() => rig.frames.length > 5, 15000, 'shared frames');
+      // The first frames can still be black while the file loads: wait for the picture, report what was seen.
+      const seen: string[] = [];
+      try {
+        await waitFor(() => {
+          const f = rig.frames[rig.frames.length - 1];
+          const t = pixel(f, 160, 20);
+          const b = pixel(f, 160, 160);
+          const line = `t=${timePos(rig).toFixed(2)} frames=${rig.frames.length} top=${t.r},${t.g},${t.b},${t.a} bottom=${b.r},${b.g},${b.b},${b.a}`;
+          if (seen[seen.length - 1] !== line) seen.push(line);
+          return isRed(t) && isBlue(b);
+        }, 15000, 'the red/blue picture');
+      } catch (error) {
+        console.log(`iosurface-shared picture never arrived:
+${seen.slice(-15).join('
+')}
+stats ${JSON.stringify(rig.player.stats())}`);
+        throw error;
+      }
       const frame = rig.frames[rig.frames.length - 1];
       expect(frame.handle!.length).toBe(8);
       expect(frame.handle!.readBigUInt64LE()).not.toBe(0n);
@@ -310,7 +328,21 @@ describeNative('libmpv render API', (env: NativeEnv) => {
       if (!await needGl()) return;
       const rig = await open({backend: 'iosurface-shared'});
       const centrePixel = () => pixel(rig.frames[rig.frames.length - 1], 160, 90);
-      await waitFor(() => timePos(rig) >= 1.0 && timePos(rig) < 2.4 && isRed(centrePixel()), 15000, 'red segment');
+      const trace: string[] = [];
+      const centreOf = () => {
+        const c = centrePixel();
+        trace.push(`t=${timePos(rig).toFixed(2)} frames=${rig.frames.length} ${c.r},${c.g},${c.b},${c.a}`);
+        return c;
+      };
+      try {
+        await waitFor(() => timePos(rig) >= 1.0 && timePos(rig) < 2.4 && isRed(centreOf()), 15000, 'red segment');
+      } catch (error) {
+        console.log(`iosurface-shared red segment never seen:
+${trace.filter((_, i) => i % 50 === 0).slice(-20).join('
+')}
+stats ${JSON.stringify(rig.player.stats())}`);
+        throw error;
+      }
       await rig.player.command(['seek', '4', 'absolute+exact']);
       await waitFor(() => timePos(rig) >= 4.0 && timePos(rig) < 5.4 && isGreen(centrePixel()), 15000, 'green segment');
     });
