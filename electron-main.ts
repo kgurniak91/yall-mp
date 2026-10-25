@@ -191,12 +191,18 @@ async function runBench(config: BenchConfig): Promise<void> {
     await delay(config.warmupSec * 1000);
     const before = await pageStats();
     const timePosBefore = await mpvProperty('time-pos');
+    app.getAppMetrics(); // percentCPUUsage is relative to the previous call, so this starts the measuring window
     const startedAt = Date.now();
     // Tells an external sampler that the measuring window has begun
     writeFileSync(`${config.out}.measuring`, '');
     await delay(config.measureSec * 1000);
     const after = await pageStats();
     const timePosAfter = await mpvProperty('time-pos');
+    // % of one core per process, summed by process type (Browser = main process with libmpv, GPU, Tab = renderer)
+    const cpuByProcessType: Record<string, number> = {};
+    for (const metric of app.getAppMetrics()) {
+      cpuByProcessType[metric.type] = (cpuByProcessType[metric.type] ?? 0) + metric.cpu.percentCPUUsage;
+    }
     const seconds = (Date.now() - startedAt) / 1000;
     const sender = videoSender?.stats();
     const gpu = await app.getGPUInfo('basic').catch(() => null) as { gpuDevice?: Array<Record<string, unknown>> } | null;
@@ -205,6 +211,7 @@ async function runBench(config: BenchConfig): Promise<void> {
       // Media seconds played per wall-clock second: below 1 means the machine cannot keep real time
       playbackSpeedRatio: typeof timePosBefore === 'number' && typeof timePosAfter === 'number' ? (timePosAfter - timePosBefore) / seconds : null,
       mpvSpeed: await mpvProperty('speed'),
+      cpuByProcessType,
       presentedFps: before && after ? (after.drawn - before.drawn) / seconds : null,
       page: after,
       sender,
@@ -213,7 +220,13 @@ async function runBench(config: BenchConfig): Promise<void> {
         delayedFrames: await mpvProperty('vo-delayed-frame-count'),
         decoderDrops: await mpvProperty('decoder-frame-drop-count'),
         avsync: await mpvProperty('avsync'),
-        hwdecCurrent: await mpvProperty('hwdec-current')
+        hwdecCurrent: await mpvProperty('hwdec-current'),
+        decodedFormat: await mpvProperty('video-params/pixelformat'),
+        outputFormat: await mpvProperty('video-out-params/pixelformat'),
+        videoSync: await mpvProperty('video-sync'),
+        decoderThreads: await mpvProperty('vd-lavc-threads'),
+        currentVo: await mpvProperty('current-vo'),
+        estimatedFps: await mpvProperty('estimated-vf-fps')
       },
       activeGpu: gpu?.gpuDevice?.find(device => device.active) ?? null,
       gpuCompositing: app.getGPUFeatureStatus().gpu_compositing,
