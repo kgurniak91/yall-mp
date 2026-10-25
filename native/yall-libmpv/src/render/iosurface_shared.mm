@@ -2,6 +2,7 @@
 #define GL_SILENCE_DEPRECATION
 #include "iosurface_shared.h"
 #include <CoreFoundation/CoreFoundation.h>
+#include <IOKit/IOReturn.h>
 #include <OpenGL/CGLIOSurface.h>
 #include <OpenGL/CGLRenderers.h>
 #include <OpenGL/gl3.h>
