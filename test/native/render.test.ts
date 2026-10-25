@@ -403,6 +403,16 @@ describeNative('libmpv render API', (env: NativeEnv) => {
       expect(rig.player.stats()!.generation).toBeGreaterThan(generation);
       const newest = rig.frames.filter(f => f.width === 400).pop()!;
       expect(newest.generation).toBeGreaterThan(rig.frames[0].generation);
+      // Evidence: how does each further paused redraw look? (the first one at a new size came out black on CI)
+      const redraws: string[] = [`400x224 ${JSON.stringify(pixel(newest, 200, 20))}`];
+      for (const [w, h] of [[402, 226], [404, 228], [402, 226]]) {
+        rig.player.resize(w, h);
+        await waitFor(() => rig.frames.some(f => f.width === w && f.height === h), 5000, `a ${w}x${h} frame`);
+        await sleep(300);
+        const f = rig.frames.filter(x => x.width === w && x.height === h).pop()!;
+        redraws.push(`${w}x${h} slot${f.slotId} ${JSON.stringify(pixel(f, 200, 20))}`);
+      }
+      console.log(`paused redraws: ${redraws.join(' ; ')}`);
       // Evidence: is the paused redraw empty, or is every frame of the new size?
       const pausedFrames = rig.frames.filter(f => f.width === 400).length;
       await rig.player.setProperty('pause', false);
