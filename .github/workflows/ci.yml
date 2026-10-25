@@ -179,6 +179,8 @@ jobs:
         continue-on-error: true
         env:
           YALL_MP_GL_DEBUG: 1
+          # Hosted runners only have Apple's software OpenGL renderer; the backend refuses it by default.
+          YALL_MP_ALLOW_SOFTWARE_GL: 1
         run: |
           mkdir -p test-results/smoke
           { sw_vers; uname -m; system_profiler SPDisplaysDataType; } > test-results/smoke/macos-system.txt 2>&1 || true
@@ -199,7 +201,7 @@ jobs:
             export YALL_MP_GL_DEBUG=1
             status=0
             npm run test:native:smoke -- --backend=readback --seconds=4 --min-fps=10 --json=test-results/smoke/macos.json || status=1
-            npm run test:native:smoke -- --backend=iosurface-shared --allow-fallback --seconds=6 --mpv-log=v --screenshot=test-results/smoke/macos-iosurface.png --json=test-results/smoke/macos-iosurface.json || status=1
+            YALL_MP_ALLOW_SOFTWARE_GL=1 npm run test:native:smoke -- --backend=iosurface-shared --min-fps=3 --allow-fallback --seconds=6 --mpv-log=v --screenshot=test-results/smoke/macos-iosurface.png --json=test-results/smoke/macos-iosurface.json || status=1
             npm run test:native:smoke -- --backend=auto --allow-fallback --seconds=6 --screenshot=test-results/smoke/macos-auto.png --json=test-results/smoke/macos-auto.json || status=1
             exit $status
           fi

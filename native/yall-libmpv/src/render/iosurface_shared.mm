@@ -116,6 +116,11 @@ std::string IOSurfaceSharedBackend::Init(mpv_handle* handle) {
   adapterInfo_.name = renderer;
   adapterInfo_.software = software || Contains(renderer, "Software") || Contains(renderer, "llvmpipe");
   adapterInfo_.selection = adapterInfo_.software ? "software" : "accelerated";
+  // Apple's software renderer needs about a second per 1024x642 frame (hosted CI runner): the capped readback
+  // path is far faster there, so leave the choice to the fallback unless a test asks for the GL path anyway.
+  if (adapterInfo_.software && !std::getenv("YALL_MP_ALLOW_SOFTWARE_GL")) {
+    return "OpenGL renderer is software (" + renderer + "), readback is faster";
+  }
   Note(std::string("GL ") + GlString(GL_VERSION) + " | " + renderer + " | " + GlString(GL_VENDOR) +
        (attempts.empty() ? "" : " | earlier attempts: " + attempts));
   CheckGl("context creation");
@@ -267,9 +272,10 @@ bool IOSurfaceSharedBackend::Render(int w, int h, uint32_t gen, Frame& out) {
 
   auto t0 = Clock::now();
   double cpu0 = ThreadCpuMs();
-  // A texture-backed FBO is bottom-up in GL; the IOSurface is read top-down, so ask mpv to flip.
+  // Measured on a macOS runner: with FLIP_Y=1 the IOSurface came out upside down, mpv's default already
+  // writes the first row at the top of the picture.
   mpv_opengl_fbo target{static_cast<int>(fbo), w, h, GL_RGBA8};
-  int flipY = 1;
+  int flipY = 0;
   mpv_render_param rp[] = {{MPV_RENDER_PARAM_OPENGL_FBO, &target},
                            {MPV_RENDER_PARAM_FLIP_Y, &flipY},
                            {MPV_RENDER_PARAM_INVALID, nullptr}};
