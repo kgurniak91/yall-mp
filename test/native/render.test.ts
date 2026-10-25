@@ -299,10 +299,7 @@ describeNative('libmpv render API', (env: NativeEnv) => {
           return isRed(t) && isBlue(b);
         }, 15000, 'the red/blue picture');
       } catch (error) {
-        console.log(`iosurface-shared picture never arrived:
-${seen.slice(-15).join('
-')}
-stats ${JSON.stringify(rig.player.stats())}`);
+        console.log(`iosurface-shared picture never arrived: ${seen.slice(-15).join(' ; ')} stats ${JSON.stringify(rig.player.stats())}`);
         throw error;
       }
       const frame = rig.frames[rig.frames.length - 1];
@@ -337,10 +334,7 @@ stats ${JSON.stringify(rig.player.stats())}`);
       try {
         await waitFor(() => timePos(rig) >= 1.0 && timePos(rig) < 2.4 && isRed(centreOf()), 15000, 'red segment');
       } catch (error) {
-        console.log(`iosurface-shared red segment never seen:
-${trace.filter((_, i) => i % 50 === 0).slice(-20).join('
-')}
-stats ${JSON.stringify(rig.player.stats())}`);
+        console.log(`iosurface-shared red segment never seen: ${trace.filter((_, i) => i % 50 === 0).slice(-20).join(' ; ')} stats ${JSON.stringify(rig.player.stats())}`);
         throw error;
       }
       await rig.player.command(['seek', '4', 'absolute+exact']);
