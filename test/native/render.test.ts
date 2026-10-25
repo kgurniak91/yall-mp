@@ -9,10 +9,14 @@ const {ensureClip, ensureSplitClip} = require('./support/bench-media.js') as {
 const isWindows = process.platform === 'win32';
 const isMac = process.platform === 'darwin';
 
+type Pixel = { r: number; g: number; b: number; a: number };
+
 interface Rig {
   player: Libmpv;
   log: EventLog;
   frames: RenderFrame[];
+  /** iosurface-shared: the pixels read inside the frame callback (see `sample`), keyed by frame. */
+  samples: WeakMap<RenderFrame, Array<Pixel | null>>;
   attachId: number;
   /** Releases a shared frame (what the frame sender does when Chromium lets go of the texture). */
   release: (frame: RenderFrame) => void;
@@ -35,7 +39,7 @@ describeNative('libmpv render API', (env: NativeEnv) => {
 
   const open = async (
     attach: Omit<AttachRendererOptions, 'width' | 'height'> & { width?: number; height?: number },
-    options: { autoRelease?: boolean; file?: string; extra?: Record<string, string> } = {}
+    options: { autoRelease?: boolean; file?: string; extra?: Record<string, string>; sample?: Array<[number, number]> } = {}
   ): Promise<Rig> => {
     const player = await Libmpv.create(env.addon, {
       options: {
@@ -52,10 +56,14 @@ describeNative('libmpv render API', (env: NativeEnv) => {
     const frames: RenderFrame[] = [];
     const autoRelease = options.autoRelease ?? true;
     const rig: Rig = {
-      player, log, frames, attachId: 0,
+      player, log, frames, samples: new WeakMap(), attachId: 0,
       release: (frame) => player.releaseSlot(frame.attachId, frame.slotId, frame.serial)
     };
     const result = player.attachRenderer({width: 320, height: 180, ...attach}, (frame) => {
+      // A frame is only safe to read until it is released: the next render reuses the slot.
+      if (frame.handle && options.sample && env.addon.readSurfacePixel) {
+        rig.samples.set(frame, options.sample.map(([x, y]) => env.addon.readSurfacePixel!(frame.handle!, x, y)));
+      }
       frames.push(frame);
       if (frame.handle && autoRelease) rig.release(frame);
       if (frames.length > 300) frames.splice(0, frames.length - 300);
@@ -274,7 +282,6 @@ describeNative('libmpv render API', (env: NativeEnv) => {
       return true;
     };
 
-    const pixel = (frame: RenderFrame, x: number, y: number) => env.addon.readSurfacePixel!(frame.handle!, x, y)!;
 
     it('attaches, or fails with RENDER_INIT_FAILED and a reason', async () => {
       await probe();
@@ -284,27 +291,28 @@ describeNative('libmpv render API', (env: NativeEnv) => {
       expect(typeof env.addon.readSurfacePixel).toBe('function');
     });
 
+    // Frames are read inside the frame callback (`sample`), before the slot is released and rendered into again.
+    const sampled = (rig: Rig, frame: RenderFrame, index: number): Pixel => rig.samples.get(frame)![index]!;
+    const newestSampled = (rig: Rig, index: number, where: (f: RenderFrame) => boolean = () => true): Pixel | null => {
+      const frame = [...rig.frames].reverse().find(f => where(f) && rig.samples.get(f)?.[index]);
+      return frame ? sampled(rig, frame, index) : null;
+    };
+
     it('hands out IOSurface handles that hold the picture the right way up', async () => {
       if (!await needGl()) return;
-      const clip = ensureSplitClip({width: 320, height: 180});
-      const rig = await open({backend: 'iosurface-shared'}, {file: clip});
-      await waitFor(() => rig.frames.length > 5, 15000, 'shared frames');
+      const rig = await open({backend: 'iosurface-shared'}, {
+        file: ensureSplitClip({width: 320, height: 180}), sample: [[160, 20], [160, 160], [0, 0], [319, 0], [0, 179], [319, 179]]
+      });
       // The first frames can still be black while the file loads: wait for the picture, report what was seen.
-      const seen: string[] = [];
+      const isPicture = (f: RenderFrame) => !!rig.samples.get(f) && isRed(sampled(rig, f, 0)) && isBlue(sampled(rig, f, 1));
       try {
-        await waitFor(() => {
-          const f = rig.frames[rig.frames.length - 1];
-          const t = pixel(f, 160, 20);
-          const b = pixel(f, 160, 160);
-          const line = `t=${timePos(rig).toFixed(2)} frames=${rig.frames.length} top=${t.r},${t.g},${t.b},${t.a} bottom=${b.r},${b.g},${b.b},${b.a}`;
-          if (seen[seen.length - 1] !== line) seen.push(line);
-          return isRed(t) && isBlue(b);
-        }, 15000, 'the red/blue picture');
+        await waitFor(() => rig.frames.some(isPicture), 15000, 'the red/blue picture');
       } catch (error) {
-        console.log(`iosurface-shared picture never arrived: ${seen.slice(-15).join(' ; ')} stats ${JSON.stringify(rig.player.stats())}`);
+        const last = rig.frames[rig.frames.length - 1];
+        console.log(`iosurface-shared picture never arrived: ${rig.frames.length} frames, last samples ${JSON.stringify(rig.samples.get(last))} stats ${JSON.stringify(rig.player.stats())}`);
         throw error;
       }
-      const frame = rig.frames[rig.frames.length - 1];
+      const frame = rig.frames.find(isPicture)!;
       expect(frame.handle!.length).toBe(8);
       expect(frame.handle!.readBigUInt64LE()).not.toBe(0n);
       expect(frame.pixels).toBeUndefined();
@@ -312,46 +320,24 @@ describeNative('libmpv render API', (env: NativeEnv) => {
       expect(stats.backend).toBe('iosurface-shared');
       expect(stats.impl).toBe('gl');
       expect(stats.gpuWaitTimeouts).toBe(0);
-
-      const top = pixel(frame, 160, 20);
-      const bottom = pixel(frame, 160, 160);
-      console.log(`iosurface-shared pixels: top ${JSON.stringify(top)} bottom ${JSON.stringify(bottom)} ` +
-        `corners ${JSON.stringify([pixel(frame, 0, 0), pixel(frame, 319, 0), pixel(frame, 0, 179), pixel(frame, 319, 179)])} ` +
-        `glErrors=${stats.glErrors} note=${stats.note}`);
-      expect(isRed(top)).toBe(true);
-      expect(isBlue(bottom)).toBe(true);
+      console.log(`iosurface-shared samples: ${JSON.stringify(rig.samples.get(frame))} glErrors=${stats.glErrors} note=${stats.note}`);
+      // every sampled frame that shows the picture has it the right way up, corners included
+      const corners = rig.samples.get(frame)!.slice(2) as Pixel[];
+      expect(isRed(corners[0]) && isRed(corners[1])).toBe(true);
+      expect(isBlue(corners[2]) && isBlue(corners[3])).toBe(true);
       expect(stats.glErrors).toBe(0);
     });
 
     it('shows the colours of the sample, also after a seek', async () => {
       if (!await needGl()) return;
-      const rig = await open({backend: 'iosurface-shared'});
-      const centrePixel = () => pixel(rig.frames[rig.frames.length - 1], 160, 90);
-      const mpvLog: string[] = [];
-      rig.player.requestLogMessages('warn');
-      rig.player.on('event', e => { if (e.event === 'log-message') mpvLog.push(`${e.prefix}/${e.level}: ${String(e.text).trim()}`); });
-      const trace: string[] = [];
-      const centreOf = () => {
-        const c = centrePixel();
-        trace.push(`t=${timePos(rig).toFixed(2)} frames=${rig.frames.length} ${c.r},${c.g},${c.b},${c.a}`);
-        return c;
+      const rig = await open({backend: 'iosurface-shared'}, {sample: [[160, 90]]});
+      const centreIs = (check: (c: Pixel) => boolean) => {
+        const c = newestSampled(rig, 0);
+        return !!c && check(c);
       };
-      try {
-        await waitFor(() => timePos(rig) >= 1.0 && timePos(rig) < 2.4 && isRed(centreOf()), 15000, 'red segment');
-      } catch (error) {
-        const props: Record<string, unknown> = {};
-        for (const name of ['video-params', 'hwdec-current', 'estimated-vf-fps', 'frame-drop-count', 'vo-delayed-frame-count', 'width', 'dwidth', 'video-format', 'audio-pts', 'avsync']) {
-          props[name] = await rig.player.getProperty(name).catch((e: Error) => `ERR ${e.message}`);
-        }
-        const last = rig.frames[rig.frames.length - 1];
-        let lit = 0;
-        for (let y = 0; y < last.height; y += 10) for (let x = 0; x < last.width; x += 10) { const c = pixel(last, x, y); if (c.r + c.g + c.b > 30) lit++; }
-        console.log(`iosurface-shared diagnosis: litSamples=${lit} props=${JSON.stringify(props)} mpvLog=${mpvLog.slice(-20).join(' ; ')}`);
-        console.log(`iosurface-shared red segment never seen: ${trace.filter((_, i) => i % 50 === 0).slice(-20).join(' ; ')} stats ${JSON.stringify(rig.player.stats())}`);
-        throw error;
-      }
+      await waitFor(() => timePos(rig) >= 1.0 && timePos(rig) < 2.4 && centreIs(isRed), 15000, 'red segment');
       await rig.player.command(['seek', '4', 'absolute+exact']);
-      await waitFor(() => timePos(rig) >= 4.0 && timePos(rig) < 5.4 && isGreen(centrePixel()), 15000, 'green segment');
+      await waitFor(() => timePos(rig) >= 4.0 && timePos(rig) < 5.4 && centreIs(isGreen), 15000, 'green segment');
     });
 
     it('holds exactly 4 in flight, then skips frames until a slot is released', async () => {
@@ -392,20 +378,25 @@ describeNative('libmpv render API', (env: NativeEnv) => {
 
     it('resizes: the generation bumps and new frames are new surfaces of the new size, also while paused', async () => {
       if (!await needGl()) return;
-      const rig = await open({backend: 'iosurface-shared'}, {file: ensureSplitClip({width: 320, height: 180})});
+      const rig = await open({backend: 'iosurface-shared'}, {
+        file: ensureSplitClip({width: 320, height: 180}), sample: [[200, 20], [200, 200], [399, 223], [400, 0]]
+      });
       await waitFor(() => rig.frames.length > 3, 15000, 'frames');
       const generation = rig.player.stats()!.generation;
       await rig.player.setProperty('pause', true);
       await sleep(300);
       rig.player.resize(400, 224);
-      await waitFor(() => rig.frames.some(f => f.width === 400 && f.height === 224), 5000, 'a 400x224 frame');
+      const isNew = (f: RenderFrame) => f.width === 400 && f.height === 224;
+      await waitFor(() => rig.frames.some(isNew), 5000, 'a 400x224 frame');
       expect(rig.player.stats()!.generation).toBeGreaterThan(generation);
-      const newest = rig.frames.filter(f => f.width === 400).pop()!;
+      const newest = rig.frames.filter(isNew).pop()!;
       expect(newest.generation).toBeGreaterThan(rig.frames[0].generation);
-      expect(isRed(pixel(newest, 200, 20))).toBe(true);
-      expect(isBlue(pixel(newest, 200, 200))).toBe(true);
-      expect(env.addon.readSurfacePixel!(newest.handle!, 399, 223)).not.toBeNull();
-      expect(env.addon.readSurfacePixel!(newest.handle!, 400, 0)).toBeNull();
+      const samples = rig.samples.get(newest)!;
+      console.log(`iosurface-shared resized frame samples: ${JSON.stringify(samples)}`);
+      expect(isRed(samples[0]!)).toBe(true);
+      expect(isBlue(samples[1]!)).toBe(true);
+      expect(samples[2]).not.toBeNull();
+      expect(samples[3]).toBeNull();
     });
 
     it('detaches with all slots in flight, accepts late releases and drains', async () => {
