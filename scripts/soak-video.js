@@ -259,6 +259,10 @@ function writeCsv(samples) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'yall-soak-'));
   seed(dir);
   const app = await _electron.launch({args: ['.', ...(process.platform === 'darwin' ? [] : ['--js-flags=--expose-gc']), ...(process.platform === 'linux' ? ['--no-sandbox'] : [])], cwd: REPO, env: {...process.env, YALL_MP_E2E: '1', YALL_MP_USER_DATA_DIR: dir}});
+  if (process.platform === 'darwin') {
+    // The e2e specs do this and the hosted macOS runner only shows the window with it
+    await app.context().tracing.start({screenshots: true, snapshots: true});
+  }
   let mainLog = '';
   for (const stream of [app.process().stdout, app.process().stderr]) {
     stream?.on('data', chunk => { mainLog = (mainLog + chunk).slice(-4000); });
