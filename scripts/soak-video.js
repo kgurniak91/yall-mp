@@ -347,7 +347,7 @@ function writeCsv(samples) {
       fs.writeFileSync(process.env.SOAK_HEAP_SNAPSHOT, chunks.join(''));
     }
   } finally {
-    await app.close().catch(() => undefined);
+    await Promise.race([app.close().catch(() => undefined), sleep(20_000)]);
     await sleep(2000);
     fs.rmSync(dir, {recursive: true, force: true});
   }
