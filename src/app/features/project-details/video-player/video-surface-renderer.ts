@@ -28,6 +28,8 @@ export interface VideoSurfaceStats {
   received: number;
   drawn: number;
   dropped: number;
+  /** Frames handed to `present` that were closed again; received - closed = frames still open. */
+  closed: number;
   errors: number;
   contextLosses: number;
   canvasWidth: number;
@@ -68,7 +70,7 @@ interface GlResources {
  */
 export class VideoSurfaceRenderer {
   public readonly stats: VideoSurfaceStats = {
-    backend: 'none', received: 0, drawn: 0, dropped: 0, errors: 0, contextLosses: 0,
+    backend: 'none', received: 0, drawn: 0, dropped: 0, closed: 0, errors: 0, contextLosses: 0,
     canvasWidth: 0, canvasHeight: 0, lastFrameWidth: 0, lastFrameHeight: 0
   };
 
@@ -116,13 +118,13 @@ export class VideoSurfaceRenderer {
 
   /** Takes ownership of `frame`: it is closed once it was replaced or drawn and replaced. */
   public present(frame: VideoFrame): void {
+    this.stats.received++;
     if (this.disposed || this.stats.backend === 'none') {
-      frame.close();
+      this.closeFrame(frame);
       return;
     }
-    this.stats.received++;
     if (this.pending) {
-      this.pending.close();
+      this.closeFrame(this.pending);
       this.stats.dropped++;
     }
     this.pending = frame;
@@ -141,7 +143,7 @@ export class VideoSurfaceRenderer {
       return;
     }
     this.pending = null;
-    this.current?.close();
+    this.closeFrame(this.current);
     this.current = frame;
     this.textureHoldsCurrent = false;
     this.stats.lastFrameWidth = frame.displayWidth;
@@ -216,8 +218,8 @@ export class VideoSurfaceRenderer {
       cancelAnimationFrame(this.frameRequest);
       this.frameRequest = 0;
     }
-    this.pending?.close();
-    this.current?.close();
+    this.closeFrame(this.pending);
+    this.closeFrame(this.current);
     this.pending = this.current = null;
     this.canvas.removeEventListener('webglcontextlost', this.onContextLost);
     this.canvas.removeEventListener('webglcontextrestored', this.onContextRestored);
@@ -225,10 +227,21 @@ export class VideoSurfaceRenderer {
       this.gl.deleteTexture(this.resources.texture);
       this.gl.deleteProgram(this.resources.program);
     }
+    // The GPU process keeps the context (and its textures) until the canvas is collected, which can take long
+    this.gl?.getExtension('WEBGL_lose_context')?.loseContext();
+    // and the backing store of the detached canvas stays allocated until it is collected as well
+    this.canvas.width = this.canvas.height = 0;
     this.resources = null;
     const holder = window as unknown as { __yallVideoStats?: VideoSurfaceStats };
     if (holder.__yallVideoStats === this.stats) {
       delete holder.__yallVideoStats;
+    }
+  }
+
+  private closeFrame(frame: VideoFrame | null): void {
+    if (frame) {
+      frame.close();
+      this.stats.closed++;
     }
   }
 

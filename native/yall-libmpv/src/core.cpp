@@ -33,17 +33,19 @@ Napi::Error MakeDestroyedError(Napi::Env env) {
 class TerminateWorker : public Napi::AsyncWorker {
  public:
   TerminateWorker(Napi::Env env, mpv_handle* handle, Napi::Promise::Deferred deferred, std::function<void()> before,
-                  std::function<void()> after)
+                  std::function<void()> afterTerminate, std::function<void()> after)
       : Napi::AsyncWorker(env),
         handle_(handle),
         deferred_(deferred),
         before_(std::move(before)),
+        afterTerminate_(std::move(afterTerminate)),
         after_(std::move(after)) {}
 
   void Execute() override {
     before_();
     mpv.terminate_destroy(handle_);
     Counts().cores--;
+    afterTerminate_();
   }
   void OnOK() override {
     after_();
@@ -58,6 +60,7 @@ class TerminateWorker : public Napi::AsyncWorker {
   mpv_handle* handle_;
   Napi::Promise::Deferred deferred_;
   std::function<void()> before_;
+  std::function<void()> afterTerminate_;
   std::function<void()> after_;
 };
 
@@ -379,6 +382,8 @@ Napi::Value MpvCore::Destroy(const Napi::CallbackInfo& info) {
   bool live = tsfnLive_;
   tsfnLive_ = false;
   std::vector<std::shared_ptr<RenderThread>> renderers = renderers_;
+  // Keeps this core alive until the worker is done, so the finished renderers can be released here.
+  auto self = std::make_shared<Napi::ObjectReference>(Napi::Persistent(info.This().As<Napi::Object>()));
   auto* worker = new TerminateWorker(
       env, handle, deferred,
       [renderers]() {
@@ -386,8 +391,17 @@ Napi::Value MpvCore::Destroy(const Napi::CallbackInfo& info) {
         // right after it sees the stop flag, so this wait is short.
         for (const auto& r : renderers) r->WaitContextFreed(5000);
       },
-      [tsfn, live]() mutable {
+      [renderers]() {
+        // The drain is capped (kDestroyDrainMs), so every render thread ends shortly after the core is gone.
+        for (const auto& r : renderers) r->Join();
+      },
+      [tsfn, live, self, this]() mutable {
         if (live) tsfn.Release();
+        // Their backends (pixel pool, device, shared slots) would otherwise live until the JS wrapper is
+        // collected, which V8 does late because it cannot see this memory.
+        renderers_.clear();
+        currentRenderer_.reset();
+        self->Reset();
       });
   worker->Queue();
   return deferred.Promise();

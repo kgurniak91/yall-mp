@@ -143,6 +143,9 @@ describe('VideoSurfaceRenderer', () => {
     expect(renderer.stats.dropped).toBe(1);
     renderer.renderNow();
     near(renderer.readPixel(80, 45), [0, 255, 0, 255]);
+    expect(renderer.stats.received - renderer.stats.closed).toBe(1); // only the drawn frame stays open
+    renderer.dispose();
+    expect(renderer.stats.received - renderer.stats.closed).toBe(0);
   });
 
   it('closes the previous frame once a new one was drawn', () => {

@@ -157,6 +157,20 @@ describeNative('libmpv render API', (env: NativeEnv) => {
     expect(rig.player.stats()).toBeNull();
   });
 
+  it('frees the render backends of a destroyed core without waiting for the wrapper to be collected', async () => {
+    // The pixel pool of a 1600x900 software backend holds ~23 MB; a core that is destroyed and dropped must not keep it.
+    const rss = (): number => process.memoryUsage().rss / 1048576;
+    const cycle = async (): Promise<void> => {
+      const rig = await open({backend: 'readback', impl: 'sw', width: 1600, height: 900});
+      await waitFor(() => rig.frames.length > 5, 10000, 'frames');
+      await players.splice(players.indexOf(rig.player), 1)[0].destroy();
+    };
+    await cycle(); // allocator and library warm-up
+    const before = rss();
+    for (let i = 0; i < 5; i++) await cycle();
+    expect(rss() - before).toBeLessThan(40);
+  }, 60000);
+
   describe.runIf(isWindows).each([{adapter: 'warp' as const}, {adapter: 'default' as const}])('d3d11-shared ($adapter)', ({adapter}) => {
     it('hands out shared NT handles and waits for the GPU without spinning', async () => {
       const rig = await open({backend: 'd3d11-shared', adapter});
