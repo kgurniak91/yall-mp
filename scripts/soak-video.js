@@ -54,7 +54,7 @@ function seed(dir) {
   };
   fs.mkdirSync(path.join(dir, 'projects'), {recursive: true});
   fs.writeFileSync(path.join(dir, 'yall-mp-app-data.json'),
-    JSON.stringify({projects: [minimal], lastOpenedProjectId: ID, globalSettings: {hardwareAcceleration: true}}));
+    JSON.stringify({projects: [minimal], lastOpenedProjectId: ID, ...(process.platform === 'darwin' ? {} : {globalSettings: {hardwareAcceleration: true}})}));
   fs.writeFileSync(path.join(dir, 'projects', `${ID}.json`), JSON.stringify(project));
 }
 
@@ -72,7 +72,7 @@ async function findUi(app) {
     }
     await sleep(200);
   }
-  throw new Error('No UI window');
+  throw new Error(`No UI window; windows: ${app.windows().map(page => page.url()).join(' | ') || 'none'}`);
 }
 
 async function waitForPlayer(ui) {
