@@ -1,7 +1,12 @@
 name: Soak (macOS)
 
-# Manual only: memory and leak counters of the video path over a looped playback on the hosted macOS runner (software GL, readback)
+# Memory and leak counters of the video path over a looped playback on the hosted macOS runner (software GL, readback).
+# Runs when .github/soak-macos-trigger changes on a feature branch (a new workflow file cannot be dispatched before it is on
+# the default branch) or by hand once it is.
 on:
+  push:
+    branches: [ 'feature/**' ]
+    paths: [ '.github/soak-macos-trigger' ]
   workflow_dispatch:
     inputs:
       minutes:
@@ -30,7 +35,7 @@ jobs:
       - run: npm run electron:build
 
       - name: Soak
-        run: node scripts/soak-video.js --minutes=${{ inputs.minutes }} --warmup-min=3 --reopen-min=3 --file=test/e2e/fixtures/sample.mp4 --out=soak-macos
+        run: node scripts/soak-video.js --minutes=${{ inputs.minutes || '10' }} --warmup-min=3 --reopen-min=3 --file=test/e2e/fixtures/sample.mp4 --out=soak-macos
 
       - name: Upload soak results
         if: always()
