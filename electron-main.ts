@@ -24,7 +24,7 @@ import {v4 as uuidv4} from 'uuid';
 import {ChildProcess, execFile, spawn} from 'child_process';
 import {ensureLibmpv, LibmpvManager} from './libmpv-manager';
 import {backendAfterGpuLoss, GpuInfoLike, LibmpvFrameSender, PreferredBackend, PROBE_REPORT_CHANNEL} from './libmpv-frame-sender';
-import type {AdapterOption} from './libmpv-bridge';
+import {loadLibmpvAddon, type AdapterOption} from './libmpv-bridge';
 import {FontData, ParsedSubtitlesData} from './src/electron-api';
 import {AppData, CoreConfig, Project, SubtitleSelection, SupportedLanguage} from './src/app/model/project.types';
 import {
@@ -650,6 +650,12 @@ async function createWindow() {
       getWindows: () => ({mainWindow}),
       getVideoStats: () => videoSender?.stats() ?? null,
       isDisplaySleepBlocked: () => displaySleepBlockerId !== null,
+      getLiveCounts: () => loadLibmpvAddon().liveCounts(),
+      // Listener counts that must stay constant across project reopen cycles
+      getListenerCounts: () => ({
+        ipcMain: Object.fromEntries(ipcMain.eventNames().map(name => [String(name), ipcMain.listenerCount(name)])),
+        mpvManager: Object.fromEntries((mpvManager?.eventNames() ?? []).map(name => [String(name), mpvManager!.listenerCount(name)]))
+      }),
       simulateDeviceLost: () => videoSender?.simulateDeviceLost() ?? false,
       simulateEngineError: () => mpvManager?.emit('error', new Error('simulated engine failure')) ?? false,
       crashProcess: () => process.crash(),

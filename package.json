@@ -28,6 +28,7 @@
     "electron:watch:build": "npm run generate:licenses && concurrently \"ng build --watch --configuration=electron\" \"tsc --watch --project tsconfig.electron.json\"",
     "electron:watch:run": "nodemon",
     "bench:kit": "node scripts/make-bench-kit.js",
+    "soak": "node scripts/soak-video.js",
     "package:win": "npm run native:build && npm run electron:build && electron-builder --win",
     "package:mac": "npm run native:build && npm run electron:build && electron-builder --mac",
     "package:linux": "npm run native:build && npm run electron:build && electron-builder --linux",
