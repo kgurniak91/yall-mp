@@ -134,6 +134,7 @@ jobs:
       - run: npm run electron:build
 
       - name: Soak
+        timeout-minutes: 25
         run: node scripts/soak-video.js --minutes=${{ inputs.soak_minutes }} --warmup-min=3 --reopen-min=3 --file=test/e2e/fixtures/sample.mp4 --out=soak-macos
 
       - name: Upload soak results

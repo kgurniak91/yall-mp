@@ -258,7 +258,11 @@ function writeCsv(samples) {
 (async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'yall-soak-'));
   seed(dir);
-  const app = await _electron.launch({args: ['.', '--js-flags=--expose-gc', ...(process.platform === 'linux' ? ['--no-sandbox'] : [])], cwd: REPO, env: {...process.env, YALL_MP_E2E: '1', YALL_MP_USER_DATA_DIR: dir}});
+  const app = await _electron.launch({args: ['.', ...(process.platform === 'darwin' ? [] : ['--js-flags=--expose-gc']), ...(process.platform === 'linux' ? ['--no-sandbox'] : [])], cwd: REPO, env: {...process.env, YALL_MP_E2E: '1', YALL_MP_USER_DATA_DIR: dir}});
+  let mainLog = '';
+  for (const stream of [app.process().stdout, app.process().stderr]) {
+    stream?.on('data', chunk => { mainLog = (mainLog + chunk).slice(-4000); });
+  }
   const samples = [];
   const reopenSnapshots = [];
   try {
@@ -346,6 +350,10 @@ function writeCsv(samples) {
       await cdp.send('HeapProfiler.takeHeapSnapshot', {reportProgress: false});
       fs.writeFileSync(process.env.SOAK_HEAP_SNAPSHOT, chunks.join(''));
     }
+  } catch (error) {
+    console.error(`main process output:
+${mainLog}`);
+    throw error;
   } finally {
     await Promise.race([app.close().catch(() => undefined), sleep(20_000)]);
     await sleep(2000);
