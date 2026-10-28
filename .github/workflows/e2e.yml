@@ -5,10 +5,6 @@ on:
     branches: [ master, 'feature/**' ]
   pull_request:
   workflow_dispatch:
-    inputs:
-      soak_minutes:
-        description: 'Length of the macOS soak job in minutes (0 skips it)'
-        default: '10'
 
 concurrency:
   group: e2e-${{ github.ref }}
@@ -108,40 +104,5 @@ jobs:
             playwright-report/
             test-results/
             e2e-artifacts/
-          retention-days: 14
-          if-no-files-found: ignore
-
-  # Manual only: memory and leak counters of the video path over a looped playback on the hosted macOS runner (software GL, readback)
-  soak:
-    if: github.event_name == 'workflow_dispatch' && inputs.soak_minutes != '0'
-    runs-on: macos-latest
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install macOS dependencies
-        run: brew install mpv cmake
-
-      - run: npm ci
-
-      - run: npm run native:build
-
-      - run: npm run electron:build
-
-      - name: Soak
-        timeout-minutes: 25
-        run: node scripts/soak-video.js --minutes=${{ inputs.soak_minutes }} --warmup-min=3 --reopen-min=3 --file=test/e2e/fixtures/sample.mp4 --out=soak-macos
-
-      - name: Upload soak results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: soak-macos
-          path: soak-macos.*
           retention-days: 14
           if-no-files-found: ignore
