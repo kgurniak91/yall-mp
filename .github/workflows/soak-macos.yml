@@ -26,7 +26,10 @@ jobs:
           cache: npm
 
       - name: Install macOS dependencies
-        run: brew install mpv cmake
+        run: |
+          brew install mpv cmake
+          brew tap bbc/audiowaveform
+          brew install audiowaveform
 
       - run: npm ci
 
