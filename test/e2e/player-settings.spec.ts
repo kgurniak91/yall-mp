@@ -68,7 +68,7 @@ test('extending the clip end while auto-paused there: the auto-pause moves to th
   expect((await snapshot(ui))?.currentClipIndex).toBe(3);
 
   // Undo puts the end back; the playhead then lies in the following clip
-  await press(ui, 'Control+z');
+  await press(ui, 'ControlOrMeta+z');
   await expect.poll(async () => (await snapshot(ui))?.currentClipIndex, {message: 'the playhead is in the next clip again'}).toBe(4);
   await waitForState(ui, 'PausedByUser');
 });
@@ -78,7 +78,7 @@ test('shortening the clip while auto-paused at its end keeps it auto-paused at t
   await startPlaying(ui);
   await waitForState(ui, 'AutoPausedAtEnd');
 
-  await press(ui, 'Control+]');
+  await press(ui, 'ControlOrMeta+]');
 
   await expect.poll(async () => {
     const s = await snapshot(ui);

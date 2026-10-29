@@ -80,19 +80,19 @@ test('holding Shift while paused changes the speed without moving or resuming', 
 test('Ctrl+. and Ctrl+, change the speed of the current clip type by 0.1', async ({launch}) => {
   const {ui} = await launchClips(launch, {lastPlaybackTime: inClip(3, 0.5)});
 
-  await press(ui, 'Control+.');
+  await press(ui, 'ControlOrMeta+.');
   await expectSpeed(ui, SUBTITLED_SPEED + 0.1, 'faster in a subtitled clip');
   await quiet(250); // longer than the key throttle
-  await press(ui, 'Control+,');
+  await press(ui, 'ControlOrMeta+,');
   await quiet(250);
-  await press(ui, 'Control+,');
+  await press(ui, 'ControlOrMeta+,');
   await expectSpeed(ui, SUBTITLED_SPEED - 0.1, 'slower in a subtitled clip');
 
   // Gaps have their own speed, untouched by the above
   await seekTo(ui, inClip(2, 0.5));
   await expect.poll(async () => (await snapshot(ui))?.currentClipIndex).toBe(2);
   await expectSpeed(ui, GAP_SPEED, 'the gap speed is unchanged');
-  await press(ui, 'Control+.');
+  await press(ui, 'ControlOrMeta+.');
   await expectSpeed(ui, GAP_SPEED + 0.1, 'faster in a gap');
 });
 

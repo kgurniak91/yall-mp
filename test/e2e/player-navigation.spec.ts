@@ -25,22 +25,22 @@ for (const atStart of [false, true]) {
       expect(await mpvTime(ui)).toBeLessThan(CLIPS[index].start + landingSlack);
     };
 
-    await press(ui, 'Control+ArrowRight');
+    await press(ui, 'ControlOrMeta+ArrowRight');
     await landsOn(3);
 
-    await press(ui, 'Control+ArrowRight');
+    await press(ui, 'ControlOrMeta+ArrowRight');
     await landsOn(4); // the adjacent subtitled clip
 
-    await press(ui, 'Control+ArrowLeft');
+    await press(ui, 'ControlOrMeta+ArrowLeft');
     await landsOn(3);
 
-    await press(ui, 'Control+ArrowLeft');
+    await press(ui, 'ControlOrMeta+ArrowLeft');
     await landsOn(1); // the gap in between is skipped
 
     // On the first subtitled clip there is nothing before it: the clip restarts
     const mark = await markHistory(ui);
     await quiet(1200);
-    await press(ui, 'Control+ArrowLeft');
+    await press(ui, 'ControlOrMeta+ArrowLeft');
     // The clip index does not change, so the seek itself is what to wait for before judging where the clip landed
     await expect.poll(async () => containsInOrder(await stepsSince(ui, mark), [{state: 'Transitioning', clip: 1}]), {message: 'the clip should have been sought'}).toBe(true);
     await landsOn(1);
@@ -50,7 +50,7 @@ for (const atStart of [false, true]) {
 test('Ctrl+Right from a gap jumps to the next subtitled clip, and does nothing after the last one', async ({launch}) => {
   const {ui} = await launchClips(launch, {lastPlaybackTime: inClip(7, 0.5)});
 
-  await press(ui, 'Control+ArrowRight');
+  await press(ui, 'ControlOrMeta+ArrowRight');
   await expect.poll(async () => (await snapshot(ui))?.currentClipIndex).toBe(8);
   await waitForState(ui, 'Playing');
 
@@ -58,7 +58,7 @@ test('Ctrl+Right from a gap jumps to the next subtitled clip, and does nothing a
   await press(ui, 'Space');
   await waitForState(ui, 'PausedByUser');
   const mark = await markHistory(ui);
-  await press(ui, 'Control+ArrowRight');
+  await press(ui, 'ControlOrMeta+ArrowRight');
   await quiet(700);
   expect(await markHistory(ui), 'no seek, no state change').toBe(mark);
   expect((await snapshot(ui))?.currentClipIndex).toBe(8);
@@ -69,7 +69,7 @@ test('Ctrl+Left from the leading gap does nothing', async ({launch}) => {
   const {ui} = await launchClips(launch, {lastPlaybackTime: inClip(0, 0.5)});
   const mark = await markHistory(ui);
 
-  await press(ui, 'Control+ArrowLeft');
+  await press(ui, 'ControlOrMeta+ArrowLeft');
   await quiet(700);
 
   expect(await markHistory(ui)).toBe(mark);

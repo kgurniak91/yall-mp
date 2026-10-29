@@ -25,7 +25,7 @@ const domVisible = async (ui: Page): Promise<boolean> => {
 };
 
 async function arriveAndPause(ui: Page, clip: number): Promise<void> {
-  await press(ui, 'Control+ArrowRight');
+  await press(ui, 'ControlOrMeta+ArrowRight');
   await expect.poll(async () => (await snapshot(ui))?.currentClipIndex, {message: `arrive at clip ${clip}`}).toBe(clip);
   await waitForState(ui, 'Playing');
   await press(ui, 'Space');
