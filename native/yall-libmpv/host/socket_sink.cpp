@@ -3,6 +3,7 @@
 bool SocketSink::Post(Frame&& frame) {
   proto::Json meta = {{"attachId", frame.attachId}, {"slotId", frame.slotId}, {"serial", frame.serial},
                       {"generation", frame.generation}, {"width", frame.width}, {"height", frame.height}};
+  if (frame.renderedAtMs > 0) meta["renderedAt"] = frame.renderedAtMs;
   if (!frame.pixels) {
     // A shared buffer: the client already holds its descriptor, so the message names the slot only. The pool
     // bounds the frames in flight, which is why these do not count as outstanding.

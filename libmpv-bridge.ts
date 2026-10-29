@@ -114,7 +114,7 @@ export interface RenderFrame {
   /** Shared backends, first frames only: BGRA of five points the host read from the rendered buffer (20 numbers). */
   probe?: number[];
   pixels?: Buffer;
-  /** When the render thread finished the frame, in ms since the Unix epoch (absent from the Linux host). */
+  /** When the render thread finished the frame, in ms since the Unix epoch. */
   renderedAt?: number;
   /**
    * Set instead of a picture (`slotId` is -1) when the GPU device behind the attach was removed (TDR), e.g.

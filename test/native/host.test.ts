@@ -75,6 +75,8 @@ if (process.platform === 'linux') {
       await player.attachRenderer({backend: 'readback', width: 320, height: 180}, (frame) => {
         received++;
         expect(frame.pixels!.length).toBe(frame.width * frame.height * 4);
+        // the render thread stamps every frame with the wall clock, for the latency statistics
+        expect(Math.abs(Date.now() - frame.renderedAt!)).toBeLessThan(5000);
       });
       await player.command(['loadfile', SAMPLE_MP4, 'replace']);
       await waitFor(() => received >= 30, 15000, '30 frames');

@@ -115,6 +115,8 @@ describeNative('libmpv render API', (env: NativeEnv) => {
       expect(frame.height).toBe(180);
       expect(frame.pixels!.length).toBe(320 * 180 * 4);
       expect(frame.handle).toBeUndefined();
+      // the render thread stamps every frame with the wall clock, for the latency statistics
+      expect(Math.abs(Date.now() - frame.renderedAt!)).toBeLessThan(5000);
 
       await rig.player.command(['seek', '4', 'absolute+exact']);
       await waitForColour(rig, 3.8, 5.6, isGreen, 'green segment');

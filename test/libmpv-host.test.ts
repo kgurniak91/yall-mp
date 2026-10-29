@@ -341,11 +341,11 @@ describe('host client', () => {
       expect(result).toMatchObject({attachId: 1, backend: 'readback', impl: 'sw', gpuWaitImpl: 'none'});
       expect(result.adapter).toMatchObject({name: 'host adapter', software: true});
 
-      child.socket.send(MessageType.frame, {attachId: 1, slotId: -1, serial: 3, generation: 2, width: 2, height: 1},
+      child.socket.send(MessageType.frame, {attachId: 1, slotId: -1, serial: 3, generation: 2, width: 2, height: 1, renderedAt: 1761750000123.5},
         Buffer.from([9, 8, 7, 6, 5, 4, 3, 2]));
       await tick();
       expect(frames).toHaveLength(1);
-      expect(frames[0]).toMatchObject({attachId: 1, serial: 3, generation: 2, width: 2, height: 1});
+      expect(frames[0]).toMatchObject({attachId: 1, serial: 3, generation: 2, width: 2, height: 1, renderedAt: 1761750000123.5});
       expect([...frames[0].pixels!]).toEqual([9, 8, 7, 6, 5, 4, 3, 2]);
       expect(lastSent(MessageType.frameAck).json).toEqual({count: 1});
     });

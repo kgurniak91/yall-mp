@@ -741,7 +741,7 @@ class HostMpvCore implements NativeMpvCore {
     try {
       handler?.({
         attachId: meta.attachId, slotId: meta.slotId, serial: meta.serial, generation: meta.generation,
-        width: meta.width, height: meta.height, pixels: message.bin
+        width: meta.width, height: meta.height, pixels: message.bin, renderedAt: meta.renderedAt
       });
     } catch (error) {
       // A broken consumer must not take the socket (or, from a timer, the process) down with it.
@@ -771,6 +771,7 @@ class HostMpvCore implements NativeMpvCore {
         handler({
           attachId: meta.attachId, slotId: meta.slotId, serial: meta.serial, generation: meta.generation,
           width: meta.width, height: meta.height, probe: Array.isArray(meta.probe) ? meta.probe : undefined,
+          renderedAt: meta.renderedAt,
           dmabuf: {fd: plane.fd, stride: plane.stride, offset: plane.offset, size: plane.size, modifier: plane.modifier}
         });
       } catch (error) {
