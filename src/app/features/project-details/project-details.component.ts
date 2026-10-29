@@ -80,6 +80,7 @@ import {Slider} from 'primeng/slider';
 import {UnexportedNotesWarningService} from './services/unexported-notes-warning/unexported-notes-warning.service';
 import {Menu} from 'primeng/menu';
 import {SelectButton} from 'primeng/selectbutton';
+import {primaryModifierLabel} from '../../core/services/keyboard-shortcuts-helper/primary-modifier';
 
 @Component({
   selector: 'app-project-details',
@@ -122,6 +123,7 @@ import {SelectButton} from 'primeng/selectbutton';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProjectDetailsComponent implements OnInit, OnDestroy {
+  protected readonly ctrl = primaryModifierLabel();
   protected readonly isCursorHidden = signal(false);
   protected readonly isYomitanEnabled = signal(false);
   protected readonly subtitlesAtCurrentTime = computed(() => this.clipsStateService.subtitlesAtCurrentTime());

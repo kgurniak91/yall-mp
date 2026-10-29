@@ -31,6 +31,7 @@ import {NoteFormDialogComponent} from '../note-form-dialog/note-form-dialog.comp
 import {take} from 'rxjs';
 import {cloneDeep, escape} from 'lodash-es';
 import {DEFAULT_CONFIRMATION} from '../../../shared/types/confirmation.types';
+import {primaryModifierLabel} from '../../../core/services/keyboard-shortcuts-helper/primary-modifier';
 
 interface NoteViewItem {
   text: string;
@@ -61,6 +62,7 @@ interface SelectionGroupView {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProjectNotesComponent {
+  protected readonly ctrl = primaryModifierLabel();
   public readonly projectId = input.required<string>();
   public readonly clipId = input.required<string>();
   public readonly initialExpandAll = input(false);

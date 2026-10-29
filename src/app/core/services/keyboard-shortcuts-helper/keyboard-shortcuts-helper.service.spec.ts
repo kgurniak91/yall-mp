@@ -184,4 +184,27 @@ describe('KeyboardShortcutsHelperService', () => {
       expect(shortcut?.action).toBe(KeyboardAction.SeekForward);
     });
   });
+
+  describe('on macOS', () => {
+    beforeEach(() => {
+      spyOnProperty(navigator, 'platform', 'get').and.returnValue('MacIntel');
+      // the shortcut maps are built by an effect: toggle the setting to rebuild them with the spied platform
+      swapNavigationSignal.set(true);
+      spectator.flushEffects();
+      swapNavigationSignal.set(false);
+      spectator.flushEffects();
+    });
+
+    it('uses Command as the primary modifier and ignores Ctrl', () => {
+      const withCommand = new KeyboardEvent('keydown', {key: 's', metaKey: true});
+      const withCtrl = new KeyboardEvent('keydown', {key: 's', ctrlKey: true});
+      expect(service.getShortcutForEvent(withCommand, KeyboardShortcutScope.Global)?.action).toBe(KeyboardAction.AddNote);
+      expect(service.getShortcutForEvent(withCtrl, KeyboardShortcutScope.Global)).toBeUndefined();
+    });
+
+    it('shows the Command symbol in the shortcut list', () => {
+      const addNote = service.getGroupedShortcuts().flatMap(g => g.shortcuts).find(s => s.action === KeyboardAction.AddNote);
+      expect(addNote?.displayKeys).toEqual(['⌘', 'S']);
+    });
+  });
 });

@@ -48,7 +48,7 @@
                 (onClick)="repeatCurrentClip()"/>
 
       <p-button icon="fa-solid fa-arrow-left"
-                pTooltip="Play previous subtitled clip (Ctrl + ←)"
+                [pTooltip]="'Play previous subtitled clip (' + ctrl + ' + ←)'"
                 tooltipStyleClass="tooltip-one-line"
                 tooltipPosition="bottom"
                 severity="secondary"
@@ -56,7 +56,7 @@
                 (onClick)="goToPreviousSubtitledClip()"/>
 
       <p-button icon="fa-solid fa-arrow-right"
-                pTooltip="Play next subtitled clip (Ctrl + →)"
+                [pTooltip]="'Play next subtitled clip (' + ctrl + ' + →)'"
                 tooltipStyleClass="tooltip-one-line"
                 tooltipPosition="bottom"
                 severity="secondary"
@@ -75,7 +75,7 @@
           <p-button (click)="adjustClipStartLeft()" icon="fa fa-chevron-left" severity="secondary" variant="outlined"
                     tooltipPosition="left" pTooltip="Adjust Left ([)"/>
           <p-button (click)="adjustClipStartRight()" icon="fa fa-chevron-right" severity="secondary" variant="outlined"
-                    tooltipPosition="right" pTooltip="Adjust Right (Ctrl+[)"/>
+                    tooltipPosition="right" [pTooltip]="'Adjust Right (' + ctrl + '+[)'"/>
         </div>
       </p-popover>
 
@@ -89,7 +89,7 @@
       <p-popover #opEnd appendTo="body" (onShow)="onPopoverShow(opEnd)" (onHide)="onPopoverHide(opEnd)">
         <div class="p-buttonset">
           <p-button (click)="adjustClipEndLeft()" icon="fa fa-chevron-left" severity="secondary" variant="outlined"
-                    tooltipPosition="left" pTooltip="Adjust Left (Ctrl+])"/>
+                    tooltipPosition="left" [pTooltip]="'Adjust Left (' + ctrl + '+])'"/>
           <p-button (click)="adjustClipEndRight()" icon="fa fa-chevron-right" severity="secondary" variant="outlined"
                     tooltipPosition="right" pTooltip="Adjust Right (])"/>
         </div>

@@ -20,6 +20,7 @@ import {
 import {ToastService} from '../../../shared/services/toast/toast.service';
 import {Tooltip} from 'primeng/tooltip';
 import {DEFAULT_CONFIRMATION} from '../../../shared/types/confirmation.types';
+import {primaryModifierLabel} from '../../../core/services/keyboard-shortcuts-helper/primary-modifier';
 
 @Component({
   selector: 'app-subtitles-lookup-settings',
@@ -38,6 +39,7 @@ import {DEFAULT_CONFIRMATION} from '../../../shared/types/confirmation.types';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SubtitlesLookupSettingsComponent {
+  protected readonly ctrl = primaryModifierLabel();
   protected readonly globalSettingsStateService = inject(GlobalSettingsStateService);
   protected readonly SubtitleLookupBrowserType = SubtitleLookupBrowserType;
   protected readonly SEARCH_AI_TYPE: LookupType = 'ai';

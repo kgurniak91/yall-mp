@@ -28,6 +28,7 @@ import {NoteRequest} from './subtitles-overlay.types';
 import {RebuildGeneration} from './rebuild-generation';
 import {DialogService} from 'primeng/dynamicdialog';
 import {ToastService} from '../../../shared/services/toast/toast.service';
+import {primaryModifierKey, primaryModifierPressed} from '../../../core/services/keyboard-shortcuts-helper/primary-modifier';
 
 const FALLBACK_VIDEO_ASPECT_RATIO = 16 / 9;
 // How long the container size must stay unchanged before the ASS renderer is rebuilt one last time for it.
@@ -325,7 +326,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
         const fullText = data.textNode.textContent || '';
         let scanStart = data.offset;
 
-        if (!data.event.ctrlKey) {
+        if (!primaryModifierPressed(data.event)) {
           const currentLang = this.projectSettingsStateService.subtitlesLanguage();
           const characterResolutionLangs = ['ja', 'zh', 'yue'];
 
@@ -342,7 +343,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
 
         let textToScan = fullText.substring(scanStart);
 
-        if (data.event.ctrlKey) {
+        if (primaryModifierPressed(data.event)) {
           const chars = Array.from(textToScan);
           textToScan = chars.length > 0 ? chars[0] : '';
         }
@@ -610,7 +611,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
     } else {
       // If Yomitan is enabled but found nothing, do NOT show a fallback highlight (prevents confusing highlights with no popups)...
       // ...but if CTRL is held, allow the fallback highlighting (visual feedback for "Click to Lookup")
-      if (this.isYomitanEnabled() && !event.ctrlKey) {
+      if (this.isYomitanEnabled() && !primaryModifierPressed(event)) {
         return;
       }
 
@@ -952,7 +953,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
     const isCharBasedLanguage = characterResolutionLangs.includes(currentLang);
 
     // Only force character selection if CTRL is held OR if user is currently dragging (selecting)
-    const forceCharMode = event.ctrlKey || (this.isSelecting() && isCharBasedLanguage);
+    const forceCharMode = primaryModifierPressed(event) || (this.isSelecting() && isCharBasedLanguage);
 
     if (forceCharMode) {
       // Ensure cursor is not outside bounds
@@ -1157,7 +1158,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       }
 
       const hitInfo = this.getHitTextNodeAndOffset(event);
-      const isCtrl = event.ctrlKey;
+      const isCtrl = primaryModifierPressed(event);
 
       // OPTIMIZATION: Only proceed if cursor moved to a different character/node
       if (
@@ -1277,11 +1278,12 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       return;
     }
 
-    if (event.key === 'Control' && this.lastMouseEvent && !this.isSelecting()) {
+    if (event.key === primaryModifierKey() && this.lastMouseEvent && !this.isSelecting()) {
       const syntheticEvent = new MouseEvent('mousemove', {
         clientX: this.lastMouseEvent.clientX,
         clientY: this.lastMouseEvent.clientY,
         ctrlKey: event.ctrlKey,
+        metaKey: event.metaKey,
         bubbles: true,
         cancelable: true
       });

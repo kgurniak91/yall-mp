@@ -21,6 +21,7 @@ import {
 } from '../../services/header-current-project-action-bridge/header-current-project-action-bridge.service';
 import {LogoComponent} from '../../../shared/components/logo/logo.component';
 import {DEFAULT_CONFIRMATION} from '../../../shared/types/confirmation.types';
+import {localizeModifier} from '../../services/keyboard-shortcuts-helper/primary-modifier';
 
 @Component({
   selector: 'app-header',
@@ -154,12 +155,12 @@ export class HeaderComponent implements OnInit, OnDestroy {
             separator: true
           },
           {
-            label: 'Search in dictionary (Ctrl+D)',
+            label: localizeModifier('Search in dictionary (Ctrl+D)'),
             icon: 'fa-solid fa-book',
             command: () => this.headerCurrentProjectActionBridgeService.openDictionary()
           },
           {
-            label: 'Find in subtitles (Ctrl+F)',
+            label: localizeModifier('Find in subtitles (Ctrl+F)'),
             icon: 'fa-solid fa-magnifying-glass',
             command: () => this.headerCurrentProjectActionBridgeService.searchInSubtitles()
           },
@@ -189,12 +190,12 @@ export class HeaderComponent implements OnInit, OnDestroy {
       menu.push({
         separator: true
       }, {
-        label: 'Undo (Ctrl+Z)',
+        label: localizeModifier('Undo (Ctrl+Z)'),
         icon: 'fa-solid fa-rotate-left',
         command: () => this.headerCurrentProjectActionBridgeService.undo(),
         disabled: !this.headerCurrentProjectActionBridgeService.canUndo()
       }, {
-        label: 'Redo (Ctrl+Y)',
+        label: localizeModifier('Redo (Ctrl+Y)'),
         icon: 'fa-solid fa-rotate-right',
         command: () => this.headerCurrentProjectActionBridgeService.redo(),
         disabled: !this.headerCurrentProjectActionBridgeService.canRedo()

@@ -10,6 +10,7 @@ import {KeyboardAction} from '../../../model/video.types';
 import {GlobalSettingsStateService} from '../../../state/global-settings/global-settings-state.service';
 import {ActionPayload} from '../../../features/project-details/services/project-action/project-action.service';
 import {shortcutKeyName} from './shortcut-key';
+import {localizeModifier, primaryModifierPressed} from './primary-modifier';
 
 @Injectable({
   providedIn: 'root'
@@ -73,7 +74,7 @@ export class KeyboardShortcutsHelperService {
     const key = shortcutKeyName(event);
     const parts: string[] = [];
 
-    if (event.ctrlKey && key !== 'control') {
+    if (primaryModifierPressed(event) && key !== 'control' && key !== 'meta') {
       parts.push('ctrl');
     }
 
@@ -114,6 +115,7 @@ export class KeyboardShortcutsHelperService {
         }
       }
 
+      shortcut.displayKeys = shortcut.displayKeys.map(displayKey => localizeModifier(displayKey));
       this.activeShortcuts.push(shortcut);
 
       const keyParts: string[] = [];

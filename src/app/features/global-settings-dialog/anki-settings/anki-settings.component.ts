@@ -21,6 +21,7 @@ import {
 import {DEFAULT_CONFIRMATION} from '../../../shared/types/confirmation.types';
 import {Menu} from 'primeng/menu';
 import {AnkiDailyGoalDialogComponent} from './anki-daily-goal-dialog/anki-daily-goal-dialog.component';
+import {primaryModifierLabel} from '../../../core/services/keyboard-shortcuts-helper/primary-modifier';
 
 @Component({
   selector: 'app-anki-settings',
@@ -39,6 +40,7 @@ import {AnkiDailyGoalDialogComponent} from './anki-daily-goal-dialog/anki-daily-
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AnkiSettingsComponent {
+  protected readonly ctrl = primaryModifierLabel();
   protected readonly AnkiConnectStatus = AnkiConnectStatus;
   protected readonly ankiStateService = inject(AnkiStateService);
   protected readonly globalSettingsStateService = inject(GlobalSettingsStateService);

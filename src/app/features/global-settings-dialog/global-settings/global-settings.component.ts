@@ -12,6 +12,7 @@ import {
   LanguagePriorityListComponent
 } from '../../../shared/components/language-priority-list/language-priority-list.component';
 import {SelectButton} from 'primeng/selectbutton';
+import {primaryModifierLabel} from '../../../core/services/keyboard-shortcuts-helper/primary-modifier';
 
 @Component({
   selector: 'app-global-settings',
@@ -31,6 +32,7 @@ import {SelectButton} from 'primeng/selectbutton';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class GlobalSettingsComponent {
+  protected readonly ctrl = primaryModifierLabel();
   protected readonly globalSettingsStateService = inject(GlobalSettingsStateService);
   protected readonly MIN_SRT_FONT_SIZE = 1;
   protected readonly MAX_SRT_FONT_SIZE = 80;

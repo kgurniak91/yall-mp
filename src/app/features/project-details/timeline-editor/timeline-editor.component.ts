@@ -20,6 +20,7 @@ import {ClipsStateService} from '../../../state/clips/clips-state.service';
 import {SpinnerComponent} from '../../../shared/components/spinner/spinner.component';
 import {AppStateService} from '../../../state/app/app-state.service';
 import {GlobalSettingsStateService} from '../../../state/global-settings/global-settings-state.service';
+import {primaryModifierKey, primaryModifierPressed} from '../../../core/services/keyboard-shortcuts-helper/primary-modifier';
 
 const INITIAL_ZOOM = 80;
 const MIN_ZOOM = 20;
@@ -329,7 +330,7 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
 
     e.stopPropagation();
 
-    if (e.ctrlKey) {
+    if (primaryModifierPressed(e)) {
       const clickTime = this.calculateTimeFromMouseEvent(e, region.start);
       this.clipsStateService.splitClip(region.id, clickTime);
     } else {
@@ -489,7 +490,7 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   private handleKey(e: KeyboardEvent): void {
-    if (e.key === 'Control') {
+    if (e.key === primaryModifierKey()) {
       this.isCtrlPressed.set(e.type === 'keydown');
     }
   }
