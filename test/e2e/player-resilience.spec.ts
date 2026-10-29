@@ -30,7 +30,8 @@ test('an engine that stops by itself is restarted at the same position, a second
 
   await simulateEngineError(app);
   await expect.poll(() => videoLog(userDataDir), {timeout: 15_000}).toContain('not restarting');
-  await expect(ui.getByText('could not restart, reopen the project')).toBeVisible();
+  // The Linux host can report its exit as a second engine error, which shows the toast twice
+  await expect(ui.getByText('could not restart, reopen the project').first()).toBeVisible();
 });
 
 test('a native crash leaves a minidump and nothing is uploaded', async ({launch}) => {

@@ -140,7 +140,6 @@ export class LibmpvManager extends EventEmitter {
       'vd-lavc-threads': '0',          // Use all available CPU cores for decoding
       'demuxer-max-bytes': '150MiB',   // Increase demuxer cache
       'demuxer-readahead-secs': '20',  // Prefetch more data
-      'audio-fallback-to-null': 'yes', // No audio device (unplugged, none installed): keep the clock running silently
       framedrop: 'vo',                 // Drop frames visually if rendering is too slow to maintain sync
       'vd-lavc-fast': 'yes',           // Allow optimizations that might slightly violate spec but improve speed
       'sws-allow-zimg': 'no',          // Disable zimg (can be slow/buggy on old systems), fallback to swscale

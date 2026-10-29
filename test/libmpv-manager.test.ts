@@ -121,9 +121,9 @@ describe('LibmpvManager', () => {
     };
     const reloads = () => fake.command.mock.calls.filter(([args]) => args[0] === 'ao-reload').length;
 
-    it('keeps the clock running when there is no audio device', async () => {
+    it('leaves mpv to cope with a missing audio device (no silent fallback output: it changes the end-of-file behaviour)', async () => {
       await start();
-      expect(optionsSeen['audio-fallback-to-null']).toBe('yes');
+      expect(optionsSeen).not.toHaveProperty('audio-fallback-to-null');
     });
 
     it('re-creates the output when a device appears while none is open', async () => {
