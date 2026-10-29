@@ -27,6 +27,7 @@ enum Type : uint32_t {
   kFrameAck = 12,    // {count}: readback frames the client has taken over
   kReleaseSlot = 13, // {attachId, slotId, serial}
   kDestroy = 14,     // {id}                                                         -> reply, then the host exits
+  kRedraw = 15,      // {}: draw the current frame again, even when paused
 
   // Host -> node
   kReply = 101,      // {id, value} or {id, error: {code, message, mpvError?}}

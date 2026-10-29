@@ -326,6 +326,13 @@ Napi::Value MpvCore::Resize(const Napi::CallbackInfo& info) {
   return env.Undefined();
 }
 
+// redraw() -> boolean: the current attach draws its frame again (a paused picture after sleep/resume). False without an attach.
+Napi::Value MpvCore::Redraw(const Napi::CallbackInfo& info) {
+  if (!currentRenderer_ || currentRenderer_->IsDetached()) return Napi::Boolean::New(info.Env(), false);
+  currentRenderer_->RequestRedraw();
+  return Napi::Boolean::New(info.Env(), true);
+}
+
 // releaseSlot(attachId, slotId, serial): also valid for a detached attach that is still draining.
 // Unknown or stale ids are ignored (counted by the backend when the attach is known).
 Napi::Value MpvCore::ReleaseSlot(const Napi::CallbackInfo& info) {

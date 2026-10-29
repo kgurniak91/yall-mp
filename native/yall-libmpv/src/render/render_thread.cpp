@@ -77,6 +77,14 @@ void RenderThread::Resize(int w, int h) {
   cv_.notify_one();
 }
 
+void RenderThread::RequestRedraw() {
+  {
+    std::lock_guard<std::mutex> lock(mu_);
+    force_ = true;
+  }
+  cv_.notify_one();
+}
+
 void RenderThread::Release(int slotId, uint64_t serial) {
   backend_->Release(slotId, serial);
   cv_.notify_all();  // wakes the drain phase

@@ -132,6 +132,19 @@ describeNative('libmpv render API', (env: NativeEnv) => {
       await waitFor(() => (rig.player.stats()?.generation ?? 0) > 1, 5000, 'the new generation in the stats');
     });
 
+    it('draws the picture again on request, also while paused', async () => {
+      const rig = await open({backend: 'readback', ...options});
+      await waitFor(() => rig.frames.length > 3, 10000, 'first frames');
+      await rig.player.setProperty('pause', true);
+      await sleep(400);
+      rig.frames.length = 0;
+      await sleep(300);
+      expect(rig.frames).toHaveLength(0);
+      expect(rig.player.redraw()).toBe(true);
+      await waitFor(() => rig.frames.length >= 1, 5000, 'a frame after redraw');
+      expect(rig.frames[0].width).toBe(320);
+    });
+
     it('reports its stats', async () => {
       const rig = await open({backend: 'readback', ...options});
       await waitFor(() => rig.frames.length > 10, 10000, 'frames');
@@ -199,6 +212,19 @@ describeNative('libmpv render API', (env: NativeEnv) => {
       expect(rig.frames.slice(30).some(f => f.probe)).toBe(false);
       // BGRA: the sample opens on red, so some probed frame has a lit red channel (index 2) at the centre
       expect(probed.some(f => f.probe![2] > 200 && f.probe![0] < 60 && f.probe![1] < 60)).toBe(true);
+    });
+
+    it('draws the picture again on request, also while paused', async () => {
+      const rig = await open({backend: 'd3d11-shared', adapter});
+      await waitFor(() => rig.frames.length > 5, 15000, 'shared frames');
+      await rig.player.setProperty('pause', true);
+      await sleep(400);
+      rig.frames.length = 0;
+      await sleep(300);
+      expect(rig.frames).toHaveLength(0);
+      expect(rig.player.redraw()).toBe(true);
+      await waitFor(() => rig.frames.length >= 1, 5000, 'a frame after redraw');
+      expect(rig.frames[0].handle).toBeDefined();
     });
 
     it('detaches with all slots in flight, accepts late releases and drains', async () => {

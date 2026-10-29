@@ -421,6 +421,14 @@ describe('host client', () => {
       await tick();
       expect(child.socket.fromClient.some(m => m.type === MessageType.detach)).toBe(true);
     });
+
+    it('forwards a redraw request to the host', async () => {
+      await createCore();
+      await attachAnswered(() => undefined);
+      expect(core.redraw()).toBe(true);
+      await tick();
+      expect(lastSent(MessageType.redraw).json).toEqual({});
+    });
   });
 
   describe('descriptor channel', () => {

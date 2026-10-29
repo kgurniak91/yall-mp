@@ -100,6 +100,9 @@ bool HostCore::Handle(proto::Message&& message) {
     case proto::kAttach: Attach(args); break;
     case proto::kResize: Resize(args); break;
     case proto::kDetach: Detach(); break;
+    case proto::kRedraw:
+      if (currentRenderer_) currentRenderer_->RequestRedraw();
+      break;
     case proto::kStats: Stats(args); break;
     case proto::kFrameAck: {
       const int count = args.value("count", 1);

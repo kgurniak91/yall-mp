@@ -41,6 +41,7 @@ export const MessageType = {
   frameAck: 12,
   releaseSlot: 13,
   destroy: 14,
+  redraw: 15,
   reply: 101,
   event: 102,
   frame: 103,
@@ -644,6 +645,11 @@ class HostMpvCore implements NativeMpvCore {
 
   resize(width: number, height: number): void {
     this.send(MessageType.resize, {width, height});
+  }
+
+  redraw(): boolean {
+    this.send(MessageType.redraw, {});
+    return true;
   }
 
   releaseSlot(attachId: number, slotId: number, serial: number): void {

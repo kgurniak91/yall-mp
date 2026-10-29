@@ -43,6 +43,8 @@ class RenderThread {
   // Non-blocking. Idempotent.
   void Detach();
   void Resize(int w, int h);
+  // Draws the current frame again even though mpv has nothing new (a paused picture after sleep/resume).
+  void RequestRedraw();
   void Release(int slotId, uint64_t serial);
   // Test support: behaves as if the backend's device was removed (posts the lost frame, then idles).
   void SimulateLost();

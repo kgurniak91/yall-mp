@@ -130,6 +130,7 @@ void MpvCore::Init(Napi::Env env, Napi::Object exports) {
     InstanceMethod("destroy", &MpvCore::Destroy),
     InstanceMethod("attachRenderer", &MpvCore::AttachRenderer),
     InstanceMethod("resize", &MpvCore::Resize),
+    InstanceMethod("redraw", &MpvCore::Redraw),
     InstanceMethod("releaseSlot", &MpvCore::ReleaseSlot),
     InstanceMethod("detachRenderer", &MpvCore::DetachRenderer),
     InstanceMethod("simulateDeviceLost", &MpvCore::SimulateDeviceLost),

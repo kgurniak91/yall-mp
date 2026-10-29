@@ -48,6 +48,7 @@ class MpvCore : public Napi::ObjectWrap<MpvCore> {
   // Render side, in core_render.cpp.
   Napi::Value AttachRenderer(const Napi::CallbackInfo& info);
   Napi::Value Resize(const Napi::CallbackInfo& info);
+  Napi::Value Redraw(const Napi::CallbackInfo& info);
   Napi::Value ReleaseSlot(const Napi::CallbackInfo& info);
   Napi::Value DetachRenderer(const Napi::CallbackInfo& info);
   Napi::Value SimulateDeviceLost(const Napi::CallbackInfo& info);

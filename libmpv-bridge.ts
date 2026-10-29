@@ -46,6 +46,8 @@ export interface NativeMpvCore {
   /** The in-process addon answers at once, the Linux host with the host's own answer. */
   attachRenderer(options: AttachRendererOptions, onFrame: (frame: RenderFrame) => void): AttachResult | Promise<AttachResult>;
   resize(width: number, height: number): void;
+  /** Draws the current frame again, also while paused. False when nothing is attached. Absent in older addons. */
+  redraw?(): boolean;
   releaseSlot(attachId: number, slotId: number, serial: number): void;
   detachRenderer(): void;
   stats(): RenderStats | null;
@@ -491,6 +493,11 @@ export class Libmpv extends EventEmitter {
   /** Forces a redraw at the new size, also while paused. Frames of the old size can still arrive. */
   resize(width: number, height: number): void {
     this.core.resize(width, height);
+  }
+
+  /** Asks the current attach for one more frame of the picture on screen (sleep/resume, a lost swap chain). */
+  redraw(): boolean {
+    return this.core.redraw?.() ?? false;
   }
 
   /** Gives a shared slot back. Also valid for a detached attach that is still draining. Stale ids are ignored. */

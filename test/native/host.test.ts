@@ -84,6 +84,24 @@ if (process.platform === 'linux') {
       expect(received).toBeGreaterThan(mark);
     });
 
+    it('draws the paused picture again when asked to', async () => {
+      const player = await createPlayer(env, {vo: 'libmpv', pause: 'no', hwdec: 'no', 'loop-file': 'inf'});
+      players.push(player);
+      let received = 0;
+      await player.attachRenderer({backend: 'readback', width: 320, height: 180}, () => {
+        received++;
+      });
+      await player.command(['loadfile', SAMPLE_MP4, 'replace']);
+      await waitFor(() => received >= 5, 15000, 'first frames');
+      await player.setProperty('pause', true);
+      await sleep(500);
+      const mark = received;
+      await sleep(300);
+      expect(received).toBe(mark);
+      expect(player.redraw()).toBe(true);
+      await waitFor(() => received > mark, 5000, 'a frame after redraw');
+    });
+
     // Needs a DRM node whose GBM/EGL can allocate buffers. Machines without one (CI, WSL without /dev/dri access)
     // must get a truthful error that names the reason, which is what the frame sender falls back on.
     it('attaches dmabuf-shared and delivers dma-bufs per slot, or refuses with a reason', async () => {
