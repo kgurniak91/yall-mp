@@ -104,9 +104,6 @@ let ffprobePath = '';
 let hasRequestedInitialSeek = false;
 // Frames sent when the first seek was requested: the picture at the resume position is the first one after it.
 let initialSeekFrameBaseline = 0;
-// Where the first seek goes, and how long the page may wait for its picture before the spinner is dropped anyway.
-let initialSeekTarget = 0;
-const INITIAL_SEEK_FALLBACK_MS = 5000;
 let videoSender: LibmpvFrameSender | null = null;
 let viewportArgs: ViewportArgs | null = null;
 const engineRestartPolicy = new EngineRestartPolicy();
@@ -385,31 +382,19 @@ async function launchEngine(args: ViewportArgs, resumeAt?: number): Promise<void
     // Listen for confirmation only if seek requested
     // This ignores the premature playback-restart at t=0.
     if (status.event === 'playback-restart' && hasRequestedInitialSeek) {
-      void (async () => {
-        // On a slow first start the restart of the file load (position 0) can arrive after the seek was requested.
-        // Its picture is not the resume position: count frames only from here and wait for the restart of the seek.
-        const position = Number(await manager.getProperty('time-pos').catch(() => NaN));
-        if (manager !== mpvManager || !hasRequestedInitialSeek) {
-          return;
-        }
-        if (position < 0.5 && initialSeekTarget > 1) {
-          initialSeekFrameBaseline = videoSender?.stats().sent ?? initialSeekFrameBaseline;
-          return;
-        }
-        console.log('[Main Process] Confirmed playback-restart AFTER seek request.');
+      console.log('[Main Process] Confirmed playback-restart AFTER seek request.');
 
-        // This is only needed once:
-        manager.removeListener('status', onMpvStatus);
+      // This is only needed once:
+      manager.removeListener('status', onMpvStatus);
 
-        // Wait for the picture of that seek; a file without video never produces one, so the wait is bounded.
-        const sender = videoSender;
-        const arrived = sender ? sender.waitForFrame(initialSeekFrameBaseline, 1000) : Promise.resolve(false);
-        void arrived.then(() => {
-          if (manager === mpvManager) {
-            finishInitialSeek();
-          }
-        });
-      })();
+      // Wait for the picture of that seek; a file without video never produces one, so the wait is bounded.
+      const sender = videoSender;
+      const arrived = sender ? sender.waitForFrame(initialSeekFrameBaseline, 1000) : Promise.resolve(false);
+      void arrived.then(() => {
+        if (manager === mpvManager) {
+          finishInitialSeek();
+        }
+      });
     }
   };
   manager.on('status', onMpvStatus);
@@ -1397,15 +1382,7 @@ if (!gotTheLock) {
       // The first seek is the resume position: the page waits for the frame it produces
       if (!hasRequestedInitialSeek) {
         hasRequestedInitialSeek = true;
-        initialSeekTarget = Number(time) || 0;
         initialSeekFrameBaseline = videoSender?.stats().sent ?? 0;
-        // A seek that never reports back (clamped position, odd file) must not keep the spinner up
-        const seekManager = mpvManager;
-        setTimeout(() => {
-          if (hasRequestedInitialSeek && seekManager === mpvManager) {
-            finishInitialSeek();
-          }
-        }, INITIAL_SEEK_FALLBACK_MS);
       }
       playbackManager?.seek(time, isNavigation);
     });
