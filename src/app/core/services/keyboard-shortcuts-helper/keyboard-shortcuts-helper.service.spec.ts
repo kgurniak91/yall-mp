@@ -59,6 +59,12 @@ describe('KeyboardShortcutsHelperService', () => {
       expect(generateKey(event)).toBe('alt');
     });
 
+    it('resolves a shortcut typed on a non-Latin layout by its physical key (Russian "ф" is the "a" key)', () => {
+      const event = new KeyboardEvent('keydown', {key: 'з', code: 'KeyP'});
+      expect(generateKey(event)).toBe('p');
+      expect(service.getShortcutForEvent(event, KeyboardShortcutScope.Project)?.action).toBe(KeyboardAction.ToggleSettings);
+    });
+
     it('handles navigation keys', () => {
       const event = new KeyboardEvent('keydown', {key: 'ArrowRight'});
       expect(generateKey(event)).toBe('arrowright');

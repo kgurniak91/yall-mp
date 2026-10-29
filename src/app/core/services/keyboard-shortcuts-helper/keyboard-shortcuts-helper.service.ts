@@ -9,6 +9,7 @@ import {
 import {KeyboardAction} from '../../../model/video.types';
 import {GlobalSettingsStateService} from '../../../state/global-settings/global-settings-state.service';
 import {ActionPayload} from '../../../features/project-details/services/project-action/project-action.service';
+import {shortcutKeyName} from './shortcut-key';
 
 @Injectable({
   providedIn: 'root'
@@ -69,7 +70,7 @@ export class KeyboardShortcutsHelperService {
   }
 
   private generateEventKey(event: KeyboardEvent, ignoreShift = false): string {
-    const key = event.key.toLowerCase();
+    const key = shortcutKeyName(event);
     const parts: string[] = [];
 
     if (event.ctrlKey && key !== 'control') {

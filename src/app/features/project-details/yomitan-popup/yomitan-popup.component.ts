@@ -110,7 +110,7 @@ export class YomitanPopupComponent implements OnInit, OnDestroy {
 
     wv.executeJavaScript(`
        document.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 's' || (e.key.charCodeAt(0) > 127 && e.code === 'KeyS'))) {
           e.preventDefault();
 
           const selection = window.getSelection();

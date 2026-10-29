@@ -6,6 +6,7 @@ import {
 } from '../../../../core/services/keyboard-shortcuts-helper/keyboard-shortcuts-helper.service';
 import {ActionType, KeyboardShortcutScope} from '../../../../model/keyboard-shortcuts.types';
 import {KeyboardAction} from '../../../../model/video.types';
+import {shortcutKeyName} from '../../../../core/services/keyboard-shortcuts-helper/shortcut-key';
 
 @Injectable()
 export class ProjectKeyboardShortcutsService implements OnDestroy {
@@ -53,7 +54,7 @@ export class ProjectKeyboardShortcutsService implements OnDestroy {
 
     // Handle current settings drawer shortcuts first
     if (this.projectSettingsStateService.isSettingsDrawerOpen()) {
-      if (event.key === 'Escape' || event.key === 'p') {
+      if (event.key === 'Escape' || shortcutKeyName(event) === 'p') {
         event.preventDefault();
         this.projectSettingsStateService.setSettingsDrawerOpen(false);
       }
@@ -64,7 +65,7 @@ export class ProjectKeyboardShortcutsService implements OnDestroy {
 
     // Handle current notes drawer shortcuts
     if (this.projectSettingsStateService.isNotesDrawerOpen()) {
-      if (event.key === 'Escape' || event.key === 'n') {
+      if (event.key === 'Escape' || shortcutKeyName(event) === 'n') {
         event.preventDefault();
         this.projectSettingsStateService.setNotesDrawerOpen(false);
       }
