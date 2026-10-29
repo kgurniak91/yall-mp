@@ -43,7 +43,7 @@ export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
   ngAfterViewInit(): void {
     const renderer = new VideoSurfaceRenderer(this.canvasRef().nativeElement);
     this.renderer = renderer;
-    this.unsubscribeFrames = window.electronAPI.onVideoFrame(frame => renderer.present(frame));
+    this.unsubscribeFrames = window.electronAPI.onVideoFrame((frame, renderedAt) => renderer.present(frame, renderedAt));
     this.unsubscribeProbe = window.electronAPI.onVideoProbeStart(
       frames => renderer.startProbe(frames, black => window.electronAPI.videoProbeReport(black)));
     this.resizeObserver = new ResizeObserver(entries => this.onResize(entries[entries.length - 1]));

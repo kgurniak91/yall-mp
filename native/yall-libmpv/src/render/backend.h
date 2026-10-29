@@ -1,6 +1,7 @@
 #pragma once
 // Render backend interface. A backend owns the GPU/CPU resources and the mpv render context for one
 // attach. Everything except Release() and FillStats() runs on the render thread.
+#include <chrono>
 #include <cstdint>
 #include <memory>
 #include <mutex>
@@ -29,7 +30,14 @@ struct Frame {
   // The GPU device behind this attach is gone: no picture, slotId = -1. Posted once, then the render thread idles.
   bool lost = false;
   std::string lostReason;
+  // When the render thread finished this frame, in milliseconds since the Unix epoch (the clock the page's
+  // performance.timeOrigin + performance.now() reads), so the page can measure how long the frame took to reach it.
+  double renderedAtMs = 0;
 };
+
+inline double EpochMillisNow() {
+  return std::chrono::duration<double, std::milli>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
 
 struct AdapterInfo {
   std::string name;

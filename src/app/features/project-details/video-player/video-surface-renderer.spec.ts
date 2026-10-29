@@ -1,4 +1,4 @@
-import {computeFit, VideoSurfaceRenderer} from './video-surface-renderer';
+import {computeFit, LATENCY_WINDOW, summarizeLatency, VideoSurfaceRenderer} from './video-surface-renderer';
 
 const solidFrame = (width: number, height: number, [r, g, b]: [number, number, number]): VideoFrame => {
   const data = new Uint8Array(width * height * 4);
@@ -40,6 +40,21 @@ describe('computeFit', () => {
   });
 });
 
+describe('summarizeLatency', () => {
+  it('is all zero without samples', () => {
+    expect(summarizeLatency([])).toEqual({p50: 0, p95: 0, max: 0});
+  });
+
+  it('takes the median, the 95th percentile and the maximum', () => {
+    const samples = Array.from({length: 100}, (_, i) => i + 1);
+    expect(summarizeLatency(samples)).toEqual({p50: 51, p95: 96, max: 100});
+  });
+
+  it('does not depend on the order of the samples', () => {
+    expect(summarizeLatency([9, 1, 5, 3, 7])).toEqual(summarizeLatency([1, 3, 5, 7, 9]));
+  });
+});
+
 describe('VideoSurfaceRenderer', () => {
   let canvas: HTMLCanvasElement;
   let renderer: VideoSurfaceRenderer;
@@ -66,6 +81,33 @@ describe('VideoSurfaceRenderer', () => {
     renderer.renderNow();
     near(renderer.readPixel(80, 45), [255, 0, 0, 255]);
     expect(renderer.stats.drawn).toBe(1);
+  });
+
+  it('measures how long a frame took from the render thread to the draw call', () => {
+    for (let i = 0; i < 20; i++) {
+      renderer.present(solidFrame(160, 90, [255, 0, 0]), performance.timeOrigin + performance.now() - 12);
+      renderer.renderNow();
+    }
+    expect(renderer.stats.latencySamples).toBe(20);
+    expect(renderer.stats.latencyP50Ms).toBeGreaterThanOrEqual(12);
+    expect(renderer.stats.latencyP50Ms).toBeLessThan(200);
+    expect(renderer.stats.latencyMaxMs).toBeGreaterThanOrEqual(renderer.stats.latencyP95Ms);
+  });
+
+  it('ignores frames without a usable render timestamp and keeps a bounded window', () => {
+    renderer.present(solidFrame(160, 90, [255, 0, 0]));
+    renderer.renderNow();
+    renderer.present(solidFrame(160, 90, [255, 0, 0]), NaN);
+    renderer.renderNow();
+    renderer.present(solidFrame(160, 90, [255, 0, 0]), 0);
+    renderer.renderNow();
+    expect(renderer.stats.latencySamples).toBe(0);
+    for (let i = 0; i < LATENCY_WINDOW + 20; i++) {
+      renderer.present(solidFrame(16, 9, [0, 255, 0]), performance.timeOrigin + performance.now());
+      renderer.renderNow();
+    }
+    expect(renderer.stats.latencySamples).toBe(LATENCY_WINDOW + 20);
+    expect(renderer.stats.latencyP95Ms).toBeLessThan(500);
   });
 
   it('reports whether the probe points of the next frames are black, and then stops', () => {

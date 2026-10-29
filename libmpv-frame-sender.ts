@@ -76,7 +76,7 @@ export interface SharedTextureApi {
     allReferencesReleased?: () => void;
   }): SharedTextureImportedLike;
 
-  sendSharedTexture(options: { frame: unknown; importedSharedTexture: SharedTextureImportedLike }): Promise<void>;
+  sendSharedTexture(options: { frame: unknown; importedSharedTexture: SharedTextureImportedLike }, ...args: unknown[]): Promise<void>;
 }
 
 export interface FrameTarget {
@@ -449,7 +449,7 @@ export class LibmpvFrameSender {
     if (frame.pixels) {
       try {
         this.target.send(READBACK_CHANNEL, {
-          attachId: frame.attachId, width: frame.width, height: frame.height, data: frame.pixels
+          attachId: frame.attachId, width: frame.width, height: frame.height, data: frame.pixels, renderedAt: frame.renderedAt
         });
         this.countSent();
       } catch {
@@ -506,7 +506,8 @@ export class LibmpvFrameSender {
     };
     try {
       // `mainFrame` throws once the page is destroyed; a send that throws synchronously is a failed send.
-      this.sharedTexture().sendSharedTexture({frame: this.target.mainFrame, importedSharedTexture: imported})
+      // The extra argument reaches the page's receiver next to the texture
+      this.sharedTexture().sendSharedTexture({frame: this.target.mainFrame, importedSharedTexture: imported}, {renderedAt: frame.renderedAt})
         .then(() => imported.release())
         .catch(onSendError);
     } catch (error) {

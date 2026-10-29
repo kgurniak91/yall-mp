@@ -93,8 +93,11 @@ export interface IElectronAPI {
   onMpvManagerReady: (callback: () => void) => (() => void);
   onMpvInitialSeekComplete: (callback: () => void) => (() => void);
   onMpvEngineError: (callback: (state: 'restarting' | 'failed') => void) => (() => void);
-  /** One subscriber; the page owns every delivered frame and must `close()` it. Returns the unsubscribe function. */
-  onVideoFrame: (callback: (frame: VideoFrame) => void) => (() => void);
+  /**
+   * One subscriber; the page owns every delivered frame and must `close()` it. `renderedAt` is when the render thread
+   * finished the frame (ms since the Unix epoch), absent from the Linux host. Returns the unsubscribe function.
+   */
+  onVideoFrame: (callback: (frame: VideoFrame, renderedAt?: number) => void) => (() => void);
   /** Main asks for the next `frames` drawn frames to be checked for a black picture (see `videoProbeReport`). */
   onVideoProbeStart: (callback: (frames: number) => void) => (() => void);
   /** Whether all probe points of one drawn frame were black. */

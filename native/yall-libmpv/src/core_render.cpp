@@ -54,6 +54,7 @@ void FrameCallJs(Napi::Env env, Napi::Function, FrameCtx* ctx, FrameMsg* rawMsg)
     obj.Set("generation", Napi::Number::New(env, f.generation));
     obj.Set("width", Napi::Number::New(env, f.width));
     obj.Set("height", Napi::Number::New(env, f.height));
+    if (f.renderedAtMs > 0) obj.Set("renderedAt", Napi::Number::New(env, f.renderedAtMs));
     if (f.hasProbe) {
       Napi::Array probe = Napi::Array::New(env, sizeof(f.probe));
       for (uint32_t i = 0; i < sizeof(f.probe); i++) probe.Set(i, Napi::Number::New(env, f.probe[i]));

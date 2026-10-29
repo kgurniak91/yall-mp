@@ -36,6 +36,27 @@ export interface VideoSurfaceStats {
   canvasHeight: number;
   lastFrameWidth: number;
   lastFrameHeight: number;
+  /** Drawn frames that carried a render timestamp; the latency numbers cover the last `LATENCY_WINDOW` of them. */
+  latencySamples: number;
+  /**
+   * Milliseconds from the render thread finishing a frame to the draw call on the canvas (queue into main, hand-over to
+   * the page, wait for the animation frame). The compositor adds about one display refresh after that.
+   */
+  latencyP50Ms: number;
+  latencyP95Ms: number;
+  latencyMaxMs: number;
+}
+
+export const LATENCY_WINDOW = 300;
+
+/** Median, 95th percentile and maximum of the samples (0 for none). */
+export function summarizeLatency(samples: readonly number[]): { p50: number; p95: number; max: number } {
+  if (samples.length === 0) {
+    return {p50: 0, p95: 0, max: 0};
+  }
+  const sorted = [...samples].sort((a, b) => a - b);
+  const at = (q: number): number => sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))];
+  return {p50: at(0.5), p95: at(0.95), max: sorted[sorted.length - 1]};
 }
 
 const VERTEX_SHADER = `#version 300 es
@@ -71,13 +92,16 @@ interface GlResources {
 export class VideoSurfaceRenderer {
   public readonly stats: VideoSurfaceStats = {
     backend: 'none', received: 0, drawn: 0, dropped: 0, closed: 0, errors: 0, contextLosses: 0,
-    canvasWidth: 0, canvasHeight: 0, lastFrameWidth: 0, lastFrameHeight: 0
+    canvasWidth: 0, canvasHeight: 0, lastFrameWidth: 0, lastFrameHeight: 0,
+    latencySamples: 0, latencyP50Ms: 0, latencyP95Ms: 0, latencyMaxMs: 0
   };
 
   private readonly gl: WebGL2RenderingContext | null;
   private readonly ctx2d: CanvasRenderingContext2D | null = null;
   private resources: GlResources | null = null;
   private pending: VideoFrame | null = null;
+  private pendingRenderedAt: number | undefined;
+  private readonly latencies: number[] = [];
   private current: VideoFrame | null = null;
   private frameRequest = 0;
   private disposed = false;
@@ -116,8 +140,11 @@ export class VideoSurfaceRenderer {
     (window as unknown as { __yallVideoStats?: VideoSurfaceStats }).__yallVideoStats = this.stats;
   }
 
-  /** Takes ownership of `frame`: it is closed once it was replaced or drawn and replaced. */
-  public present(frame: VideoFrame): void {
+  /**
+   * Takes ownership of `frame`: it is closed once it was replaced or drawn and replaced. `renderedAt` is when the render
+   * thread finished it (ms since the Unix epoch), for the latency statistics.
+   */
+  public present(frame: VideoFrame, renderedAt?: number): void {
     this.stats.received++;
     if (this.disposed || this.stats.backend === 'none') {
       this.closeFrame(frame);
@@ -128,6 +155,7 @@ export class VideoSurfaceRenderer {
       this.stats.dropped++;
     }
     this.pending = frame;
+    this.pendingRenderedAt = renderedAt;
     if (!this.frameRequest) {
       this.frameRequest = requestAnimationFrame(() => {
         this.frameRequest = 0;
@@ -143,13 +171,34 @@ export class VideoSurfaceRenderer {
       return;
     }
     this.pending = null;
+    const renderedAt = this.pendingRenderedAt;
+    this.pendingRenderedAt = undefined;
     this.closeFrame(this.current);
     this.current = frame;
     this.textureHoldsCurrent = false;
     this.stats.lastFrameWidth = frame.displayWidth;
     this.stats.lastFrameHeight = frame.displayHeight;
     this.draw();
+    this.recordLatency(renderedAt);
     this.probeDrawnFrame();
+  }
+
+  private recordLatency(renderedAt: number | undefined): void {
+    if (renderedAt === undefined || !Number.isFinite(renderedAt) || renderedAt <= 0) {
+      return;
+    }
+    // Both ends read the system clock (the page through its time origin), so a negative value is clock noise
+    this.latencies.push(Math.max(0, performance.timeOrigin + performance.now() - renderedAt));
+    if (this.latencies.length > LATENCY_WINDOW) {
+      this.latencies.shift();
+    }
+    this.stats.latencySamples++;
+    if (this.stats.latencySamples % 8 === 0 || this.latencies.length < 8) {
+      const summary = summarizeLatency(this.latencies);
+      this.stats.latencyP50Ms = summary.p50;
+      this.stats.latencyP95Ms = summary.p95;
+      this.stats.latencyMaxMs = summary.max;
+    }
   }
 
   /** Reports, for each of the next `frames` newly drawn frames, whether five points of the picture are black. */

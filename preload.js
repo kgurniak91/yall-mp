@@ -12,20 +12,24 @@ let frameSink = null;
 let heldFrame = null;
 let droppedFrames = 0;
 
-const deliverFrame = (frame) => {
+// `renderedAt`: when the render thread finished the frame (ms since the Unix epoch), for the latency statistics.
+let heldRenderedAt;
+
+const deliverFrame = (frame, renderedAt) => {
   if (frameSink) {
-    frameSink(frame);
+    frameSink(frame, renderedAt);
     return;
   }
   heldFrame?.close();
   heldFrame = frame;
+  heldRenderedAt = renderedAt;
 };
 
 if (sharedTexture?.setSharedTextureReceiver) {
-  sharedTexture.setSharedTextureReceiver(async ({importedSharedTexture}) => {
+  sharedTexture.setSharedTextureReceiver(async ({importedSharedTexture}, meta) => {
     try {
       // The VideoFrame keeps the texture alive; the slot goes back to the pool when the page closes the frame.
-      deliverFrame(importedSharedTexture.getVideoFrame());
+      deliverFrame(importedSharedTexture.getVideoFrame(), meta?.renderedAt);
     } catch (error) {
       droppedFrames++;
     } finally {
@@ -42,7 +46,7 @@ ipcRenderer.on(READBACK_CHANNEL, (_event, message) => {
   try {
     deliverFrame(new VideoFrame(message.data, {
       format: 'BGRA', codedWidth: message.width, codedHeight: message.height, timestamp: 0
-    }));
+    }), message.renderedAt);
   } catch (error) {
     droppedFrames++;
   }
@@ -159,7 +163,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     if (heldFrame) {
       const frame = heldFrame;
       heldFrame = null;
-      callback(frame);
+      callback(frame, heldRenderedAt);
     }
     return () => {
       if (frameSink === callback) {

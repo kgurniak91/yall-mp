@@ -188,6 +188,7 @@ void RenderThread::Run() {
     Frame frame;
     if (backend_->Render(w, h, gen, frame)) {
       frame.attachId = attachId_;
+      frame.renderedAtMs = EpochMillisNow();
       int slotId = frame.slotId;
       uint64_t serial = frame.serial;
       if (!sink_->Post(std::move(frame))) {
