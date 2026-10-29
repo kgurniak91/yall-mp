@@ -322,7 +322,8 @@ async function launchEngine(args: ViewportArgs, resumeAt?: number): Promise<void
     attachVideo: async libmpv => {
       const sender = new LibmpvFrameSender({
         libmpv, webContents: pageContents, gpuInfo: gpuInfo ?? undefined, adapter: videoAdapterOverride(),
-        log: logVideo, preferredAfterDeviceLoss: preferredVideoBackend, simulateBlackFrames: isE2E && process.env.YALL_MP_E2E_SIMULATE_BLACK_FRAMES === '1'
+        log: logVideo, preferredAfterDeviceLoss: preferredVideoBackend, simulateBlackFrames: isE2E && process.env.YALL_MP_E2E_SIMULATE_BLACK_FRAMES === '1',
+        simulateImportFailure: isE2E && process.env.YALL_MP_E2E_SIMULATE_IMPORT_FAILURE === '1'
       });
       videoSender = sender;
       let attach;
