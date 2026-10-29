@@ -14,7 +14,7 @@ import type {
   Size
 } from './libmpv-bridge';
 import {computeReadbackSize} from './libmpv-bridge';
-import {needsToneMapFilter, toneMapCommand} from './hdr-tonemap';
+import {needsToneMapFilter, TONE_MAP_VARIANTS, toneMapCommand} from './hdr-tonemap';
 
 /** Channel of the readback frames: `{attachId, width, height, data: Uint8Array}` (BGRA, alpha 255). */
 export const READBACK_CHANNEL = 'libmpv:readback-frame';
@@ -169,6 +169,9 @@ export class LibmpvFrameSender {
   private gamma: string | null = null;
   /** The tone mapping filter of the software renderer: in the filter chain (`on`), not (`off`), or impossible here. */
   private toneMapFilter: 'off' | 'on' | 'unavailable' = 'off';
+  /** The first filter variant not yet refused by this libmpv (a build without zscale refuses the first one). */
+  private toneMapVariant = 0;
+  private toneMapQueue: Promise<void> = Promise.resolve();
   private firstFrameDone = false;
   private switching = false;
   /** True from `stop()` until the next `start()`: an attach that finishes meanwhile is undone. */
@@ -212,6 +215,7 @@ export class LibmpvFrameSender {
     this.reattachTimes = [];
     this.gamma = null;
     this.toneMapFilter = 'off';
+    this.toneMapVariant = 0;
     this.libmpv.on('property-change', this.onPropertyChange);
     for (const name of ['dwidth', 'dheight', 'video-params/gamma']) {
       this.observeIds.push(this.libmpv.observeProperty(name));
@@ -411,16 +415,43 @@ export class LibmpvFrameSender {
       return;
     }
     this.toneMapFilter = wanted ? 'on' : 'off';
-    this.libmpv.command(toneMapCommand(wanted)).then(
-      () => this.log(`[libmpv] HDR tone mapping filter ${wanted ? 'added' : 'removed'} (gamma=${this.gamma}, impl=${this.attach?.impl})`),
-      (error: unknown) => {
-        if (wanted) {
-          // mpv's ffmpeg has no zscale or tonemap filter: leave the picture as it is and do not try again
-          this.toneMapFilter = 'unavailable';
-          this.log(`[libmpv] HDR tone mapping filter could not be added (${errorMessage(error)}); the picture stays untouched`);
-        }
+    // One command at a time: a source change right after another must not overtake the first command
+    this.toneMapQueue = this.toneMapQueue.then(() => wanted ? this.addToneMapFilter() : this.removeToneMapFilter());
+  }
+
+  private async addToneMapFilter(): Promise<void> {
+    let refusedAll = true;
+    for (let i = this.toneMapVariant; i < TONE_MAP_VARIANTS.length; i++) {
+      const variant = TONE_MAP_VARIANTS[i];
+      if (!(variant.gammas as readonly string[]).includes(this.gamma ?? '')) {
+        // this variant cannot do this kind of source (the lookup table graph does PQ only)
+        refusedAll = false;
+        continue;
       }
-    );
+      try {
+        await this.libmpv.command(toneMapCommand(true, variant));
+        this.toneMapVariant = i;
+        this.log(`[libmpv] HDR tone mapping filter added (${variant.name}; gamma=${this.gamma}, impl=${this.attach?.impl})`);
+        return;
+      } catch (error) {
+        // mpv's ffmpeg has no zscale (the macOS build): the next variant needs only common filters
+        this.toneMapVariant = i + 1;
+        this.log(`[libmpv] HDR tone mapping filter '${variant.name}' was refused (${errorMessage(error)})`);
+      }
+    }
+    this.toneMapFilter = refusedAll ? 'unavailable' : 'off';
+    if (refusedAll) {
+      this.log('[libmpv] HDR tone mapping is not available in this libmpv; the picture stays untouched');
+    }
+  }
+
+  private async removeToneMapFilter(): Promise<void> {
+    try {
+      await this.libmpv.command(toneMapCommand(false));
+      this.log(`[libmpv] HDR tone mapping filter removed (gamma=${this.gamma}, impl=${this.attach?.impl})`);
+    } catch {
+      // it was never in the chain
+    }
   }
 
   private release(frame: RenderFrame): void {

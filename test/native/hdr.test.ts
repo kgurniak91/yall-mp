@@ -1,15 +1,15 @@
 import {afterEach, describe, expect, it} from 'vitest';
 import {AttachRendererOptions, Libmpv, LibmpvEvent, RenderFrame} from '../../libmpv-bridge';
-import {needsToneMapFilter, toneMapCommand} from '../../hdr-tonemap';
+import {needsToneMapFilter, TONE_MAP_VARIANTS, ToneMapVariant, toneMapCommand} from '../../hdr-tonemap';
 import {EventLog, describeNative, NativeEnv, sleep, waitFor} from './support/native';
 import {ensureHdrClips, PATCH_COLUMNS, PATCH_ROWS, PATCHES} from '../e2e/support/hdr-media';
 
 type Rgb = [number, number, number];
 
 /** Runs the filter command; a refusal is reported with what mpv logged about it (which filter or option it did not like). */
-const addToneMapFilter = async (player: Libmpv, messages: string[]): Promise<void> => {
+const addToneMapFilter = async (player: Libmpv, messages: string[], variant: ToneMapVariant): Promise<void> => {
   try {
-    await player.command(toneMapCommand(true));
+    await player.command(toneMapCommand(true, variant));
   } catch (error) {
     const version = async (name: string) => String(await player.getProperty(name).catch(() => '?'));
     const relevant = messages.filter(m => /vf|lavfi|zscale|tonemap|filter|ffmpeg|error|fail/i.test(m)).slice(-12);
@@ -28,7 +28,7 @@ describeNative('HDR10 on the readback paths', (env: NativeEnv) => {
   });
 
   /** Plays the clip paused at 1 s like the frame sender would set it up and returns the patch colours of the readback frame. */
-  const patchColours = async (file: string, attach: Omit<AttachRendererOptions, 'width' | 'height'>, toneMap: boolean): Promise<{ colours: Rgb[]; events: string[] }> => {
+  const patchColours = async (file: string, attach: Omit<AttachRendererOptions, 'width' | 'height'>, variant?: ToneMapVariant): Promise<{ colours: Rgb[]; events: string[] }> => {
     const player = await Libmpv.create(env.addon, {
       options: {
         vo: 'libmpv', ao: 'null', idle: 'yes', pause: 'yes', 'keep-open': 'always', hwdec: 'no', 'terminal': 'no',
@@ -53,10 +53,10 @@ describeNative('HDR10 on the readback paths', (env: NativeEnv) => {
     await player.command(['loadfile', file, 'replace']);
     await waitFor(() => last !== undefined, 15000, 'a frame');
     await waitFor(() => log.values('video-params/gamma').some(g => typeof g === 'string'), 10000, 'video-params/gamma');
-    if (toneMap) {
+    if (variant) {
       const gamma = log.values('video-params/gamma').filter(g => typeof g === 'string').pop();
       if (needsToneMapFilter(result.impl, gamma)) {
-        await addToneMapFilter(player, messages);
+        await addToneMapFilter(player, messages, variant);
       }
     }
     await sleep(300);
@@ -79,17 +79,33 @@ describeNative('HDR10 on the readback paths', (env: NativeEnv) => {
 
   const luma = (c: Rgb): number => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
 
-  const variants: Array<{ name: string; options: Partial<AttachRendererOptions> }> = [{name: 'sw', options: {impl: 'sw'}}];
+  // `slack`: how far a saturated primary may stray from pure (the lookup table filter applies the gamut matrix to encoded values)
+  const variants: Array<{ name: string; options: Partial<AttachRendererOptions>; variant?: ToneMapVariant; slack: number }> = [
+    {name: 'sw, zscale filter', options: {impl: 'sw'}, variant: TONE_MAP_VARIANTS[0], slack: 0},
+    {name: 'sw, lookup table filter', options: {impl: 'sw'}, variant: TONE_MAP_VARIANTS[1], slack: 50}
+  ];
   if (process.platform === 'win32') {
-    variants.push({name: 'd3d11 on WARP', options: {impl: 'd3d11', adapter: 'warp'}});
+    variants.push({name: 'd3d11 on WARP', options: {impl: 'd3d11', adapter: 'warp'}, slack: 0});
   }
 
-  describe.each(variants)('readback ($name)', ({options}) => {
-    it('shows an HDR10 clip like the same picture in SDR', async () => {
+  describe.each(variants)('readback ($name)', ({options, variant, slack}) => {
+    it('shows an HDR10 clip like the same picture in SDR', async (context) => {
       const clips = ensureHdrClips();
-      const sdr = (await patchColours(clips.sdr, {backend: 'readback', ...options}, true)).colours;
-      const hdr = (await patchColours(clips.hdr, {backend: 'readback', ...options}, true)).colours;
+      const sdr = (await patchColours(clips.sdr, {backend: 'readback', ...options}, variant)).colours;
+      let hdr: Rgb[];
+      try {
+        hdr = (await patchColours(clips.hdr, {backend: 'readback', ...options}, variant)).colours;
+      } catch (error) {
+        // The zscale graph needs an ffmpeg with zimg; the Homebrew build on macOS has none (the sender falls back to the lookup table graph)
+        if (variant?.name === 'zscale' && /No such filter|error running command/.test((error as Error).message)) {
+          context.skip();
+        }
+        throw error;
+      }
       const report = PATCHES.map((nominal, i) => `${JSON.stringify(nominal)} sdr=${JSON.stringify(sdr[i])} hdr=${JSON.stringify(hdr[i])}`).join('\n');
+      if (process.env.HDR_REPORT) {
+        console.log(`HDRREPORT ${variant?.name}\n${report}`);
+      }
       const why = `\n${report}`;
       const [white, grey, dark, black, red, green, blue] = hdr;
       expect(luma(white), `white is bright${why}`).toBeGreaterThanOrEqual(190);
@@ -97,15 +113,15 @@ describeNative('HDR10 on the readback paths', (env: NativeEnv) => {
       expect(luma(grey), `mid grey is mid grey${why}`).toBeGreaterThanOrEqual(100);
       expect(luma(grey), `mid grey is not lifted${why}`).toBeLessThanOrEqual(160);
       expect(luma(dark) < luma(grey), `dark < mid${why}`).toBe(true);
-      expect(red[0] >= 150 && red[1] <= 50 && red[2] <= 50, `red stays saturated${why}`).toBe(true);
-      expect(green[1] >= 100 && green[0] <= 50 && green[2] <= 50, `green stays saturated${why}`).toBe(true);
-      expect(blue[2] >= 130 && blue[0] <= 70, `blue stays saturated${why}`).toBe(true);
+      expect(red[0] >= 150 && red[1] <= 50 + slack && red[2] <= 50 + slack, `red stays saturated${why}`).toBe(true);
+      expect(green[1] >= 100 && green[0] <= 50 + slack && green[2] <= 50 + slack, `green stays saturated${why}`).toBe(true);
+      expect(blue[2] >= 130 && blue[0] <= 70 + slack, `blue stays saturated${why}`).toBe(true);
       // The SDR clip never gets the filter and stays close to its nominal colours (the swscale conversion differs a little per platform)
       PATCHES.forEach((nominal, i) => expect(Math.max(...nominal.map((v, k) => Math.abs(v - sdr[i][k]))), `SDR patch ${i}${why}`).toBeLessThanOrEqual(40));
     }, 60000);
   });
 
-  it('adding and taking out the filter while playing keeps the file playing', async () => {
+  it.each(TONE_MAP_VARIANTS.map(v => ({name: v.name, variant: v})))('adding and taking out the $name filter while playing keeps the file playing', async ({variant}) => {
     const clips = ensureHdrClips();
     const player = await Libmpv.create(env.addon, {
       options: {
@@ -131,7 +147,15 @@ describeNative('HDR10 on the readback paths', (env: NativeEnv) => {
     await player.command(['loadfile', clips.hdr, 'replace']);
     await waitFor(() => frames > 5, 15000, 'frames');
     log.clear();
-    await addToneMapFilter(player, messages);
+    try {
+      await addToneMapFilter(player, messages, variant);
+    } catch (error) {
+      // No zscale in this ffmpeg (Homebrew on macOS): the lookup table graph is the one that runs there
+      if (variant.name === 'zscale' && /No such filter|error running command/.test((error as Error).message)) {
+        return;
+      }
+      throw error;
+    }
     const before = frames;
     await waitFor(() => frames > before + 10, 10000, 'frames after the filter was added');
     // The playback state machine reads playback-restart and seek events: adding the filter must not look like a seek

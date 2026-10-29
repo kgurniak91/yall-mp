@@ -639,16 +639,26 @@ describe('LibmpvFrameSender', () => {
   });
 
   describe('HDR tone mapping on the software renderer', () => {
-    const gamma = (libmpv: FakeLibmpv, value: unknown) =>
+    const gamma = async (libmpv: FakeLibmpv, value: unknown) => {
       libmpv.emit({event: 'property-change', name: 'video-params/gamma', data: value} as LibmpvEvent);
+      await flush();
+    };
     const filterCommands = (libmpv: FakeLibmpv) =>
       (libmpv.command as ReturnType<typeof vi.fn>).mock.calls.map(([args]) => args as string[]).filter(args => args[0] === 'vf');
+    const names = (libmpv: FakeLibmpv) => filterCommands(libmpv).map(args => args.slice(0, 2).join(' '));
     const startedSoftware = async (opts: Parameters<typeof fakeLibmpv>[0] = {software: true}) => {
       const libmpv = fakeLibmpv(opts);
       const sender = create(libmpv);
       await sender.start({width: 800, height: 450, preferred: 'readback'});
       return {libmpv, sender};
     };
+    // A libmpv whose ffmpeg has no zscale: only the graph that does not use it is accepted
+    const withoutZscale = (libmpv: FakeLibmpv) => (libmpv.command as ReturnType<typeof vi.fn>).mockImplementation(async (args: string[]) => {
+      if (args[0] === 'vf' && args[1] === 'add' && args[2].includes('zscale')) {
+        throw new Error('error running command');
+      }
+      return undefined;
+    });
 
     it('observes the transfer function of the file', async () => {
       const {libmpv} = await startedSoftware();
@@ -657,32 +667,32 @@ describe('LibmpvFrameSender', () => {
 
     it.each(['pq', 'hlg'])('adds the filter for a %s source', async (value) => {
       const {libmpv} = await startedSoftware();
-      gamma(libmpv, value);
-      expect(filterCommands(libmpv)).toEqual([['vf', 'add', expect.stringContaining('@yall-tonemap:lavfi=[')]]);
+      await gamma(libmpv, value);
+      expect(filterCommands(libmpv)).toEqual([['vf', 'add', expect.stringContaining('@yall-tonemap:lavfi=[zscale')]]);
     });
 
     it('leaves an SDR source alone and does not add the filter twice', async () => {
       const {libmpv} = await startedSoftware();
-      gamma(libmpv, 'bt.1886');
-      gamma(libmpv, 'srgb');
-      gamma(libmpv, null);
+      await gamma(libmpv, 'bt.1886');
+      await gamma(libmpv, 'srgb');
+      await gamma(libmpv, null);
       expect(filterCommands(libmpv)).toEqual([]);
-      gamma(libmpv, 'pq');
-      gamma(libmpv, 'pq');
+      await gamma(libmpv, 'pq');
+      await gamma(libmpv, 'pq');
       expect(filterCommands(libmpv)).toHaveLength(1);
     });
 
     it('takes the filter out when the next file is SDR', async () => {
       const {libmpv} = await startedSoftware();
-      gamma(libmpv, 'pq');
-      gamma(libmpv, 'bt.1886');
-      expect(filterCommands(libmpv).map(args => args.slice(0, 2).join(' '))).toEqual(['vf add', 'vf remove']);
+      await gamma(libmpv, 'pq');
+      await gamma(libmpv, 'bt.1886');
+      expect(names(libmpv)).toEqual(['vf add', 'vf remove']);
       expect(filterCommands(libmpv)[1][2]).toBe('@yall-tonemap');
     });
 
     it('does not touch the picture on the GPU renderers, which tone-map themselves', async () => {
       const {libmpv} = await startedSoftware({d3d11: true});
-      gamma(libmpv, 'pq');
+      await gamma(libmpv, 'pq');
       expect(filterCommands(libmpv)).toEqual([]);
     });
 
@@ -690,7 +700,7 @@ describe('LibmpvFrameSender', () => {
       const libmpv = fakeLibmpv({d3d11: true});
       const sender = create(libmpv);
       await sender.start({width: 800, height: 450, preferred: 'd3d11-shared'});
-      gamma(libmpv, 'pq');
+      await gamma(libmpv, 'pq');
       expect(filterCommands(libmpv)).toEqual([]);
       (libmpv.attachRenderer as ReturnType<typeof vi.fn>).mockImplementationOnce(async (options: AttachRendererOptions, onFrame: (frame: RenderFrame) => void) => {
         const result: AttachResult = {attachId: 2, backend: options.backend, impl: 'sw', gpuWaitImpl: 'fence', adapter: adapter(true)};
@@ -699,18 +709,44 @@ describe('LibmpvFrameSender', () => {
       });
       sender.gpuProcessGone('test');
       await flush();
-      expect(filterCommands(libmpv).map(args => args.slice(0, 2).join(' '))).toEqual(['vf add']);
+      expect(names(libmpv)).toEqual(['vf add']);
     });
 
-    it('gives up quietly when the filter is not available in this libmpv', async () => {
+    it('uses the lookup table graph when this libmpv has no zscale', async () => {
       const {libmpv} = await startedSoftware();
-      (libmpv.command as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('no such filter: zscale'));
-      gamma(libmpv, 'pq');
-      await flush();
-      expect(log).toHaveBeenCalledWith(expect.stringContaining('could not be added (no such filter: zscale)'));
-      gamma(libmpv, 'bt.1886');
-      gamma(libmpv, 'pq');
+      withoutZscale(libmpv);
+      await gamma(libmpv, 'pq');
+      expect(filterCommands(libmpv).map(args => args[2].includes('zscale') ? 'zscale' : 'lut')).toEqual(['zscale', 'lut']);
+      expect(log).toHaveBeenCalledWith(expect.stringContaining("'zscale' was refused"));
+      expect(log).toHaveBeenCalledWith(expect.stringContaining('(lut;'));
+      // the next file starts with the graph that works
+      await gamma(libmpv, 'bt.1886');
+      await gamma(libmpv, 'pq');
+      expect(filterCommands(libmpv).filter(args => args[1] === 'add').map(args => args[2].includes('zscale') ? 'zscale' : 'lut'))
+        .toEqual(['zscale', 'lut', 'lut']);
+    });
+
+    it('leaves HLG alone when only the lookup table graph is available (it does PQ only)', async () => {
+      const {libmpv} = await startedSoftware();
+      withoutZscale(libmpv);
+      await gamma(libmpv, 'hlg');
       expect(filterCommands(libmpv)).toHaveLength(1);
+      expect(log).not.toHaveBeenCalledWith(expect.stringContaining('not available'));
+      // a later PQ file still gets its filter
+      await gamma(libmpv, 'bt.1886');
+      await gamma(libmpv, 'pq');
+      expect(filterCommands(libmpv).filter(args => args[1] === 'add')).toHaveLength(2);
+    });
+
+    it('gives up quietly when no graph is available in this libmpv', async () => {
+      const {libmpv} = await startedSoftware();
+      (libmpv.command as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('error running command'));
+      await gamma(libmpv, 'pq');
+      expect(log).toHaveBeenCalledWith(expect.stringContaining('not available in this libmpv'));
+      const tried = filterCommands(libmpv).length;
+      await gamma(libmpv, 'bt.1886');
+      await gamma(libmpv, 'pq');
+      expect(filterCommands(libmpv)).toHaveLength(tried);
     });
   });
 
