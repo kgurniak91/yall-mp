@@ -25,10 +25,13 @@ import {GlobalSettingsStateService} from '../../../state/global-settings/global-
 import {YomitanPopupComponent} from '../yomitan-popup/yomitan-popup.component';
 import {YomitanService} from '../../../core/services/yomitan/yomitan.service';
 import {NoteRequest} from './subtitles-overlay.types';
+import {RebuildGeneration} from './rebuild-generation';
 import {DialogService} from 'primeng/dynamicdialog';
 import {ToastService} from '../../../shared/services/toast/toast.service';
 
 const FALLBACK_VIDEO_ASPECT_RATIO = 16 / 9;
+// How long the container size must stay unchanged before the ASS renderer is rebuilt one last time for it.
+const ASS_SETTLE_MS = 150;
 
 @Component({
   selector: 'app-subtitles-overlay',
@@ -121,6 +124,8 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   private assInstance: ASS | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private mutationObserver: MutationObserver | null = null;
+  private readonly rebuildGeneration = new RebuildGeneration();
+  private assSettleTimer: ReturnType<typeof setTimeout> | null = null;
   private fakeVideo: any = null;
   private readonly isSelecting = signal(false);
   private selectionAnchor: { node: Node, start: number, end: number } | null = null;
@@ -235,6 +240,16 @@ export class SubtitlesOverlayComponent implements OnDestroy {
           this.initializeOrUpdateAssRenderer(width, height);
           this.isInitialized.set(true);
 
+          // Once the size stopped changing, rebuild one more time with nothing overlapping, so the scale read back
+          // belongs to the final size even when the drag ended between two frames.
+          if (this.assSettleTimer) {
+            clearTimeout(this.assSettleTimer);
+          }
+          this.assSettleTimer = setTimeout(() => {
+            this.assSettleTimer = null;
+            this.initializeOrUpdateAssRenderer(width, height);
+          }, ASS_SETTLE_MS);
+
           // Close offline dictionary popup on window resize
           if (this.currentSearchTerm() != null) {
             this.clearHighlightAndPopup();
@@ -246,6 +261,10 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       onCleanup(() => {
         this.isInitialized.set(false);
         this.resizeObserver?.disconnect();
+        if (this.assSettleTimer) {
+          clearTimeout(this.assSettleTimer);
+          this.assSettleTimer = null;
+        }
         this.destroyAssRenderer();
       });
     });
@@ -704,6 +723,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
 
     this.isScaleApplied.set(false);
     this.destroyAssRenderer();
+    const isLatestRebuild = this.rebuildGeneration.begin();
 
     this.fakeVideo = videoContainer;
     this.fakeVideo.videoWidth = width;
@@ -736,10 +756,17 @@ export class SubtitlesOverlayComponent implements OnDestroy {
     });
 
     requestAnimationFrame(() => {
+      if (!isLatestRebuild()) {
+        return;
+      }
       this.fakeVideo?.dispatchEvent(new Event('playing'));
 
       // Give ass.js enough time to finish its own internal async CSS variables updates:
       requestAnimationFrame(() => {
+        if (!isLatestRebuild()) {
+          // A newer rebuild replaced this renderer; its own read-back stores the scale
+          return;
+        }
         const assBox = renderContainer.querySelector('.ASS-box');
         if (assBox) {
           const newBaseScale = parseFloat(getComputedStyle(assBox).getPropertyValue('--ass-scale'));
@@ -758,6 +785,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   }
 
   private destroyAssRenderer(): void {
+    this.rebuildGeneration.cancel();
     this.assInstance?.destroy();
     this.assInstance = null;
     this.fakeVideo = null;

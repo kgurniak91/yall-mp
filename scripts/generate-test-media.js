@@ -142,16 +142,37 @@ function makeClipsMp4() {
   ]);
 }
 
+// Lip-sync fixture: every full second the whole picture flashes white for 50 ms and a 1 kHz tone sounds for 40 ms, on black
+// and silence otherwise. Played through the player, flash and beep must be heard and seen together.
+function makeAvsyncMp4() {
+  const duration = 10;
+  ffmpeg([
+    '-f', 'lavfi', '-i', `color=c=black:s=320x180:r=30:d=${duration}`,
+    '-f', 'lavfi', '-i', `aevalsrc=sin(2*PI*1000*t)*lt(mod(t\\,1)\\,0.04):s=48000:d=${duration}`,
+    '-vf', "drawbox=x=0:y=0:w=iw:h=ih:color=white:t=fill:enable='lt(mod(t,1),0.05)'",
+    '-t', String(duration),
+    '-c:v', 'libx264', '-preset', 'veryslow', '-crf', '30', '-pix_fmt', 'yuv420p', '-g', '8', '-keyint_min', '8', '-sc_threshold', '0',
+    '-movflags', '+faststart', '-c:a', 'aac', '-b:a', '64k',
+    path.join(OUT, 'avsync.mp4'),
+  ]);
+}
+
 fs.mkdirSync(OUT, {recursive: true});
+if (process.argv.includes('--only-avsync')) {
+  makeAvsyncMp4();
+  console.log(`avsync.mp4: ${fs.statSync(path.join(OUT, 'avsync.mp4')).size} bytes`);
+  process.exit(0);
+}
 writeSrt();
 writeAss();
 makeMp4();
 makeMkv();
 writeClipsSubtitles();
 makeClipsMp4();
+makeAvsyncMp4();
 
 let total = 0;
-for (const name of ['sample.mp4', 'sample.srt', 'sample-styled.ass', 'sample-5.1.mkv', 'clips.mp4', 'clips.srt', 'clips.ass', 'clips.json']) {
+for (const name of ['sample.mp4', 'sample.srt', 'sample-styled.ass', 'sample-5.1.mkv', 'clips.mp4', 'clips.srt', 'clips.ass', 'clips.json', 'avsync.mp4']) {
   const size = fs.statSync(path.join(OUT, name)).size;
   total += size;
   console.log(`${name}: ${size} bytes`);
