@@ -11,7 +11,10 @@ const addToneMapFilter = async (player: Libmpv, messages: string[]): Promise<voi
   try {
     await player.command(toneMapCommand(true));
   } catch (error) {
-    throw new Error(`${(error as Error).message}; mpv said: ${messages.slice(-8).join(' | ') || '(nothing)'}`);
+    const version = async (name: string) => String(await player.getProperty(name).catch(() => '?'));
+    const relevant = messages.filter(m => /vf|lavfi|zscale|tonemap|filter|ffmpeg|error|fail/i.test(m)).slice(-12);
+    throw new Error(`${(error as Error).message}; mpv ${await version('mpv-version')}, ffmpeg ${await version('ffmpeg-version')}; ` +
+      `mpv said: ${relevant.join(' | ') || '(nothing)'}`);
   }
 };
 
@@ -41,7 +44,7 @@ describeNative('HDR10 on the readback paths', (env: NativeEnv) => {
         messages.push(`[${event.prefix}] ${event.text.trim()}`);
       }
     });
-    player.requestLogMessages('warn');
+    player.requestLogMessages('v');
     player.observeProperty('video-params/gamma');
     let last: RenderFrame | undefined;
     const result = await player.attachRenderer({width: 320, height: 180, ...attach}, frame => {
@@ -119,7 +122,7 @@ describeNative('HDR10 on the readback paths', (env: NativeEnv) => {
         messages.push(`[${event.prefix}] ${event.text.trim()}`);
       }
     });
-    player.requestLogMessages('warn');
+    player.requestLogMessages('v');
     player.observeProperty('time-pos');
     let frames = 0;
     await player.attachRenderer({backend: 'readback', impl: 'sw', width: 320, height: 180}, () => {
