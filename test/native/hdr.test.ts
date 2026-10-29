@@ -1,10 +1,19 @@
 import {afterEach, describe, expect, it} from 'vitest';
-import {AttachRendererOptions, Libmpv, RenderFrame} from '../../libmpv-bridge';
+import {AttachRendererOptions, Libmpv, LibmpvEvent, RenderFrame} from '../../libmpv-bridge';
 import {needsToneMapFilter, toneMapCommand} from '../../hdr-tonemap';
 import {EventLog, describeNative, NativeEnv, sleep, waitFor} from './support/native';
 import {ensureHdrClips, PATCH_COLUMNS, PATCH_ROWS, PATCHES} from '../e2e/support/hdr-media';
 
 type Rgb = [number, number, number];
+
+/** Runs the filter command; a refusal is reported with what mpv logged about it (which filter or option it did not like). */
+const addToneMapFilter = async (player: Libmpv, messages: string[]): Promise<void> => {
+  try {
+    await player.command(toneMapCommand(true));
+  } catch (error) {
+    throw new Error(`${(error as Error).message}; mpv said: ${messages.slice(-8).join(' | ') || '(nothing)'}`);
+  }
+};
 
 // Readback is what Linux and macOS use by default, and on those it goes through mpv's software renderer: HDR10 has to come
 // out tone-mapped for an SDR screen there too, not as the raw PQ signal (bright, clipped and oversaturated).
@@ -26,6 +35,13 @@ describeNative('HDR10 on the readback paths', (env: NativeEnv) => {
     });
     players.push(player);
     const log = new EventLog(player);
+    const messages: string[] = [];
+    player.on('event', (event: LibmpvEvent) => {
+      if (event.event === 'log-message') {
+        messages.push(`[${event.prefix}] ${event.text.trim()}`);
+      }
+    });
+    player.requestLogMessages('warn');
     player.observeProperty('video-params/gamma');
     let last: RenderFrame | undefined;
     const result = await player.attachRenderer({width: 320, height: 180, ...attach}, frame => {
@@ -37,7 +53,7 @@ describeNative('HDR10 on the readback paths', (env: NativeEnv) => {
     if (toneMap) {
       const gamma = log.values('video-params/gamma').filter(g => typeof g === 'string').pop();
       if (needsToneMapFilter(result.impl, gamma)) {
-        await player.command(toneMapCommand(true));
+        await addToneMapFilter(player, messages);
       }
     }
     await sleep(300);
@@ -97,6 +113,13 @@ describeNative('HDR10 on the readback paths', (env: NativeEnv) => {
     });
     players.push(player);
     const log = new EventLog(player);
+    const messages: string[] = [];
+    player.on('event', (event: LibmpvEvent) => {
+      if (event.event === 'log-message') {
+        messages.push(`[${event.prefix}] ${event.text.trim()}`);
+      }
+    });
+    player.requestLogMessages('warn');
     player.observeProperty('time-pos');
     let frames = 0;
     await player.attachRenderer({backend: 'readback', impl: 'sw', width: 320, height: 180}, () => {
@@ -105,7 +128,7 @@ describeNative('HDR10 on the readback paths', (env: NativeEnv) => {
     await player.command(['loadfile', clips.hdr, 'replace']);
     await waitFor(() => frames > 5, 15000, 'frames');
     log.clear();
-    await player.command(toneMapCommand(true));
+    await addToneMapFilter(player, messages);
     const before = frames;
     await waitFor(() => frames > before + 10, 10000, 'frames after the filter was added');
     // The playback state machine reads playback-restart and seek events: adding the filter must not look like a seek
