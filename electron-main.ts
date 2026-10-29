@@ -7,6 +7,7 @@ import {
   Menu,
   nativeImage,
   nativeTheme,
+  powerMonitor,
   powerSaveBlocker,
   screen,
   session,
@@ -22,7 +23,7 @@ import type {MediaTrack} from './shared/types/media.type';
 import {AnkiBatchExportRequest, AnkiCard, AnkiFieldMappingSource} from './src/app/model/anki.types';
 import {v4 as uuidv4} from 'uuid';
 import {ChildProcess, execFile, spawn} from 'child_process';
-import {ensureLibmpv, LibmpvManager} from './libmpv-manager';
+import {AudioOutputInfo, ensureLibmpv, LibmpvManager} from './libmpv-manager';
 import {backendAfterGpuLoss, GpuInfoLike, LibmpvFrameSender, PreferredBackend, PROBE_REPORT_CHANNEL} from './libmpv-frame-sender';
 import {loadLibmpvAddon, type AdapterOption} from './libmpv-bridge';
 import {FontData, ParsedSubtitlesData} from './src/electron-api';
@@ -35,6 +36,7 @@ import {
 } from './shared/utils/subtitle-parsing';
 import {PlaybackManager} from './playback-manager';
 import {EngineRestartPolicy} from './engine-restart';
+import {FullscreenTransitionGuard} from './fullscreen-transition';
 import {BenchConfig, loadBenchConfig} from './bench-config';
 import type fontkit from 'fontkit';
 import {
@@ -105,6 +107,14 @@ let initialSeekFrameBaseline = 0;
 let videoSender: LibmpvFrameSender | null = null;
 let viewportArgs: ViewportArgs | null = null;
 const engineRestartPolicy = new EngineRestartPolicy();
+const fullscreenGuard = new FullscreenTransitionGuard();
+
+/** Enters or leaves fullscreen; entering again right after a leave is dropped, the window would come back at a wrong size. */
+function setFullScreenGuarded(enabled: boolean): void {
+  if (mainWindow && !mainWindow.isDestroyed() && fullscreenGuard.tryBegin(enabled)) {
+    mainWindow.setFullScreen(enabled);
+  }
+}
 // Last canvas backing size (CSS px x scale factor) reported by the page.
 let videoCanvasSize: { width: number; height: number } | null = null;
 // Chromium GPU-process losses: the first one costs the open project the shared backend, the next project tries it
@@ -246,9 +256,22 @@ async function runBench(config: BenchConfig): Promise<void> {
   }
 }
 
+/** What the decoder produced and what mpv hands to the render API (colour handling of HDR and 10-bit sources), for video.log. */
+async function logVideoColourParams(manager: LibmpvManager): Promise<void> {
+  const names = ['primaries', 'gamma', 'colormatrix', 'levels', 'sig-peak', 'pixelformat', 'hw-pixelformat'];
+  const read = async (group: string) => (await Promise.all(names.map(async name => {
+    const value = await manager.getProperty(`${group}/${name}`).catch(() => undefined);
+    return value === undefined || value === '' ? null : `${name}=${value}`;
+  }))).filter(Boolean).join(' ');
+  logVideo(`[Main Process] Video colour: in(${await read('video-params')}) out(${await read('video-out-params')})`);
+}
+
 function finishInitialSeek() {
   if (!mainWindow || mainWindow.isDestroyed()) {
     return;
+  }
+  if (mpvManager) {
+    void logVideoColourParams(mpvManager);
   }
   if (benchConfig && !benchStarted) {
     benchStarted = true;
@@ -295,6 +318,7 @@ async function launchEngine(args: ViewportArgs, resumeAt?: number): Promise<void
   const manager = new LibmpvManager({
     basePath: app.isPackaged ? process.resourcesPath : app.getAppPath(),
     customLibmpvPath: customExecutables.libmpv,
+    options: e2eMpvOptions(),
     attachVideo: async libmpv => {
       const sender = new LibmpvFrameSender({
         libmpv, webContents: pageContents, gpuInfo: gpuInfo ?? undefined, adapter: videoAdapterOverride(),
@@ -375,6 +399,10 @@ async function launchEngine(args: ViewportArgs, resumeAt?: number): Promise<void
   };
   manager.on('status', onMpvStatus);
 
+  manager.on('audio-output', (info: AudioOutputInfo) => {
+    logVideo(`[Main Process] Audio output: driver=${info.currentAo ?? 'none'} devices=${info.deviceCount}${info.reloaded ? ' (output re-created after a device change)' : ''}`);
+  });
+
   manager.on('error', (err) => {
     console.error("MPV Error:", err);
     setDisplaySleepBlocked(false);
@@ -398,6 +426,18 @@ async function launchEngine(args: ViewportArgs, resumeAt?: number): Promise<void
   if (resumeAt !== undefined && manager === mpvManager) {
     await manager.sendCommand(['seek', resumeAt, 'absolute', 'exact']);
     playbackManager?.pause();
+  }
+}
+
+/** E2E only: extra mpv options as JSON in `YALL_MP_E2E_MPV_OPTIONS` (e.g. an unusable `audio-device`). */
+function e2eMpvOptions(): Record<string, string> | undefined {
+  if (!isE2E || !process.env.YALL_MP_E2E_MPV_OPTIONS) {
+    return undefined;
+  }
+  try {
+    return JSON.parse(process.env.YALL_MP_E2E_MPV_OPTIONS);
+  } catch {
+    return undefined;
   }
 }
 
@@ -495,13 +535,45 @@ function setDisplaySleepBlocked(blocked: boolean): void {
   }
 }
 
+// The GPU and the display come back a moment after the resume event; checking at once would find them half awake.
+const RESUME_CHECK_DELAY_MS = 500;
+let resumeCheckTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** The machine goes to sleep: pause, so the audio does not run on into the suspend and the position is not lost. */
+function onSystemSuspend(): void {
+  const playing = playbackManager !== null && !playbackManager.isPaused;
+  logVideo(`[Main Process] System suspend; ${playing ? 'pausing playback' : 'nothing is playing'}.`);
+  if (playing) {
+    playbackManager!.pause();
+  }
+}
+
+/** The machine woke up: make sure the picture still gets drawn. Playback stays paused until the user continues. */
+function onSystemResume(): void {
+  logVideo('[Main Process] System resume.');
+  if (resumeCheckTimer) {
+    clearTimeout(resumeCheckTimer);
+  }
+  resumeCheckTimer = setTimeout(() => {
+    resumeCheckTimer = null;
+    const sender = videoSender;
+    if (!sender) {
+      return;
+    }
+    sender.checkAfterResume().then(
+      result => logVideo(`[Main Process] Resume check: ${result}.`),
+      error => logVideo(`[Main Process] Resume check failed: ${error instanceof Error ? error.message : error}`)
+    );
+  }, RESUME_CHECK_DELAY_MS);
+}
+
 function handleWindowEscape() {
   if (!mainWindow || mainWindow.isMinimized()) {
     return;
   }
 
   if (mainWindow.isFullScreen()) {
-    mainWindow.setFullScreen(false);
+    setFullScreenGuarded(false);
   } else if (mainWindow.isMaximized()) {
     mainWindow.unmaximize();
   } else {
@@ -615,10 +687,12 @@ async function createWindow() {
   });
 
   mainWindow.on('enter-full-screen', () => {
+    fullscreenGuard.end(true);
     mainWindow?.webContents.send('window:fullscreen-state-changed', true);
   });
 
   mainWindow.on('leave-full-screen', () => {
+    fullscreenGuard.end(false);
     mainWindow?.webContents.send('window:fullscreen-state-changed', false);
   });
 
@@ -658,6 +732,8 @@ async function createWindow() {
       }),
       simulateDeviceLost: () => videoSender?.simulateDeviceLost() ?? false,
       simulateEngineError: () => mpvManager?.emit('error', new Error('simulated engine failure')) ?? false,
+      // Goes through the real powerMonitor listeners, so the wiring is covered too.
+      emitPowerEvent: (name: 'suspend' | 'resume') => powerMonitor.emit(name),
       crashProcess: () => process.crash(),
       getCrashDumpsPath: () => app.getPath('crashDumps')
     };
@@ -711,8 +787,11 @@ if (!gotTheLock) {
       process.env.PATH = [...homebrewPaths, ...currentPaths].join(path.delimiter);
     }
 
+    powerMonitor.on('suspend', onSystemSuspend);
+    powerMonitor.on('resume', onSystemResume);
+
     // The renderer asks for frames right after the project opens: have the active GPU known by then.
-    gpuInfoPromise = app.getGPUInfo('complete').then(info => info as GpuInfoLike).catch(() => null);
+    gpuInfoPromise =app.getGPUInfo('complete').then(info => info as GpuInfoLike).catch(() => null);
 
     try {
       const configStr = await fs.readFile(APP_DATA_PATH, 'utf-8');
@@ -865,7 +944,7 @@ if (!gotTheLock) {
 
     ipcMain.on('window:toggle-fullscreen', () => {
       if (mainWindow) {
-        mainWindow.setFullScreen(!mainWindow.isFullScreen());
+        setFullScreenGuarded(!mainWindow.isFullScreen());
       }
     });
 

@@ -16,6 +16,8 @@
     "libmpv-host.ts",
     "libmpv-frame-sender.ts",
     "engine-restart.ts",
+    "fullscreen-transition.ts",
+    "hdr-tonemap.ts",
     "bench-config.ts",
     "src/custom-typings.d.ts",
     "playback-manager.ts",

@@ -21,8 +21,19 @@ const LOAD_TIMEOUT_MS = 15000;
 
 /** Properties the manager always observes; main used to observe them one by one after `start()`. */
 const OBSERVED_PROPERTIES = [
-  'time-pos', 'duration', 'pause', 'volume', 'mute', 'eof-reached', 'idle-active', 'user-data/auto-pause-fired'
+  'time-pos', 'duration', 'pause', 'volume', 'mute', 'eof-reached', 'idle-active', 'user-data/auto-pause-fired',
+  'audio-device-list', 'current-ao'
 ];
+
+/** What the audio output looks like after a device change, for the diagnostics log. */
+export interface AudioOutputInfo {
+  /** Audio devices mpv can see right now. */
+  deviceCount: number;
+  /** mpv's audio output driver, `null` when none is open (`null` the driver is the silent fallback). */
+  currentAo: string | null;
+  /** The output was re-created because it had no real device and the device list changed. */
+  reloaded: boolean;
+}
 
 export interface LibmpvManagerOptions {
   /** Directory that contains `electron-resources` and `mpv` (the app root in dev, `process.resourcesPath` when packaged). */
@@ -89,6 +100,8 @@ export class LibmpvManager extends EventEmitter {
   private failedSeek: string[] | null = null;
   private timeTimer: ReturnType<typeof setInterval> | null = null;
   private readonly observed = new Set<string>();
+  private currentAo: string | null = null;
+  private audioDeviceCount: number | null = null;
 
   constructor(private readonly config: LibmpvManagerOptions) {
     super();
@@ -127,6 +140,7 @@ export class LibmpvManager extends EventEmitter {
       'vd-lavc-threads': '0',          // Use all available CPU cores for decoding
       'demuxer-max-bytes': '150MiB',   // Increase demuxer cache
       'demuxer-readahead-secs': '20',  // Prefetch more data
+      'audio-fallback-to-null': 'yes', // No audio device (unplugged, none installed): keep the clock running silently
       framedrop: 'vo',                 // Drop frames visually if rendering is too slow to maintain sync
       'vd-lavc-fast': 'yes',           // Allow optimizations that might slightly violate spec but improve speed
       'sws-allow-zimg': 'no',          // Disable zimg (can be slow/buggy on old systems), fallback to swscale
@@ -208,6 +222,8 @@ export class LibmpvManager extends EventEmitter {
     this.pendingSeeks = 0;
     this.failedSeek = null;
     this.observed.clear();
+    this.currentAo = null;
+    this.audioDeviceCount = null;
   }
 
   /** Resolves on `file-loaded`, rejects on an `end-file` with an error or after the timeout. */
@@ -294,8 +310,35 @@ export class LibmpvManager extends EventEmitter {
         }
         break;
       }
+      case 'audio-device-list':
+        this.handleAudioDevices(Array.isArray(data) ? data.length : 0);
+        break;
+      case 'current-ao':
+        this.currentAo = typeof data === 'string' && data ? data : null;
+        this.emit('audio-output', {deviceCount: this.audioDeviceCount ?? 0, currentAo: this.currentAo, reloaded: false} as AudioOutputInfo);
+        break;
       default:
         this.emit('status', {event: 'property-change', name: event.name, data});
+    }
+  }
+
+  /**
+   * mpv's wasapi/coreaudio/pulse outputs follow the default device by themselves. What they do not always manage is to
+   * come back after the last device was gone: the output then stayed on the silent fallback (or closed). When the
+   * device list changes in that state, ask for the output again.
+   */
+  private handleAudioDevices(count: number): void {
+    const first = this.audioDeviceCount === null;
+    const changed = this.audioDeviceCount !== count;
+    this.audioDeviceCount = count;
+    if (first || !changed) {
+      return;
+    }
+    const withoutDevice = this.currentAo === null || this.currentAo === 'null';
+    const reload = withoutDevice && count > 0 && this.lastIdle === false;
+    this.emit('audio-output', {deviceCount: count, currentAo: this.currentAo, reloaded: reload} as AudioOutputInfo);
+    if (reload) {
+      void this.sendCommand(['ao-reload']);
     }
   }
 

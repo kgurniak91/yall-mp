@@ -106,7 +106,70 @@ describe('LibmpvManager', () => {
     expect(fake.observeProperty).toHaveBeenCalledWith('time-pos');
     expect(fake.observeProperty).toHaveBeenCalledWith('user-data/auto-pause-fired');
     manager.observeProperty('time-pos');
-    expect(fake.observeProperty).toHaveBeenCalledTimes(8);
+    expect(fake.observeProperty).toHaveBeenCalledTimes(10);
+  });
+
+  describe('audio output', () => {
+    const outputs = () => {
+      const seen: any[] = [];
+      manager.on('audio-output', info => seen.push(info));
+      return seen;
+    };
+    const loaded = async () => {
+      await start();
+      fake.prop('idle-active', false);
+    };
+    const reloads = () => fake.command.mock.calls.filter(([args]) => args[0] === 'ao-reload').length;
+
+    it('keeps the clock running when there is no audio device', async () => {
+      await start();
+      expect(optionsSeen['audio-fallback-to-null']).toBe('yes');
+    });
+
+    it('re-creates the output when a device appears while none is open', async () => {
+      const seen = outputs();
+      await loaded();
+      fake.prop('audio-device-list', [{name: 'auto'}]);
+      fake.prop('current-ao', null);
+      fake.prop('audio-device-list', [{name: 'auto'}, {name: 'wasapi/headset'}]);
+      expect(reloads()).toBe(1);
+      expect(seen.at(-1)).toEqual({deviceCount: 2, currentAo: null, reloaded: true});
+    });
+
+    it('also re-creates it when only the silent fallback is open', async () => {
+      await loaded();
+      fake.prop('audio-device-list', [{name: 'auto'}]);
+      fake.prop('current-ao', 'null');
+      fake.prop('audio-device-list', [{name: 'auto'}, {name: 'wasapi/headset'}]);
+      expect(reloads()).toBe(1);
+    });
+
+    it('leaves a working output alone, mpv follows the default device itself', async () => {
+      await loaded();
+      fake.prop('audio-device-list', [{name: 'auto'}, {name: 'wasapi/a'}]);
+      fake.prop('current-ao', 'wasapi');
+      fake.prop('audio-device-list', [{name: 'auto'}]);
+      fake.prop('audio-device-list', [{name: 'auto'}, {name: 'wasapi/b'}]);
+      expect(reloads()).toBe(0);
+    });
+
+    it('does not act on the first list, an unchanged count, an empty list or an unloaded file', async () => {
+      await start();
+      fake.prop('audio-device-list', [{name: 'auto'}]);
+      fake.prop('audio-device-list', [{name: 'auto'}, {name: 'wasapi/a'}]);
+      expect(reloads()).toBe(0);
+      fake.prop('idle-active', false);
+      fake.prop('audio-device-list', [{name: 'auto'}, {name: 'wasapi/b'}]);
+      fake.prop('audio-device-list', []);
+      expect(reloads()).toBe(0);
+    });
+
+    it('keeps the device list out of the status events', async () => {
+      await loaded();
+      fake.prop('audio-device-list', [{name: 'auto'}]);
+      fake.prop('current-ao', 'wasapi');
+      expect(statuses.filter(s => s.name === 'audio-device-list' || s.name === 'current-ao')).toEqual([]);
+    });
   });
 
   it('rejects and destroys when the file fails to load', async () => {

@@ -125,6 +125,29 @@ test.describe('window state', () => {
     await expect.poll(async () => (await state(app)).isFullScreen, {timeout: 10_000}).toBe(false);
   });
 
+  test('a burst of fullscreen toggles settles and brings back the window it started from', async ({launch}) => {
+    const {app, ui} = await launch({seed: dir => seedProject(dir)});
+    await waitForPlayer(ui);
+    const initial = await state(app);
+
+    for (const round of [1, 2, 3]) {
+      for (let toggle = 0; toggle < 6; toggle++) {
+        await ui.evaluate(() => (window as any).electronAPI.windowToggleFullScreen());
+        await ui.waitForTimeout(50);
+      }
+      await ui.waitForTimeout(900);
+      if ((await state(app)).isFullScreen) {
+        await ui.evaluate(() => (window as any).electronAPI.windowToggleFullScreen());
+        await expect.poll(async () => (await state(app)).isFullScreen, {timeout: 10_000, message: `leave #${round}`}).toBe(false);
+      }
+      await expect.poll(async () => {
+        const {bounds} = await state(app);
+        return rectsClose(bounds, initial.bounds, 4) ? 'restored' : `${JSON.stringify(bounds)} != initial ${JSON.stringify(initial.bounds)}`;
+      }, {timeout: 10_000, message: `restored bounds #${round}`}).toBe('restored');
+      await expect.poll(() => withWindows(app, ({mainWindow}) => mainWindow.isResizable()), {timeout: 10_000}).toBe(true);
+    }
+  });
+
   test('fullscreen can be entered repeatedly and fills the display every time', async ({launch}) => {
     const {app, ui} = await launch({seed: dir => seedProject(dir)});
     await waitForPlayer(ui);

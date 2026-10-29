@@ -399,7 +399,7 @@ describe('LibmpvFrameSender', () => {
     expect(texture.importSharedTexture).not.toHaveBeenCalled();
     expect(libmpv.releaseSlot).toHaveBeenCalledWith(1, 2, 3);
     expect(sender.stats().staleDropped).toBe(1);
-    expect(libmpv.unobserveProperty).toHaveBeenCalledTimes(2);
+    expect(libmpv.unobserveProperty).toHaveBeenCalledTimes(3);
   });
 
   describe('waitForFrame', () => {
@@ -638,8 +638,171 @@ describe('LibmpvFrameSender', () => {
     });
   });
 
+  describe('HDR tone mapping on the software renderer', () => {
+    const gamma = (libmpv: FakeLibmpv, value: unknown) =>
+      libmpv.emit({event: 'property-change', name: 'video-params/gamma', data: value} as LibmpvEvent);
+    const filterCommands = (libmpv: FakeLibmpv) =>
+      (libmpv.command as ReturnType<typeof vi.fn>).mock.calls.map(([args]) => args as string[]).filter(args => args[0] === 'vf');
+    const startedSoftware = async (opts: Parameters<typeof fakeLibmpv>[0] = {software: true}) => {
+      const libmpv = fakeLibmpv(opts);
+      const sender = create(libmpv);
+      await sender.start({width: 800, height: 450, preferred: 'readback'});
+      return {libmpv, sender};
+    };
+
+    it('observes the transfer function of the file', async () => {
+      const {libmpv} = await startedSoftware();
+      expect(libmpv.observeProperty).toHaveBeenCalledWith('video-params/gamma');
+    });
+
+    it.each(['pq', 'hlg'])('adds the filter for a %s source', async (value) => {
+      const {libmpv} = await startedSoftware();
+      gamma(libmpv, value);
+      expect(filterCommands(libmpv)).toEqual([['vf', 'add', expect.stringContaining('@yall-tonemap:lavfi=[')]]);
+    });
+
+    it('leaves an SDR source alone and does not add the filter twice', async () => {
+      const {libmpv} = await startedSoftware();
+      gamma(libmpv, 'bt.1886');
+      gamma(libmpv, 'srgb');
+      gamma(libmpv, null);
+      expect(filterCommands(libmpv)).toEqual([]);
+      gamma(libmpv, 'pq');
+      gamma(libmpv, 'pq');
+      expect(filterCommands(libmpv)).toHaveLength(1);
+    });
+
+    it('takes the filter out when the next file is SDR', async () => {
+      const {libmpv} = await startedSoftware();
+      gamma(libmpv, 'pq');
+      gamma(libmpv, 'bt.1886');
+      expect(filterCommands(libmpv).map(args => args.slice(0, 2).join(' '))).toEqual(['vf add', 'vf remove']);
+      expect(filterCommands(libmpv)[1][2]).toBe('@yall-tonemap');
+    });
+
+    it('does not touch the picture on the GPU renderers, which tone-map themselves', async () => {
+      const {libmpv} = await startedSoftware({d3d11: true});
+      gamma(libmpv, 'pq');
+      expect(filterCommands(libmpv)).toEqual([]);
+    });
+
+    it('picks the filter up when HDR was already on screen before a software attach (fallback from a GPU backend)', async () => {
+      const libmpv = fakeLibmpv({d3d11: true});
+      const sender = create(libmpv);
+      await sender.start({width: 800, height: 450, preferred: 'd3d11-shared'});
+      gamma(libmpv, 'pq');
+      expect(filterCommands(libmpv)).toEqual([]);
+      (libmpv.attachRenderer as ReturnType<typeof vi.fn>).mockImplementationOnce(async (options: AttachRendererOptions, onFrame: (frame: RenderFrame) => void) => {
+        const result: AttachResult = {attachId: 2, backend: options.backend, impl: 'sw', gpuWaitImpl: 'fence', adapter: adapter(true)};
+        libmpv.attaches.push({options, onFrame, result});
+        return result;
+      });
+      sender.gpuProcessGone('test');
+      await flush();
+      expect(filterCommands(libmpv).map(args => args.slice(0, 2).join(' '))).toEqual(['vf add']);
+    });
+
+    it('gives up quietly when the filter is not available in this libmpv', async () => {
+      const {libmpv} = await startedSoftware();
+      (libmpv.command as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('no such filter: zscale'));
+      gamma(libmpv, 'pq');
+      await flush();
+      expect(log).toHaveBeenCalledWith(expect.stringContaining('could not be added (no such filter: zscale)'));
+      gamma(libmpv, 'bt.1886');
+      gamma(libmpv, 'pq');
+      expect(filterCommands(libmpv)).toHaveLength(1);
+    });
+  });
+
+  describe('checkAfterResume', () => {
+    const videoSize = (libmpv: FakeLibmpv) => {
+      libmpv.emit({event: 'property-change', name: 'dwidth', data: 640} as LibmpvEvent);
+      libmpv.emit({event: 'property-change', name: 'dheight', data: 360} as LibmpvEvent);
+    };
+    // A redraw that is answered with a frame of the current attach, like the render thread does.
+    const answering = (libmpv: FakeLibmpv) => vi.fn(() => {
+      const current = libmpv.attaches[libmpv.attaches.length - 1];
+      setImmediate(() => current.onFrame(readbackFrame(current.result.attachId)));
+      return true;
+    });
+    const startedOn = async (backend: 'readback' | 'd3d11-shared', preferredAfter: () => PreferredBackend = () => 'd3d11-shared') => {
+      const libmpv = fakeLibmpv();
+      const sender = create(libmpv, {preferredAfterDeviceLoss: preferredAfter});
+      await sender.start({width: 800, height: 450, preferred: backend});
+      videoSize(libmpv);
+      return {libmpv, sender};
+    };
+
+    it('is ok when the redraw produces a frame', async () => {
+      const {libmpv, sender} = await startedOn('readback');
+      libmpv.redraw = answering(libmpv);
+      expect(await sender.checkAfterResume(500)).toBe('ok');
+      expect(libmpv.redraw).toHaveBeenCalledTimes(1);
+      expect(libmpv.attaches).toHaveLength(1);
+    });
+
+    it('skips when nothing is attached, the core cannot redraw, or the file has no video', async () => {
+      const idle = create(fakeLibmpv());
+      expect(await idle.checkAfterResume(20)).toBe('skipped');
+
+      const {libmpv, sender} = await startedOn('readback');
+      expect(await sender.checkAfterResume(20)).toBe('skipped');
+      expect(libmpv.attaches).toHaveLength(1);
+
+      const noVideo = fakeLibmpv();
+      const audioOnly = create(noVideo);
+      await audioOnly.start({width: 800, height: 450, preferred: 'readback'});
+      noVideo.redraw = vi.fn().mockReturnValue(true);
+      expect(await audioOnly.checkAfterResume(20)).toBe('skipped');
+      expect(noVideo.redraw).not.toHaveBeenCalled();
+    });
+
+    it('attaches the preferred shared backend again when no frame comes back', async () => {
+      const {libmpv, sender} = await startedOn('d3d11-shared');
+      libmpv.redraw = vi.fn().mockReturnValue(true);
+      expect(await sender.checkAfterResume(20)).toBe('reattached');
+      expect(libmpv.attaches.map(a => a.options.backend)).toEqual(['d3d11-shared', 'd3d11-shared']);
+      expect(libmpv.reinitVideo).toHaveBeenCalledTimes(1);
+      expect(sender.stats().fallbackReason).toBe('no frames after resume');
+    });
+
+    it('rebuilds a readback attach as readback', async () => {
+      const {libmpv, sender} = await startedOn('readback');
+      libmpv.redraw = vi.fn().mockReturnValue(true);
+      expect(await sender.checkAfterResume(20)).toBe('reattached');
+      expect(libmpv.attaches.map(a => a.options.backend)).toEqual(['readback', 'readback']);
+    });
+
+    it('goes to readback when the policy no longer trusts the GPU', async () => {
+      const {libmpv, sender} = await startedOn('d3d11-shared', () => 'readback');
+      libmpv.redraw = vi.fn().mockReturnValue(true);
+      await sender.checkAfterResume(20);
+      expect(libmpv.attaches.map(a => a.options.backend)).toEqual(['d3d11-shared', 'readback']);
+    });
+
+    it('stays on readback after repeated replacements within a minute', async () => {
+      const {libmpv, sender} = await startedOn('d3d11-shared');
+      libmpv.redraw = vi.fn().mockReturnValue(true);
+      for (let i = 0; i < 4; i++) {
+        await sender.checkAfterResume(10);
+      }
+      expect(libmpv.attaches.map(a => a.options.backend)).toEqual(['d3d11-shared', 'd3d11-shared', 'd3d11-shared', 'd3d11-shared', 'readback']);
+      expect(log).toHaveBeenCalledWith(expect.stringContaining('staying on readback'));
+    });
+
+    it('does not replace the attach when the sender stopped meanwhile', async () => {
+      const {libmpv, sender} = await startedOn('d3d11-shared');
+      libmpv.redraw = vi.fn(() => {
+        setImmediate(() => sender.stop());
+        return true;
+      });
+      expect(await sender.checkAfterResume(500)).toBe('skipped');
+      expect(libmpv.attaches).toHaveLength(1);
+    });
+  });
+
   describe('backendAfterGpuLoss', () => {
-    const base = {configured: 'auto' as PreferredBackend, lossCount: 0, lossSinceOpen: 0, compositingEnabled: true};
+    const base ={configured: 'auto' as PreferredBackend, lossCount: 0, lossSinceOpen: 0, compositingEnabled: true};
 
     it('keeps the configured backend while the GPU process never died', () => {
       expect(backendAfterGpuLoss(base)).toBe('auto');

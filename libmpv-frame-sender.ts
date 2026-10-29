@@ -14,6 +14,7 @@ import type {
   Size
 } from './libmpv-bridge';
 import {computeReadbackSize} from './libmpv-bridge';
+import {needsToneMapFilter, toneMapCommand} from './hdr-tonemap';
 
 /** Channel of the readback frames: `{attachId, width, height, data: Uint8Array}` (BGRA, alpha 255). */
 export const READBACK_CHANNEL = 'libmpv:readback-frame';
@@ -50,6 +51,7 @@ export function backendAfterGpuLoss(input: GpuLossPolicyInput): PreferredBackend
 export interface FrameSenderLibmpv extends Pick<Libmpv, 'sharedBackendName' | 'attachRenderer' | 'resize' | 'releaseSlot'
   | 'detachRenderer' | 'stats' | 'observeProperty' | 'unobserveProperty' | 'reinitVideo' | 'getProperty' | 'command'> {
   simulateDeviceLost?(attachId: number): boolean;
+  redraw?(): boolean;
   on(event: 'property-change' | 'end-file', listener: (event: LibmpvEvent) => void): unknown;
   off(event: 'property-change' | 'end-file', listener: (event: LibmpvEvent) => void): unknown;
 }
@@ -163,6 +165,10 @@ export class LibmpvFrameSender {
   private canvas: Size = {width: 0, height: 0};
   private videoSize: Partial<Size> = {};
   private readbackSize: Size | null = null;
+  /** `video-params/gamma` of the file on screen (`pq`, `hlg`, `bt.1886`, ...). */
+  private gamma: string | null = null;
+  /** The tone mapping filter of the software renderer: in the filter chain (`on`), not (`off`), or impossible here. */
+  private toneMapFilter: 'off' | 'on' | 'unavailable' = 'off';
   private firstFrameDone = false;
   private switching = false;
   /** True from `stop()` until the next `start()`: an attach that finishes meanwhile is undone. */
@@ -204,8 +210,10 @@ export class LibmpvFrameSender {
     this.canvas = {width: options.width, height: options.height};
     this.fallbackReason = null;
     this.reattachTimes = [];
+    this.gamma = null;
+    this.toneMapFilter = 'off';
     this.libmpv.on('property-change', this.onPropertyChange);
-    for (const name of ['dwidth', 'dheight']) {
+    for (const name of ['dwidth', 'dheight', 'video-params/gamma']) {
       this.observeIds.push(this.libmpv.observeProperty(name));
     }
     const shared = options.preferred === 'auto' ? this.libmpv.sharedBackendName() : options.preferred;
@@ -335,6 +343,7 @@ export class LibmpvFrameSender {
       // The software cap is only known once the adapter is: shrink the frame size if needed.
       this.applySize();
     }
+    this.updateToneMapping();
     return result;
   }
 
@@ -374,6 +383,11 @@ export class LibmpvFrameSender {
   }
 
   private handlePropertyChange(event: LibmpvEvent): void {
+    if (event.event === 'property-change' && event.name === 'video-params/gamma') {
+      this.gamma = typeof event.data === 'string' ? event.data : null;
+      this.updateToneMapping();
+      return;
+    }
     if (event.event !== 'property-change' || (event.name !== 'dwidth' && event.name !== 'dheight')) {
       return;
     }
@@ -384,6 +398,29 @@ export class LibmpvFrameSender {
       this.videoSize.height = value;
     }
     this.applySize();
+  }
+
+  /**
+   * HDR sources on the software renderer need the tone mapping filter (the GPU renderers do it themselves); it is added
+   * when the picture is HDR and the current attach is `sw`, and taken out again for anything else. Runs when the
+   * source changes and when the attach does.
+   */
+  private updateToneMapping(): void {
+    const wanted = needsToneMapFilter(this.attach?.impl, this.gamma);
+    if (this.toneMapFilter === 'unavailable' || wanted === (this.toneMapFilter === 'on')) {
+      return;
+    }
+    this.toneMapFilter = wanted ? 'on' : 'off';
+    this.libmpv.command(toneMapCommand(wanted)).then(
+      () => this.log(`[libmpv] HDR tone mapping filter ${wanted ? 'added' : 'removed'} (gamma=${this.gamma}, impl=${this.attach?.impl})`),
+      (error: unknown) => {
+        if (wanted) {
+          // mpv's ffmpeg has no zscale or tonemap filter: leave the picture as it is and do not try again
+          this.toneMapFilter = 'unavailable';
+          this.log(`[libmpv] HDR tone mapping filter could not be added (${errorMessage(error)}); the picture stays untouched`);
+        }
+      }
+    );
   }
 
   private release(frame: RenderFrame): void {
@@ -506,19 +543,50 @@ export class LibmpvFrameSender {
 
   /** The GPU device behind a shared attach was removed (TDR): attach again on a new device, or readback. */
   private async reattachAfterDeviceLoss(lost: AttachResult, reason: string): Promise<void> {
-    const now = Date.now();
-    this.reattachTimes = this.reattachTimes.filter(t => now - t < REATTACH_WINDOW_MS);
     if (lost.backend === 'readback' || this.attach?.attachId !== lost.attachId) {
       return;
     }
-    let target: PreferredBackend = this.preferredAfterDeviceLoss?.() ?? 'auto';
+    await this.reattach(lost, `GPU device lost (${reason})`, 'the GPU device was lost', this.preferredAfterDeviceLoss?.() ?? 'auto');
+  }
+
+  /**
+   * After the machine woke from sleep (or any pause in the app's life): ask for the picture on screen again and expect
+   * a frame within `timeoutMs`. A GPU device or swap chain that did not survive shows as no frame at all; then the
+   * current attach is replaced. `skipped`: nothing to check (no attach, no video, a switch already running).
+   */
+  async checkAfterResume(timeoutMs = 2000): Promise<'ok' | 'reattached' | 'skipped'> {
+    const attach = this.attach;
+    if (!attach || this.stopped || this.switching || !this.videoSize.width || !this.videoSize.height) {
+      return 'skipped';
+    }
+    const baseline = this.sent;
+    if (!this.libmpv.redraw?.()) {
+      return 'skipped';
+    }
+    if (await this.waitForFrame(baseline, timeoutMs)) {
+      return 'ok';
+    }
+    if (this.stopped || this.attach?.attachId !== attach.attachId) {
+      return 'skipped';
+    }
+    // A readback attach that stopped answering is rebuilt as readback: its fallback reason still holds.
+    const target: PreferredBackend = attach.backend === 'readback' ? 'readback' : this.preferredAfterDeviceLoss?.() ?? 'auto';
+    await this.reattach(attach, 'no frames after resume', 'no frame arrived after the machine resumed', target);
+    return 'reattached';
+  }
+
+  /** Replaces the attach, at most `REATTACH_LIMIT` times per `REATTACH_WINDOW_MS`; after that it stays on readback. */
+  private async reattach(lost: AttachResult, message: string, what: string, preferred: PreferredBackend): Promise<void> {
+    const now = Date.now();
+    this.reattachTimes = this.reattachTimes.filter(t => now - t < REATTACH_WINDOW_MS);
+    let target = preferred;
     if (this.reattachTimes.length >= REATTACH_LIMIT) {
-      this.log(`[libmpv] the GPU device was lost ${REATTACH_LIMIT} times within ${REATTACH_WINDOW_MS / 1000} s, staying on readback`);
+      this.log(`[libmpv] the video backend was replaced ${REATTACH_LIMIT} times within ${REATTACH_WINDOW_MS / 1000} s, staying on readback`);
       target = 'readback';
     } else {
       this.reattachTimes.push(now);
     }
-    await this.switchBackend(lost, `GPU device lost (${reason})`, 'the GPU device was lost', target);
+    await this.switchBackend(lost, message, what, target);
   }
 
   private beginValidation(attach: AttachResult): void {

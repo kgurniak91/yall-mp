@@ -3,6 +3,7 @@ import {seedProject} from './support/seed';
 import {waitForPlayer} from './support/playback';
 import {canvasMatchesContainer, capturePage, isRed, pictureRect} from './support/capture';
 import {getWindowStates, restoreIfMaximized, withWindows} from './support/windows';
+import {launchClips, press, startPlaying, waitForState} from './support/player';
 
 const hardAssert = process.platform === 'win32';
 const MIN_WIDTH = 800;
@@ -56,6 +57,41 @@ test('setBounds resize: the layout follows, the canvas re-fits and the paused pi
   expect(small.width).toBeLessThanOrEqual(MIN_WIDTH + SLACK);
   expect(small.height).toBeLessThanOrEqual(MIN_HEIGHT + SLACK);
   await expect.poll(async () => (await canvasMatchesContainer(ui)).ok, {timeout: 10_000}).toBe(true);
+});
+
+test('long resize stress while playing: 300 steps in both directions, with gaps from none to the debounce time', async ({launch}) => {
+  test.setTimeout(120_000);
+  const {app, ui} = await launchClips(launch, {lastPlaybackTime: 1.0});
+  await startPlaying(ui);
+  // The fixture is 15 s long and the stress takes longer: keep it playing
+  await ui.evaluate(() => (window as any).electronAPI.mpvSetProperty('loop-file', 'inf'));
+
+  const gaps =[0, 10, 25, 60, 120];
+  for (let i = 0; i < 300; i++) {
+    // Sweeps up and down so the size grows and shrinks, with a prime stride so the aspect keeps changing
+    const phase = i % 60 < 30 ? i % 30 : 29 - (i % 30);
+    const width = 820 + phase * 17 + ((i * 53) % 90);
+    const height = 620 + phase * 11 + ((i * 37) % 70);
+    await app.evaluate((_electron, size) => {
+      const win = (globalThis as any).__yallE2E.getWindows().mainWindow;
+      const b = win.getBounds();
+      win.setBounds({x: b.x, y: b.y, width: size.width, height: size.height});
+    }, {width, height});
+    await new Promise(r => setTimeout(r, gaps[i % gaps.length]));
+  }
+
+  await press(ui, 'Space');
+  await waitForState(ui, 'PausedByUser');
+  await expect.poll(async () => (await canvasMatchesContainer(ui)).ok, {timeout: 10_000}).toBe(true);
+  await new Promise(r => setTimeout(r, 500));
+
+  const surface = await ui.evaluate(() => (window as any).__yallVideoStats);
+  const sender = await app.evaluate(() => (globalThis as any).__yallE2E.getVideoStats());
+  test.info().annotations.push({type: 'probe', description: `surface ${JSON.stringify(surface)}; sender backend ${sender?.backend}, sent ${sender?.sent}, inFlight ${sender?.addon?.inFlight}, reclaimed ${sender?.addon?.reclaimed}`});
+  expect(surface.errors).toBe(0);
+  expect(sender.sendFailures).toBe(0);
+  expect(sender.addon.inFlight).toBeLessThanOrEqual(2);
+  expect(sender.addon.reclaimed).toBe(0);
 });
 
 test('resize stress: no draw errors, no send failures, the slots come back', async ({launch}) => {

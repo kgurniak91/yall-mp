@@ -55,6 +55,8 @@
       "libmpv-host.js",
       "libmpv-frame-sender.js",
       "engine-restart.js",
+      "fullscreen-transition.js",
+      "hdr-tonemap.js",
       "bench-config.js",
       "native/yall-libmpv/build/Release/yall_libmpv.node",
       "native/yall-libmpv/build/Release/yall_fdpass.node",

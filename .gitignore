@@ -81,6 +81,10 @@ public/THIRD-PARTY-NOTICES.txt
 /libmpv-frame-sender.js.map
 /engine-restart.js
 /engine-restart.js.map
+/fullscreen-transition.js
+/fullscreen-transition.js.map
+/hdr-tonemap.js
+/hdr-tonemap.js.map
 /bench-config.js
 /bench-config.js.map
 /libmpv-host.js
