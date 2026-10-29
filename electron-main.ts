@@ -492,7 +492,8 @@ function preferredVideoBackend(): PreferredBackend {
     configured: configuredVideoBackend(),
     lossCount: gpuLossCount,
     lossSinceOpen: gpuLossSinceOpen,
-    compositingEnabled: String(app.getGPUFeatureStatus().gpu_compositing).startsWith('enabled')
+    compositingEnabled: String(app.getGPUFeatureStatus().gpu_compositing).startsWith('enabled'),
+    compositingDisabled: String(app.getGPUFeatureStatus().gpu_compositing).startsWith('disabled')
   });
 }
 

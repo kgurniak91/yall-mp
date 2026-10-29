@@ -861,6 +861,12 @@ describe('LibmpvFrameSender', () => {
       expect(backendAfterGpuLoss({...base, lossCount: 2})).toBe('readback');
     });
 
+    it('starts on readback without GPU compositing, unless a backend was chosen explicitly', () => {
+      expect(backendAfterGpuLoss({...base, compositingEnabled: false, compositingDisabled: true})).toBe('readback');
+      expect(backendAfterGpuLoss({...base, configured: 'd3d11-shared', compositingEnabled: false, compositingDisabled: true})).toBe('d3d11-shared');
+      expect(backendAfterGpuLoss({...base, compositingEnabled: false})).toBe('auto');
+    });
+
     it('does not turn an explicit readback into a shared backend', () => {
       expect(backendAfterGpuLoss({...base, configured: 'readback', lossCount: 1})).toBe('readback');
     });

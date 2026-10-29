@@ -34,6 +34,8 @@ export interface GpuLossPolicyInput {
   lossSinceOpen: number;
   /** `app.getGPUFeatureStatus().gpu_compositing` starts with "enabled". */
   compositingEnabled: boolean;
+  /** `gpu_compositing` starts with "disabled" (software compositing): a shared texture cannot be imported then. */
+  compositingDisabled?: boolean;
 }
 
 /**
@@ -43,6 +45,11 @@ export interface GpuLossPolicyInput {
  */
 export function backendAfterGpuLoss(input: GpuLossPolicyInput): PreferredBackend {
   if (input.lossSinceOpen > 0 || input.lossCount >= 2 || (input.lossCount === 1 && !input.compositingEnabled)) {
+    return 'readback';
+  }
+  // Without GPU compositing the first import fails ("GPU is not available") and the file is reloaded for the switch: start on readback instead.
+  // An explicitly chosen backend is left alone (the fallback ladder is tested through it).
+  if (input.configured === 'auto' && input.compositingDisabled) {
     return 'readback';
   }
   return input.configured;
