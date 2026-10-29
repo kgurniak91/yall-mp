@@ -1320,7 +1320,6 @@ if (!gotTheLock) {
       mpvManager?.setProperty(property, value);
     });
 
-    ipcMain.handle('mpv:showSubtitles', () => mpvManager?.showSubtitles());
     ipcMain.handle('mpv:hideSubtitles', () => mpvManager?.hideSubtitles());
 
     ipcMain.handle('mpv:destroyViewport', async () => {

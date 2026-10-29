@@ -65,12 +65,6 @@ html, body {
   height: calc(100% - var(--app-header-height)) !important;
 }
 
-video {
-  &:focus-visible {
-    outline: none !important;
-  }
-}
-
 .rotate-90 {
   display: inline-block;
   transform: rotate(90deg);

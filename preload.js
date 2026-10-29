@@ -89,11 +89,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('project:add-note', subscription);
   },
   closeLookupWindow: () => ipcRenderer.send('lookup:close-window'),
-  onViewLoadingStateChange: (callback) => {
-    const subscription = (_event, isLoading) => callback(isLoading);
-    ipcRenderer.on('view:loading-state-change', subscription);
-    return () => ipcRenderer.removeListener('view:loading-state-change', subscription);
-  },
   onLookupWindowStateChange: (callback) => {
     const subscription = (_event, isVisible) => callback(isVisible);
     ipcRenderer.on('lookup:window-state-changed', subscription);
@@ -134,7 +129,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   mpvCommand: (commandArray) => ipcRenderer.invoke('mpv:command', commandArray),
   mpvGetProperty: (property) => ipcRenderer.invoke('mpv:getProperty', property),
   mpvSetProperty: (property, value) => ipcRenderer.invoke('mpv:setProperty', property, value),
-  mpvShowSubtitles: () => ipcRenderer.invoke('mpv:showSubtitles'),
   mpvHideSubtitles: () => ipcRenderer.invoke('mpv:hideSubtitles'),
   onMpvDestroyViewport: () => ipcRenderer.invoke('mpv:destroyViewport'),
   onMpvEvent: (callback) => {

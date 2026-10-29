@@ -44,7 +44,6 @@ export interface IElectronAPI {
     selection: string;
   }) => void) => (() => void);
   closeLookupWindow: () => void;
-  onViewLoadingStateChange: (callback: (isLoading: boolean) => void) => (() => void);
   onLookupShowToast: (callback: (message: string) => void) => (() => void);
   onLookupWindowStateChange: (callback: (isVisible: boolean) => void) => (() => void);
   clearLookupData: () => Promise<void>;
@@ -86,7 +85,6 @@ export interface IElectronAPI {
   mpvCommand: (commandArray: any[]) => Promise<void>;
   mpvGetProperty: (property: string) => Promise<any>;
   mpvSetProperty: (property: string, value: any) => Promise<void>;
-  mpvShowSubtitles: () => Promise<void>;
   mpvHideSubtitles: () => Promise<void>;
   onMpvDestroyViewport: () => Promise<void>;
   onMpvEvent: (callback: (status: any) => void) => (() => void);
