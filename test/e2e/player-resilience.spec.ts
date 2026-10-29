@@ -37,8 +37,8 @@ test('an engine that stops by itself is restarted at the same position, a second
 test('a native crash leaves a minidump and nothing is uploaded', async ({launch}) => {
   const {app} = await launchClips(launch, {lastPlaybackTime: inClip(0, 0.5)});
   const dumps = await app.evaluate(() => (globalThis as any).__yallE2E.getCrashDumpsPath() as string);
-  // Windows keeps finished dumps in 'reports', macOS and Linux in 'completed'
-  const countDumps = () => ['reports', 'completed'].reduce((total, folder) => {
+  // Windows keeps finished dumps in 'reports'; elsewhere they are in 'completed' once uploaded and stay in 'pending' when uploads are off
+  const countDumps = () => ['reports', 'completed', 'pending'].reduce((total, folder) => {
     const dir = path.join(dumps, folder);
     return total + (fs.existsSync(dir) ? fs.readdirSync(dir).filter(name => name.endsWith('.dmp')).length : 0);
   }, 0);
