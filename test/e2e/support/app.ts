@@ -22,7 +22,7 @@ export interface LaunchedApp {
   mainLog: () => string;
 }
 
-export async function getUiPage(app: ElectronApplication, timeoutMs = 30_000): Promise<Page> {
+export async function getUiPage(app: ElectronApplication, timeoutMs = process.platform === 'darwin' ? 60_000 : 30_000): Promise<Page> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     for (const page of app.windows()) {
@@ -42,6 +42,11 @@ export async function getUiPage(app: ElectronApplication, timeoutMs = 30_000): P
     await new Promise(r => setTimeout(r, 200));
   }
   throw new Error('Timed out waiting for the UI window');
+}
+
+/** Gives up on a call that hangs when the app is stuck (a slow runner, a window that never came up), so the worker can shut down. */
+async function withinTime<T>(work: Promise<T>, ms: number): Promise<T | undefined> {
+  return Promise.race([work, new Promise<undefined>(r => setTimeout(() => r(undefined), ms))]);
 }
 
 async function closeApp(app: ElectronApplication): Promise<void> {
@@ -110,8 +115,8 @@ export const test = base.extend<{ launch: (opts?: LaunchOptions) => Promise<Laun
     for (const [i, l] of launched.entries()) {
       try {
         const tracePath = testInfo.outputPath(`trace-${i}.zip`);
-        await l.app.context().tracing.stop({path: failed ? tracePath : undefined});
-        if (failed) {
+        await withinTime(l.app.context().tracing.stop({path: failed ? tracePath : undefined}), 20_000);
+        if (failed && fs.existsSync(tracePath)) {
           await testInfo.attach(`trace-${i}`, {path: tracePath, contentType: 'application/zip'});
         }
         if (failed) {
