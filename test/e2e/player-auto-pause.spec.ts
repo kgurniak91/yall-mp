@@ -121,7 +121,7 @@ for (const atStart of [false, true]) {
 }
 
 test('pausing and resuming inside a clip still auto-pauses at its end', async ({launch}) => {
-  const {ui} = await launchClips(launch, {lastPlaybackTime: inClip(3, 0.6), settings: {autoPauseAtEnd: true}});
+  const {ui} = await launchClips(launch, {lastPlaybackTime: inClip(3, 0.6), settings: {autoPauseAtEnd: true, subtitledClipSpeed: 0.5}});
 
   await startPlaying(ui);
   await press(ui, 'Space');
