@@ -3,7 +3,7 @@
 // every minute. Writes a CSV of the samples and a JSON summary with the pass/fail verdict.
 //
 //   node scripts/soak-video.js [--minutes=60] [--file=spikes/libmpv-poc/media/1080p30-h264.mp4] [--out=soak-result]
-//                              [--warmup-min=10] [--actions=seek,pause-resume,resize,speed|none] [--reopen-min=N] [--reopen-min=10] [--sample-sec=60] [--action-sec=30]
+//                              [--warmup-min=10] [--actions=seek,pause-resume,resize,speed,sleep-wake|none] [--reopen-min=N] [--reopen-min=10] [--sample-sec=60] [--action-sec=30]
 //   YALL_MP_VIDEO_BACKEND / YALL_MP_VIDEO_ADAPTER are passed through to the app (e.g. readback + warp for the software path).
 //
 // Needs `npm run electron:build` first. Exit code 1 when a criterion fails:
@@ -118,7 +118,15 @@ const ACTIONS = [
     const b = win.getBounds();
     win.setBounds({x: b.x, y: b.y, width: size.width, height: size.height});
   }, step % 2 ? {width: 1280, height: 720} : {width: 1600, height: 900})],
-  ['speed', async (ui) => { await ui.evaluate(() => window.electronAPI.playbackSetSpeedOverride(true)); await sleep(3000); await ui.evaluate(() => window.electronAPI.playbackSetSpeedOverride(false)); }]
+  ['speed', async (ui) => { await ui.evaluate(() => window.electronAPI.playbackSetSpeedOverride(true)); await sleep(3000); await ui.evaluate(() => window.electronAPI.playbackSetSpeedOverride(false)); }],
+  // The machine goes to sleep and wakes up: playback pauses, a fresh frame is requested, and stays paused until the user continues
+  ['sleep-wake', async (ui, app) => {
+    await app.evaluate(() => globalThis.__yallE2E.emitPowerEvent('suspend'));
+    await sleep(1500);
+    await app.evaluate(() => globalThis.__yallE2E.emitPowerEvent('resume'));
+    await sleep(2500);
+    await ui.keyboard.press('Space');
+  }]
 ];
 
 /** Linux only: RSS of the out-of-process libmpv host, i.e. a child of the main process that Electron's metrics do not list. */
