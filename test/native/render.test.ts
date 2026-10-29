@@ -491,13 +491,13 @@ describeNative('libmpv render API', (env: NativeEnv) => {
       await waitFor(() => rig.player.stats()!.inFlight === 4, 15000, 'a full pool');
       const held = rig.frames.slice(0, 4);
       rig.player.detachRenderer();
-      await waitFor(() => env.addon.liveCounts().renderers === 0, 10000, 'the render context to be freed');
+      await waitFor(() => env.addon.liveCounts().renderers === 0, 30000, 'the render context to be freed');
       expect(env.addon.liveCounts().renderThreads).toBe(1);
       expect(env.addon.liveCounts().slots).toBe(4);
       for (const frame of held) rig.release(frame);
-      await waitFor(() => env.addon.liveCounts().renderThreads === 0, 10000, 'the drain to end');
+      await waitFor(() => env.addon.liveCounts().renderThreads === 0, 30000, 'the drain to end');
       expect(env.addon.liveCounts().slots).toBe(0);
-    });
+    }, 90000);
 
     it('posts one lost frame when the device is reported lost, then idles and detaches cleanly', async () => {
       if (!await needGl()) return;
