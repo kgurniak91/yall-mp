@@ -40,7 +40,7 @@ describe('KeyboardShortcutsHelperService', () => {
     });
 
     it('handles modifier keys + standard keys', () => {
-      const event = new KeyboardEvent('keydown', {key: 's', ctrlKey: true, shiftKey: true});
+      const event = new KeyboardEvent('keydown', {key: 's', ctrlKey: true, metaKey: true, shiftKey: true});
       expect(generateKey(event)).toBe('ctrl-shift-s');
     });
 
@@ -122,7 +122,7 @@ describe('KeyboardShortcutsHelperService', () => {
   describe('Shortcut Lookup with Speed Override (Shift)', () => {
     it('resolves explicit Shift shortcuts (e.g. Redo)', () => {
       // Ctrl+Shift+Z -> Redo
-      const event = new KeyboardEvent('keydown', {key: 'z', ctrlKey: true, shiftKey: true});
+      const event = new KeyboardEvent('keydown', {key: 'z', ctrlKey: true, metaKey: true, shiftKey: true});
       const shortcut = service.getShortcutForEvent(event, KeyboardShortcutScope.Project);
 
       expect(shortcut).toBeDefined();
@@ -156,7 +156,7 @@ describe('KeyboardShortcutsHelperService', () => {
       spectator.flushEffects();
 
       // Ctrl + Right Arrow -> Next Subtitled Clip
-      const event = new KeyboardEvent('keydown', {key: 'ArrowRight', ctrlKey: true});
+      const event = new KeyboardEvent('keydown', {key: 'ArrowRight', ctrlKey: true, metaKey: true});
       const shortcut = service.getShortcutForEvent(event, KeyboardShortcutScope.Project);
 
       expect(shortcut?.action).toBe(KeyboardAction.NextSubtitledClip);
@@ -178,7 +178,7 @@ describe('KeyboardShortcutsHelperService', () => {
       spectator.flushEffects();
 
       // Ctrl + Right Arrow -> Seek Forward
-      const event = new KeyboardEvent('keydown', {key: 'ArrowRight', ctrlKey: true});
+      const event = new KeyboardEvent('keydown', {key: 'ArrowRight', ctrlKey: true, metaKey: true});
       const shortcut = service.getShortcutForEvent(event, KeyboardShortcutScope.Project);
 
       expect(shortcut?.action).toBe(KeyboardAction.SeekForward);

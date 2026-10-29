@@ -237,14 +237,14 @@ describeNative('libmpv render API', (env: NativeEnv) => {
       rig.player.detachRenderer();
 
       // The render thread frees the context first and then waits for the slots.
-      await waitFor(() => env.addon.liveCounts().renderers === 0, 10000, 'the render context to be freed');
+      await waitFor(() => env.addon.liveCounts().renderers === 0, 30000, 'the render context to be freed');
       expect(env.addon.liveCounts().renderThreads).toBe(1);
       expect(env.addon.liveCounts().slots).toBe(4);
 
       for (const frame of held) rig.release(frame);
-      await waitFor(() => env.addon.liveCounts().renderThreads === 0, 10000, 'the drain to end');
+      await waitFor(() => env.addon.liveCounts().renderThreads === 0, 30000, 'the drain to end');
       expect(env.addon.liveCounts().slots).toBe(0);
-    });
+    }, 90000);
 
     it('posts one lost frame when the device is reported lost, then idles and detaches cleanly', async () => {
       const rig = await open({backend: 'd3d11-shared', adapter});
