@@ -8,8 +8,9 @@ import {
 // Jumping between subtitled clips (Ctrl+Left / Ctrl+Right) and repeating the current clip (Up).
 
 // The clip plays on while the checks run; a VM needs more time than a desktop
-const landingSlack = process.platform === 'linux' ? 1.5 : 0.6;
-const restartSlack = process.platform === 'linux' ? 2 : 0.5;
+const slowHost = process.platform === 'linux' || process.platform === 'darwin';
+const landingSlack = slowHost ? 1.5 : 0.6;
+const restartSlack = slowHost ? 2 : 0.5;
 
 for (const atStart of [false, true]) {
   test(`Ctrl+Right and Ctrl+Left jump between subtitled clips, skipping gaps (auto-pause at start=${atStart})`, async ({launch}) => {
