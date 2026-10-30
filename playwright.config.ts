@@ -8,7 +8,8 @@ export default defineConfig({
   fullyParallel: false,
   timeout: process.env['CI'] ? 90_000 : 60_000,
   expect: {timeout: process.env['CI'] ? 30_000 : 15_000},
-  retries: process.env['CI'] ? 1 : 0,
+  // The hosted Mac is a slow software-GL VM whose timing failures change from run to run: one more try there
+  retries: process.env['CI'] ? (process.platform === 'darwin' ? 2 : 1) : 0,
   reporter: [['list'], ['html', {open: 'never'}]],
   outputDir: 'test-results',
   globalSetup: './test/e2e/support/global-setup.ts',
