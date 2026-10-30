@@ -90,10 +90,6 @@ export const test = base.extend<{ launch: (opts?: LaunchOptions) => Promise<Laun
       });
       await app.context().tracing.start({screenshots: true, snapshots: true});
 
-      const ui = await getUiPage(app);
-      const pageErrors: string[] = [];
-      ui.on('pageerror', err => pageErrors.push(err.message));
-
       const chunks: string[] = [];
       let size = 0;
       const collect = (data: Buffer) => {
@@ -105,6 +101,18 @@ export const test = base.extend<{ launch: (opts?: LaunchOptions) => Promise<Laun
       };
       app.process().stdout?.on('data', collect);
       app.process().stderr?.on('data', collect);
+
+      let ui: Page;
+      try {
+        ui = await getUiPage(app);
+      } catch (error) {
+        // Keep what the app printed, and do not leave it running for the worker teardown to wait on
+        await testInfo.attach('main-process-launch.log', {body: chunks.join(''), contentType: 'text/plain'});
+        await closeApp(app);
+        throw error;
+      }
+      const pageErrors: string[] = [];
+      ui.on('pageerror', err => pageErrors.push(err.message));
 
       const result = {app, ui, userDataDir, pageErrors, mainLog: () => chunks.join('')};
       launched.push(result);
