@@ -2,7 +2,7 @@ import {expect, test} from './support/app';
 import {CLIPS, inClip, NEAR_END} from './support/clips';
 import {
   containsInOrder, describeSteps, launchClips, markHistory, mpvPaused, mpvTime, press, quiet, repeatCompletions, snapshot, startPlaying,
-  stepsSince, waitForState, waitForTime
+  stepsSince, waitForState, waitForTimeSince
 } from './support/player';
 
 // Jumping between subtitled clips (Ctrl+Left / Ctrl+Right) and repeating the current clip (Up).
@@ -87,7 +87,7 @@ test('Up repeats the current clip from its start while playing', async ({launch}
 
   await expect.poll(() => repeatCompletions(ui), {message: 'the repeat seek completes once'}).toBe(before + 1);
   await waitForState(ui, 'Playing');
-  await waitForTime(ui, t => t >= CLIPS[3].start && t < inClip(3, 0.6), 'playback restarts at the beginning of the clip');
+  await waitForTimeSince(ui, mark, t => t >= CLIPS[3].start && t < inClip(3, 0.6), 'playback restarts at the beginning of the clip');
   const steps = await stepsSince(ui, mark);
   expect(containsInOrder(steps, [{state: 'Transitioning', clip: 3}, {state: 'Playing', clip: 3}]), describeSteps(steps)).toBe(true);
   expect(await repeatCompletions(ui)).toBe(before + 1);
@@ -97,13 +97,14 @@ test('Up repeats a clip that was paused by the user and plays it', async ({launc
   const {ui} = await launchClips(launch, {lastPlaybackTime: inClip(3, 0.8)});
   expect(await mpvPaused(ui)).toBe(true);
   const before = await repeatCompletions(ui);
+  const mark = await markHistory(ui);
 
   await press(ui, 'ArrowUp');
 
   await expect.poll(() => repeatCompletions(ui)).toBe(before + 1);
   await waitForState(ui, 'Playing');
   expect(await mpvPaused(ui)).toBe(false);
-  await waitForTime(ui, t => t >= CLIPS[3].start && t < inClip(3, 0.6), 'playback restarts at the beginning of the clip');
+  await waitForTimeSince(ui, mark, t => t >= CLIPS[3].start && t < inClip(3, 0.6), 'playback restarts at the beginning of the clip');
 });
 
 test('Up after an auto-pause at the end replays the clip and auto-pauses at its end again', async ({launch}) => {
@@ -126,10 +127,11 @@ test('repeating twice in a row restarts the clip each time', async ({launch}) =>
   await startPlaying(ui);
 
   for (let i = 1; i <= 2; i++) {
+    const mark = await markHistory(ui);
     await press(ui, 'ArrowUp');
     await expect.poll(() => repeatCompletions(ui), {message: `repeat ${i} completes`}).toBe(i);
     await waitForState(ui, 'Playing');
-    await waitForTime(ui, t => t >= CLIPS[4].start && t < inClip(4, restartSlack), `playback restarted after repeat ${i}`);
+    await waitForTimeSince(ui, mark, t => t >= CLIPS[4].start && t < inClip(4, restartSlack), `playback restarted after repeat ${i}`);
     await quiet(600); // longer than the key throttle, and lets the clip move on a little
   }
 });

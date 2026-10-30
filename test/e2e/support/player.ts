@@ -53,6 +53,14 @@ export async function waitForTime(ui: Page, predicate: (time: number) => boolean
   await expect.poll(async () => predicate((await latestPlayback(ui))?.currentTime ?? -1), {timeout, message}).toBe(true);
 }
 
+/**
+ * Waits until one of the updates recorded after `mark` has a time that satisfies the predicate. Unlike `waitForTime` it
+ * cannot miss a short window: on a slow machine the playhead can move on between two polls of the latest update.
+ */
+export async function waitForTimeSince(ui: Page, mark: number, predicate: (time: number) => boolean, message: string, timeout = 15_000): Promise<void> {
+  await expect.poll(async () => (await playbackHistory(ui)).slice(mark).some(s => predicate(s.currentTime)), {timeout, message}).toBe(true);
+}
+
 /** Marks the current end of the recorded updates; `stepsSince` then returns what happened after this point. */
 export const markHistory = async (ui: Page): Promise<number> => (await playbackHistory(ui)).length;
 
