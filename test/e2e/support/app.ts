@@ -108,6 +108,9 @@ export const test = base.extend<{ launch: (opts?: LaunchOptions) => Promise<Laun
       } catch (error) {
         // Keep what the app printed, and do not leave it running for the worker teardown to wait on
         await testInfo.attach('main-process-launch.log', {body: chunks.join(''), contentType: 'text/plain'});
+        // Retried tests drop their attachments, so a launch that never showed its window is also printed
+        console.log(`[e2e] no UI window for ${testInfo.title}; windows: ${JSON.stringify(app.windows().map(w => w.url()))}; app output:
+${chunks.join('').slice(-4000)}`);
         await closeApp(app);
         throw error;
       }
