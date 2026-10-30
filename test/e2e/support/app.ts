@@ -77,42 +77,53 @@ export const test = base.extend<{ launch: (opts?: LaunchOptions) => Promise<Laun
       fs.mkdirSync(userDataDir, {recursive: true});
       opts.seed?.(userDataDir);
 
-      const app = await _electron.launch({
-        args: ['.', ...(process.platform === 'linux' ? ['--no-sandbox'] : []), ...(opts.files ?? [])],
-        cwd: REPO_ROOT,
-        env: {
-          ...process.env as Record<string, string>,
-          YALL_MP_E2E: '1',
-          YALL_MP_USER_DATA_DIR: userDataDir,
-          ...opts.env
-        }
-        // No recordVideo: it hangs _electron.launch with this window stack; traces + desktop recording cover it
-      });
-      await app.context().tracing.start({screenshots: true, snapshots: true});
+      // On the hosted Mac the Electron process sometimes starts and then does nothing at all (no window, no output);
+      // a second start of the same app is fine, so a stalled start is repeated.
+      const attempts = process.platform === 'darwin' ? 3 : 1;
+      const uiTimeoutMs = process.platform === 'darwin' ? 25_000 : 30_000;
+      let app!: ElectronApplication;
+      let ui!: Page;
+      let chunks: string[] = [];
+      for (let attempt = 1; attempt <= attempts; attempt++) {
+        app = await _electron.launch({
+          args: ['.', ...(process.platform === 'linux' ? ['--no-sandbox'] : []), ...(opts.files ?? [])],
+          cwd: REPO_ROOT,
+          env: {
+            ...process.env as Record<string, string>,
+            YALL_MP_E2E: '1',
+            YALL_MP_USER_DATA_DIR: userDataDir,
+            ...opts.env
+          }
+          // No recordVideo: it hangs _electron.launch with this window stack; traces + desktop recording cover it
+        });
+        await app.context().tracing.start({screenshots: true, snapshots: true});
 
-      const chunks: string[] = [];
-      let size = 0;
-      const collect = (data: Buffer) => {
-        if (size < MAIN_LOG_LIMIT) {
-          const text = data.toString();
-          size += text.length;
-          chunks.push(text);
-        }
-      };
-      app.process().stdout?.on('data', collect);
-      app.process().stderr?.on('data', collect);
+        chunks = [];
+        let size = 0;
+        const collect = (data: Buffer) => {
+          if (size < MAIN_LOG_LIMIT) {
+            const text = data.toString();
+            size += text.length;
+            chunks.push(text);
+          }
+        };
+        app.process().stdout?.on('data', collect);
+        app.process().stderr?.on('data', collect);
 
-      let ui: Page;
-      try {
-        ui = await getUiPage(app);
-      } catch (error) {
-        // Keep what the app printed, and do not leave it running for the worker teardown to wait on
-        await testInfo.attach('main-process-launch.log', {body: chunks.join(''), contentType: 'text/plain'});
-        // Retried tests drop their attachments, so a launch that never showed its window is also printed
-        console.log(`[e2e] no UI window for ${testInfo.title}; windows: ${JSON.stringify(app.windows().map(w => w.url()))}; app output:
+        try {
+          ui = await getUiPage(app, uiTimeoutMs);
+          break;
+        } catch (error) {
+          // Keep what the app printed, and do not leave it running for the worker teardown to wait on
+          await testInfo.attach(`main-process-launch-${attempt}.log`, {body: chunks.join(''), contentType: 'text/plain'});
+          // Retried tests drop their attachments, so a launch that never showed its window is also printed
+          console.log(`[e2e] no UI window for ${testInfo.title} (start ${attempt} of ${attempts}); windows: ${JSON.stringify(app.windows().map(w => w.url()))}; app output:
 ${chunks.join('').slice(-4000)}`);
-        await closeApp(app);
-        throw error;
+          await closeApp(app);
+          if (attempt === attempts) {
+            throw error;
+          }
+        }
       }
       const pageErrors: string[] = [];
       ui.on('pageerror', err => pageErrors.push(err.message));
