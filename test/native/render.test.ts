@@ -494,8 +494,13 @@ describeNative('libmpv render API', (env: NativeEnv) => {
       await waitFor(() => env.addon.liveCounts().renderers === 0, 30000, 'the render context to be freed');
       expect(env.addon.liveCounts().renderThreads).toBe(1);
       expect(env.addon.liveCounts().slots).toBe(4);
+      console.log(`iosurface drain: held ${held.length} frames, slots ${JSON.stringify(held.map(f => [f.slotId, f.serial]))}, counts ${JSON.stringify(env.addon.liveCounts())}`);
       for (const frame of held) rig.release(frame);
-      await waitFor(() => env.addon.liveCounts().renderThreads === 0, 30000, 'the drain to end');
+      try {
+        await waitFor(() => env.addon.liveCounts().renderThreads === 0, 30000, 'the drain to end');
+      } catch (error) {
+        throw new Error(`${(error as Error).message}; counts after the releases ${JSON.stringify(env.addon.liveCounts())}, frames seen ${rig.frames.length}`);
+      }
       expect(env.addon.liveCounts().slots).toBe(0);
     }, 90000);
 
