@@ -19,9 +19,12 @@
   object-fit: contain;
 }
 
+// Opaque: it is up from opening the project until the picture of the resume position exists, and the frames that arrive
+// before that (the first frame of the file) must not show through.
 .resizing-overlay {
   position: absolute;
   inset: 0;
+  background: #000;
   display: flex;
   justify-content: center;
   align-items: center;
