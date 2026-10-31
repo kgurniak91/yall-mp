@@ -360,8 +360,16 @@ export class LibmpvManager extends EventEmitter {
     }
   }
 
+  /** How many commands and property changes were sent, by name, for diagnostics (the bench reports them). */
+  public readonly sentCounts: Record<string, number> = {};
+
+  private countSent(kind: string): void {
+    this.sentCounts[kind] = (this.sentCounts[kind] ?? 0) + 1;
+  }
+
   public sendCommand(command: any[]): Promise<void> {
     const args = command.map(arg => String(arg));
+    this.countSent(args[0] === 'seek' ? `seek ${args.slice(2).join(' ')}`.trim() : args[0]);
     const isAbsoluteSeek = args[0] === 'seek' && args[2] === 'absolute';
     return this.safely(`Command ${command[0]}`, async libmpv => {
       try {
@@ -379,6 +387,7 @@ export class LibmpvManager extends EventEmitter {
   }
 
   public setProperty(property: string, value: any): Promise<void> {
+    this.countSent(`set ${property}`);
     return this.safely(`Setting ${property}`, libmpv => libmpv.setProperty(property, value));
   }
 

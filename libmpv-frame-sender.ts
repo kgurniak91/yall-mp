@@ -131,7 +131,11 @@ export interface FrameSenderStats {
   /** Black-frame check of the current shared attach: pending while it runs, then how it ended (null: no check ran). */
   validation: 'pending' | 'confirmed' | 'accepted' | 'black' | null;
   addon: RenderStats | null;
+  /** Main-process time spent per frame handing it to the page (import and send), over the last frames. */
+  handoff: { frames: number; totalMs: number; p50Ms: number; p95Ms: number; maxMs: number };
 }
+
+const HANDOFF_WINDOW = 300;
 
 // How long after a fallback a failed video output is still blamed on the switch and repaired by reloading the file.
 const RECOVERY_WINDOW_MS = 5000;
@@ -192,6 +196,9 @@ export class LibmpvFrameSender {
 
   private sent = 0;
   private sendFailures = 0;
+  private handoffTimes: number[] = [];
+  private handoffFrames = 0;
+  private handoffTotalMs = 0;
   private importFailures = 0;
   private staleDropped = 0;
   private fallbackReason: string | null = null;
@@ -273,6 +280,25 @@ export class LibmpvFrameSender {
     });
   }
 
+  private noteHandoff(startedAt: number): void {
+    const elapsed = performance.now() - startedAt;
+    this.handoffFrames++;
+    this.handoffTotalMs += elapsed;
+    this.handoffTimes.push(elapsed);
+    if (this.handoffTimes.length > HANDOFF_WINDOW) {
+      this.handoffTimes.shift();
+    }
+  }
+
+  private handoffStats(): FrameSenderStats['handoff'] {
+    const sorted = [...this.handoffTimes].sort((a, b) => a - b);
+    const at = (fraction: number): number => sorted.length ? sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * fraction))] : 0;
+    return {
+      frames: this.handoffFrames, totalMs: Math.round(this.handoffTotalMs), p50Ms: +at(0.5).toFixed(3), p95Ms: +at(0.95).toFixed(3),
+      maxMs: +(sorted[sorted.length - 1] ?? 0).toFixed(3)
+    };
+  }
+
   private countSent(): void {
     this.sent++;
     for (const waiter of [...this.frameWaiters]) {
@@ -320,7 +346,8 @@ export class LibmpvFrameSender {
       staleDropped: this.staleDropped,
       fallbackReason: this.fallbackReason,
       validation: this.validation ? 'pending' : this.validationVerdict,
-      addon: this.libmpv.stats()
+      addon: this.libmpv.stats(),
+      handoff: this.handoffStats()
     };
   }
 
@@ -485,10 +512,12 @@ export class LibmpvFrameSender {
       return;
     }
     if (frame.pixels) {
+      const startedAt = performance.now();
       try {
         this.target.send(READBACK_CHANNEL, {
           attachId: frame.attachId, width: frame.width, height: frame.height, data: frame.pixels, renderedAt: frame.renderedAt
         });
+        this.noteHandoff(startedAt);
         this.countSent();
       } catch {
         // the page is gone (window closing): nothing to deliver to
@@ -507,6 +536,7 @@ export class LibmpvFrameSender {
       this.beginValidation(attach);
     }
     this.noteHostProbe(frame);
+    const startedAt = performance.now();
     try {
       if (this.simulateImportFailure) {
         throw new Error('simulated shared-texture import failure');
@@ -551,6 +581,7 @@ export class LibmpvFrameSender {
     } catch (error) {
       onSendError(error);
     }
+    this.noteHandoff(startedAt);
   }
 
   private textureHandle(frame: RenderFrame, attach: AttachResult): SharedTextureHandle {

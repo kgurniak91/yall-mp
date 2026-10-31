@@ -239,7 +239,9 @@ async function runBench(config: BenchConfig): Promise<void> {
         videoSync: await mpvProperty('video-sync'),
         decoderThreads: await mpvProperty('vd-lavc-threads'),
         currentVo: await mpvProperty('current-vo'),
-        estimatedFps: await mpvProperty('estimated-vf-fps')
+        estimatedFps: await mpvProperty('estimated-vf-fps'),
+        // Commands and property changes sent since the engine started (seeks, speed changes, pauses)
+        sentCounts: mpvManager?.sentCounts ?? null
       },
       activeGpu: gpu?.gpuDevice?.find(device => device.active) ?? null,
       gpuCompositing: app.getGPUFeatureStatus().gpu_compositing,

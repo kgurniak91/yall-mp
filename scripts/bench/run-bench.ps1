@@ -56,7 +56,7 @@ function New-UserData([string]$dir, $item, [string]$hwdec) {
   $selection = if ($item.Sub -ge 0) { @{ type = 'embedded'; trackIndex = $item.Sub } } else { @{ type = 'none' } }
   [object[]]$tracks = if ($item.Sub -ge 0) { @(@{ index = $item.Sub; language = 'eng'; languageCode = 'en'; title = 'Styled Subtitles'; codec = 'ass'; isSupported = $true }) } else { @() }
   $minimal = [ordered]@{
-    id = $id; catalogId = ''; mediaFileName = $item.File; subtitleFileName = ''; mediaPath = $file
+    id = $id; catalogId = ''; mediaFileName = $item.File; subtitleFileName = $(if ($item.Sub -ge 0) { 'Styled Subtitles' } else { 'No subtitles' }); mediaPath = $file
     createdDate = $now; lastOpenedDate = $now; duration = $item.Duration; lastPlaybackTime = $StartSec
     subtitleCount = 0; lastSubtitleEndTime = 0
   }
