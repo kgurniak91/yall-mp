@@ -30,6 +30,7 @@ export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
   public readonly videoContainerRef = viewChild.required<ElementRef<HTMLDivElement>>('videoContainer');
   protected readonly videoStateService = inject(VideoStateService);
   private readonly canvasRef = viewChild.required<ElementRef<HTMLCanvasElement>>('videoSurface');
+  private canvas: HTMLCanvasElement | undefined;
   private renderer: VideoSurfaceRenderer | undefined;
   private resizeObserver: ResizeObserver | undefined;
   private unsubscribeFrames: (() => void) | undefined;
@@ -41,11 +42,11 @@ export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
   private appliedHeight = 0;
 
   ngAfterViewInit(): void {
-    const renderer = new VideoSurfaceRenderer(this.canvasRef().nativeElement);
-    this.renderer = renderer;
-    this.unsubscribeFrames = window.electronAPI.onVideoFrame((frame, renderedAt) => renderer.present(frame, renderedAt));
+    this.canvas = this.canvasRef().nativeElement;
+    this.renderer = this.createRenderer(this.canvas);
+    this.unsubscribeFrames = window.electronAPI.onVideoFrame((frame, renderedAt) => this.renderer?.present(frame, renderedAt));
     this.unsubscribeProbe = window.electronAPI.onVideoProbeStart(
-      frames => renderer.startProbe(frames, black => window.electronAPI.videoProbeReport(black)));
+      frames => this.renderer?.startProbe(frames, black => window.electronAPI.videoProbeReport(black)));
     this.resizeObserver = new ResizeObserver(entries => this.onResize(entries[entries.length - 1]));
     try {
       this.resizeObserver.observe(this.videoContainerRef().nativeElement, {box: 'device-pixel-content-box'});
@@ -60,6 +61,39 @@ export class VideoPlayerComponent implements AfterViewInit, OnDestroy {
     this.unsubscribeFrames?.();
     this.unsubscribeProbe?.();
     this.renderer?.dispose();
+  }
+
+  private createRenderer(canvas: HTMLCanvasElement): VideoSurfaceRenderer {
+    const renderer = new VideoSurfaceRenderer(canvas);
+    renderer.onUnrecoverable = () => this.replaceCanvas(renderer);
+    return renderer;
+  }
+
+  /**
+   * After repeated GPU process crashes Chromium can leave the WebGL context of the canvas lost for good (the canvas then
+   * shows a sad face). A new canvas gets a new context; the newest frame moves over, so a paused picture comes back too.
+   */
+  private replaceCanvas(dead: VideoSurfaceRenderer): void {
+    const old = this.canvas;
+    if (dead !== this.renderer || !old?.parentElement) {
+      return;
+    }
+    const {width, height} = this.appliedWidth ? {width: this.appliedWidth, height: this.appliedHeight} : old;
+    const handOver = dead.handOver();
+    const canvas = document.createElement('canvas');
+    canvas.id = old.id;
+    // The view encapsulation attributes carry the component styles
+    for (const name of old.getAttributeNames()) {
+      if (name.startsWith('_ng')) {
+        canvas.setAttribute(name, old.getAttribute(name) ?? '');
+      }
+    }
+    old.replaceWith(canvas);
+    this.canvas = canvas;
+    const renderer = this.createRenderer(canvas);
+    this.renderer = renderer;
+    renderer.setBackingSize(width, height);
+    renderer.adopt(handOver);
   }
 
   private onResize(entry: ResizeObserverEntry): void {

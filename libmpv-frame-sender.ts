@@ -580,12 +580,16 @@ export class LibmpvFrameSender {
     return this.attach ? this.libmpv.simulateDeviceLost?.(this.attach.attachId) ?? false : false;
   }
 
-  /** The GPU device behind a shared attach was removed (TDR): attach again on a new device, or readback. */
+  /**
+   * The GPU device behind an attach was removed (TDR): attach again on a new device. A readback attach on a real GPU
+   * (after an earlier loss) has a device too, and stays readback; without a device it never reports a loss.
+   */
   private async reattachAfterDeviceLoss(lost: AttachResult, reason: string): Promise<void> {
-    if (lost.backend === 'readback' || this.attach?.attachId !== lost.attachId) {
+    if (this.attach?.attachId !== lost.attachId) {
       return;
     }
-    await this.reattach(lost, `GPU device lost (${reason})`, 'the GPU device was lost', this.preferredAfterDeviceLoss?.() ?? 'auto');
+    const target: PreferredBackend = lost.backend === 'readback' ? 'readback' : this.preferredAfterDeviceLoss?.() ?? 'auto';
+    await this.reattach(lost, `GPU device lost (${reason})`, 'the GPU device was lost', target);
   }
 
   /**

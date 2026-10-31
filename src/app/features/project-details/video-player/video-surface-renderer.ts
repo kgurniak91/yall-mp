@@ -48,6 +48,14 @@ export interface VideoSurfaceStats {
 }
 
 export const LATENCY_WINDOW = 300;
+/** How long a lost WebGL context gets to come back before the canvas counts as dead (Chromium restores within a few frames). */
+export const CONTEXT_RESTORE_WAIT_MS = 1500;
+
+export interface RendererHandOver {
+  frame: VideoFrame | null;
+  renderedAt: number | undefined;
+  stats: VideoSurfaceStats;
+}
 
 /** Median, 95th percentile and maximum of the samples (0 for none). */
 export function summarizeLatency(samples: readonly number[]): { p50: number; p95: number; max: number } {
@@ -110,15 +118,26 @@ export class VideoSurfaceRenderer {
   private probeFrames = 0;
   private probeReport: ((black: boolean) => void) | null = null;
 
+  /** Called when a lost WebGL context did not come back by itself: the canvas stays dead, so the owner has to replace it. */
+  public onUnrecoverable: (() => void) | null = null;
+  private restoreTimer: ReturnType<typeof setTimeout> | undefined;
+
   private readonly onContextLost = (event: Event): void => {
     event.preventDefault();
     this.contextLost = true;
     this.resources = null;
     this.textureHoldsCurrent = false;
     this.stats.contextLosses++;
+    clearTimeout(this.restoreTimer);
+    this.restoreTimer = setTimeout(() => {
+      if (this.contextLost && !this.disposed) {
+        this.onUnrecoverable?.();
+      }
+    }, CONTEXT_RESTORE_WAIT_MS);
   };
 
   private readonly onContextRestored = (): void => {
+    clearTimeout(this.restoreTimer);
     this.contextLost = false;
     this.createResources();
     this.redraw();
@@ -247,6 +266,32 @@ export class VideoSurfaceRenderer {
     this.redraw();
   }
 
+  /**
+   * Gives up the newest frame (still open) and the counters, for the renderer of a replacement canvas. This renderer is
+   * disposed afterwards, so it neither closes the frame nor keeps drawing.
+   */
+  public handOver(): RendererHandOver {
+    const frame = this.pending ?? this.current;
+    const renderedAt = this.pending ? this.pendingRenderedAt : undefined;
+    if (this.pending && this.current) {
+      this.closeFrame(this.current);
+    }
+    this.pending = this.current = null;
+    const stats = {...this.stats};
+    this.dispose();
+    return {frame, renderedAt, stats};
+  }
+
+  /** Continues where the renderer that was handed over stopped: its counters and its newest frame. */
+  public adopt(handOver: RendererHandOver): void {
+    const {canvasWidth, canvasHeight} = this.stats;
+    Object.assign(this.stats, handOver.stats, {backend: this.stats.backend, canvasWidth, canvasHeight});
+    if (handOver.frame) {
+      this.stats.received--;
+      this.present(handOver.frame, handOver.renderedAt);
+    }
+  }
+
   /** Colour of one pixel of the last drawn picture (RGBA), valid in the task that drew it. For tests and probes. */
   public readPixel(x: number, y: number): [number, number, number, number] {
     if (this.gl && !this.contextLost) {
@@ -263,6 +308,7 @@ export class VideoSurfaceRenderer {
       return;
     }
     this.disposed = true;
+    clearTimeout(this.restoreTimer);
     if (this.frameRequest) {
       cancelAnimationFrame(this.frameRequest);
       this.frameRequest = 0;

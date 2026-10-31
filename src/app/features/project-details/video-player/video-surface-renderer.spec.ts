@@ -1,4 +1,4 @@
-import {computeFit, LATENCY_WINDOW, summarizeLatency, VideoSurfaceRenderer} from './video-surface-renderer';
+import {CONTEXT_RESTORE_WAIT_MS, computeFit, LATENCY_WINDOW, summarizeLatency, VideoSurfaceRenderer} from './video-surface-renderer';
 
 const solidFrame = (width: number, height: number, [r, g, b]: [number, number, number]): VideoFrame => {
   const data = new Uint8Array(width * height * 4);
@@ -253,5 +253,49 @@ describe('VideoSurfaceRenderer', () => {
       canvas.addEventListener('webglcontextrestored', () => resolve(renderer.readPixel(80, 45)), {once: true}));
     lose!.restoreContext();
     near(await restoredPixel, [0, 255, 0, 255]);
+  });
+
+  it('reports a context that stays lost, but not one that comes back', async () => {
+    if (renderer.stats.backend !== 'webgl2') {
+      pending('WebGL2 is not available here');
+    }
+    const lose = canvas.getContext('webgl2')!.getExtension('WEBGL_lose_context');
+    if (!lose) {
+      pending('WEBGL_lose_context is not available here');
+    }
+    const unrecoverable = jasmine.createSpy('onUnrecoverable');
+    renderer.onUnrecoverable = unrecoverable;
+
+    lose!.loseContext();
+    await new Promise(resolve => setTimeout(resolve, 50));
+    lose!.restoreContext();
+    await new Promise(resolve => setTimeout(resolve, CONTEXT_RESTORE_WAIT_MS + 200));
+    expect(unrecoverable).not.toHaveBeenCalled();
+
+    lose!.loseContext();
+    await new Promise(resolve => setTimeout(resolve, CONTEXT_RESTORE_WAIT_MS + 200));
+    expect(unrecoverable).toHaveBeenCalledTimes(1);
+  });
+
+  it('hands its newest frame and its counters to the renderer of a new canvas', () => {
+    renderer.present(solidFrame(160, 90, [255, 0, 0]));
+    renderer.renderNow();
+    const handOver = renderer.handOver();
+    expect(handOver.frame).not.toBeNull();
+    expect(handOver.stats.received).toBe(1);
+
+    const next = document.createElement('canvas');
+    next.width = 160;
+    next.height = 90;
+    document.body.appendChild(next);
+    const successor = new VideoSurfaceRenderer(next);
+    successor.adopt(handOver);
+    successor.renderNow();
+    near(successor.readPixel(80, 45), [255, 0, 0, 255]);
+    expect(successor.stats.received).toBe(1);
+    expect(successor.stats.drawn).toBe(2);
+    successor.dispose();
+    next.remove();
+    expect(successor.stats.closed).toBe(1);
   });
 });

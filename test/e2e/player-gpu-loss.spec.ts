@@ -1,9 +1,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import {expect, test} from './support/app';
+import {captureComposited} from './support/capture';
 import {inClip} from './support/clips';
 import {
-  expectVideoShowsClip, goToProjectList, launchClips, openProjectFromList, pixelProbesAvailable, press, seekTo, startPlaying
+  expectVideoShowsClip, goToProjectList, launchClips, mpvPaused, openProjectFromList, pixelProbesAvailable, press, quiet, seekTo, startPlaying, VIDEO_AREA
 } from './support/player';
 
 // Losing the GPU (Chromium's GPU process, or libmpv's own device) must end in a picture, never a black window. These read
@@ -87,4 +88,77 @@ test('a lost libmpv device is replaced by a new one and the picture comes back',
   expect(after.fallbackReason).toContain('GPU device lost');
   expect(videoLog(userDataDir)).toContain('the GPU device was lost');
   await expectPictureRecovered(app, ui, 2);
+});
+
+test('two GPU process losses in one run, the second while paused, leave a live picture on screen', async ({launch}) => {
+  const {app, ui, userDataDir} = await launchClips(launch, {lastPlaybackTime: inClip(0, 0.5)});
+  test.skip((await backendOf(app)) === 'readback', 'needs the GPU path');
+
+  const screenColor = async () => {
+    const box = await ui.locator(VIDEO_AREA).first().boundingBox();
+    const content = await app.evaluate(() => (globalThis as any).__yallE2E.getWindows().mainWindow.getContentBounds());
+    return (await captureComposited(app, [{x: content.x + box!.x + box!.width / 2, y: content.y + box!.y + box!.height / 2}])).colors[0];
+  };
+
+  await startPlaying(ui);
+  expect(await killGpuProcess(app)).not.toBeNull();
+  await expect.poll(() => backendOf(app), {timeout: 15_000}).toBe('readback');
+  await quiet(2000);
+
+  // Pause for sure: after the engine reload the transport state is not what a blind Space toggles
+  if (!(await mpvPaused(ui))) {
+    await press(ui, 'Space');
+  }
+  await expect.poll(() => mpvPaused(ui), {timeout: 10_000}).toBe(true);
+  await seekTo(ui, inClip(2, 0.5));
+  await expectVideoShowsClip(app, ui, 2, 15_000);
+  await quiet(1000);
+  expect(await killGpuProcess(app), 'a second GPU process to kill').not.toBeNull();
+  await quiet(4000);
+
+  const color = await screenColor();
+  const log = videoLog(userDataDir);
+  expect(log, 'renderer must not die').not.toContain('Renderer process gone');
+  expect(color, `composited centre of the video area ${JSON.stringify(color)}`).not.toBeNull();
+  const nearWhite = color!.r > 200 && color!.g > 200 && color!.b > 200;
+  expect(nearWhite, `video area went white: ${JSON.stringify(color)}`).toBe(false);
+  await expectVideoShowsClip(app, ui, 2, 15_000);
+
+  // Playing again must deliver new frames, not only keep the old one on screen
+  const pageDrawn = (): Promise<number> => ui.evaluate(() => (window as any).__yallVideoStats?.drawn ?? 0);
+  const drawnBefore = await pageDrawn();
+  await press(ui, 'Space');
+  await expect.poll(async () => (await pageDrawn()) - drawnBefore, {
+    timeout: 10_000, message: 'frames must be drawn after resuming'
+  }).toBeGreaterThan(5);
+});
+
+test('a lost device of the readback attach (after a GPU process loss) is replaced while paused and playback draws frames again', async ({launch}) => {
+  const {app, ui, userDataDir} = await launchClips(launch, {lastPlaybackTime: inClip(0, 0.5)});
+  test.skip((await backendOf(app)) === 'readback', 'needs the GPU path');
+
+  await startPlaying(ui);
+  expect(await killGpuProcess(app)).not.toBeNull();
+  await expect.poll(() => backendOf(app), {timeout: 15_000}).toBe('readback');
+  await quiet(2000);
+  if (!(await mpvPaused(ui))) {
+    await press(ui, 'Space');
+  }
+  await expect.poll(() => mpvPaused(ui), {timeout: 10_000}).toBe(true);
+  await seekTo(ui, inClip(2, 0.5));
+  await expectVideoShowsClip(app, ui, 2, 15_000);
+
+  const before = await videoStats(app);
+  expect(await app.evaluate(() => (globalThis as any).__yallE2E.simulateDeviceLost())).toBe(true);
+  await expect.poll(async () => (await videoStats(app))?.attachId, {timeout: 15_000}).not.toBe(before.attachId);
+  expect((await videoStats(app)).backend).toBe('readback');
+  expect(videoLog(userDataDir)).toContain('the GPU device was lost');
+  await expectVideoShowsClip(app, ui, 2, 15_000);
+
+  const pageDrawn = (): Promise<number> => ui.evaluate(() => (window as any).__yallVideoStats?.drawn ?? 0);
+  const drawnBefore = await pageDrawn();
+  await press(ui, 'Space');
+  await expect.poll(async () => (await pageDrawn()) - drawnBefore, {
+    timeout: 10_000, message: 'frames must be drawn after resuming'
+  }).toBeGreaterThan(5);
 });

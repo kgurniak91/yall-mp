@@ -638,6 +638,17 @@ describe('LibmpvFrameSender', () => {
     });
   });
 
+  it('rebuilds a readback attach whose own GPU device was lost, as readback, whatever the policy says', async () => {
+    const libmpv = fakeLibmpv({});
+    const sender = create(libmpv, {preferredAfterDeviceLoss: () => 'auto'});
+    await sender.start({width: 800, height: 450, preferred: 'readback'});
+    libmpv.attaches[0].onFrame({attachId: 1, slotId: -1, serial: 0, generation: 0, width: 0, height: 0, lost: 'DEVICE_REMOVED 0x887A0007'});
+    await flush();
+    expect(libmpv.attaches.map(a => a.options.backend)).toEqual(['readback', 'readback']);
+    expect(libmpv.reinitVideo).toHaveBeenCalledTimes(1);
+    expect(sender.stats().fallbackReason).toBe('GPU device lost (DEVICE_REMOVED 0x887A0007)');
+  });
+
   describe('HDR tone mapping on the software renderer', () => {
     const gamma = async (libmpv: FakeLibmpv, value: unknown) => {
       libmpv.emit({event: 'property-change', name: 'video-params/gamma', data: value} as LibmpvEvent);

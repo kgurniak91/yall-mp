@@ -732,6 +732,11 @@ async function createWindow() {
   mainWindow.once('ready-to-show', showMainWindow);
   // An unmapped window does not paint on every Linux compositor, so ready-to-show may never fire
   mainWindow.webContents.once('did-finish-load', showMainWindow);
+  mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    logVideo(`[Main Process] Renderer process gone (${details.reason}, exit code ${details.exitCode})`);
+  });
+  mainWindow.webContents.on('unresponsive', () => logVideo('[Main Process] Renderer unresponsive'));
+  mainWindow.webContents.on('responsive', () => logVideo('[Main Process] Renderer responsive again'));
 
   mainWindow.loadFile(path.join(__dirname, './dist/yall-mp/browser/index.html'));
 
