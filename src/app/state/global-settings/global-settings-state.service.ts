@@ -34,6 +34,7 @@ export class GlobalSettingsStateService {
   public readonly cinemaModeEnabled = computed(() => this.appStateService.globalSettings().cinemaModeEnabled);
   public readonly cinemaModeSpeed = computed(() => this.appStateService.globalSettings().cinemaModeSpeed);
   public readonly hideTimeline = computed(() => this.appStateService.globalSettings().hideTimeline);
+  public readonly pauseOnSubtitleHover = computed(() => this.appStateService.globalSettings().pauseOnSubtitleHover);
   public readonly customLibmpvPath = computed(() => this.appStateService.globalSettings().customLibmpvPath || '');
   public readonly customFfmpegPath = computed(() => this.appStateService.globalSettings().customFfmpegPath || '');
   public readonly customFfprobePath = computed(() => this.appStateService.globalSettings().customFfprobePath || '');
@@ -144,6 +145,10 @@ export class GlobalSettingsStateService {
 
   public setHideTimeline(hideTimeline: boolean): void {
     this.appStateService.updateGlobalSettings({hideTimeline});
+  }
+
+  public setPauseOnSubtitleHover(pauseOnSubtitleHover: boolean): void {
+    this.appStateService.updateGlobalSettings({pauseOnSubtitleHover});
   }
 
   public setCustomPath(key: CustomPathKey, path: string): void {

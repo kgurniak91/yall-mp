@@ -71,6 +71,7 @@ export interface GlobalSettings {
   cinemaModeEnabled: boolean;
   cinemaModeSpeed: number;
   hideTimeline: boolean;
+  pauseOnSubtitleHover: boolean;
   customLibmpvPath?: string;
   customFfmpegPath?: string;
   customFfprobePath?: string;
@@ -176,6 +177,7 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   cinemaModeEnabled: false,
   cinemaModeSpeed: 1.0,
   hideTimeline: false,
+  pauseOnSubtitleHover: false,
   customLibmpvPath: '',
   customFfmpegPath: '',
   customFfprobePath: '',

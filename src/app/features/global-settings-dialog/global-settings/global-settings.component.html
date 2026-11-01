@@ -29,6 +29,18 @@
     </div>
   </p-fieldset>
 
+  <p-fieldset legend="Subtitles" [toggleable]="false">
+    <div class="setting-item">
+      <label for="pause-on-subtitle-hover" class="font-semibold">Pause while the pointer is over the subtitles</label>
+      <p-inputSwitch inputId="pause-on-subtitle-hover"
+                     [ngModel]="globalSettingsStateService.pauseOnSubtitleHover()"
+                     (ngModelChange)="globalSettingsStateService.setPauseOnSubtitleHover($event)"/>
+    </div>
+    <small class="block mt-2 text-sm">
+      Playback resumes when the pointer leaves and offline dictionary popup is closed, unless you clicked a word to open online lookup or paused yourself.
+    </small>
+  </p-fieldset>
+
   <p-fieldset legend="Playback Settings" [toggleable]="false">
     <div class="setting-item">
       <label for="hardware-accel" class="font-semibold">Hardware Acceleration</label>

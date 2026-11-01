@@ -26,6 +26,7 @@ import {YomitanPopupComponent} from '../yomitan-popup/yomitan-popup.component';
 import {YomitanService} from '../../../core/services/yomitan/yomitan.service';
 import {NoteRequest} from './subtitles-overlay.types';
 import {RebuildGeneration} from './rebuild-generation';
+import {HoverPauseController, isPointNearRects} from './hover-pause.controller';
 import {DialogService} from 'primeng/dynamicdialog';
 import {ToastService} from '../../../shared/services/toast/toast.service';
 import {primaryModifierKey, primaryModifierPressed} from '../../../core/services/keyboard-shortcuts-helper/primary-modifier';
@@ -33,6 +34,9 @@ import {primaryModifierKey, primaryModifierPressed} from '../../../core/services
 const FALLBACK_VIDEO_ASPECT_RATIO = 16 / 9;
 // How long the container size must stay unchanged before the ASS renderer is rebuilt one last time for it.
 const ASS_SETTLE_MS = 150;
+// How far from a rendered subtitle line the pointer still counts as being over the subtitles (bridges the gaps between lines).
+const HOVER_PAUSE_PADDING_PX = 8;
+const MODIFIER_KEYS = new Set(['Control', 'Shift', 'Alt', 'Meta', 'AltGraph', 'CapsLock']);
 
 @Component({
   selector: 'app-subtitles-overlay',
@@ -150,12 +154,34 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   private readonly HEADER_SAFE_ZONE = 50;
   private rafId: number | null = null; // Track the animation frame
   private hoverTimeout: any = null;
+  private readonly hoverPause = new HoverPauseController({
+    pause: () => this.videoStateService.togglePlayPause(),
+    resume: () => this.videoStateService.togglePlayPause(),
+    canResume: () => !this.hasOpenModal() && !this.isContextMenuOpen()
+  });
 
   constructor() {
     effect(() => {
       this.isContextMenuOpen();
       this.isHoverBlocked = false;
     });
+
+    effect(() => this.hoverPause.playerStateChanged(this.videoStateService.playerState()));
+
+    effect(() => {
+      if (!this.globalSettingsStateService.pauseOnSubtitleHover() || this.projectSettingsStateService.useMpvSubtitles()) {
+        untracked(() => this.hoverPause.reset());
+      }
+    });
+
+    effect(() => {
+      if (this.isContextMenuOpen() || this.isManualDictionary()) {
+        untracked(() => this.hoverPause.interaction());
+      }
+    });
+
+    // A lookup popup opened by hovering does not cancel the resume, it only postpones it until the popup is closed
+    effect(() => this.hoverPause.setHolding(this.currentSearchTerm() != null));
 
     effect((onCleanup) => {
       const clearState = () => {
@@ -377,7 +403,20 @@ export class SubtitlesOverlayComponent implements OnDestroy {
         return;
       }
 
-      const handleMouseMove = (event: MouseEvent) => this.handleMouseMove(event);
+      const handleMouseMove = (event: MouseEvent) => {
+        this.updateHoverPause(event);
+        this.handleMouseMove(event);
+      };
+      const handlePointerLeftWindow = (event: MouseEvent) => {
+        if (!event.relatedTarget) {
+          this.hoverPause.pointerMoved(false, false);
+        }
+      };
+      const handleHoverPauseKey = (event: KeyboardEvent) => {
+        if (!MODIFIER_KEYS.has(event.key)) {
+          this.hoverPause.interaction();
+        }
+      };
       const handleMouseDown = (event: MouseEvent) => this.handleMouseDown(event);
       const handleMouseUp = (event: MouseEvent) => this.handleMouseUp(event);
       const handleContextMenu = (event: MouseEvent) => this.handleContextMenu(event);
@@ -387,6 +426,8 @@ export class SubtitlesOverlayComponent implements OnDestroy {
       container.addEventListener('mousedown', handleMouseDown);
       document.addEventListener('mousedown', handleGlobalMouseDown);
       document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseout', handlePointerLeftWindow);
+      document.addEventListener('keydown', handleHoverPauseKey);
       document.addEventListener('mouseup', handleMouseUp);
       document.addEventListener('contextmenu', handleContextMenu);
       document.addEventListener('keydown', handleKeyChange);
@@ -406,6 +447,8 @@ export class SubtitlesOverlayComponent implements OnDestroy {
         container.removeEventListener('mousedown', handleMouseDown);
         document.removeEventListener('mousedown', handleGlobalMouseDown);
         document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseout', handlePointerLeftWindow);
+        document.removeEventListener('keydown', handleHoverPauseKey);
         document.removeEventListener('mouseup', handleMouseUp);
         document.removeEventListener('contextmenu', handleContextMenu);
         document.removeEventListener('keydown', handleKeyChange);
@@ -459,6 +502,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.hoverPause.dispose();
     this.destroyAssRenderer();
     this.mutationObserver?.disconnect();
   }
@@ -986,6 +1030,45 @@ export class SubtitlesOverlayComponent implements OnDestroy {
     return null;
   }
 
+  private updateHoverPause(event: MouseEvent): void {
+    if (!this.globalSettingsStateService.pauseOnSubtitleHover()) {
+      return;
+    }
+
+    const container = this.subtitleContainer().nativeElement;
+    const canPause = !this.shouldBeHidden() &&
+      !this.projectSettingsStateService.useMpvSubtitles() &&
+      !this.isContextMenuOpen() &&
+      !this.isManualDictionary() &&
+      !this.isSelecting() &&
+      !this.hasOpenModal();
+    const inside = !this.shouldBeHidden() &&
+      isPointNearRects(event.clientX, event.clientY, this.getSubtitleRects(container), HOVER_PAUSE_PADDING_PX);
+    this.hoverPause.pointerMoved(inside, canPause);
+  }
+
+  /** The rendered subtitle lines: the SRT box, or the text of the ASS lines. */
+  private getSubtitleRects(container: HTMLElement): DOMRect[] {
+    const srtBox = container.querySelector('.srt-container');
+    if (srtBox) {
+      return [srtBox.getBoundingClientRect()];
+    }
+
+    const rects: DOMRect[] = [];
+    const range = document.createRange();
+    for (const node of this.interactiveTextNodes) {
+      if (container.contains(node)) {
+        range.selectNodeContents(node);
+        rects.push(...Array.from(range.getClientRects()));
+      }
+    }
+    return rects;
+  }
+
+  private hasOpenModal(): boolean {
+    return !!document.querySelector('.p-dialog-mask, .p-drawer-mask');
+  }
+
   private handleMouseDown(event: MouseEvent): void {
     const isPopupOpen = this.currentSearchTerm() != null;
     const isMenuOpen = this.isContextMenuOpen();
@@ -1033,6 +1116,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
     const container = this.subtitleContainer().nativeElement;
 
     if (wordInfo && container.contains(wordInfo.node)) {
+      this.hoverPause.interaction();
       this.shouldPreventVideoToggle = true;
 
       if (!this.videoStateService.isPaused()) {
@@ -1256,6 +1340,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
 
     event.preventDefault();
     event.stopPropagation();
+    this.hoverPause.interaction();
 
     if (!this.videoStateService.isPaused()) {
       this.videoStateService.togglePlayPause();
