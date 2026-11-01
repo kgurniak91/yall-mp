@@ -37,6 +37,11 @@
 
 .timeline-area {
   flex-shrink: 0; // Prevents the timeline from shrinking
+
+  // Hidden with CSS, not @if, so wavesurfer and the peaks stay alive
+  &.timeline-hidden {
+    display: none;
+  }
 }
 
 .toolbar {

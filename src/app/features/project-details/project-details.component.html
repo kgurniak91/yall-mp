@@ -231,6 +231,14 @@
                 tooltipPosition="left"
                 severity="secondary"/>
 
+      @let timelineHidden = globalSettingsStateService.hideTimeline();
+      <p-button icon="fa-solid fa-wave-square"
+                [class.active-icon]="timelineHidden"
+                [pTooltip]="(timelineHidden ? 'Show timeline' : 'Hide timeline') + ' (T)'"
+                (onClick)="toggleTimeline()"
+                tooltipPosition="left"
+                severity="secondary"/>
+
       <p-button pTooltip="Notes (N)"
                 tooltipStyleClass="tooltip-one-line"
                 tooltipPosition="left"
@@ -254,7 +262,7 @@
     </div>
   </div>
 
-  <div class="timeline-area">
+  <div class="timeline-area" [class.timeline-hidden]="globalSettingsStateService.hideTimeline()">
     <app-timeline-editor #timelineEditor
                          (contextMenuRequested)="onTimelineContextMenu($event)"
                          (hideContextMenuRequested)="hideAllOverlays()"/>

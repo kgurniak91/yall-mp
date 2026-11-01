@@ -761,6 +761,10 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     this.actionService.dispatch(KeyboardAction.ToggleSubtitles);
   }
 
+  toggleTimeline(): void {
+    this.actionService.dispatch(KeyboardAction.ToggleTimeline);
+  }
+
   openEditSubtitlesDialog(): void {
     this.actionService.dispatch(KeyboardAction.EditCurrentSubtitles);
   }

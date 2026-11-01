@@ -70,6 +70,7 @@ export interface GlobalSettings {
   isMuted?: boolean;
   cinemaModeEnabled: boolean;
   cinemaModeSpeed: number;
+  hideTimeline: boolean;
   customLibmpvPath?: string;
   customFfmpegPath?: string;
   customFfprobePath?: string;
@@ -174,6 +175,7 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   isMuted: false,
   cinemaModeEnabled: false,
   cinemaModeSpeed: 1.0,
+  hideTimeline: false,
   customLibmpvPath: '',
   customFfmpegPath: '',
   customFfprobePath: '',

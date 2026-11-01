@@ -25,6 +25,7 @@ export function mapVideoClipToLightweight(clip: VideoClip): LightweightVideoClip
 
 export enum KeyboardAction {
   ToggleSubtitles = 'ToggleSubtitles',
+  ToggleTimeline = 'ToggleTimeline',
   SeekBackward = 'SeekBackward',
   SeekForward = 'SeekForward',
   PreviousSubtitledClip = 'PreviousSubtitledClip',

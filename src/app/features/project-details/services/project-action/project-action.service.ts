@@ -84,6 +84,9 @@ export class ProjectActionService {
       case KeyboardAction.ToggleSubtitles:
         this.videoStateService.toggleSubtitlesVisible();
         break;
+      case KeyboardAction.ToggleTimeline:
+        this.globalSettingsStateService.setHideTimeline(!this.globalSettingsStateService.hideTimeline());
+        break;
       case KeyboardAction.SeekBackward:
         this.videoStateService.seekRelative(-this.globalSettingsStateService.seekAmountSeconds());
         break;

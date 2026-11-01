@@ -322,6 +322,15 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
     type: ActionType.Continuous,
     group: KeyboardShortcutGroup.Timeline
   },
+  {
+    action: KeyboardAction.ToggleTimeline,
+    key: 't',
+    description: 'Show or hide the timeline',
+    displayKeys: ['T'],
+    scope: KeyboardShortcutScope.Project,
+    type: ActionType.SingleShot,
+    group: KeyboardShortcutGroup.Timeline
+  },
   // --- Project Scope - Subtitles & Integration
   {
     action: KeyboardAction.ToggleSubtitles,

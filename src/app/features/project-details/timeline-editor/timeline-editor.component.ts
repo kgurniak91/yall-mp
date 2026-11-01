@@ -78,6 +78,21 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
       const isCtrl = this.isCtrlPressed();
       this.updateRegionCursors(isCtrl);
     });
+
+    effect(() => {
+      if (!this.globalSettingsStateService.hideTimeline()) {
+        untracked(() => requestAnimationFrame(() => this.redraw()));
+      }
+    });
+  }
+
+  /** Re-applies the zoom so the waveform fills the container after it was hidden (zero width) or resized. */
+  public redraw(): void {
+    if (!this.wavesurfer || !this.timelineContainer().nativeElement.clientWidth) {
+      return;
+    }
+    this.wavesurfer.zoom(this.currentZoom());
+    this.forceWavesurferRedraw();
   }
 
   ngOnInit(): void {
@@ -121,13 +136,13 @@ export class TimelineEditorComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   private zoomIn(): void {
-    if (!this.wavesurfer) return;
+    if (!this.wavesurfer || this.globalSettingsStateService.hideTimeline()) return;
     const newZoom = Math.min(this.currentZoom() * ZOOM_FACTOR, MAX_ZOOM);
     this.updateZoom(newZoom);
   }
 
   private zoomOut(): void {
-    if (!this.wavesurfer) return;
+    if (!this.wavesurfer || this.globalSettingsStateService.hideTimeline()) return;
     const newZoom = Math.max(this.currentZoom() / ZOOM_FACTOR, MIN_ZOOM);
     this.updateZoom(newZoom);
     this.forceWavesurferRedraw();
