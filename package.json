@@ -153,6 +153,8 @@
     },
     "mac": {
       "target": "dmg",
+      "identity": "-",
+      "hardenedRuntime": false,
       "icon": "build/icon.icns",
       "artifactName": "${productName} v${version}.${ext}",
       "electronLanguages": [
