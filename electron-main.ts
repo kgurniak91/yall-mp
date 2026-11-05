@@ -378,7 +378,7 @@ async function launchEngine(args: ViewportArgs, resumeAt?: number): Promise<void
 
   manager.on('status', (status) => {
     if (status.event === 'property-change' && status.name === 'pause') {
-      setDisplaySleepBlocked(status.data === false);
+      setDisplaySleepBlocked(status.data === false, true);
     } else if (status.event === 'end-file') {
       setDisplaySleepBlocked(false);
     }
@@ -539,8 +539,25 @@ function initialVideoCanvasSize(window: BrowserWindow): { width: number; height:
   return {width: Math.max(2, Math.round(width * scale)), height: Math.max(2, Math.round(height * scale))};
 }
 
+// The auto-pause at a clip end pauses mpv for a moment before playback goes on; releasing the display on each of those
+// would create and drop the OS assertion with every clip (every 1-2 s on short clips). A pause releases the display
+// only once it has lasted this long; every other release (suspend, leaving the player, errors) is immediate.
+const DISPLAY_RELEASE_AFTER_PAUSE_MS = 3000;
+let displayReleaseTimer: ReturnType<typeof setTimeout> | null = null;
+
 /** mpv's own window used to keep the display awake while playing; with libmpv the app has to ask for it. */
-function setDisplaySleepBlocked(blocked: boolean): void {
+function setDisplaySleepBlocked(blocked: boolean, becausePaused = false): void {
+  if (displayReleaseTimer) {
+    clearTimeout(displayReleaseTimer);
+    displayReleaseTimer = null;
+  }
+  if (!blocked && becausePaused && displaySleepBlockerId !== null) {
+    displayReleaseTimer = setTimeout(() => {
+      displayReleaseTimer = null;
+      setDisplaySleepBlocked(false);
+    }, DISPLAY_RELEASE_AFTER_PAUSE_MS);
+    return;
+  }
   if (blocked === (displaySleepBlockerId !== null)) {
     return;
   }
