@@ -1,14 +1,18 @@
 // Smoke preload (sandboxed): counts the frames it receives (shared textures or readback IPC), closes and releases
 // them at once, and reports the totals plus a centre-pixel probe. It does not draw video; the 2d context is only
-// used at 1 fps to read one pixel of a shared frame.
+// used at 1 fps to read one pixel of a shared frame, and to answer the main process's first-frame probe (are the
+// first shared frames black at five points?) the way the app's video surface does.
 const {ipcRenderer, sharedTexture} = require('electron');
 
 const READBACK_CHANNEL = 'libmpv:readback-frame';
+const PROBE_START_CHANNEL = 'libmpv:probe-start';
+const PROBE_REPORT_CHANNEL = 'libmpv:probe';
 
 const stats = {
   sharedAvailable: !!sharedTexture?.setSharedTextureReceiver,
-  shared: 0, readback: 0, errors: 0, lastWidth: 0, lastHeight: 0, centre: null
+  shared: 0, readback: 0, errors: 0, lastWidth: 0, lastHeight: 0, centre: null, probeReports: 0, probeBlack: 0
 };
+let probeFramesLeft = 0;
 let probeCanvas = null;
 let probeCtx = null;
 let lastProbeAt = 0;
@@ -19,10 +23,7 @@ function probeFrame(frame) {
     return;
   }
   lastProbeAt = now;
-  if (!probeCanvas) {
-    probeCanvas = new OffscreenCanvas(1, 1);
-    probeCtx = probeCanvas.getContext('2d', {willReadFrequently: true});
-  }
+  ensureProbeCtx();
   const w = frame.displayWidth || frame.codedWidth;
   const h = frame.displayHeight || frame.codedHeight;
   // draw only the centre pixel into a 1x1 canvas
@@ -30,6 +31,40 @@ function probeFrame(frame) {
   const d = probeCtx.getImageData(0, 0, 1, 1).data;
   stats.centre = [d[0], d[1], d[2], d[3]];
 }
+
+function ensureProbeCtx() {
+  if (!probeCanvas) {
+    probeCanvas = new OffscreenCanvas(1, 1);
+    probeCtx = probeCanvas.getContext('2d', {willReadFrequently: true});
+  }
+}
+
+/** The first-frame probe: black when all five points (centre and the four quarter points) are 0,0,0. */
+function answerProbe(frame) {
+  if (probeFramesLeft <= 0) {
+    return;
+  }
+  probeFramesLeft--;
+  ensureProbeCtx();
+  const w = frame.displayWidth || frame.codedWidth;
+  const h = frame.displayHeight || frame.codedHeight;
+  const xs = [0.5, 0.25, 0.75, 0.25, 0.75];
+  const ys = [0.5, 0.25, 0.25, 0.75, 0.75];
+  const black = xs.every((fx, i) => {
+    probeCtx.drawImage(frame, Math.floor(w * fx), Math.floor(h * ys[i]), 1, 1, 0, 0, 1, 1);
+    const d = probeCtx.getImageData(0, 0, 1, 1).data;
+    return d[0] === 0 && d[1] === 0 && d[2] === 0;
+  });
+  stats.probeReports++;
+  if (black) {
+    stats.probeBlack++;
+  }
+  ipcRenderer.send(PROBE_REPORT_CHANNEL, black);
+}
+
+ipcRenderer.on(PROBE_START_CHANNEL, (_e, m) => {
+  probeFramesLeft = Number(m?.frames) || 0;
+});
 
 window.addEventListener('DOMContentLoaded', () => {
   const canvas = document.getElementById('video-surface');
@@ -43,6 +78,7 @@ window.addEventListener('DOMContentLoaded', () => {
         frame = importedSharedTexture.getVideoFrame();
         stats.lastWidth = frame.codedWidth;
         stats.lastHeight = frame.codedHeight;
+        answerProbe(frame);
         probeFrame(frame);
       } catch (e) {
         stats.errors++;

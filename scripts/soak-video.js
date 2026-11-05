@@ -4,17 +4,21 @@
 //
 //   node scripts/soak-video.js [--minutes=60] [--file=spikes/libmpv-poc/media/1080p30-h264.mp4] [--out=soak-result]
 //                              [--warmup-min=10] [--actions=seek,pause-resume,resize,speed,sleep-wake|none] [--reopen-min=N] [--reopen-min=10] [--sample-sec=60] [--action-sec=30]
+//   node scripts/soak-video.js --recheck=<result.json>   (the verdict of a saved run with the current criteria)
 //   YALL_MP_VIDEO_BACKEND / YALL_MP_VIDEO_ADAPTER are passed through to the app (e.g. readback + warp for the software path).
 //
 // Needs `npm run electron:build` first. Exit code 1 when a criterion fails:
 //   growth per process type < 30 MB/h (renderer JS heap < 10 MB/h, fitted over the second half of the run; the fit after
-//   the warm-up is reported next to it; the renderer is sampled after a forced GC), inFlight <= pool size,
+//   the warm-up is reported next to it; the renderer is sampled after a forced GC; the heap fails only when it also
+//   climbs past its first-half peak, so a buffer pool that is released and refilled is not read as a leak; the same
+//   rule for the process types, whose macOS working set jumps by the frames in flight), inFlight <= pool size,
 //   reclaimed == 0, sendFailures == 0, open VideoFrames <= 2, listener counts constant across reopen cycles,
 //   addon liveCounts back to the same values after each reopen.
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const {_electron} = require('@playwright/test');
+const {evaluate} = require('./soak-verdict');
 
 const REPO = path.resolve(__dirname, '..');
 const args = Object.fromEntries(process.argv.slice(2).map(a => {
@@ -32,6 +36,21 @@ const outBase = path.resolve(args.out || 'soak-result');
 const ID = '00000000-0000-4000-8000-00000000e2e0';
 const srt = path.join(REPO, 'test', 'e2e', 'fixtures', 'sample.srt');
 const MB = 1024 * 1024;
+
+function printVerdict(verdict) {
+  console.log(verdict.pass ? 'SOAK PASS' : `SOAK FAIL:\n  ${verdict.failures.join('\n  ')}`);
+  console.log(`growth MB/h after warm-up: ${JSON.stringify(verdict.growthMBPerHour)}`);
+  console.log(`growth MB/h second half (gates): ${JSON.stringify(verdict.growthSecondHalfMBPerHour)}`);
+  console.log(`MB/h past the first-half peak: ${JSON.stringify(verdict.excessPastPeakMBPerHour)}`);
+}
+
+// --recheck=<result.json>: apply the current criteria to a saved run instead of running one
+if (args.recheck) {
+  const saved = JSON.parse(fs.readFileSync(path.resolve(String(args.recheck)), 'utf8'));
+  const verdict = evaluate(saved.samples, saved.reopenSnapshots ?? [], saved.warmupMin ?? WARMUP_MIN);
+  printVerdict(verdict);
+  process.exit(verdict.pass ? 0 : 1);
+}
 
 if (!fs.existsSync(file)) {
   console.error(`Media file not found: ${file}`);
@@ -170,7 +189,12 @@ async function sample(app, ui, t0) {
     entry.workingSetMB += m.workingSetMB;
     entry.privateMB += m.privateMB;
   }
-  await ui.evaluate(() => { if (typeof window.gc === 'function') { window.gc(); } }).catch(() => undefined);
+  // A full GC before reading the heap: through the DevTools protocol, which works on every platform (macOS starts
+  // without --expose-gc, so window.gc is missing there and the heap would be read with whatever garbage it holds)
+  const gcDone = await collectGarbage(ui);
+  if (!gcDone) {
+    await ui.evaluate(() => { if (typeof window.gc === 'function') { window.gc(); } }).catch(() => undefined);
+  }
   const page = await ui.evaluate(() => ({
     heapMB: performance.memory ? performance.memory.usedJSHeapSize / 1048576 : null,
     stats: window.__yallVideoStats ? {...window.__yallVideoStats} : null,
@@ -188,70 +212,18 @@ async function sample(app, ui, t0) {
   };
 }
 
-/** Least-squares slope of y over x (x in minutes), returned per hour. */
-function slopePerHour(points) {
-  if (points.length < 3) {
-    return null;
-  }
-  const n = points.length;
-  const mx = points.reduce((s, p) => s + p[0], 0) / n;
-  const my = points.reduce((s, p) => s + p[1], 0) / n;
-  const num = points.reduce((s, p) => s + (p[0] - mx) * (p[1] - my), 0);
-  const den = points.reduce((s, p) => s + (p[0] - mx) ** 2, 0);
-  return den === 0 ? null : (num / den) * 60;
-}
+let gcSession = null;
 
-function evaluate(samples, reopenSnapshots) {
-  const failures = [];
-  const warm = samples.filter(s => s.minute >= WARMUP_MIN);
-  const lastMinute = samples.at(-1)?.minute ?? 0;
-  const secondHalf = samples.filter(s => s.minute >= lastMinute / 2);
-  const growth = {};
-  const growthSecondHalf = {};
-  const types = new Set(samples.flatMap(s => Object.keys(s.byType)));
-  const fit = (list, pick, limit, label, gate) => {
-    const g = slopePerHour(list.filter(s => pick(s) !== null && pick(s) !== undefined).map(s => [s.minute, pick(s)]));
-    if (gate && g !== null && g >= limit) {
-      failures.push(`${label} grows ${g.toFixed(1)} MB/h over the second half (limit ${limit})`);
-    }
-    return g === null ? null : Number(g.toFixed(1));
-  };
-  for (const type of types) {
-    const pick = s => s.byType[type] ? (s.byType[type].privateMB || s.byType[type].workingSetMB) : null;
-    growth[type] = fit(warm, pick, 30, type, false);
-    growthSecondHalf[type] = fit(secondHalf, pick, 30, type, true);
+/** Forces a full garbage collection in the page; false when the DevTools protocol is not available. */
+async function collectGarbage(ui) {
+  try {
+    gcSession ??= await ui.context().newCDPSession(ui);
+    await gcSession.send('HeapProfiler.collectGarbage');
+    return true;
+  } catch {
+    gcSession = null;
+    return false;
   }
-  growth.rendererJsHeap = fit(warm, s => s.heapMB, 10, 'renderer JS heap', false);
-  growthSecondHalf.rendererJsHeap = fit(secondHalf, s => s.heapMB, 10, 'renderer JS heap', true);
-  const worst = (key, pick) => Math.max(0, ...samples.map(s => pick(s) ?? 0));
-  const maxInFlight = worst('inFlight', s => s.inFlight);
-  const pool = samples.find(s => s.poolSize)?.poolSize ?? 4;
-  if (maxInFlight > pool) {
-    failures.push(`inFlight reached ${maxInFlight} (pool ${pool})`);
-  }
-  if (worst('reclaimed', s => s.reclaimed) !== 0) {
-    failures.push('slots were reclaimed');
-  }
-  if (worst('sendFailures', s => s.sendFailures) !== 0) {
-    failures.push('frame send failures');
-  }
-  const maxOpen = worst('openFrames', s => s.openFrames);
-  if (maxOpen > 2) {
-    failures.push(`${maxOpen} VideoFrames open at once (limit 2)`);
-  }
-  const [first, ...rest] = reopenSnapshots;
-  for (const snap of rest) {
-    if (JSON.stringify(snap.listeners) !== JSON.stringify(first.listeners)) {
-      failures.push(`listener counts changed after reopen at minute ${snap.minute}`);
-    }
-    // Slots are allocated lazily and held while a frame is in flight, so they are bounded, not compared
-    const {slots: firstSlots, ...firstCounts} = first.live;
-    const {slots, ...counts} = snap.live;
-    if (JSON.stringify(counts) !== JSON.stringify(firstCounts) || slots > Math.max(4, firstSlots)) {
-      failures.push(`addon liveCounts changed after reopen at minute ${snap.minute}: ${JSON.stringify(snap.live)} vs ${JSON.stringify(first.live)}`);
-    }
-  }
-  return {growthMBPerHour: growth, growthSecondHalfMBPerHour: growthSecondHalf, maxInFlight, maxOpenFrames: maxOpen, failures, pass: failures.length === 0};
 }
 
 function writeCsv(samples) {
@@ -266,7 +238,8 @@ function writeCsv(samples) {
 (async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'yall-soak-'));
   seed(dir);
-  const app = await _electron.launch({args: ['.', ...(process.platform === 'darwin' ? [] : ['--js-flags=--expose-gc']), ...(process.platform === 'linux' ? ['--no-sandbox'] : [])], cwd: REPO, env: {...process.env, YALL_MP_E2E: '1', YALL_MP_USER_DATA_DIR: dir}});
+  // macOS: no window restoration, whose "reopen windows?" alert after an earlier crash would block the start
+  const app = await _electron.launch({args: ['.', ...(process.platform === 'darwin' ? ['-ApplePersistenceIgnoreState', 'YES'] : ['--js-flags=--expose-gc']), ...(process.platform === 'linux' ? ['--no-sandbox'] : [])], cwd: REPO, env: {...process.env, YALL_MP_E2E: '1', YALL_MP_USER_DATA_DIR: dir}});
   if (process.platform === 'darwin') {
     // The e2e specs do this and the hosted macOS runner only shows the window with it
     await app.context().tracing.start({screenshots: true, snapshots: true});
@@ -372,12 +345,10 @@ ${mainLog}`);
     fs.rmSync(dir, {recursive: true, force: true});
   }
   writeCsv(samples);
-  const verdict = evaluate(samples, reopenSnapshots);
+  const verdict = evaluate(samples, reopenSnapshots, WARMUP_MIN);
   fs.writeFileSync(`${outBase}.json`, JSON.stringify({file: path.basename(file), minutes: MINUTES, warmupMin: WARMUP_MIN,
     backend: process.env.YALL_MP_VIDEO_BACKEND ?? 'auto', ...verdict, reopenSnapshots, samples}, null, 2));
-  console.log(verdict.pass ? 'SOAK PASS' : `SOAK FAIL:\n  ${verdict.failures.join('\n  ')}`);
-  console.log(`growth MB/h after warm-up: ${JSON.stringify(verdict.growthMBPerHour)}`);
-  console.log(`growth MB/h second half (gates): ${JSON.stringify(verdict.growthSecondHalfMBPerHour)}`);
+  printVerdict(verdict);
   process.exit(verdict.pass ? 0 : 1);
 })().catch(error => {
   console.error(error);

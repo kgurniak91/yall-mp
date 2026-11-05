@@ -1,6 +1,7 @@
-// Video path benchmark on Windows: launches the app on a seeded project, plays the file and samples the CPU of the
-// whole Electron process tree (browser, GPU, renderer, utility) with the PowerShell sampler, together with the
-// frames the page presented in the same window.
+// Video path benchmark: launches the app on a seeded project, plays the file and samples the CPU of the whole
+// Electron process tree (browser, GPU, renderer, utility), together with the frames the page presented in the same
+// window. Windows samples with the PowerShell sampler (CPU, GPU engines, dwm); macOS samples `ps` cputime once a
+// second (CPU only; WindowServer is reported in the dwm field, GPU is null: use powermetrics alongside).
 //
 //   node scripts/bench-video.js [--file=spikes/libmpv-poc/media/1080p60-h264.mp4] [--hwdec=auto|no|both]
 //                               [--runs=3] [--warmup=10] [--measure=60] [--size=1600x900] [--out=bench-video.json]
@@ -10,7 +11,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const {spawn} = require('child_process');
+const {spawn, execFileSync} = require('child_process');
 const {_electron} = require('@playwright/test');
 
 const REPO = path.resolve(__dirname, '..');
@@ -28,8 +29,8 @@ const [WIDTH, HEIGHT] = String(args.size || '1600x900').split('x').map(Number);
 const ID = '00000000-0000-4000-8000-00000000e2e0';
 const srt = path.join(REPO, 'test', 'e2e', 'fixtures', 'sample.srt');
 
-if (process.platform !== 'win32') {
-  console.error('bench-video.js samples the process tree with a PowerShell script and runs on Windows only.');
+if (process.platform !== 'win32' && process.platform !== 'darwin') {
+  console.error('bench-video.js samples the process tree on Windows and macOS only.');
   process.exit(1);
 }
 if (!fs.existsSync(file)) {
@@ -64,6 +65,95 @@ const runSampler = (pid, out) => new Promise(resolve => {
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+/** `ps` cputime ([[dd-]hh:]mm:ss.ss) in seconds. */
+const cpuSeconds = text => {
+  const [days, rest] = text.includes('-') ? text.split('-') : ['0', text];
+  return rest.split(':').reduce((sum, part) => sum * 60 + parseFloat(part), 0) + Number(days) * 86400;
+};
+
+const psLines = columns => execFileSync('ps', ['-A', '-o', columns], {encoding: 'utf8', maxBuffer: 16 * 1024 * 1024}).split('\n');
+
+/**
+ * pid -> {ppid, cpu, name} of every process. The name is the executable (`comm`, which may contain spaces); an
+ * Electron helper's name carries its --type (gpu-process, renderer, utility) from the arguments.
+ */
+function psSnapshot() {
+  const types = new Map();
+  for (const line of psLines('pid=,args=')) {
+    const m = /^\s*(\d+)\s.*--type=(\S+)/.exec(line);
+    if (m) {
+      types.set(Number(m[1]), m[2]);
+    }
+  }
+  const procs = new Map();
+  for (const line of psLines('pid=,ppid=,time=,comm=')) {
+    const m = /^\s*(\d+)\s+(\d+)\s+(\S+)\s+(.*)$/.exec(line);
+    if (!m) {
+      continue;
+    }
+    const pid = Number(m[1]);
+    const base = path.basename(m[4].trim());
+    const type = types.get(pid);
+    procs.set(pid, {ppid: Number(m[2]), cpu: cpuSeconds(m[3]), name: type ? `${base} (${type})` : base});
+  }
+  return procs;
+}
+
+/** The macOS counterpart of sampler.ps1, with the same output fields where they apply. */
+async function runPsSampler(rootPid, out) {
+  await sleep((WARMUP + 1) * 1000);
+  const end = Date.now() + Math.max(5, MEASURE - 2) * 1000;
+  const tree = procs => {
+    const ids = new Set([rootPid]);
+    for (let grew = true; grew;) {
+      grew = false;
+      for (const [pid, p] of procs) {
+        if (ids.has(p.ppid) && !ids.has(pid)) {
+          ids.add(pid);
+          grew = true;
+        }
+      }
+    }
+    return ids;
+  };
+  const samples = [];
+  let prev = psSnapshot();
+  let prevAt = Date.now();
+  while (Date.now() < end) {
+    await sleep(1000);
+    const now = psSnapshot();
+    const at = Date.now();
+    const dt = (at - prevAt) / 1000;
+    const byName = {};
+    for (const pid of tree(now)) {
+      const a = prev.get(pid);
+      const b = now.get(pid);
+      if (a && b) {
+        byName[b.name] = (byName[b.name] ?? 0) + (b.cpu - a.cpu) / dt * 100;
+      }
+    }
+    const ws = [...now].find(([, p]) => p.name === 'WindowServer');
+    const wsPrev = ws && prev.get(ws[0]);
+    if (ws && wsPrev) {
+      byName.dwm = (ws[1].cpu - wsPrev.cpu) / dt * 100;
+    }
+    samples.push(byName);
+    prev = now;
+    prevAt = at;
+  }
+  const names = new Set(samples.flatMap(s => Object.keys(s)));
+  const cpu = {};
+  for (const n of names) {
+    cpu[n] = Number((samples.reduce((sum, s) => sum + (s[n] ?? 0), 0) / Math.max(1, samples.length)).toFixed(2));
+  }
+  const appCpu = Object.entries(cpu).filter(([n]) => n !== 'dwm').reduce((sum, [, v]) => sum + v, 0);
+  const cores = os.cpus().length;
+  fs.writeFileSync(out, JSON.stringify({
+    rootPid, cores, samples: samples.length, cpuPctOfOneCoreByProcess: cpu, appCpuPctOfOneCore: Number(appCpu.toFixed(2)),
+    appCpuPctOfTotal: Number((appCpu / cores).toFixed(2)), dwmCpuPctOfOneCore: cpu.dwm ?? 0, gpu: {samples: 0, app3d: null}
+  }, null, 2));
+}
+
 async function findUi(app) {
   for (let i = 0; i < 150; i++) {
     for (const page of app.windows()) {
@@ -82,7 +172,8 @@ async function findUi(app) {
 async function runOnce(hwdec) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'yall-bench-'));
   seed(dir, hwdec);
-  const app = await _electron.launch({args: ['.'], cwd: REPO, env: {...process.env, YALL_MP_E2E: '1', YALL_MP_USER_DATA_DIR: dir}});
+  // macOS: no window restoration, whose "reopen windows?" alert after an earlier crash would block the start
+  const app = await _electron.launch({args: ['.', ...(process.platform === 'darwin' ? ['-ApplePersistenceIgnoreState', 'YES'] : [])], cwd: REPO, env: {...process.env, YALL_MP_E2E: '1', YALL_MP_USER_DATA_DIR: dir}});
   try {
     const ui = await findUi(app);
     await ui.locator('#video-container .resizing-overlay').waitFor({state: 'detached', timeout: 30000});
@@ -106,7 +197,7 @@ async function runOnce(hwdec) {
     }
 
     const out = path.join(dir, 'sampler.json');
-    const sampling = runSampler(app.process().pid, out);
+    const sampling = process.platform === 'darwin' ? runPsSampler(app.process().pid, out) : runSampler(app.process().pid, out);
     await sleep((WARMUP + 1) * 1000);
     const before = await ui.evaluate(() => ({at: performance.now(), drawn: window.__yallVideoStats.drawn, received: window.__yallVideoStats.received}));
     await sleep(Math.max(5, MEASURE - 2) * 1000);

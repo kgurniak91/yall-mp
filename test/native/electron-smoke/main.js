@@ -20,7 +20,7 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..', '..');
 const {loadLibmpvAddon, loadLibmpv, libmpvCandidates, Libmpv} = require(path.join(ROOT, 'libmpv-bridge.js'));
-const {LibmpvFrameSender} = require(path.join(ROOT, 'libmpv-frame-sender.js'));
+const {LibmpvFrameSender, PROBE_REPORT_CHANNEL} = require(path.join(ROOT, 'libmpv-frame-sender.js'));
 
 const args = Object.fromEntries(process.argv.slice(2).filter(a => a.startsWith('--')).map(a => {
   const [k, ...v] = a.slice(2).split('=');
@@ -214,6 +214,11 @@ async function run(gpuInfo) {
         logLines.some(l => /platform=/.test(l) && /readback/.test(l));
       check('shared backend kept (no fallback)', wasShared || fellBack,
         fellBack ? `fell back: ${fs_.fallbackReason}` : (fs_.fallbackReason ?? ''));
+      if (wasShared) {
+        // The page saw a picture in the first shared frames (the media is never black at the probe points)
+        check('first frames confirmed by the page', logLines.some(l => /first frames confirmed by the page/.test(l)),
+          `${rendererStats.probeReports ?? 0} probe reports, ${rendererStats.probeBlack ?? 0} black`);
+      }
     }
   }
   const minFps = cfg.minFps ?? (wasShared && expected ? null : Math.min(24, (vfFps || 24) * 0.95));
@@ -268,6 +273,12 @@ app.whenReady().then(async () => {
   win.removeMenu();
   win.on('close', () => sender?.stop());
   ipcMain.on('smoke:stats', (_e, s) => { rendererStats = s; });
+  // The page's first-frame probe answers, as the app forwards them
+  ipcMain.on(PROBE_REPORT_CHANNEL, (event, black) => {
+    if (typeof black === 'boolean' && event.sender === win?.webContents) {
+      sender?.reportPageProbe(black);
+    }
+  });
   ipcMain.once('smoke:video-size', () => {
     if (started) {
       return;
