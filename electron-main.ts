@@ -525,9 +525,11 @@ function configuredVideoBackend(): PreferredBackend {
   if (value && VIDEO_BACKENDS.includes(value)) {
     return value;
   }
-  // The macOS GPU backend is verified on a software GL renderer only (CI has no Mac with a GPU): readback stays the
-  // default there until it was seen working on real hardware; `YALL_MP_VIDEO_BACKEND=iosurface-shared` opts in; Linux `dmabuf-shared` is opt-in the same way (auto resolves to readback there).
-  return process.platform === 'darwin' ? 'readback' : 'auto';
+  // auto: the shared GPU texture where the platform has one and it works (D3D11 on Windows, IOSurface on macOS, checked
+  // on an Apple M2), readback otherwise; an attach or import failure, black frames or a GPU loss fall back to readback.
+  // A software GL renderer (a hosted macOS runner) refuses the IOSurface path, so auto lands on readback there.
+  // Linux `dmabuf-shared` is opt-in (`YALL_MP_VIDEO_BACKEND=dmabuf-shared`): auto resolves to readback there.
+  return 'auto';
 }
 
 /** `YALL_MP_VIDEO_ADAPTER=warp` forces the software adapter (what the GPU-less CI runner has). */
