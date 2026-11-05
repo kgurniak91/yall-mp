@@ -152,6 +152,12 @@ async function ensureFFmpegPaths(): Promise<void> {
     }
   }
 
+  if (!ffprobePath && process.platform === 'darwin' && process.arch === 'arm64') {
+    // ffprobe-static's darwin/arm64 binary is an x86_64 build: without Rosetta it does not start ("bad CPU type").
+    // The Homebrew mpv the app needs on macOS brings Homebrew's native ffprobe along.
+    ffprobePath = ['/opt/homebrew/bin/ffprobe', '/usr/local/bin/ffprobe'].find(p => fsLib.existsSync(p)) ?? '';
+  }
+
   if (!ffprobePath) {
     const ffprobeStatic = (await import('ffprobe-static')).default;
     if (ffprobeStatic && ffprobeStatic.path) {
