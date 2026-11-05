@@ -595,7 +595,10 @@ export class LibmpvFrameSender {
 
   /** The page's verdict on one drawn frame of the validation window: were all its probe points black? */
   reportPageProbe(black: boolean): void {
-    this.handlePageProbe(black);
+    // The simulation stands in for the page: a real answer would race it and confirm the frames first
+    if (!this.simulateBlackFrames) {
+      this.handlePageProbe(black);
+    }
   }
 
   /** Chromium's GPU process died: the shared textures are gone with it, so the rest of the session uses readback. */

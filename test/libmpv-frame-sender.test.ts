@@ -555,6 +555,19 @@ describe('LibmpvFrameSender', () => {
       expect(sender.stats().fallbackReason).toContain('page read black');
     });
 
+    it('simulateBlackFrames is not undone by a real page that sees a picture', async () => {
+      const {libmpv, sender} = await started({simulateBlackFrames: true});
+      libmpv.attaches[0].onFrame(dmabufFrame(undefined, 0, 1));
+      sender.reportPageProbe(false);
+      for (let i = 1; i < 3; i++) {
+        libmpv.attaches[0].onFrame(dmabufFrame(undefined, i, i + 1));
+        sender.reportPageProbe(false);
+      }
+      await flush();
+      expect(libmpv.attaches.map(a => a.options.backend)).toEqual([backend, 'readback']);
+      expect(sender.stats().validation).toBe('black');
+    });
+
     it('goes to readback when the GPU process is gone, and ignores it on readback', async () => {
       const {libmpv, sender} = await started();
       libmpv.attaches[0].onFrame(dmabufFrame(litProbe));
