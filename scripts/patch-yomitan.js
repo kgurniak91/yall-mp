@@ -133,6 +133,33 @@ export class RequestBuilder {
   fs.writeFileSync(filePath, newContent, 'utf8');
 }
 
+/**
+ * `chrome.runtime.getContexts` walks every frame of the extension, including the hidden lookup window, whose view type
+ * Electron leaves unset: Chromium then logs "NOTREACHED hit. Unexpected view type found: 0" and writes a crash dump
+ * without crashing (35 MB on Windows) on every start. Yomitan's own pre-Chrome-116 check (the service worker's clients)
+ * answers the same question without it.
+ */
+function patchOffscreenProxy() {
+  const filePath = path.join(YOMITAN_PATH, 'js', 'background', 'offscreen-proxy.js');
+  if (!fs.existsSync(filePath)) {
+    return;
+  }
+
+  let content = fs.readFileSync(filePath, 'utf8');
+  if (content.includes('/* ELECTRON_PATCH_OFFSCREEN */')) {
+    console.log('   ℹ️  offscreen-proxy.js is already patched.');
+    return;
+  }
+  const original = 'if (!chrome.runtime.getContexts) {';
+  if (!content.includes(original)) {
+    console.warn('   ⚠️  offscreen-proxy.js: the getContexts check was not found, not patched.');
+    return;
+  }
+  console.log('   🔧 Patching offscreen-proxy.js...');
+  content = content.replace(original, 'if (true) { /* ELECTRON_PATCH_OFFSCREEN */');
+  fs.writeFileSync(filePath, content, 'utf8');
+}
+
 function patchManifest() {
   const filePath = path.join(YOMITAN_PATH, 'manifest.json');
   if (!fs.existsSync(filePath)) {
@@ -174,6 +201,7 @@ function main() {
     patchPermissionsUtil();
     patchBackend();
     patchRequestBuilder();
+    patchOffscreenProxy();
     patchManifest();
     console.log('✅ Yomitan patched successfully.');
   } catch (e) {
