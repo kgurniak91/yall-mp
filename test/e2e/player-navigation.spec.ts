@@ -1,7 +1,8 @@
 import {expect, test} from './support/app';
 import {CLIPS, inClip, NEAR_END} from './support/clips';
+import {playbackHistory, type PlaybackSnapshot} from './support/playback';
 import {
-  containsInOrder, describeSteps, launchClips, markHistory, mpvPaused, mpvTime, press, quiet, repeatCompletions, snapshot, startPlaying,
+  changesSince, containsInOrder, describeSteps, launchClips, markHistory, mpvPaused, mpvTime, press, quiet, repeatCompletions, snapshot, startPlaying,
   stepsSince, waitForState, waitForTimeSince
 } from './support/player';
 
@@ -17,34 +18,52 @@ for (const atStart of [false, true]) {
     // Start paused inside the gap between the first and the second subtitled clip
     const {ui} = await launchClips(launch, {lastPlaybackTime: inClip(2, 0.4), settings: {autoPauseAtStart: atStart}});
 
-    // A jump always lands at the start of the clip and then plays, or rests there when auto-pause at start is on
-    const landsOn = async (index: number): Promise<void> => {
-      await expect.poll(async () => (await snapshot(ui))?.currentClipIndex, {message: `jump to clip ${index}`}).toBe(index);
-      await waitForState(ui, atStart ? 'AutoPausedAtStart' : 'Playing');
-      expect(await mpvPaused(ui)).toBe(atStart);
-      expect(await mpvTime(ui)).toBeGreaterThan(CLIPS[index].start - 0.05);
-      expect(await mpvTime(ui)).toBeLessThan(CLIPS[index].start + landingSlack);
+    const wanted = atStart ? 'AutoPausedAtStart' : 'Playing';
+    // A jump always lands at the start of the clip and then plays, or rests there when auto-pause at start is on.
+    // Where it landed is read from the first update in the new clip, not from the live position: the clip plays on
+    // while the poll runs, so a late read of the live position would judge the playback rather than the landing.
+    const landsOn = async (index: number, mark: number): Promise<void> => {
+      const landing = async (): Promise<PlaybackSnapshot | undefined> => {
+        const history = await playbackHistory(ui);
+        let departed = mark === 0; // no update before the mark: nothing to depart from
+        for (const s of history.slice(Math.max(0, mark - 1))) {
+          if (s.currentClipIndex !== index || s.playerState !== wanted) {
+            departed = true;
+          } else if (departed) {
+            return s;
+          }
+        }
+        return undefined;
+      };
+      await expect.poll(async () => (await landing()) !== undefined, {message: `jump to clip ${index} (${wanted})`}).toBe(true);
+      const landedAt = (await landing())!.currentTime;
+      expect(landedAt, `landing time in clip ${index}`).toBeGreaterThan(CLIPS[index].start - 0.05);
+      expect(landedAt, `landing time in clip ${index}`).toBeLessThan(CLIPS[index].start + landingSlack);
+      if (atStart) {
+        // It rests at the start, so the live position must be there too
+        expect(await mpvPaused(ui)).toBe(true);
+        expect(await mpvTime(ui)).toBeGreaterThan(CLIPS[index].start - 0.05);
+        expect(await mpvTime(ui)).toBeLessThan(CLIPS[index].start + landingSlack);
+      }
+    };
+    const jump = async (key: string, index: number): Promise<void> => {
+      const mark = await markHistory(ui);
+      await press(ui, key);
+      await landsOn(index, mark);
     };
 
-    await press(ui, 'ControlOrMeta+ArrowRight');
-    await landsOn(3);
-
-    await press(ui, 'ControlOrMeta+ArrowRight');
-    await landsOn(4); // the adjacent subtitled clip
-
-    await press(ui, 'ControlOrMeta+ArrowLeft');
-    await landsOn(3);
-
-    await press(ui, 'ControlOrMeta+ArrowLeft');
-    await landsOn(1); // the gap in between is skipped
+    await jump('ControlOrMeta+ArrowRight', 3);
+    await jump('ControlOrMeta+ArrowRight', 4); // the adjacent subtitled clip
+    await jump('ControlOrMeta+ArrowLeft', 3);
+    await jump('ControlOrMeta+ArrowLeft', 1); // the gap in between is skipped
 
     // On the first subtitled clip there is nothing before it: the clip restarts
-    const mark = await markHistory(ui);
     await quiet(1200);
+    const mark = await markHistory(ui);
     await press(ui, 'ControlOrMeta+ArrowLeft');
     // The clip index does not change, so the seek itself is what to wait for before judging where the clip landed
     await expect.poll(async () => containsInOrder(await stepsSince(ui, mark), [{state: 'Transitioning', clip: 1}]), {message: 'the clip should have been sought'}).toBe(true);
-    await landsOn(1);
+    await landsOn(1, mark);
   });
 }
 
@@ -58,23 +77,31 @@ test('Ctrl+Right from a gap jumps to the next subtitled clip, and does nothing a
   // Pause on the last subtitled clip; there is no later one
   await press(ui, 'Space');
   await waitForState(ui, 'PausedByUser');
+  // The state turns PausedByUser when the key is handled; the last frame before mpv stops can still move the playhead
+  // a little after that (macOS reports the pause late), so let it settle before taking the baseline
+  await expect.poll(() => mpvPaused(ui)).toBe(true);
+  await quiet(400);
   const mark = await markHistory(ui);
+  const timeBefore = await mpvTime(ui);
   await press(ui, 'ControlOrMeta+ArrowRight');
   await quiet(700);
-  expect(await markHistory(ui), 'no seek, no state change').toBe(mark);
+  expect(await changesSince(ui, mark), 'no seek, no state change').toEqual([]);
   expect((await snapshot(ui))?.currentClipIndex).toBe(8);
   expect(await mpvPaused(ui)).toBe(true);
+  expect(Math.abs(await mpvTime(ui) - timeBefore), 'the playhead stays where it was').toBeLessThan(0.05);
 });
 
 test('Ctrl+Left from the leading gap does nothing', async ({launch}) => {
   const {ui} = await launchClips(launch, {lastPlaybackTime: inClip(0, 0.5)});
   const mark = await markHistory(ui);
+  const timeBefore = await mpvTime(ui);
 
   await press(ui, 'ControlOrMeta+ArrowLeft');
   await quiet(700);
 
-  expect(await markHistory(ui)).toBe(mark);
+  expect(await changesSince(ui, mark), 'no seek, no state change').toEqual([]);
   expect(await mpvPaused(ui)).toBe(true);
+  expect(Math.abs(await mpvTime(ui) - timeBefore), 'the playhead stays where it was').toBeLessThan(0.05);
 });
 
 test('Up repeats the current clip from its start while playing', async ({launch}) => {

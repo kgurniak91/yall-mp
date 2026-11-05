@@ -4,6 +4,13 @@ import * as path from 'path';
 
 export const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 
+/**
+ * macOS: skip AppKit's window restoration. After a crash (the native crash spec crashes the app on purpose) the next
+ * starts of the same app bundle can stop in a modal "reopen windows?" alert before any window exists. The app reads
+ * only existing files from argv, so the pair is ignored there.
+ */
+export const MAC_LAUNCH_ARGS = process.platform === 'darwin' ? ['-ApplePersistenceIgnoreState', 'YES'] : [];
+
 export interface LaunchOptions {
   /** Called with the fresh userData dir before the app starts, e.g. to seed a project */
   seed?: (userDataDir: string) => void;
@@ -78,7 +85,8 @@ export const test = base.extend<{ launch: (opts?: LaunchOptions) => Promise<Laun
       opts.seed?.(userDataDir);
 
       // On the hosted Mac the Electron process sometimes starts and then does nothing at all (no window, no output);
-      // a second start of the same app is fine, so a stalled start is repeated.
+      // a second start of the same app is fine, so a stalled start is repeated. (On the real Mac that stall was the
+      // restoration alert that MAC_LAUNCH_ARGS now turns off.)
       const attempts = process.platform === 'darwin' ? 3 : 1;
       const uiTimeoutMs = process.platform === 'darwin' ? 25_000 : 30_000;
       let app!: ElectronApplication;
@@ -86,7 +94,7 @@ export const test = base.extend<{ launch: (opts?: LaunchOptions) => Promise<Laun
       let chunks: string[] = [];
       for (let attempt = 1; attempt <= attempts; attempt++) {
         app = await _electron.launch({
-          args: ['.', ...(process.platform === 'linux' ? ['--no-sandbox'] : []), ...(opts.files ?? [])],
+          args: ['.', ...MAC_LAUNCH_ARGS, ...(process.platform === 'linux' ? ['--no-sandbox'] : []), ...(opts.files ?? [])],
           cwd: REPO_ROOT,
           env: {
             ...process.env as Record<string, string>,

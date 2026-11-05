@@ -15,8 +15,11 @@ const CLIP_COLORS = CLIPS.map(c => c.color);
 
 export const VIDEO_AREA = '#video-container, #mpv-placeholder';
 
-/** Pixel probes need a real GPU and a real screen: the hosted runners render the composited capture white. */
-export const pixelProbesAvailable = process.platform === 'win32' && !process.env['CI'];
+/**
+ * Pixel probes need a real GPU and a real screen: the hosted runners render the composited capture white. On a real
+ * Mac the screen capture needs the Screen Recording permission for the process that runs the tests.
+ */
+export const pixelProbesAvailable = (process.platform === 'win32' || process.platform === 'darwin') && !process.env['CI'];
 
 type LaunchFn = (opts?: LaunchOptions) => Promise<LaunchedApp>;
 
@@ -79,6 +82,20 @@ export async function stepsSince(ui: Page, mark = 0): Promise<Step[]> {
     }
   }
   return steps;
+}
+
+/**
+ * The updates since the mark that differ from the last update before it (state, clip, or time by more than 50 ms).
+ * An engine may resend an unchanged state while paused, so the raw number of updates does not show that nothing
+ * happened; this does. Without an update before the mark every update counts as a change.
+ */
+export async function changesSince(ui: Page, mark: number): Promise<string[]> {
+  const history = await playbackHistory(ui);
+  const before = mark > 0 ? history[mark - 1] : undefined;
+  return history.slice(mark)
+    .filter(s => !before || s.playerState !== before.playerState || s.currentClipIndex !== before.currentClipIndex
+      || Math.abs(s.currentTime - before.currentTime) > 0.05)
+    .map(s => `${s.playerState}@${s.currentClipIndex} t=${s.currentTime.toFixed(2)}`);
 }
 
 /** True when `wanted` occurs in `steps` in this order (other steps, such as Transitioning, may be in between). A step without `clip` matches any clip. */
@@ -258,8 +275,9 @@ export const quiet = (ms: number): Promise<void> => new Promise(r => setTimeout(
 /**
  * Near-white pixels in the band where the subtitle text sits (bottom of the picture of the 16:9 clips fixture), from a desktop capture,
  * so it sees whatever ends up on screen: mpv's own subtitle rendering as well as the DOM overlay. Use it for "is any text drawn".
+ * `min` is the lowest value of all three channels that counts as text (see `subtitleTextMin`).
  */
-export async function whitePixelsInSubtitleBand(app: ElectronApplication, ui: Page): Promise<number> {
+export async function whitePixelsInSubtitleBand(app: ElectronApplication, ui: Page, min = 225): Promise<number> {
   const box = await ui.locator(VIDEO_AREA).first().boundingBox();
   if (!box) {
     return 0;
@@ -285,7 +303,17 @@ export async function whitePixelsInSubtitleBand(app: ElectronApplication, ui: Pa
     }
   }
   const {colors} = await captureComposited(app, probes);
-  return colors.filter(c => c && c.r > 225 && c.g > 225 && c.b > 225).length;
+  return colors.filter(c => c && c.r > min && c.g > min && c.b > min).length;
+}
+
+/**
+ * The text threshold for `whitePixelsInSubtitleBand`. Readback renders at the video's own size when that is smaller
+ * than the canvas, so mpv's text in the 320x180 fixture is upscaled and soft (measured on a Mac: 5 grid points above
+ * 225, 24 above 180; the GPU path 32 above 225); the DOM overlay is always sharp.
+ */
+export async function subtitleTextMin(app: ElectronApplication): Promise<number> {
+  const backend = await app.evaluate(() => (globalThis as any).__yallE2E.getVideoStats()?.backend);
+  return backend === 'readback' ? 180 : 225;
 }
 
 /**

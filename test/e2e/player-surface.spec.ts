@@ -2,7 +2,7 @@ import {expect, test} from './support/app';
 import {CLIPS_ASS, inClip} from './support/clips';
 import {
   expectVideoShowsClip, launchClips, mpvSubtitlesVisible, pixelProbesAvailable, press, seekTo, setSubtitleRenderer, startPlaying,
-  whitePixelsInSubtitleBand
+  subtitleTextMin, whitePixelsInSubtitleBand
 } from './support/player';
 
 // What is actually on screen. These read pixels, so they need a real GPU and a real screen (the hosted CI runners have neither).
@@ -32,14 +32,15 @@ test('mpv draws the subtitle text itself in mpv mode, and stops when the subtitl
     settings: {useMpvSubtitles: true}
   });
   await expect.poll(() => mpvSubtitlesVisible(ui)).toBe(true);
+  const min = await subtitleTextMin(app);
 
-  const shown = await whitePixelsInSubtitleBand(app, ui);
+  const shown = await whitePixelsInSubtitleBand(app, ui, min);
   console.log(`[e2e] white pixels in the subtitle band, mpv mode shown: ${shown}`);
   expect(shown, 'text pixels with mpv subtitles shown').toBeGreaterThan(10);
 
   await press(ui, 'c');
   await expect.poll(() => mpvSubtitlesVisible(ui)).toBe(false);
-  const hidden = await whitePixelsInSubtitleBand(app, ui);
+  const hidden = await whitePixelsInSubtitleBand(app, ui, min);
   console.log(`[e2e] white pixels in the subtitle band, mpv mode hidden: ${hidden}`);
   expect(hidden, 'text pixels with mpv subtitles hidden').toBeLessThan(3);
 });
@@ -59,5 +60,6 @@ test('in interactive mode the text comes from the DOM overlay and mpv draws none
   await press(ui, 'c');
   await setSubtitleRenderer(ui, 'mpv');
   await expect.poll(() => mpvSubtitlesVisible(ui)).toBe(true);
-  await expect.poll(() => whitePixelsInSubtitleBand(app, ui), {message: 'mpv text on screen'}).toBeGreaterThan(10);
+  const min = await subtitleTextMin(app);
+  await expect.poll(() => whitePixelsInSubtitleBand(app, ui, min), {message: 'mpv text on screen'}).toBeGreaterThan(10);
 });
