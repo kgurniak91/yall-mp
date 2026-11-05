@@ -49,11 +49,21 @@ class TerminateWorker : public Napi::AsyncWorker {
   }
   void OnOK() override {
     after_();
-    deferred_.Resolve(Env().Undefined());
+    try {
+      deferred_.Resolve(Env().Undefined());
+    } catch (const Napi::Error&) {
+      // The worker can finish while Node tears the environment down (app quit): the promise can no longer be
+      // settled, and letting the exception escape would make node-addon-api rethrow it outside any handler
+      // (std::terminate, abort at quit).
+    }
   }
   void OnError(const Napi::Error& e) override {
     after_();
-    deferred_.Reject(e.Value());
+    try {
+      deferred_.Reject(e.Value());
+    } catch (const Napi::Error&) {
+      // Same as OnOK: nothing can receive the rejection during environment teardown.
+    }
   }
 
  private:
