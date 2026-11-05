@@ -18,16 +18,17 @@ const ZSCALE_FILTER =
   'zscale=t=iec61966-2-1:m=bt709:r=tv,format=yuv420p]';
 
 // Builds without zimg (the Homebrew ffmpeg on macOS) have no `zscale`. The same curve then runs per channel on the PQ
-// signal in a lookup table: PQ decode, 203 nit diffuse white, the same mobius roll-off for a 1000 nit title, sRGB
-// encode, then the BT.2020 to BT.709 primaries matrix applied to the encoded values (not to linear light, which the
-// 16 bit integer pipeline cannot hold: close enough, neutral colours are untouched). PQ only: HLG is built to look
-// right on an SDR screen as it is.
+// signal in a lookup table: PQ decode, 203 nit diffuse white and the same mobius roll-off for a 1000 nit title, kept
+// as linear light (the roll-off ends at 1, so 16 bit integers hold it), then the BT.2020 to BT.709 primaries matrix
+// in linear light, then the sRGB encode in a second table. (The matrix on encoded values instead bled about 60 levels
+// into the other channels of a saturated colour.) PQ only: HLG is built to look right on an SDR screen as it is.
 const PQ = {m1: 0.1593017578125, m2: 78.84375, c1: 0.8359375, c2: 18.8515625, c3: 18.6875};
 const DIFFUSE_WHITE_NITS = 203;
 const SIGNAL_PEAK_NITS = 1000;
 const MOBIUS_TRANSITION = 0.5;
 
-function lutExpression(): string {
+/** PQ signal -> tone-mapped linear light relative to diffuse white, 0..1 of maxval. */
+function toneMapExpression(): string {
   const peak = SIGNAL_PEAK_NITS / DIFFUSE_WHITE_NITS;
   const j = MOBIUS_TRANSITION;
   const a = -j * j * (peak - 1) / (j * j - 2 * j + peak);
@@ -39,15 +40,17 @@ function lutExpression(): string {
     `st(0,pow(val/maxval,${n(1 / PQ.m2)}))`,
     `st(1,pow(max(ld(0)-${n(PQ.c1)},0)/max(${n(PQ.c2)}-${n(PQ.c3)}*ld(0),0.000001),${n(1 / PQ.m1)})*${n(10000 / DIFFUSE_WHITE_NITS)})`,
     // roll-off above the transition point, never above 1
-    `st(2,min(if(lte(ld(1),${n(j)}),ld(1),${n(k)}*(ld(1)+${n(a)})/(ld(1)+${n(b)})),1))`,
-    // sRGB encode
-    `if(lte(ld(2),0.0031308),12.92*ld(2),1.055*pow(ld(2),${n(1 / 2.4)})-0.055)*maxval`
+    `min(if(lte(ld(1),${n(j)}),ld(1),${n(k)}*(ld(1)+${n(a)})/(ld(1)+${n(b)})),1)*maxval`
   ].join(';');
 }
 
+/** Linear light (0..1 of maxval) -> sRGB signal. */
+const SRGB_ENCODE = 'st(0,val/maxval);if(lte(ld(0),0.0031308),12.92*ld(0),1.055*pow(ld(0),1/2.4)-0.055)*maxval';
+
 const LUT_FILTER =
-  `lavfi=[format=gbrp16le,lutrgb=r='${lutExpression()}':g='${lutExpression()}':b='${lutExpression()}',` +
+  `lavfi=[format=gbrp16le,lutrgb=r='${toneMapExpression()}':g='${toneMapExpression()}':b='${toneMapExpression()}',` +
   'colorchannelmixer=rr=1.6605:rg=-0.5876:rb=-0.0728:gr=-0.1246:gg=1.1329:gb=-0.0083:br=-0.0182:bg=-0.1006:bb=1.1187,' +
+  `lutrgb=r='${SRGB_ENCODE}':g='${SRGB_ENCODE}':b='${SRGB_ENCODE}',` +
   'scale=out_color_matrix=bt709:out_range=tv,format=yuv420p,' +
   'setparams=colorspace=bt709:color_primaries=bt709:color_trc=iec61966-2-1:range=tv]';
 
