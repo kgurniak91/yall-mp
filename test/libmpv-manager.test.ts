@@ -245,15 +245,32 @@ describe('LibmpvManager', () => {
       fake.prop('time-pos', 2);
       fake.prop('time-pos', 2.1);
       statuses.length = 0;
-      vi.advanceTimersByTime(1000);
+      // Many position changes within a second: one update per 100 ms tick, always the latest position
+      for (let i = 0; i < 100; i++) {
+        fake.prop('time-pos', 2.1 + i * 0.01);
+        vi.advanceTimersByTime(10);
+      }
       const times = statuses.filter(s => s.name === 'time-pos');
       expect(times).toHaveLength(10);
-      expect(times[0]).toEqual({event: 'property-change', name: 'time-pos', data: 2.1});
+      expect(times[0]).toEqual({event: 'property-change', name: 'time-pos', data: 2.19});
 
       fake.prop('pause', true);
       statuses.length = 0;
       vi.advanceTimersByTime(500);
       expect(statuses).toEqual([]);
+    });
+
+    it('does not resend an unchanged position while the pause notification is on its way', () => {
+      fake.prop('pause', false);
+      fake.prop('time-pos', 12.1);
+      vi.advanceTimersByTime(100);
+      statuses.length = 0;
+      // Playback stopped (the position no longer moves), `pause` has not been reported yet
+      vi.advanceTimersByTime(1300);
+      expect(statuses.filter(s => s.name === 'time-pos')).toEqual([]);
+      fake.prop('time-pos', 12.2);
+      vi.advanceTimersByTime(100);
+      expect(statuses.filter(s => s.name === 'time-pos')).toEqual([{event: 'property-change', name: 'time-pos', data: 12.2}]);
     });
 
     it('emits pause changes and normalises null to undefined', () => {

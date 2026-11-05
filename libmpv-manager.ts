@@ -93,6 +93,8 @@ export class LibmpvManager extends EventEmitter {
   private stopping = false;
   private paused = true;
   private timePos: number | null = null;
+  /** The last position `emitTimePos` sent. */
+  private emittedTimePos: number | null = null;
   private lastIdle: boolean | undefined;
   private detachVideo: (() => void) | null = null;
   private pendingSeeks = 0;
@@ -217,6 +219,7 @@ export class LibmpvManager extends EventEmitter {
   private resetState(): void {
     this.paused = true;
     this.timePos = null;
+    this.emittedTimePos = null;
     this.lastIdle = undefined;
     this.pendingSeeks = 0;
     this.failedSeek = null;
@@ -341,8 +344,14 @@ export class LibmpvManager extends EventEmitter {
     }
   }
 
+  /**
+   * The latest position, at most 10 times a second and only when it moved. The `pause` notification can come a second
+   * after playback actually stopped (macOS: the core is still pausing the audio output), and an unchanged position
+   * resent in that window is not news.
+   */
   private emitTimePos(): void {
-    if (!this.paused && this.timePos !== null) {
+    if (!this.paused && this.timePos !== null && this.timePos !== this.emittedTimePos) {
+      this.emittedTimePos = this.timePos;
       this.emit('status', {event: 'property-change', name: 'time-pos', data: this.timePos});
     }
   }
