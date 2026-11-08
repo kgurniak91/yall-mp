@@ -16,7 +16,8 @@ import {
 } from 'electron';
 import path from 'path';
 import os from 'os';
-import {appendFileSync, existsSync, promises as fs, statSync, writeFileSync} from 'fs';
+import {appendFileSync, existsSync, mkdirSync, promises as fs, readFileSync, statSync, writeFileSync} from 'fs';
+import {ensureAppImageDesktopEntry} from './linux-desktop-entry';
 import type {CaptionsFileFormat, ParsedCaptionsResult, parseResponse, VTTCue} from 'media-captions';
 import type {SrtSubtitleData, SubtitleData} from './shared/types/subtitle.type';
 import type {MediaTrack} from './shared/types/media.type';
@@ -681,6 +682,27 @@ function blockDefaultBrowserShortcuts(event: Electron.Event, input: Electron.Inp
   }
 }
 
+/** Linux AppImage: gives the shell a .desktop entry and icon in the user's folder, or the dock shows a cogwheel. */
+function registerAppImageInDesktop(): void {
+  if (process.platform !== 'linux' || !process.env.APPIMAGE) {
+    return;
+  }
+  try {
+    // The icon theme has no folder above 512 px, so the 1024 px source is scaled down.
+    const image = nativeImage.createFromPath(path.join(__dirname, 'build', 'icon.png'));
+    const result = ensureAppImageDesktopEntry({
+      appImagePath: process.env.APPIMAGE,
+      dataHome: process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share'),
+      icon: image.isEmpty() ? null : image.resize({width: 512, height: 512, quality: 'best'}).toPNG(),
+      fs: {existsSync, readFileSync, writeFileSync, mkdirSync}
+    });
+    logVideo(`[Main Process] Desktop entry for the AppImage: ${result}`);
+  } catch (error) {
+    // cosmetic only: the app works without the entry
+    logVideo(`[Main Process] Desktop entry for the AppImage could not be written: ${error instanceof Error ? error.message : error}`);
+  }
+}
+
 function getWindowIcon(): Electron.NativeImage {
   const icon = nativeImage.createFromPath(path.join(__dirname, 'build', 'icon.png'));
   // On X11 Chromium drops window icons above 128 px, so the 1024 px source would leave the default icon
@@ -846,6 +868,8 @@ if (!gotTheLock) {
 
     powerMonitor.on('suspend', onSystemSuspend);
     powerMonitor.on('resume', onSystemResume);
+
+    registerAppImageInDesktop();
 
     // The renderer asks for frames right after the project opens: have the active GPU known by then.
     gpuInfoPromise =app.getGPUInfo('complete').then(info => info as GpuInfoLike).catch(() => null);
