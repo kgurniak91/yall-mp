@@ -17,7 +17,10 @@ const displays = (app: ElectronApplication): Promise<DisplayInfo[]> =>
 
 const state = async (app: ElectronApplication) => (await getWindowStates(app)).main!;
 
-async function moveTo(app: ElectronApplication, target: DisplayInfo, width = 1000, height = 700): Promise<Rect> {
+async function moveTo(app: ElectronApplication, target: DisplayInfo, preferredWidth = 1000, preferredHeight = 700): Promise<Rect> {
+  // A window larger than the display would be shrunk to fit it (a 640x480 monitor is a supported size)
+  const width = Math.min(preferredWidth, target.workArea.width);
+  const height = Math.min(preferredHeight, target.workArea.height);
   const bounds: Rect = {
     x: target.workArea.x + Math.round((target.workArea.width - width) / 2),
     y: target.workArea.y + Math.round((target.workArea.height - height) / 2),
@@ -46,7 +49,11 @@ async function expectSurfaceOn(app: ElectronApplication, ui: Parameters<typeof c
 
 // These need two displays (the dev PC has them, CI does not). Scaling differences between the displays are what makes
 // them interesting, but a second display with the same scaling still catches a window that lands on the wrong screen.
+// A Wayland compositor places the windows itself: setBounds cannot put the window on the other display, so the specs
+// would test nothing there (fullscreen opens on the display the compositor chose).
 test.describe('two displays', () => {
+  test.skip(process.platform === 'linux' && process.env.XDG_SESSION_TYPE === 'wayland', 'Wayland does not let a window be placed on a display');
+
   test('moving the window to the other display re-fits the canvas to that display and redraws the picture', async ({launch}) => {
     const {app, ui} = await launch({seed: dir => seedProject(dir, {lastPlaybackTime: 1.0})});
     await waitForPlayer(ui);

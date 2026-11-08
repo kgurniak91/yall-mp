@@ -189,7 +189,8 @@ export async function expectPictureFillsContainer(app: ElectronApplication, ui: 
       const fit = await canvasMatchesContainer(ui);
       const {x, y, width, height} = await pictureRect(ui);
       const shot = await capturePage(app, ui);
-      const inset = 16;
+      // 16 px on a normal picture; smaller on a tiny one, where the burned-in timecode of the test video would be hit
+      const inset = Math.min(16, Math.max(2, Math.round(Math.min(width, height) * 0.02)));
       const probes = [[0.5, 0.5], [0, 0], [1, 0], [0, 1], [1, 1]].map(([fx, fy]) =>
         shot.colorAt(x + inset + (width - 2 * inset) * fx, y + inset + (height - 2 * inset) * fy));
       last = `canvas ${JSON.stringify(fit)}, picture ${JSON.stringify({x, y, width, height})}, probes ${JSON.stringify(probes)}`;
