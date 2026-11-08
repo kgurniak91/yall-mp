@@ -742,7 +742,7 @@ async function createWindow() {
 
   mainWindow.on('closed', () => {
     setDisplaySleepBlocked(false);
-    void mpvManager?.stop();
+    stopEngineForQuit();
     yomitanManager?.destroy();
 
     mainWindow = null;
@@ -1590,6 +1590,36 @@ if (!gotTheLock) {
     });
   });
 }
+
+// The engine has to be stopped before the process exits: on Linux the host process and the descriptor receiver
+// thread are torn down by stop(), and an exit in the middle of that left a running receiver behind (SIGABRT).
+let engineStopForQuit: Promise<void> | null = null;
+let engineStoppedForQuit = false;
+const QUIT_ENGINE_TIMEOUT_MS = 5000;
+
+function stopEngineForQuit(): Promise<void> {
+  engineStopForQuit ??= (mpvManager?.stop() ?? Promise.resolve()).catch(() => undefined);
+  return engineStopForQuit;
+}
+
+// will-quit, not before-quit: the windows (and their renderers, which still poll the engine) are gone by then.
+app.on('will-quit', event => {
+  if (engineStoppedForQuit || !mpvManager) {
+    return;
+  }
+  event.preventDefault();
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<void>(resolve => {
+    timer = setTimeout(resolve, QUIT_ENGINE_TIMEOUT_MS);
+  });
+  void Promise.race([stopEngineForQuit(), timeout]).finally(() => {
+    clearTimeout(timer);
+    engineStoppedForQuit = true;
+    // Not in this tick: with an engine that is stopped already this runs before Electron has finished handling the
+    // preventDefault above, and a quit() issued then is ignored (the app would never exit).
+    setImmediate(() => app.quit());
+  });
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

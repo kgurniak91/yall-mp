@@ -113,6 +113,24 @@ if (process.platform === 'linux' && (fs.existsSync(addonPath) || required)) {
       addon.closeFd(parentFd);
     });
 
+    it.each([
+      ['a receiver that is still running', false],
+      ['a receiver whose peer has already gone away', true]
+    ])('lets the process exit cleanly with %s', async (_name, peerGone) => {
+      // Before the destructor existed, exit() destroyed a joinable std::thread: std::terminate, SIGABRT.
+      const script = `
+        const module = {exports: {}};
+        process.dlopen(module, ${JSON.stringify(addonPath)});
+        const addon = module.exports;
+        const {parentFd, childFd} = addon.createFdChannel();
+        addon.startReceiver(parentFd, () => undefined);
+        ${peerGone ? 'addon.closeFd(childFd);' : ''}
+        setTimeout(() => process.exit(0), 150);
+      `;
+      const run = spawnSync(process.execPath, ['-e', script], {encoding: 'utf8', timeout: 15000});
+      expect({status: run.status, signal: run.signal, stderr: run.stderr}).toEqual({status: 0, signal: null, stderr: ''});
+    });
+
     it('does not leak descriptors over 20 channels', async () => {
       const before = openFds();
       for (let i = 0; i < 20; i++) {

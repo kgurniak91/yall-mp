@@ -32,17 +32,30 @@ class Receiver {
     thread_ = std::thread([this] { Run(); });
   }
 
+  // A receiver still alive when the process exits is destroyed with the static map below. A std::thread that is
+  // still joinable when destroyed calls std::terminate, so the destructor must stop and join it.
+  ~Receiver() { Stop(); }
+
+  Receiver(const Receiver&) = delete;
+  Receiver& operator=(const Receiver&) = delete;
+
+  // Idempotent: stopReceiver and the destructor may both get here.
   void Stop() {
+    if (stopped_) return;
+    stopped_ = true;
     if (stop_[1] >= 0) {
       const char byte = 1;
       (void)!write(stop_[1], &byte, 1);
     }
     if (thread_.joinable()) thread_.join();
-    tsfn_.Release();
+    // At process exit Node has already torn the environment down and released the function itself.
+    if (!atExit_) tsfn_.Release();
     if (stop_[0] >= 0) close(stop_[0]);
     if (stop_[1] >= 0) close(stop_[1]);
     stop_[0] = stop_[1] = -1;
   }
+
+  void MarkAtExit() { atExit_ = true; }
 
  private:
   void Run() {
@@ -95,10 +108,18 @@ class Receiver {
   int stop_[2] = {-1, -1};
   Napi::ThreadSafeFunction tsfn_;
   std::thread thread_;
+  bool stopped_ = false;
+  bool atExit_ = false;
 };
 
 std::mutex g_mutex;
-std::map<int, std::unique_ptr<Receiver>> g_receivers;
+// Static, so it is destroyed by exit(): the receivers still in it are stopped and joined there, without touching Node.
+struct ReceiverMap : std::map<int, std::unique_ptr<Receiver>> {
+  ~ReceiverMap() {
+    for (auto& entry : *this) entry.second->MarkAtExit();
+  }
+};
+ReceiverMap g_receivers;
 int g_nextReceiver = 1;
 
 bool IntArg(const Napi::CallbackInfo& info, size_t index, int& out) {
