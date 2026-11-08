@@ -18,7 +18,7 @@ const displays = (app: ElectronApplication): Promise<DisplayInfo[]> =>
 const state = async (app: ElectronApplication) => (await getWindowStates(app)).main!;
 
 async function moveTo(app: ElectronApplication, target: DisplayInfo, preferredWidth = 1000, preferredHeight = 700): Promise<Rect> {
-  // A window larger than the display would be shrunk to fit it (a 640x480 monitor is a supported size)
+  // A window larger than the display would be shrunk to fit it
   const width = Math.min(preferredWidth, target.workArea.width);
   const height = Math.min(preferredHeight, target.workArea.height);
   const bounds: Rect = {

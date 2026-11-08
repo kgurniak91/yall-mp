@@ -6,8 +6,8 @@ import {getWindowStates, restoreIfMaximized, withWindows} from './support/window
 import {launchClips, press, startPlaying, waitForState} from './support/player';
 
 const hardAssert = process.platform === 'win32';
-const MIN_WIDTH = 640;
-const MIN_HEIGHT = 480;
+const MIN_WIDTH = 800;
+const MIN_HEIGHT = 600;
 // Wayland compositors add a shadow margin to the frameless window
 const SLACK = process.platform === 'linux' ? 32 : 16;
 
@@ -44,10 +44,10 @@ test('setBounds resize: the layout follows, the canvas re-fits and the paused pi
     }
   });
 
-  // Below the 640x480 minimum the window is clamped
+  // Below the 800x600 minimum the window is clamped
   await withWindows(app, ({mainWindow}) => {
     const b = mainWindow.getBounds();
-    mainWindow.setBounds({x: b.x, y: b.y, width: 500, height: 350});
+    mainWindow.setBounds({x: b.x, y: b.y, width: 600, height: 400});
   });
   await expect.poll(async () => {
     const small = (await getWindowStates(app)).main!.bounds;

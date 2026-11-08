@@ -1,11 +1,10 @@
-// The app window may be larger than the display it was moved to (GNOME lets a window stick out, and the 800x600 minimum
-// of the old layout was larger than a 640x480 screen). The page knows its display (screen.availWidth/availHeight follows
+// The app window may be larger than the display it was moved to (GNOME lets a window stick out). The page knows its display (screen.availWidth/availHeight follows
 // the monitor the window is on, also on Wayland, where the main process gets no usable window position) and asks the main
 // process to shrink the window when it does not fit.
 
-/** The smallest window the layout supports; also the size of the smallest screen the app is expected to run on. */
-export const MIN_WINDOW_WIDTH = 640;
-export const MIN_WINDOW_HEIGHT = 480;
+/** The smallest window the layout supports (a smaller display makes the window fit it, see windowFitSize). */
+export const MIN_WINDOW_WIDTH = 800;
+export const MIN_WINDOW_HEIGHT = 600;
 
 export interface Size {
   width: number;
