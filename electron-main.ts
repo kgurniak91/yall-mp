@@ -19,7 +19,8 @@ import os from 'os';
 import {appendFileSync, existsSync, mkdirSync, promises as fs, readFileSync, statSync, writeFileSync} from 'fs';
 import {customIconArguments, desktopIconFile, ensureAppImageDesktopEntry} from './linux-desktop-entry';
 import {createLookupHost, LookupHost, lookupPanelBounds} from './lookup-host';
-import {MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, windowFitSize} from './window-fit';
+import {boundsInsideWorkArea, MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, windowFitSize} from './window-fit';
+import {hasOzonePlatformArgument, isNativeWayland, shouldRelaunchWithX11, x11RelaunchCommand} from './linux-display-server';
 import type {CaptionsFileFormat, ParsedCaptionsResult, parseResponse, VTTCue} from 'media-captions';
 import type {SrtSubtitleData, SubtitleData} from './shared/types/subtitle.type';
 import type {MediaTrack} from './shared/types/media.type';
@@ -770,11 +771,43 @@ async function createWindow() {
     mainWindow?.webContents.send('window:maximized-state-changed', false);
   });
 
-  if (process.platform === 'linux') {
+  // The stretched first fullscreen frames are a native Wayland (GNOME) problem; X11 and XWayland do not have it
+  const nativeWayland = runsAsNativeWayland();
+  if (nativeWayland) {
     const window = mainWindow;
     fullscreenRepair = new FullscreenRepairPulse((opacity) => {
       if (!window.isDestroyed()) {
         window.setOpacity(opacity);
+      }
+    });
+  }
+
+  // Where the window position is exact (X11, XWayland) a window dropped on a smaller monitor is shrunk and moved inside it.
+  // It waits until the move has stopped, or it would fight the drag.
+  if (process.platform === 'linux' && !nativeWayland) {
+    const window = mainWindow;
+    let settleTimer: ReturnType<typeof setTimeout> | null = null;
+    window.on('move', () => {
+      if (settleTimer) {
+        clearTimeout(settleTimer);
+      }
+      settleTimer = setTimeout(() => {
+        settleTimer = null;
+        if (window.isDestroyed() || window.isMaximized() || window.isFullScreen() || window.isMinimized()) {
+          return;
+        }
+        const bounds = window.getBounds();
+        const fitted = boundsInsideWorkArea(bounds, screen.getDisplayMatching(bounds).workArea);
+        if (fitted) {
+          console.log(`[Main Process] Window at ${bounds.x},${bounds.y} ${bounds.width}x${bounds.height} is larger than its display, fitting to ${fitted.x},${fitted.y} ${fitted.width}x${fitted.height}`);
+          window.setMinimumSize(Math.min(MIN_WINDOW_WIDTH, fitted.width), Math.min(MIN_WINDOW_HEIGHT, fitted.height));
+          window.setBounds(fitted);
+        }
+      }, 400);
+    });
+    window.on('closed', () => {
+      if (settleTimer) {
+        clearTimeout(settleTimer);
       }
     });
   }
@@ -855,7 +888,31 @@ async function createWindow() {
   }
 }
 
-const gotTheLock = app.requestSingleInstanceLock();
+function runsAsNativeWayland(): boolean {
+  return isNativeWayland(app.commandLine.getSwitchValue('ozone-platform'), {
+    platform: process.platform,
+    sessionType: process.env.XDG_SESSION_TYPE,
+    hasWaylandDisplay: !!process.env.WAYLAND_DISPLAY
+  });
+}
+
+// Linux runs through X11 (XWayland on a Wayland desktop): a native Wayland client cannot know its window position or monitor.
+// Electron chooses the platform before this code runs, so the packaged app relaunches itself once with the X11 switch.
+const relaunchWithX11 = shouldRelaunchWithX11({
+  platform: process.platform,
+  packaged: app.isPackaged,
+  e2e: isE2E,
+  ozonePlatformArgument: hasOzonePlatformArgument(process.argv),
+  currentOzonePlatform: app.commandLine.getSwitchValue('ozone-platform'),
+  hasX11Display: !!process.env.DISPLAY
+});
+if (relaunchWithX11) {
+  const relaunch = x11RelaunchCommand({execPath: process.execPath, argv: process.argv, appImage: process.env.APPIMAGE, appDir: process.env.APPDIR});
+  app.relaunch({execPath: relaunch.execPath, args: relaunch.args});
+  app.exit(0);
+}
+
+const gotTheLock = relaunchWithX11 ? false : app.requestSingleInstanceLock();
 
 if (!gotTheLock) {
   app.quit();
@@ -1052,6 +1109,11 @@ if (!gotTheLock) {
     // The page reports a display smaller than the window (it was moved to a smaller monitor): shrink the window to fit
     ipcMain.on('window:fit-to-display', (_, available: { width: number; height: number }) => {
       if (!mainWindow || mainWindow.isDestroyed() || mainWindow.isMaximized() || mainWindow.isFullScreen()) {
+        return;
+      }
+      // On Linux the main process fits the window itself after a move (it knows the position there, unlike the page); on
+      // native Wayland neither side knows the display, so there is nothing to fit to
+      if (process.platform === 'linux') {
         return;
       }
       const [width, height] = mainWindow.getContentSize();

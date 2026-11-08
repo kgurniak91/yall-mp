@@ -122,7 +122,25 @@ test('resize stress: no draw errors, no send failures, the slots come back', asy
   expect(sender.addon.reclaimed).toBe(0);
 });
 
+// Linux fits the window in the main process after a move (the position is exact on X11); the other platforms fit it from the page's report
+test('a window larger than its display is shrunk and moved inside the display', async ({launch}) => {
+  test.skip(process.platform !== 'linux' || process.env.YALL_MP_E2E_OZONE === 'wayland', 'Linux on X11 only');
+  const {app, ui} = await launch({seed: dir => seedProject(dir)});
+  await waitForPlayer(ui);
+  await restoreIfMaximized(app);
+  const workArea = await app.evaluate(({screen}) => screen.getPrimaryDisplay().workArea);
+  // Larger than the work area and sticking out at the bottom right
+  await app.evaluate((_electron, area) => (globalThis as any).__yallE2E.getWindows().mainWindow.setBounds(
+    {x: area.x + 200, y: area.y + 100, width: area.width + 300, height: area.height + 200}), workArea);
+  await expect.poll(async () => {
+    const b = (await getWindowStates(app)).main!.bounds;
+    return b.width <= workArea.width && b.height <= workArea.height && b.x >= workArea.x && b.y >= workArea.y
+      && b.x + b.width <= workArea.x + workArea.width && b.y + b.height <= workArea.y + workArea.height;
+  }, {timeout: 10_000}).toBe(true);
+});
+
 test('a window larger than its display is shrunk to the display, and the minimum follows a tiny display', async ({launch}) => {
+  test.skip(process.platform === 'linux', 'Linux fits in the main process, see the test above');
   const {app, ui} = await launch({seed: dir => seedProject(dir)});
   await waitForPlayer(ui);
   await restoreIfMaximized(app);

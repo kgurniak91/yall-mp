@@ -58,6 +58,7 @@
       "linux-desktop-entry.js",
       "lookup-host.js",
       "window-fit.js",
+      "linux-display-server.js",
       "fullscreen-transition.js",
       "hdr-tonemap.js",
       "bench-config.js",

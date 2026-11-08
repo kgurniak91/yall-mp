@@ -87,6 +87,8 @@ public/THIRD-PARTY-NOTICES.txt
 /lookup-host.js.map
 /window-fit.js
 /window-fit.js.map
+/linux-display-server.js
+/linux-display-server.js.map
 /fullscreen-transition.js
 /fullscreen-transition.js.map
 /hdr-tonemap.js

@@ -2,6 +2,11 @@ import {_electron, test as base, type ElectronApplication, type Page} from '@pla
 import * as fs from 'fs';
 import * as path from 'path';
 
+/** The shipped Linux app runs on X11 (XWayland on a Wayland desktop); `YALL_MP_E2E_OZONE=wayland` tests native Wayland. */
+function linuxOzoneArgs(): string[] {
+  const platform = process.env.YALL_MP_E2E_OZONE ?? 'x11';
+  return process.env.DISPLAY || platform !== 'x11' ? [`--ozone-platform=${platform}`] : [];
+}
 export const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 
 /**
@@ -94,7 +99,7 @@ export const test = base.extend<{ launch: (opts?: LaunchOptions) => Promise<Laun
       let chunks: string[] = [];
       for (let attempt = 1; attempt <= attempts; attempt++) {
         app = await _electron.launch({
-          args: ['.', ...MAC_LAUNCH_ARGS, ...(process.platform === 'linux' ? ['--no-sandbox'] : []), ...(opts.files ?? [])],
+          args: ['.', ...MAC_LAUNCH_ARGS, ...(process.platform === 'linux' ? ['--no-sandbox', ...linuxOzoneArgs()] : []), ...(opts.files ?? [])],
           cwd: REPO_ROOT,
           env: {
             ...process.env as Record<string, string>,

@@ -7,9 +7,8 @@ export function exceedsDisplay(inner: { width: number; height: number }, availab
 }
 
 /**
- * Keeps the window inside the display it is on. A window manager may let a window stick out of a smaller monitor (GNOME
- * does), and the main process has no usable window position on Wayland, but the page knows its display:
- * `screen.availWidth/availHeight` follows the monitor the window is on. There is no event for moving to another monitor,
+ * Keeps the window inside the display it is on (Windows and macOS; on Linux the main process fits the window after a move).
+ * The page knows its display: `screen.availWidth/availHeight` follows the monitor the window is on. There is no event for moving to another monitor,
  * so the check runs once a second and on resize; it only costs two property reads.
  */
 @Injectable({providedIn: 'root'})

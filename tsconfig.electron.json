@@ -19,6 +19,7 @@
     "linux-desktop-entry.ts",
     "lookup-host.ts",
     "window-fit.ts",
+    "linux-display-server.ts",
     "fullscreen-transition.ts",
     "hdr-tonemap.ts",
     "bench-config.ts",
