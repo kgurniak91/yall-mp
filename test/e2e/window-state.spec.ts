@@ -61,6 +61,17 @@ test.describe('window state', () => {
     await expectPictureFillsContainer(app, ui);
   });
 
+  test('the header is a drag region and every clickable part of it opts out', async ({launch}) => {
+    const {ui} = await launch({seed: dir => seedProject(dir)});
+    await waitForPlayer(ui);
+
+    expect(await appRegion(ui)).toBe('drag');
+    for (const selector of ['.window-controls-wrapper', '.menu-button-wrapper']) {
+      const region = await ui.locator(`.header-wrapper ${selector}`).first().evaluate(el => getComputedStyle(el).getPropertyValue('-webkit-app-region'));
+      expect(region, selector).toBe('no-drag');
+    }
+  });
+
   test('F11 enters fullscreen and Escape leaves it', async ({launch}) => {
     const {app, ui} = await launch({seed: dir => seedProject(dir)});
     await waitForPlayer(ui);
