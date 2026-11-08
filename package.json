@@ -222,6 +222,7 @@
     },
     "linux": {
       "target": "AppImage",
+      "executableName": "yall-mp",
       "icon": "build/icon.png",
       "artifactName": "${productName} v${version}.${ext}",
       "extraResources": [
