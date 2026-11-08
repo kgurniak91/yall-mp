@@ -5,6 +5,15 @@ import {auditTime, debounceTime, filter, from, map, of, Subject} from 'rxjs';
 import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
 import {switchMap} from 'rxjs/operators';
 
+/**
+ * The time the player shows for a playback update. When the file has ended it is the duration: the engine reports the
+ * end with the duration, but a late time-pos event (the last frame, e.g. 89.97 s of 90 s) can follow and overwrite it,
+ * and the clock would sometimes stop at 00:01:29 of 00:01:30.
+ */
+export function timeToShow(update: { playerState: PlayerState; currentTime: number }, duration: number): number {
+  return update.playerState === PlayerState.Ended && duration > 0 ? duration : update.currentTime;
+}
+
 @Injectable()
 export class VideoStateService implements OnDestroy {
   private readonly _currentTime = signal(0);
@@ -89,7 +98,7 @@ export class VideoStateService implements OnDestroy {
     });
 
     this.cleanupPlaybackListener = window.electronAPI.onPlaybackStateUpdate((update) => {
-      this._currentTime.set(update.currentTime);
+      this._currentTime.set(timeToShow(update, this._duration()));
       this._isPaused.set(update.isPaused);
       this._subtitlesVisible.set(update.subtitlesVisible);
       this._playerState.set(update.playerState);
