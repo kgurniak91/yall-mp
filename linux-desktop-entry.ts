@@ -64,6 +64,25 @@ export function pngSize(png: Buffer): number | null {
   return png.readUInt32BE(16);
 }
 
+/** Where the entry stores its icon, or null when there is no PNG icon the hicolor theme could use. */
+export function desktopIconFile(dataHome: string, icon: Buffer | null): string | null {
+  const size = icon ? pngSize(icon) : null;
+  // The hicolor theme has no folder above 512 px: a larger icon would never be found.
+  if (!size || size > MAX_ICON_SIZE) {
+    return null;
+  }
+  return path.join(dataHome, 'icons', 'hicolor', `${size}x${size}`, 'apps', `${DESKTOP_ENTRY_NAME}.png`);
+}
+
+/**
+ * Arguments for `gio` that give the AppImage file the app icon in the file manager. GNOME Files shows a cogwheel for
+ * every AppImage (it does not read the icon inside the file) but honours this per-file attribute.
+ */
+export function customIconArguments(appImagePath: string, iconFile: string): string[] {
+  const uri = `file://${iconFile.split('/').map(encodeURIComponent).join('/')}`;
+  return ['set', appImagePath, 'metadata::custom-icon', uri];
+}
+
 /**
  * Writes `<dataHome>/applications/yall-mp.desktop` and the icon when this runs as an AppImage. An entry that the user
  * or another tool wrote (no marker of ours) is left alone; one of ours is updated when the AppImage moved or was
@@ -74,14 +93,12 @@ export function ensureAppImageDesktopEntry(options: DesktopEntryOptions): Deskto
   if (!appImagePath || !path.isAbsolute(appImagePath) || !icon) {
     return 'skipped';
   }
-  const size = pngSize(icon);
-  // The hicolor theme has no folder above 512 px: a larger icon would never be found.
-  if (!size || size > MAX_ICON_SIZE) {
+  const iconFile = desktopIconFile(dataHome, icon);
+  if (!iconFile) {
     return 'skipped';
   }
 
   const desktopFile = path.join(dataHome, 'applications', `${DESKTOP_ENTRY_NAME}.desktop`);
-  const iconFile = path.join(dataHome, 'icons', 'hicolor', `${size}x${size}`, 'apps', `${DESKTOP_ENTRY_NAME}.png`);
   const wanted = desktopEntryText(appImagePath);
 
   let result: DesktopEntryResult = 'created';

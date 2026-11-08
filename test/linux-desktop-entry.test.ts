@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {desktopEntryText, ensureAppImageDesktopEntry, pngSize} from '../linux-desktop-entry';
+import {customIconArguments, desktopEntryText, desktopIconFile, ensureAppImageDesktopEntry, pngSize} from '../linux-desktop-entry';
 
 /** An in-memory file system. */
 function memoryFs(files: Record<string, string | Buffer> = {}) {
@@ -67,5 +67,19 @@ describe('AppImage desktop entry', () => {
   it('reads the icon size from the PNG header', () => {
     expect(pngSize(png(512))).toBe(512);
     expect(pngSize(Buffer.alloc(40))).toBeNull();
+  });
+});
+
+describe('AppImage file icon', () => {
+  it('names the icon file after the icon size and skips icons the theme cannot use', () => {
+    expect(desktopIconFile('/data', png(512))).toBe(ICON);
+    expect(desktopIconFile('/data', png(256))).toBe('/data/icons/hicolor/256x256/apps/yall-mp.png');
+    expect(desktopIconFile('/data', png(1024))).toBeNull();
+    expect(desktopIconFile('/data', null)).toBeNull();
+  });
+
+  it('builds the gio arguments with a file URI that survives spaces and quotes in the paths', () => {
+    expect(customIconArguments(APP, ICON)).toEqual(['set', APP, 'metadata::custom-icon', 'file:///data/icons/hicolor/512x512/apps/yall-mp.png']);
+    expect(customIconArguments(APP, '/data dir/it\'s/yall-mp.png')[3]).toBe('file:///data%20dir/it\'s/yall-mp.png');
   });
 });

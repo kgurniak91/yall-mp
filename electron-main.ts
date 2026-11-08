@@ -17,7 +17,7 @@ import {
 import path from 'path';
 import os from 'os';
 import {appendFileSync, existsSync, mkdirSync, promises as fs, readFileSync, statSync, writeFileSync} from 'fs';
-import {ensureAppImageDesktopEntry} from './linux-desktop-entry';
+import {customIconArguments, desktopIconFile, ensureAppImageDesktopEntry} from './linux-desktop-entry';
 import {createLookupHost, LookupHost, lookupPanelBounds} from './lookup-host';
 import {MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, windowFitSize} from './window-fit';
 import type {CaptionsFileFormat, ParsedCaptionsResult, parseResponse, VTTCue} from 'media-captions';
@@ -694,13 +694,19 @@ function registerAppImageInDesktop(): void {
   try {
     // The icon theme has no folder above 512 px, so the 1024 px source is scaled down.
     const image = nativeImage.createFromPath(path.join(__dirname, 'build', 'icon.png'));
-    const result = ensureAppImageDesktopEntry({
-      appImagePath: process.env.APPIMAGE,
-      dataHome: process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share'),
-      icon: image.isEmpty() ? null : image.resize({width: 512, height: 512, quality: 'best'}).toPNG(),
-      fs: {existsSync, readFileSync, writeFileSync, mkdirSync}
-    });
+    const dataHome = process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share');
+    const icon = image.isEmpty() ? null : image.resize({width: 512, height: 512, quality: 'best'}).toPNG();
+    const result = ensureAppImageDesktopEntry({appImagePath: process.env.APPIMAGE, dataHome, icon, fs: {existsSync, readFileSync, writeFileSync, mkdirSync}});
     logVideo(`[Main Process] Desktop entry for the AppImage: ${result}`);
+
+    // The file manager shows a cogwheel for the AppImage file itself until the file has an icon attribute (set again on every start:
+    // moving the file with a plain `mv` drops it). Cosmetic, so a missing `gio` is only logged.
+    const iconFile = desktopIconFile(dataHome, icon);
+    if (iconFile && result !== 'skipped') {
+      execFile('gio', customIconArguments(process.env.APPIMAGE, iconFile), {timeout: 5000}, (error) => {
+        logVideo(`[Main Process] File icon of the AppImage: ${error ? `not set (${error.message})` : 'set'}`);
+      });
+    }
   } catch (error) {
     // cosmetic only: the app works without the entry
     logVideo(`[Main Process] Desktop entry for the AppImage could not be written: ${error instanceof Error ? error.message : error}`);
