@@ -13,13 +13,13 @@ import {
 } from 'electron';
 import path from 'path';
 import os from 'os';
-import {promises as fs, statSync} from 'fs';
+import {existsSync, promises as fs, statSync} from 'fs';
 import type {CaptionsFileFormat, ParsedCaptionsResult, parseResponse, VTTCue} from 'media-captions';
 import type {SrtSubtitleData, SubtitleData} from './shared/types/subtitle.type';
 import type {MediaTrack} from './shared/types/media.type';
 import {AnkiBatchExportRequest, AnkiCard, AnkiFieldMappingSource} from './src/app/model/anki.types';
 import {v4 as uuidv4} from 'uuid';
-import {ChildProcess, spawn} from 'child_process';
+import {ChildProcess, execFile, spawn} from 'child_process';
 import {MediaKeyAction, MpvManager} from './mpv-manager';
 import {FontData, ParsedSubtitlesData} from './src/electron-api';
 import {AppData, CoreConfig, Project, SubtitleSelection, SupportedLanguage} from './src/app/model/project.types';
@@ -72,8 +72,14 @@ const MAC_TITLE_STRIP_HEIGHT = 28;
 let customExecutables: { mpv?: string, ffmpeg?: string, ffprobe?: string, audiowaveform?: string } = {};
 let isFfmpegPathsInitialized = false;
 
-// Data isolation for development purposes only to avoid corrupting real study data on the local machine
-if (!app.isPackaged) {
+const isE2E = process.env.YALL_MP_E2E === '1';
+
+// E2E tests give every run its own userData dir (and therefore its own single-instance lock)
+if (process.env.YALL_MP_USER_DATA_DIR) {
+  app.setPath('userData', process.env.YALL_MP_USER_DATA_DIR);
+  console.log(`[Main] Data path overridden by YALL_MP_USER_DATA_DIR: ${process.env.YALL_MP_USER_DATA_DIR}`);
+} else if (!app.isPackaged) {
+  // Data isolation for development purposes only to avoid corrupting real study data on the local machine
   const userDataPath = path.join(app.getPath('appData'), 'yall-mp-dev');
   app.setPath('userData', userDataPath);
   console.log(`[Main] Development mode detected. Data path set to: ${userDataPath}`);
@@ -96,6 +102,7 @@ interface RequiredFont {
 
 const APP_DATA_KEY = 'yall-mp-app-data';
 const APP_DATA_PATH = path.join(app.getPath('userData'), `${APP_DATA_KEY}.json`);
+const DIALOG_STATE_PATH = path.join(app.getPath('userData'), 'dialog-state.json');
 const PROJECTS_DIR = path.join(app.getPath('userData'), 'projects');
 const FONT_CACHE_DIR = path.join(app.getPath('userData'), 'font-cache');
 const USER_AGENT_OPTIONS = {
@@ -1236,12 +1243,20 @@ async function createWindow() {
   mainWindow.on('leave-full-screen', () => {
     isEnteringFullscreen = false;
 
-    if (mainWindow) {
-      mainWindow.setResizable(true);
-    }
+    const restoreResizable = () => {
+      if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isFullScreen()) {
+        mainWindow.setResizable(true);
+      }
+      if (uiWindow && !uiWindow.isDestroyed() && mainWindow && !mainWindow.isFullScreen()) {
+        uiWindow.setResizable(true);
+      }
+    };
+    restoreResizable();
+    // Newer Electron versions re-apply the pre-fullscreen window state after this event, which left the windows
+    // non-resizable and made the next fullscreen entry stick at the old size in the top-left corner.
+    setTimeout(restoreResizable, 150);
 
     if (uiWindow) {
-      uiWindow.setResizable(true);
       uiWindow.webContents.send('window:fullscreen-state-changed', false);
     }
 
@@ -1283,9 +1298,19 @@ async function createWindow() {
   const indexPath = path.join(__dirname, './dist/yall-mp/browser/index.html');
   uiWindow.loadFile(indexPath);
 
+  if (isE2E) {
+    // Read-only probe so e2e tests can inspect the windows without URL heuristics
+    (globalThis as any).__yallE2E = {getWindows: () => ({
+      mainWindow,
+      uiWindow,
+      // Windows/Linux only; on macOS the video is a native view inside uiWindow
+      videoWindow: videoSurface instanceof ChildWindowVideoSurface ? videoSurface.window : null
+    })};
+  }
+
   // Dev builds open DevTools unless YALL_DEVTOOLS=0 (DevTools also paints a "W x H" size
   // readout in the page corner during window resizes).
-  if (isDev && process.env['YALL_DEVTOOLS'] !== '0') {
+  if (isDev && !isE2E && process.env['YALL_DEVTOOLS'] !== '0') {
     uiWindow.webContents.once('devtools-opened', () => {
       if (uiWindow && !uiWindow.isDestroyed()) {
         uiWindow.focus();
@@ -1343,6 +1368,14 @@ if (!gotTheLock) {
 
   app.whenReady().then(async () => {
     startMainThreadStallLogger();
+
+    // GUI-launched macOS apps don't inherit the shell PATH, so Homebrew binaries (mpv, audiowaveform) aren't found
+    if (process.platform === 'darwin') {
+      const currentPaths = (process.env.PATH || '').split(path.delimiter);
+      const homebrewPaths = ['/opt/homebrew/bin', '/usr/local/bin'].filter(p => !currentPaths.includes(p));
+      process.env.PATH = [...homebrewPaths, ...currentPaths].join(path.delimiter);
+    }
+
     try {
       const configStr = await fs.readFile(APP_DATA_PATH, 'utf-8');
       const config = JSON.parse(configStr);
@@ -2378,9 +2411,27 @@ app.on('window-all-closed', () => {
   }
 });
 
+// Electron 43+ opens file dialogs in Downloads instead of the last used folder, so remember it ourselves.
+async function readLastDialogDirectory(): Promise<string | undefined> {
+  try {
+    const state = JSON.parse(await fs.readFile(DIALOG_STATE_PATH, 'utf-8'));
+    if (typeof state.lastDirectory === 'string' && statSync(state.lastDirectory).isDirectory()) {
+      return state.lastDirectory;
+    }
+  } catch {
+    // No saved state yet, or the folder is gone.
+  }
+  return undefined;
+}
+
 async function handleFileOpen(options: Electron.OpenDialogOptions) {
-  const {canceled, filePaths} = await dialog.showOpenDialog(options);
+  const defaultPath = options.defaultPath ?? await readLastDialogDirectory();
+  const {canceled, filePaths} = await dialog.showOpenDialog({...options, defaultPath});
   if (!canceled) {
+    if (filePaths.length > 0) {
+      fs.writeFile(DIALOG_STATE_PATH, JSON.stringify({lastDirectory: path.dirname(filePaths[0])}), 'utf-8')
+        .catch(err => console.warn('[Main] Failed to save the last dialog directory:', err));
+    }
     return filePaths;
   }
   return [];
@@ -3373,13 +3424,79 @@ async function extractAttachmentsWithEbml(mediaPath: string): Promise<Map<string
   return attachmentMap;
 }
 
+interface SystemFontQuery {
+  family: string;
+  italic: boolean;
+  weight: number;
+}
+
+// On Linux, font-scanner's fontconfig calls trap (SIGTRAP) inside Electron 44's Chromium process, while the same
+// addon works in a plain Node process. So look fonts up in a child process running the Electron binary as Node.
+async function findSystemFonts(queries: SystemFontQuery[]): Promise<Array<{ path: string } | null>> {
+  if (queries.length === 0) {
+    return [];
+  }
+
+  if (process.platform !== 'linux') {
+    const fontScanner = (await import('font-scanner')).default;
+    const results: Array<{ path: string } | null> = [];
+    for (const query of queries) {
+      try {
+        results.push(await fontScanner.findFont(query));
+      } catch {
+        results.push(null);
+      }
+    }
+    return results;
+  }
+
+  let modulePath = path.dirname(require.resolve('font-scanner/package.json'));
+  const unpackedPath = modulePath.replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
+  if (unpackedPath !== modulePath && existsSync(unpackedPath)) {
+    modulePath = unpackedPath;
+  }
+
+  const script = `
+    const scanner = require(process.argv[1]);
+    (async () => {
+      const out = [];
+      for (const query of JSON.parse(process.argv[2])) {
+        try {
+          const font = await scanner.findFont(query);
+          out.push(font ? {path: font.path} : null);
+        } catch {
+          out.push(null);
+        }
+      }
+      process.stdout.write(JSON.stringify(out));
+    })();`;
+
+  return new Promise(resolve => {
+    execFile(process.execPath, ['-e', script, modulePath, JSON.stringify(queries)], {
+      env: {...process.env, ELECTRON_RUN_AS_NODE: '1'},
+      timeout: 30000,
+      maxBuffer: 1024 * 1024
+    }, (error, stdout) => {
+      if (error) {
+        console.warn('[Fonts] System font lookup failed:', error.message);
+        resolve(queries.map(() => null));
+        return;
+      }
+      try {
+        resolve(JSON.parse(stdout));
+      } catch {
+        resolve(queries.map(() => null));
+      }
+    });
+  });
+}
+
 async function loadFontData(
   requiredFonts: RequiredFont[],
   mediaPath?: string,
   assFilePath?: string
 ): Promise<FontData[]> {
   const Levenshtein = (await import('fast-levenshtein')).default;
-  const fontScanner = (await import('font-scanner')).default;
   const fontkit = (await import('fontkit')).default;
 
   console.log(`[Fonts] Starting search for ${requiredFonts.length} required font styles.`);
@@ -3450,15 +3567,16 @@ async function loadFontData(
 
   // From system fonts (only search for needed fonts)
   console.log(`[Fonts] Pre-caching potential system font matches...`);
-  for (const req of requiredFonts) {
+  const systemFonts = await findSystemFonts(requiredFonts.map(req => ({family: req.family, italic: req.italic, weight: req.bold ? 700 : 400})));
+  for (const font of systemFonts) {
+    if (!font) {
+      continue;
+    }
     try {
-      const font = await fontScanner.findFont({family: req.family, italic: req.italic, weight: req.bold ? 700 : 400});
-      if (font) {
-        const fontBuffer = await fs.readFile(font.path);
-        addFontToDatabase(fontBuffer, path.basename(font.path), 'system');
-      }
+      const fontBuffer = await fs.readFile(font.path);
+      addFontToDatabase(fontBuffer, path.basename(font.path), 'system');
     } catch (e) {
-      /* Not found, that's fine */
+      /* Not readable, that's fine */
     }
   }
 
