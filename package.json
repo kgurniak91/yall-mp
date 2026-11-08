@@ -55,6 +55,7 @@
       "libmpv-host.js",
       "libmpv-frame-sender.js",
       "engine-restart.js",
+      "linux-desktop-entry.js",
       "fullscreen-transition.js",
       "hdr-tonemap.js",
       "bench-config.js",
@@ -223,6 +224,14 @@
     "linux": {
       "target": "AppImage",
       "executableName": "yall-mp",
+      "category": "AudioVideo",
+      "syncDesktopName": true,
+      "desktop": {
+        "entry": {
+          "StartupWMClass": "yall-mp",
+          "Categories": "AudioVideo;Player;Video;"
+        }
+      },
       "icon": "build/icon.png",
       "artifactName": "${productName} v${version}.${ext}",
       "extraResources": [
@@ -252,7 +261,8 @@
     },
     "portable": {
       "artifactName": "${productName} v${version}.exe"
-    }
+    },
+    "afterPack": "scripts/after-pack.js"
   },
   "private": true,
   "dependencies": {
