@@ -39,7 +39,7 @@ import {
 } from './shared/utils/subtitle-parsing';
 import {PlaybackManager} from './playback-manager';
 import {EngineRestartPolicy} from './engine-restart';
-import {FullscreenTransitionGuard} from './fullscreen-transition';
+import {FullscreenRepairPulse, FullscreenTransitionGuard} from './fullscreen-transition';
 import {BenchConfig, loadBenchConfig} from './bench-config';
 import type fontkit from 'fontkit';
 import {
@@ -114,6 +114,8 @@ let videoSender: LibmpvFrameSender | null = null;
 let viewportArgs: ViewportArgs | null = null;
 const engineRestartPolicy = new EngineRestartPolicy();
 const fullscreenGuard = new FullscreenTransitionGuard();
+// Linux only: repairs a fullscreen picture that reaches the screen stretched (see FullscreenRepairPulse)
+let fullscreenRepair: FullscreenRepairPulse | null = null;
 
 /** Enters or leaves fullscreen; entering again right after a leave is dropped, the window would come back at a wrong size. */
 function setFullScreenGuarded(enabled: boolean): void {
@@ -762,17 +764,30 @@ async function createWindow() {
     mainWindow?.webContents.send('window:maximized-state-changed', false);
   });
 
+  if (process.platform === 'linux') {
+    const window = mainWindow;
+    fullscreenRepair = new FullscreenRepairPulse((opacity) => {
+      if (!window.isDestroyed()) {
+        window.setOpacity(opacity);
+      }
+    });
+  }
+
   mainWindow.on('enter-full-screen', () => {
     fullscreenGuard.end(true);
+    fullscreenRepair?.start();
     mainWindow?.webContents.send('window:fullscreen-state-changed', true);
   });
 
   mainWindow.on('leave-full-screen', () => {
     fullscreenGuard.end(false);
+    fullscreenRepair?.stop();
     mainWindow?.webContents.send('window:fullscreen-state-changed', false);
   });
 
   mainWindow.on('closed', () => {
+    fullscreenRepair?.stop();
+    fullscreenRepair = null;
     setDisplaySleepBlocked(false);
     stopEngineForQuit();
     yomitanManager?.destroy();

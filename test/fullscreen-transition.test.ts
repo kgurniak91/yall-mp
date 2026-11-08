@@ -1,5 +1,10 @@
 import {describe, expect, it} from 'vitest';
-import {FullscreenTransitionGuard} from '../fullscreen-transition';
+import {
+  FULLSCREEN_REPAIR_DIMMED_OPACITY,
+  FULLSCREEN_REPAIR_HOLD_MS,
+  FullscreenRepairPulse,
+  FullscreenTransitionGuard
+} from '../fullscreen-transition';
 
 describe('FullscreenTransitionGuard', () => {
   it('allows entering and leaving when nothing happened before', () => {
@@ -53,5 +58,92 @@ describe('FullscreenTransitionGuard', () => {
     }
     // Enter at 0 and leave at 50 go through; the leave settles at 1220, so the entries at 100, 150 and 200 are dropped
     expect(results).toEqual([true, true, false, false, false]);
+  });
+});
+
+describe('FullscreenRepairPulse', () => {
+  const setup = () => {
+    let now = 0;
+    const pending: { at: number; run: () => void; id: number }[] = [];
+    let nextId = 1;
+    const opacities: number[] = [];
+    const pulse = new FullscreenRepairPulse(
+      (opacity) => opacities.push(opacity),
+      (run, ms) => {
+        const id = nextId++;
+        pending.push({at: now + ms, run, id});
+        return id as unknown as ReturnType<typeof setTimeout>;
+      },
+      (handle) => {
+        const index = pending.findIndex(p => p.id === (handle as unknown as number));
+        if (index >= 0) {
+          pending.splice(index, 1);
+        }
+      }
+    );
+    const advance = (ms: number) => {
+      const target = now + ms;
+      for (;;) {
+        pending.sort((a, b) => a.at - b.at);
+        const next = pending[0];
+        if (!next || next.at > target) {
+          break;
+        }
+        pending.shift();
+        now = next.at;
+        next.run();
+      }
+      now = target;
+    };
+    return {pulse, advance, opacities};
+  };
+
+  it('dips the opacity about a second after entering and restores it after the hold time', () => {
+    const {pulse, advance, opacities} = setup();
+    pulse.start();
+    advance(999);
+    expect(opacities).toEqual([]);
+    advance(1);
+    expect(opacities).toEqual([FULLSCREEN_REPAIR_DIMMED_OPACITY]);
+    advance(FULLSCREEN_REPAIR_HOLD_MS);
+    expect(opacities).toEqual([FULLSCREEN_REPAIR_DIMMED_OPACITY, 1]);
+  });
+
+  it('dips again later for a bad state that shows up late', () => {
+    const {pulse, advance, opacities} = setup();
+    pulse.start();
+    advance(3000);
+    expect(opacities).toEqual([FULLSCREEN_REPAIR_DIMMED_OPACITY, 1, FULLSCREEN_REPAIR_DIMMED_OPACITY, 1]);
+  });
+
+  it('cancels the pending dips when fullscreen is left, without touching the opacity', () => {
+    const {pulse, advance, opacities} = setup();
+    pulse.start();
+    advance(500);
+    pulse.stop();
+    advance(5000);
+    expect(opacities).toEqual([]);
+  });
+
+  it('restores the opacity when fullscreen is left in the middle of a dip', () => {
+    const {pulse, advance, opacities} = setup();
+    pulse.start();
+    advance(1050);
+    expect(opacities).toEqual([FULLSCREEN_REPAIR_DIMMED_OPACITY]);
+    pulse.stop();
+    expect(opacities).toEqual([FULLSCREEN_REPAIR_DIMMED_OPACITY, 1]);
+    advance(5000);
+    expect(opacities).toEqual([FULLSCREEN_REPAIR_DIMMED_OPACITY, 1]);
+  });
+
+  it('starting again replaces the pending dips of the previous entry', () => {
+    const {pulse, advance, opacities} = setup();
+    pulse.start();
+    advance(600);
+    pulse.start();
+    advance(999);
+    expect(opacities).toEqual([]);
+    advance(1);
+    expect(opacities).toEqual([FULLSCREEN_REPAIR_DIMMED_OPACITY]);
   });
 });
