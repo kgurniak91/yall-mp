@@ -225,7 +225,10 @@
       ]
     },
     "linux": {
-      "target": "AppImage",
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "executableName": "yall-mp",
       "category": "AudioVideo",
       "syncDesktopName": true,
@@ -256,6 +259,22 @@
           "from": "native/yall-libmpv/build/Release/yall-mpv-host",
           "to": "yall-mpv-host"
         }
+      ]
+    },
+    "deb": {
+      "appArmorProfile": "scripts/linux-apparmor-profile.tpl",
+      "artifactName": "yall-mp_${version}_${arch}.deb",
+      "depends": [
+        "libgtk-3-0",
+        "libnotify4",
+        "libnss3",
+        "libxss1",
+        "libxtst6",
+        "xdg-utils",
+        "libatspi2.0-0",
+        "libuuid1",
+        "libsecret-1-0",
+        "libmpv2"
       ]
     },
     "nsis": {
