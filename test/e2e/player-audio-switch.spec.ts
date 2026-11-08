@@ -83,7 +83,7 @@ test('switching the default sink back and forth while playing keeps the clock ru
         await quiet(1200);
         const after = Number(await mpvProp(ui, 'time-pos'));
         expect(after, `the clock moves after switching to ${sink.name} (round ${round + 1})`).toBeGreaterThan(before);
-        await waitForState(ui, ['Playing', 'AutoPaused']);
+        await waitForState(ui, ['Playing', 'AutoPausedAtStart', 'AutoPausedAtEnd']);
       }
     }
   } finally {

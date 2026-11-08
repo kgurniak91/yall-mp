@@ -3,14 +3,17 @@ import {expect, test} from './support/app';
 import {seedProject} from './support/seed';
 import {waitForPlayer} from './support/playback';
 import {getWindowStates} from './support/windows';
-import {doubleClickMouse, dragMouse} from './support/os-input-win';
+import {doubleClickMouse, dragMouse, osInputAvailable} from './support/os-input';
 import {launchClips, VIDEO_AREA} from './support/player';
 import {CLIPS, CLIPS_ASS} from './support/clips';
 
 // @os-input: moves the REAL mouse. Keep hands off the machine while it runs.
-test.skip(process.platform !== 'win32', 'Windows-only real input');
+test.skip(!osInputAvailable, 'Real input needs Windows or an X11 session with xdotool');
 test.describe('@os-input', () => {
   type Point = { x: number; y: number };
+
+  // GNOME on X11 does not count the first pixels of a window drag, so the window ends a little short of the pointer
+  const DRAG_SLACK = process.platform === 'win32' ? 8 : 20;
 
   const toPhysical = (app: ElectronApplication, p: Point) =>
     app.evaluate(({screen}, pt) => screen.dipToScreenPoint(pt), p);
@@ -39,13 +42,20 @@ test.describe('@os-input', () => {
   }
 
   async function setBounds(app: ElectronApplication, bounds: { x: number; y: number; width: number; height: number }) {
-    await app.evaluate((_e, b) => {
-      (globalThis as any).__yallE2E.getWindows().mainWindow.setBounds(b);
-    }, bounds);
+    // A window manager may start the window maximized (GNOME does) and applies un-maximizing later, so a single
+    // setBounds can be overridden: repeat it until the geometry sticks
     await expect.poll(async () => {
-      const b = (await mainState(app)).bounds;
-      return Math.abs(b.x - bounds.x) <= 2 && Math.abs(b.width - bounds.width) <= 2;
-    }).toBe(true);
+      await app.evaluate((_e, b) => {
+        const win = (globalThis as any).__yallE2E.getWindows().mainWindow;
+        if (win.isMaximized()) {
+          win.unmaximize();
+        }
+        win.setBounds(b);
+      }, bounds);
+      await new Promise(resolve => setTimeout(resolve, 400));
+      const state = await mainState(app);
+      return !state.isMaximized && Math.abs(state.bounds.x - bounds.x) <= 2 && Math.abs(state.bounds.width - bounds.width) <= 2;
+    }, {timeout: 15_000}).toBe(true);
   }
 
   test('drag the header, snap to the left edge, drag back to restore', async ({launch}) => {
@@ -62,7 +72,7 @@ test.describe('@os-input', () => {
     await drag(app, h1, {x: h1.x + 150, y: h1.y + 80});
     await expect.poll(async () => {
       const b = (await mainState(app)).bounds;
-      return Math.abs(b.x - (before.x + 150)) <= 8 && Math.abs(b.y - (before.y + 80)) <= 8;
+      return Math.abs(b.x - (before.x + 150)) <= DRAG_SLACK && Math.abs(b.y - (before.y + 80)) <= DRAG_SLACK;
     }, {timeout: 10_000}).toBe(true);
 
     // 2. Aero Snap to the left half
@@ -93,7 +103,7 @@ test.describe('@os-input', () => {
     await drag(app, gap, {x: gap.x + 120, y: gap.y + 60});
     await expect.poll(async () => {
       const b = (await mainState(app)).bounds;
-      return Math.abs(b.x - (before.x + 120)) <= 8 && Math.abs(b.y - (before.y + 60)) <= 8;
+      return Math.abs(b.x - (before.x + 120)) <= DRAG_SLACK && Math.abs(b.y - (before.y + 60)) <= DRAG_SLACK;
     }, {timeout: 10_000}).toBe(true);
   });
 
@@ -120,6 +130,9 @@ test.describe('@os-input', () => {
   test('double-clicking the drag handle maximizes the window', async ({launch}) => {
     const {app, ui} = await launch({seed: dir => seedProject(dir)});
     await waitForPlayer(ui);
+    // Start un-maximized: a double click on a maximized window restores it
+    const work = (await mainState(app)).display.workArea;
+    await setBounds(app, {x: work.x + 200, y: work.y + 100, width: 1000, height: 700});
 
     doubleClickMouse(await toPhysical(app, await handleCentre(app, ui)));
     await expect.poll(async () => (await mainState(app)).isMaximized, {timeout: 10_000}).toBe(true);
