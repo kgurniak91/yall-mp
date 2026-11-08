@@ -906,6 +906,20 @@ for (const stream of [process.stdout, process.stderr]) {
   });
 }
 
+// A stop signal (logout, shutdown, a kill of the whole process group) ends the app at once through our own cleanup. Left to
+// Chromium, the GPU process is gone first and the browser process keeps trying to start it again, which has ended in a SIGTRAP
+// crash report for an app that was only being stopped.
+if (process.platform === 'linux') {
+  for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP'] as const) {
+    process.on(signal, () => {
+      setDisplaySleepBlocked(false);
+      stopEngineForQuit();
+      yomitanManager?.destroy();
+      app.exit(0);
+    });
+  }
+}
+
 const gotTheLock = app.requestSingleInstanceLock();
 
 if (!gotTheLock) {
