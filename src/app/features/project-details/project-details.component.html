@@ -120,7 +120,7 @@
     <div class="toolbar-actions-wrapper">
       @if (videoStateService.duration() > 0) {
         <div class="ml-2 mr-2">
-          <span>{{ videoStateService.currentTime() * 1000 | date:'HH:mm:ss':'UTC' }}</span>
+          <span>{{ videoStateService.clockTime() * 1000 | date:'HH:mm:ss':'UTC' }}</span>
           <span class="text-gray-500 mx-1">/</span>
           <span class="text-gray-400">{{ videoStateService.duration() * 1000 | date:'HH:mm:ss':'UTC' }}</span>
         </div>

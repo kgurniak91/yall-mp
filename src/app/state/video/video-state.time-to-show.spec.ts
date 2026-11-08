@@ -1,5 +1,22 @@
 import {PlayerState} from '../../model/video.types';
-import {timeToShow} from './video-state.service';
+import {clockTime, timeToShow} from './video-state.service';
+
+describe('clockTime', () => {
+  it('shows the duration on the last frame, so a seek past the end does not look like it did nothing', () => {
+    expect(clockTime(14.99, 15)).toBe(15);
+    expect(clockTime(14.9667, 15)).toBe(15);
+    expect(clockTime(15, 15)).toBe(15);
+  });
+
+  it('shows the reported time everywhere else', () => {
+    expect(clockTime(14.5, 15)).toBe(14.5);
+    expect(clockTime(0, 15)).toBe(0);
+  });
+
+  it('keeps the reported time while the duration is not known yet', () => {
+    expect(clockTime(4, 0)).toBe(4);
+  });
+});
 
 describe('timeToShow', () => {
   it('shows the duration when the file has ended, even if the last time update was the last frame', () => {

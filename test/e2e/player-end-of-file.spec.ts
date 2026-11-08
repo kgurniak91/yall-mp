@@ -22,3 +22,16 @@ test('the clock shows the full duration when the file has ended, on every play t
     expect(await clock(ui), `round ${round}: the clock at the end of the file`).toBe(wanted);
   }
 });
+
+// A seek forward past the end lands on the last frame (0.01 s before the end). The clock cuts off the fraction, so it used to
+// read 00:00:14 of 00:00:15 and the seek looked like it did nothing.
+test('a seek forward past the end of the file moves the clock to the full duration', async ({launch}) => {
+  const {ui} = await launchClips(launch, {lastPlaybackTime: CLIPS_DURATION - 1});
+  await seekTo(ui, CLIPS_DURATION - 1);
+  await sleep(800);
+  expect(await clock(ui), 'the clock before the seek').toBe(`00:00:${CLIPS_DURATION - 1}/00:00:${CLIPS_DURATION}`);
+  await press(ui, 'ArrowRight');
+  await expect.poll(() => clock(ui), {timeout: 10_000, message: 'the clock after seeking past the end'}).toBe(`00:00:${CLIPS_DURATION}/00:00:${CLIPS_DURATION}`);
+  await sleep(1000);
+  expect(await clock(ui), 'the clock stays at the end').toBe(`00:00:${CLIPS_DURATION}/00:00:${CLIPS_DURATION}`);
+});

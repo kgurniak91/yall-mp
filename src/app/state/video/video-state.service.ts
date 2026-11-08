@@ -14,6 +14,17 @@ export function timeToShow(update: { playerState: PlayerState; currentTime: numb
   return update.playerState === PlayerState.Ended && duration > 0 ? duration : update.currentTime;
 }
 
+/** The last frame starts less than this before the end of the file (a frame is 0.1 s at 10 fps, shorter at normal rates). */
+const LAST_FRAME_WINDOW_SECONDS = 0.1;
+
+/**
+ * The time the clock shows. The clock cuts off the fraction, so the last frame (e.g. 14.97 s of 15 s) would read
+ * 00:00:14 of 00:00:15 and a seek past the end would look like it did nothing. On the last frame it shows the duration.
+ */
+export function clockTime(currentTime: number, duration: number): number {
+  return duration > 0 && duration - currentTime < LAST_FRAME_WINDOW_SECONDS ? duration : currentTime;
+}
+
 @Injectable()
 export class VideoStateService implements OnDestroy {
   private readonly _currentTime = signal(0);
@@ -59,6 +70,8 @@ export class VideoStateService implements OnDestroy {
   public readonly mediaPath: Signal<string | null> = this._mediaPath.asReadonly();
   public readonly currentTime: Signal<number> = this._currentTime.asReadonly();
   public readonly duration: Signal<number> = this._duration.asReadonly();
+  /** The time for the clock text (see `clockTime`); everything else uses `currentTime`. */
+  public readonly clockTime: Signal<number> = computed(() => clockTime(this._currentTime(), this._duration()));
   public readonly subtitlesVisible: Signal<boolean> = this._subtitlesVisible.asReadonly();
   public readonly seekRequest = this._seekRequest.asReadonly();
   public readonly seekCompleted = this._seekCompleted.asReadonly();
