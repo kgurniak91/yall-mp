@@ -1,42 +1,15 @@
 import {describe, expect, it} from 'vitest';
-import {hasOzonePlatformArgument, isNativeWayland, shouldRelaunchWithX11, X11RelaunchEnv, x11RelaunchCommand} from '../linux-display-server';
+import {execFileSync} from 'child_process';
+import {mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync, chmodSync} from 'fs';
+import {tmpdir} from 'os';
+import path from 'path';
+import {isNativeWayland} from '../linux-display-server';
 
-const wayland: X11RelaunchEnv = {
-  platform: 'linux', packaged: true, e2e: false, ozonePlatformArgument: false, currentOzonePlatform: 'wayland', hasX11Display: true
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const {installLauncher, REAL_BINARY_SUFFIX} = require('../scripts/linux-launcher.js') as {
+  installLauncher: (appOutDir: string, executableName: string) => boolean;
+  REAL_BINARY_SUFFIX: string;
 };
-
-describe('shouldRelaunchWithX11', () => {
-  it('relaunches a packaged Linux app that came up as a Wayland client', () => {
-    expect(shouldRelaunchWithX11(wayland)).toBe(true);
-  });
-
-  it('does not relaunch twice: the relaunched process runs on x11 and carries the argument', () => {
-    expect(shouldRelaunchWithX11({...wayland, currentOzonePlatform: 'x11', ozonePlatformArgument: true})).toBe(false);
-  });
-
-  it('leaves Windows, macOS, development runs and test runs alone', () => {
-    expect(shouldRelaunchWithX11({...wayland, platform: 'win32'})).toBe(false);
-    expect(shouldRelaunchWithX11({...wayland, platform: 'darwin'})).toBe(false);
-    expect(shouldRelaunchWithX11({...wayland, packaged: false})).toBe(false);
-    expect(shouldRelaunchWithX11({...wayland, e2e: true})).toBe(false);
-  });
-
-  it('respects an explicit ozone platform, also native Wayland', () => {
-    expect(shouldRelaunchWithX11({...wayland, ozonePlatformArgument: true})).toBe(false);
-  });
-
-  it('does not relaunch without an X server, or the app could not start', () => {
-    expect(shouldRelaunchWithX11({...wayland, hasX11Display: false})).toBe(false);
-  });
-});
-
-describe('hasOzonePlatformArgument', () => {
-  it('finds both spellings and ignores other switches', () => {
-    expect(hasOzonePlatformArgument(['.', '--ozone-platform=wayland'])).toBe(true);
-    expect(hasOzonePlatformArgument(['.', '--ozone-platform', 'x11'])).toBe(true);
-    expect(hasOzonePlatformArgument(['.', '--ozone-platform-hint=auto', '--no-sandbox'])).toBe(false);
-  });
-});
 
 describe('isNativeWayland', () => {
   it('follows the ozone platform when one is set', () => {
@@ -54,24 +27,36 @@ describe('isNativeWayland', () => {
   });
 });
 
-describe('x11RelaunchCommand', () => {
-  const argv = ['/opt/yall/yall-mp', '--no-sandbox', '/home/me/movie.mkv'];
+// The launcher is a /bin/sh script: run it for real on Linux and macOS
+describe.skipIf(process.platform === 'win32')('Linux launcher script', () => {
+  const run = (env: Record<string, string>, args: string[]) => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'yall-launcher-'));
+    try {
+      // The "real binary" prints what it was started with
+      writeFileSync(path.join(dir, 'yall-mp'), '#!/bin/sh\nfor a in "$@"; do echo "$a"; done\n');
+      chmodSync(path.join(dir, 'yall-mp'), 0o755);
+      expect(installLauncher(dir, 'yall-mp')).toBe(true);
+      expect(existsSync(path.join(dir, 'yall-mp' + REAL_BINARY_SUFFIX))).toBe(true);
+      expect(readFileSync(path.join(dir, 'yall-mp'), 'utf8')).toContain('exec "$real"');
+      const out = execFileSync(path.join(dir, 'yall-mp'), args, {env: {PATH: process.env.PATH ?? '/usr/bin:/bin', ...env}, encoding: 'utf8'});
+      // Installing twice must not wrap the launcher again
+      expect(installLauncher(dir, 'yall-mp')).toBe(false);
+      return out.split('\n').filter(Boolean);
+    } finally {
+      rmSync(dir, {recursive: true, force: true});
+    }
+  };
 
-  it('starts the same executable again with the X11 switch and the original arguments', () => {
-    expect(x11RelaunchCommand({execPath: '/opt/yall/yall-mp', argv})).toEqual({
-      execPath: '/opt/yall/yall-mp', args: ['--no-sandbox', '/home/me/movie.mkv', '--ozone-platform=x11']
-    });
+  it('adds the X11 switch before the user arguments when an X server can be reached', () => {
+    expect(run({DISPLAY: ':0'}, ['--no-sandbox', '/home/me/a movie.mkv'])).toEqual(['--ozone-platform=x11', '--no-sandbox', '/home/me/a movie.mkv']);
   });
 
-  it('starts an AppImage through its own file', () => {
-    expect(x11RelaunchCommand({execPath: '/tmp/.mount_yallXYZ/yall-mp', argv, appImage: '/home/me/Yall.AppImage', appDir: '/tmp/.mount_yallXYZ'})).toEqual({
-      execPath: '/home/me/Yall.AppImage', args: ['--no-sandbox', '/home/me/movie.mkv', '--ozone-platform=x11']
-    });
+  it('leaves the platform to Electron without an X server', () => {
+    expect(run({WAYLAND_DISPLAY: 'wayland-0'}, ['--no-sandbox'])).toEqual(['--no-sandbox']);
   });
 
-  it('keeps an extracted AppImage (no FUSE) extracted', () => {
-    expect(x11RelaunchCommand({execPath: '/tmp/appimage_extracted_ab12/yall-mp', argv, appImage: '/home/me/Yall.AppImage', appDir: '/tmp/appimage_extracted_ab12'})).toEqual({
-      execPath: '/home/me/Yall.AppImage', args: ['--appimage-extract-and-run', '--no-sandbox', '/home/me/movie.mkv', '--ozone-platform=x11']
-    });
+  it('respects an explicit ozone platform, both spellings', () => {
+    expect(run({DISPLAY: ':0'}, ['--ozone-platform=wayland', 'x'])).toEqual(['--ozone-platform=wayland', 'x']);
+    expect(run({DISPLAY: ':0'}, ['--ozone-platform', 'wayland'])).toEqual(['--ozone-platform', 'wayland']);
   });
 });

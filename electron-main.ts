@@ -20,7 +20,7 @@ import {appendFileSync, existsSync, mkdirSync, promises as fs, readFileSync, sta
 import {customIconArguments, desktopIconFile, ensureAppImageDesktopEntry} from './linux-desktop-entry';
 import {createLookupHost, LookupHost, lookupPanelBounds} from './lookup-host';
 import {boundsInsideWorkArea, MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, windowFitSize} from './window-fit';
-import {hasOzonePlatformArgument, isNativeWayland, shouldRelaunchWithX11, x11RelaunchCommand} from './linux-display-server';
+import {isNativeWayland} from './linux-display-server';
 import type {CaptionsFileFormat, ParsedCaptionsResult, parseResponse, VTTCue} from 'media-captions';
 import type {SrtSubtitleData, SubtitleData} from './shared/types/subtitle.type';
 import type {MediaTrack} from './shared/types/media.type';
@@ -896,23 +896,17 @@ function runsAsNativeWayland(): boolean {
   });
 }
 
-// Linux runs through X11 (XWayland on a Wayland desktop): a native Wayland client cannot know its window position or monitor.
-// Electron chooses the platform before this code runs, so the packaged app relaunches itself once with the X11 switch.
-const relaunchWithX11 = shouldRelaunchWithX11({
-  platform: process.platform,
-  packaged: app.isPackaged,
-  e2e: isE2E,
-  ozonePlatformArgument: hasOzonePlatformArgument(process.argv),
-  currentOzonePlatform: app.commandLine.getSwitchValue('ozone-platform'),
-  hasX11Display: !!process.env.DISPLAY
-});
-if (relaunchWithX11) {
-  const relaunch = x11RelaunchCommand({execPath: process.execPath, argv: process.argv, appImage: process.env.APPIMAGE, appDir: process.env.APPDIR});
-  app.relaunch({execPath: relaunch.execPath, args: relaunch.args});
-  app.exit(0);
+// A closed stdout/stderr (the terminal that started the app was closed, or a pipe reader quit) must not crash the app on its
+// next console.log
+for (const stream of [process.stdout, process.stderr]) {
+  stream.on('error', (error: NodeJS.ErrnoException) => {
+    if (error.code !== 'EPIPE') {
+      throw error;
+    }
+  });
 }
 
-const gotTheLock = relaunchWithX11 ? false : app.requestSingleInstanceLock();
+const gotTheLock = app.requestSingleInstanceLock();
 
 if (!gotTheLock) {
   app.quit();

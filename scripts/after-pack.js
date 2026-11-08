@@ -3,6 +3,7 @@
 // architectures: a universal or per-arch build is decided later).
 const fs = require('fs');
 const path = require('path');
+const {installLauncher} = require('./linux-launcher');
 
 const PLATFORM_DIR = {darwin: 'darwin', linux: 'linux', win32: 'win32'};
 
@@ -57,6 +58,10 @@ exports.default = async function afterPack(context) {
         }
       }
     }
+  }
+  if (platformName === 'linux') {
+    const installed = installLauncher(context.appOutDir, context.packager.executableName);
+    console.log(`  • afterPack: X11 launcher ${installed ? 'installed' : 'not installed'}`);
   }
   console.log(`  • afterPack: removed ${removedFolders} unused ffprobe-static folder(s) for ${platformName}/${arch}`);
 };
