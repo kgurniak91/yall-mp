@@ -11,6 +11,7 @@ import {ToastService} from './shared/services/toast/toast.service';
 import {YomitanService} from './core/services/yomitan/yomitan.service';
 import {ProgressBar} from 'primeng/progressbar';
 import {PrimeTemplate} from 'primeng/api';
+import {WindowFitService} from './core/services/window-fit/window-fit.service';
 
 @Component({
   selector: 'app-root',
@@ -30,6 +31,7 @@ export class AppComponent implements OnInit {
   protected readonly toastService = inject(ToastService);
   private readonly fileOpenIntentService = inject(FileOpenIntentService);
   private readonly yomitanService = inject(YomitanService);
+  private readonly windowFitService = inject(WindowFitService);
 
   constructor() {
     inject(GlobalKeyboardShortcutsService);
@@ -45,5 +47,6 @@ export class AppComponent implements OnInit {
     });
 
     this.yomitanService.ensureLanguagesLoaded();
+    this.windowFitService.start();
   }
 }

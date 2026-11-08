@@ -6,8 +6,8 @@ import {getWindowStates, restoreIfMaximized, withWindows} from './support/window
 import {launchClips, press, startPlaying, waitForState} from './support/player';
 
 const hardAssert = process.platform === 'win32';
-const MIN_WIDTH = 800;
-const MIN_HEIGHT = 600;
+const MIN_WIDTH = 640;
+const MIN_HEIGHT = 480;
 // Wayland compositors add a shadow margin to the frameless window
 const SLACK = process.platform === 'linux' ? 32 : 16;
 
@@ -44,10 +44,10 @@ test('setBounds resize: the layout follows, the canvas re-fits and the paused pi
     }
   });
 
-  // Below the 800x600 minimum the window is clamped
+  // Below the 640x480 minimum the window is clamped
   await withWindows(app, ({mainWindow}) => {
     const b = mainWindow.getBounds();
-    mainWindow.setBounds({x: b.x, y: b.y, width: 600, height: 400});
+    mainWindow.setBounds({x: b.x, y: b.y, width: 500, height: 350});
   });
   await expect.poll(async () => {
     const small = (await getWindowStates(app)).main!.bounds;
@@ -120,4 +120,28 @@ test('resize stress: no draw errors, no send failures, the slots come back', asy
   // paused: the kept frame holds one slot, one more may still be on its way
   expect(sender.addon.inFlight).toBeLessThanOrEqual(2);
   expect(sender.addon.reclaimed).toBe(0);
+});
+
+test('a window larger than its display is shrunk to the display, and the minimum follows a tiny display', async ({launch}) => {
+  const {app, ui} = await launch({seed: dir => seedProject(dir)});
+  await waitForPlayer(ui);
+  await restoreIfMaximized(app);
+  await withWindows(app, ({mainWindow}) => {
+    const b = mainWindow.getBounds();
+    mainWindow.setBounds({x: b.x, y: b.y, width: 1000, height: 700});
+  });
+  await expect.poll(async () => Math.abs((await getWindowStates(app)).main!.bounds.width - 1000) <= 2, {timeout: 10_000}).toBe(true);
+
+  // What the page reports when it is on a 700x500 display
+  await ui.evaluate(() => (window as any).electronAPI.windowFitToDisplay({width: 700, height: 500}));
+  await expect.poll(async () => {
+    const size = (await getWindowStates(app)).main!.contentBounds;
+    return Math.abs(size.width - 700) <= 2 && Math.abs(size.height - 500) <= 2;
+  }, {timeout: 10_000}).toBe(true);
+
+  // A report that fits changes nothing
+  await ui.evaluate(() => (window as any).electronAPI.windowFitToDisplay({width: 1920, height: 1080}));
+  await new Promise(resolve => setTimeout(resolve, 500));
+  const after = (await getWindowStates(app)).main!.contentBounds;
+  expect(Math.abs(after.width - 700)).toBeLessThanOrEqual(2);
 });

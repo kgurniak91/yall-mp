@@ -18,6 +18,7 @@
     "engine-restart.ts",
     "linux-desktop-entry.ts",
     "lookup-host.ts",
+    "window-fit.ts",
     "fullscreen-transition.ts",
     "hdr-tonemap.ts",
     "bench-config.ts",

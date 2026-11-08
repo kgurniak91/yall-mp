@@ -57,6 +57,7 @@
       "engine-restart.js",
       "linux-desktop-entry.js",
       "lookup-host.js",
+      "window-fit.js",
       "fullscreen-transition.js",
       "hdr-tonemap.js",
       "bench-config.js",

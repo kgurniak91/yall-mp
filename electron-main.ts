@@ -19,6 +19,7 @@ import os from 'os';
 import {appendFileSync, existsSync, mkdirSync, promises as fs, readFileSync, statSync, writeFileSync} from 'fs';
 import {ensureAppImageDesktopEntry} from './linux-desktop-entry';
 import {createLookupHost, LookupHost, lookupPanelBounds} from './lookup-host';
+import {MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, windowFitSize} from './window-fit';
 import type {CaptionsFileFormat, ParsedCaptionsResult, parseResponse, VTTCue} from 'media-captions';
 import type {SrtSubtitleData, SubtitleData} from './shared/types/subtitle.type';
 import type {MediaTrack} from './shared/types/media.type';
@@ -714,8 +715,8 @@ async function createWindow() {
   const workArea = screen.getPrimaryDisplay().workArea;
 
   // The minimum size must not exceed a small work area, or the window would start taller than the screen
-  const minWidth = Math.min(800, workArea.width);
-  const minHeight = Math.min(600, workArea.height);
+  const minWidth = Math.min(MIN_WINDOW_WIDTH, workArea.width);
+  const minHeight = Math.min(MIN_WINDOW_HEIGHT, workArea.height);
 
   // 90% of the work area, centered
   const initialWidth = Math.max(minWidth, Math.round(workArea.width * 0.9));
@@ -1024,6 +1025,20 @@ if (!gotTheLock) {
         mainWindow.unmaximize();
       } else {
         mainWindow.maximize();
+      }
+    });
+
+    // The page reports a display smaller than the window (it was moved to a smaller monitor): shrink the window to fit
+    ipcMain.on('window:fit-to-display', (_, available: { width: number; height: number }) => {
+      if (!mainWindow || mainWindow.isDestroyed() || mainWindow.isMaximized() || mainWindow.isFullScreen()) {
+        return;
+      }
+      const [width, height] = mainWindow.getContentSize();
+      const fit = windowFitSize({width, height}, {width: Number(available?.width), height: Number(available?.height)});
+      if (fit) {
+        console.log(`[Main Process] Window ${width}x${height} does not fit the display (${available.width}x${available.height}), resizing to ${fit.width}x${fit.height}`);
+        mainWindow.setMinimumSize(fit.minWidth, fit.minHeight);
+        mainWindow.setContentSize(fit.width, fit.height);
       }
     });
 

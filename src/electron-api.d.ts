@@ -26,6 +26,7 @@ export interface IElectronAPI {
   windowMinimize: () => void;
   windowToggleMaximize: () => void;
   windowToggleFullScreen: () => void;
+  windowFitToDisplay: (available: { width: number; height: number }) => void;
   windowEscape: () => void;
   windowClose: () => void;
   onWindowMaximizedStateChanged: (callback: (isMaximized: boolean) => void) => (() => void);

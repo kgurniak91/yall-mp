@@ -36,7 +36,7 @@ A new main-process source file must be listed in that `include` list, and its ou
 
 There is one opaque, frameless `BrowserWindow` (`mainWindow`) that holds the Angular app. libmpv renders each frame into a GPU texture (Windows) or a readback buffer (fallback), `LibmpvFrameSender` hands it to the renderer as a `VideoFrame`, and `video-surface-renderer.ts` draws it onto a `<canvas>` in the video area. Subtitles, the timeline and dialogs are plain DOM over that canvas. Set `YALL_MP_VIDEO_BACKEND` / `YALL_MP_VIDEO_ADAPTER` to force a backend or adapter.
 
-Window behaviour is native: maximize, resize (min 800x600) and Aero Snap come from the OS, and the header is a CSS `-webkit-app-region: drag` area with `no-drag` on its controls (body-appended overlays are covered by a global `no-drag` rule in `styles.scss`). The display is kept awake with `powerSaveBlocker` while mpv is unpaused. The window starts with a splash inlined in `src/index.html`.
+Window behaviour is native: maximize, resize (min 640x480, the size of the smallest screen it is meant to run on) and Aero Snap come from the OS, and the header is a CSS `-webkit-app-region: drag` area with `no-drag` on its controls (body-appended overlays are covered by a global `no-drag` rule in `styles.scss`). The display is kept awake with `powerSaveBlocker` while mpv is unpaused. The window starts with a splash inlined in `src/index.html`.
 
 mpv's own subtitle rendering can be toggled on or off (`useMpvSubtitles`, `showSubtitles`/`hideSubtitles`). Otherwise subtitles are rendered in the renderer, with ASS via assjs. The subtitles lookup uses a further `BrowserWindow` or `WebContentsView`, parented to `mainWindow`. libmpv does not run on Linux yet, and macOS shows the readback picture.
 

@@ -48,6 +48,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  // On a very narrow window (640 px) the right-hand group goes to a second row instead of being cut off
+  flex-wrap: wrap;
   background-color: #2a2a2a;
   flex-shrink: 0;
   border: 1px solid black;
@@ -63,6 +65,7 @@
   }
 
   .toolbar-actions-wrapper:last-of-type {
+    margin-left: auto;
     border-left: 1px solid black !important;
 
     p-button:first-of-type {
