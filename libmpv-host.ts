@@ -42,6 +42,7 @@ export const MessageType = {
   releaseSlot: 13,
   destroy: 14,
   redraw: 15,
+  simulateLost: 16,
   reply: 101,
   event: 102,
   frame: 103,
@@ -652,6 +653,15 @@ class HostMpvCore implements NativeMpvCore {
     return true;
   }
 
+  /** Test support: the attach posts its lost frame as if its GPU device was removed. True when that attach is current. */
+  simulateDeviceLost(attachId: number): boolean {
+    if (!this.frameHandlers.has(attachId) || this.destroyed) {
+      return false;
+    }
+    this.send(MessageType.simulateLost, {attachId});
+    return true;
+  }
+
   releaseSlot(attachId: number, slotId: number, serial: number): void {
     this.send(MessageType.releaseSlot, {attachId, slotId, serial});
   }
@@ -733,6 +743,17 @@ class HostMpvCore implements NativeMpvCore {
 
   private deliverFrame(message: HostMessage): void {
     const meta = message.json;
+    if (typeof meta.lost === 'string') {
+      // The GPU device behind the attach is gone: no picture and nothing to acknowledge.
+      try {
+        this.frameHandlers.get(meta.attachId)?.({
+          attachId: meta.attachId, slotId: -1, serial: 0, generation: 0, width: 0, height: 0, lost: meta.lost
+        });
+      } catch (error) {
+        this.emit({event: 'log-message', prefix: 'yall-host', level: 'error', text: `frame handler failed: ${(error as Error).message}`});
+      }
+      return;
+    }
     if (meta.shared) {
       this.deliverSharedFrame(meta);
       return;

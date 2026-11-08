@@ -28,11 +28,12 @@ enum Type : uint32_t {
   kReleaseSlot = 13, // {attachId, slotId, serial}
   kDestroy = 14,     // {id}                                                         -> reply, then the host exits
   kRedraw = 15,      // {}: draw the current frame again, even when paused
+  kSimulateLost = 16, // {attachId}: test support, that attach posts its lost frame as if its device was removed
 
   // Host -> node
   kReply = 101,      // {id, value} or {id, error: {code, message, mpvError?}}
   kEvent = 102,      // {event, ...}: the shape of LibmpvEvent
-  kFrame = 103,      // {attachId, slotId, serial, generation, width, height} + BGRA pixels, or shared: true and no pixels
+  kFrame = 103,      // {attachId, slotId, serial, generation, width, height} + BGRA pixels, or shared: true and no pixels, or {attachId, slotId: -1, lost: reason}
   kSlotClosed = 104  // {attachId, slotId}: the host closed that slot's descriptor, the client closes its copy
 };
 

@@ -103,6 +103,9 @@ bool HostCore::Handle(proto::Message&& message) {
     case proto::kRedraw:
       if (currentRenderer_) currentRenderer_->RequestRedraw();
       break;
+    case proto::kSimulateLost:
+      if (currentRenderer_ && currentRenderer_->AttachId() == args.value("attachId", uint64_t{0})) currentRenderer_->SimulateLost();
+      break;
     case proto::kStats: Stats(args); break;
     case proto::kFrameAck: {
       const int count = args.value("count", 1);

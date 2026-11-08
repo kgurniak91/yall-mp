@@ -1,6 +1,10 @@
 #include "socket_sink.h"
 
 bool SocketSink::Post(Frame&& frame) {
+  if (frame.lost) {
+    // No picture: the device behind the attach is gone. Not a pixel frame, so it is not outstanding.
+    return channel_.Write(proto::kFrame, {{"attachId", frame.attachId}, {"slotId", -1}, {"lost", frame.lostReason}});
+  }
   proto::Json meta = {{"attachId", frame.attachId}, {"slotId", frame.slotId}, {"serial", frame.serial},
                       {"generation", frame.generation}, {"width", frame.width}, {"height", frame.height}};
   if (frame.renderedAtMs > 0) meta["renderedAt"] = frame.renderedAtMs;

@@ -429,6 +429,27 @@ describe('host client', () => {
       await tick();
       expect(lastSent(MessageType.redraw).json).toEqual({});
     });
+
+    it('delivers a lost frame to the attach handler without a pixel ack', async () => {
+      await createCore();
+      const frames: RenderFrame[] = [];
+      await attachAnswered(f => frames.push(f));
+      const acks = child.socket.fromClient.filter(m => m.type === MessageType.frameAck).length;
+      child.socket.send(MessageType.frame, {attachId: 1, slotId: -1, lost: 'SIMULATED device lost'});
+      await tick();
+      expect(frames).toEqual([expect.objectContaining({attachId: 1, slotId: -1, lost: 'SIMULATED device lost'})]);
+      expect(child.socket.fromClient.filter(m => m.type === MessageType.frameAck)).toHaveLength(acks);
+    });
+
+    it('asks the host for a simulated device loss of a current attach only', async () => {
+      await createCore();
+      expect(core.simulateDeviceLost(1)).toBe(false);
+      await attachAnswered(() => undefined);
+      expect(core.simulateDeviceLost(7)).toBe(false);
+      expect(core.simulateDeviceLost(1)).toBe(true);
+      await tick();
+      expect(lastSent(MessageType.simulateLost).json).toEqual({attachId: 1});
+    });
   });
 
   describe('descriptor channel', () => {
