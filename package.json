@@ -56,6 +56,7 @@
       "libmpv-frame-sender.js",
       "engine-restart.js",
       "linux-desktop-entry.js",
+      "lookup-host.js",
       "fullscreen-transition.js",
       "hdr-tonemap.js",
       "bench-config.js",

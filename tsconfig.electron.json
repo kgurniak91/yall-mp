@@ -17,6 +17,7 @@
     "libmpv-frame-sender.ts",
     "engine-restart.ts",
     "linux-desktop-entry.ts",
+    "lookup-host.ts",
     "fullscreen-transition.ts",
     "hdr-tonemap.ts",
     "bench-config.ts",

@@ -58,6 +58,11 @@
       -webkit-app-region: drag;
     }
 
+    /* Inside the main window (Linux) there is no window of its own to drag */
+    html.overlay #title-bar-drag-region {
+      -webkit-app-region: no-drag;
+    }
+
     #close-btn {
       -webkit-app-region: no-drag;
       border: none;
@@ -372,6 +377,10 @@
 </div>
 
 <script>
+  if (location.search.includes('overlay=1')) {
+    document.documentElement.classList.add('overlay');
+  }
+
   let toastTimeout;
   const originalHelpTextHTML = document.getElementById('help-text').innerHTML;
 

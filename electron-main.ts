@@ -18,6 +18,7 @@ import path from 'path';
 import os from 'os';
 import {appendFileSync, existsSync, mkdirSync, promises as fs, readFileSync, statSync, writeFileSync} from 'fs';
 import {ensureAppImageDesktopEntry} from './linux-desktop-entry';
+import {createLookupHost, LookupHost, lookupPanelBounds} from './lookup-host';
 import type {CaptionsFileFormat, ParsedCaptionsResult, parseResponse, VTTCue} from 'media-captions';
 import type {SrtSubtitleData, SubtitleData} from './shared/types/subtitle.type';
 import type {MediaTrack} from './shared/types/media.type';
@@ -96,7 +97,7 @@ let playbackManager: PlaybackManager | null = null;
 let mpvManager: LibmpvManager | null = null;
 let yomitanManager: YomitanManager | null = null;
 let mainWindow: BrowserWindow | null = null;
-let subtitlesLookupWindow: BrowserWindow | null = null;
+let subtitlesLookupWindow: LookupHost | null = null;
 let subtitlesLookupView: WebContentsView | null = null;
 let currentSubtitlesLookupContext: { clipSubtitleId: string; originalSelection: string; } | null = null;
 let isFFmpegAvailable = false;
@@ -747,7 +748,7 @@ async function createWindow() {
   });
 
   mainWindow.on('focus', () => {
-    if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed() && subtitlesLookupWindow.isVisible()) {
+    if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed() && subtitlesLookupWindow.hidesWhenParentFocused && subtitlesLookupWindow.isVisible()) {
       subtitlesLookupWindow.hide();
     }
   });
@@ -801,6 +802,9 @@ async function createWindow() {
     // Read-only probe so e2e tests can inspect the window without URL heuristics
     (globalThis as any).__yallE2E = {
       getWindows: () => ({mainWindow}),
+      getLookupPanel: () => subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()
+        ? {visible: subtitlesLookupWindow.isVisible(), size: subtitlesLookupWindow.getSize(), insideMainWindow: !subtitlesLookupWindow.hidesWhenParentFocused}
+        : null,
       getVideoStats: () => videoSender?.stats() ?? null,
       isDisplaySleepBlocked: () => displaySleepBlockerId !== null,
       getLiveCounts: () => loadLibmpvAddon().liveCounts(),
@@ -1057,11 +1061,10 @@ if (!gotTheLock) {
       const {url, clipSubtitleId, originalSelection, automationText} = data;
       currentSubtitlesLookupContext = {clipSubtitleId, originalSelection};
 
+      // A separate window is placed in screen coordinates (the main window's own bounds); a view in window coordinates
       const parentBounds = mainWindow!.getBounds();
-      const lookupWidth = Math.round(parentBounds.width * 0.8);
-      const lookupHeight = Math.round(parentBounds.height * 0.8);
-      const lookupX = Math.round(parentBounds.x + (parentBounds.width - lookupWidth) / 2);
-      const lookupY = Math.round(parentBounds.y + (parentBounds.height - lookupHeight) / 2);
+      const panel = lookupPanelBounds(parentBounds.width, parentBounds.height);
+      const lookupBounds = {x: parentBounds.x + panel.x, y: parentBounds.y + panel.y, width: panel.width, height: panel.height};
 
       const TITLE_BAR_HEIGHT = 40; // 2.5rem
       const FOOTER_HEIGHT = 40; // 2.5rem
@@ -1079,22 +1082,9 @@ if (!gotTheLock) {
 
       // Window setup - create or reuse
       if (!subtitlesLookupWindow || subtitlesLookupWindow.isDestroyed()) {
-        subtitlesLookupWindow = new BrowserWindow({
-          x: lookupX,
-          y: lookupY,
-          width: lookupWidth,
-          height: lookupHeight,
-          parent: mainWindow!,
-          frame: false,
-          show: false,
-          title: 'Subtitles Lookup',
-          backgroundColor: '#ffffff',
-          webPreferences: {
-            preload: path.join(__dirname, 'subtitles-lookup-host-preload.js')
-          }
-        });
+        subtitlesLookupWindow = createLookupHost(mainWindow!, lookupBounds, path.join(__dirname, 'subtitles-lookup-host-preload.js'));
 
-        await subtitlesLookupWindow.loadFile(path.join(__dirname, './dist/yall-mp/browser/subtitles-lookup-host.html'));
+        await subtitlesLookupWindow.loadPage(path.join(__dirname, './dist/yall-mp/browser/subtitles-lookup-host.html'));
 
         subtitlesLookupWindow.webContents.on('before-input-event', blockDefaultBrowserShortcuts);
 
@@ -1113,16 +1103,10 @@ if (!gotTheLock) {
           notifyLookupWindowState(false);
         };
 
-        subtitlesLookupWindow.on('hide', handleClose);
-
-        subtitlesLookupWindow.on('close', (e) => {
-          e.preventDefault();
-          subtitlesLookupWindow?.hide();
-          handleClose();
-        });
+        subtitlesLookupWindow.onHide(handleClose);
       } else {
         // Update bounds if reusing existing window
-        subtitlesLookupWindow.setBounds({x: lookupX, y: lookupY, width: lookupWidth, height: lookupHeight});
+        subtitlesLookupWindow.place(lookupBounds);
       }
 
       // Show spinner and text immediately
@@ -1258,8 +1242,7 @@ if (!gotTheLock) {
         }
       };
 
-      subtitlesLookupWindow.removeAllListeners('resize');
-      subtitlesLookupWindow.on('resize', updateViewBounds);
+      subtitlesLookupWindow.setResizeListener(updateViewBounds);
 
       updateViewBounds();
 
@@ -1284,9 +1267,7 @@ if (!gotTheLock) {
 
     ipcMain.on('lookup:close-window', () => {
       subtitlesLookupWindow?.hide();
-      if (subtitlesLookupWindow) {
-        subtitlesLookupWindow.emit('hide');
-      }
+      subtitlesLookupWindow?.emitHide();
       notifyLookupWindowState(false);
     });
 
@@ -1311,8 +1292,7 @@ if (!gotTheLock) {
         }
       ];
       const menu = Menu.buildFromTemplate(template);
-      const parentWindow = subtitlesLookupWindow ?? undefined;
-      menu.popup({window: parentWindow});
+      menu.popup({window: subtitlesLookupWindow?.menuWindow});
     });
 
     ipcMain.on('lookup:add-note', (_, {text}) => {

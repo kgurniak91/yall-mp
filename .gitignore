@@ -83,6 +83,8 @@ public/THIRD-PARTY-NOTICES.txt
 /engine-restart.js.map
 /linux-desktop-entry.js
 /linux-desktop-entry.js.map
+/lookup-host.js
+/lookup-host.js.map
 /fullscreen-transition.js
 /fullscreen-transition.js.map
 /hdr-tonemap.js
