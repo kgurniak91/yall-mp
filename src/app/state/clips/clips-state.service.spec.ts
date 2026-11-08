@@ -6,9 +6,11 @@ import {VideoClip} from '../../model/video.types';
 import {
   ADJUST_DEBOUNCE_MS,
   ClipsStateService,
+  DEFAULT_NEW_SUBTITLE_DURATION,
   MIN_GAP_DURATION,
   MIN_REQUIRED_CLIP_DURATION_FOR_SPLIT,
-  MIN_SUBTITLE_DURATION
+  MIN_SUBTITLE_DURATION,
+  planNewSubtitleTimes
 } from './clips-state.service';
 import {VideoStateService} from '../video/video-state.service';
 import {CommandHistoryStateService} from '../command-history/command-history-state.service';
@@ -27,6 +29,38 @@ import {ClipContent, UpdateClipTextCommand} from '../../model/commands/update-cl
 import {ConfirmationService} from 'primeng/api';
 import {ProjectClipNotes} from '../../model/project.types';
 import {MergeSubtitlesCommand} from '../../model/commands/merge-subtitles.command';
+
+describe('planNewSubtitleTimes', () => {
+  it('gives a new subtitle the default length when the gap has room', () => {
+    const planned = planNewSubtitleTimes(10, 30, 12)!;
+    expect(planned.startTime).toBe(12);
+    expect(planned.endTime).toBeCloseTo(12 + DEFAULT_NEW_SUBTITLE_DURATION);
+    expect(DEFAULT_NEW_SUBTITLE_DURATION).toBeGreaterThanOrEqual(1);
+  });
+
+  it('starts at the beginning of the gap when the cursor is before it', () => {
+    const planned = planNewSubtitleTimes(10, 30, 5)!;
+    expect(planned.startTime).toBe(10 + MIN_GAP_DURATION);
+    expect(planned.endTime).toBeCloseTo(10 + MIN_GAP_DURATION + DEFAULT_NEW_SUBTITLE_DURATION);
+  });
+
+  it('takes the remaining space when the gap ends sooner than the default length', () => {
+    const planned = planNewSubtitleTimes(10, 10.5, 10)!;
+    expect(planned.startTime).toBe(10 + MIN_GAP_DURATION);
+    expect(planned.endTime).toBeCloseTo(10.5 - MIN_GAP_DURATION);
+    const nearEnd = planNewSubtitleTimes(10, 30, 29.6)!;
+    expect(nearEnd.endTime).toBeCloseTo(30 - MIN_GAP_DURATION);
+  });
+
+  it('refuses when not even the minimum subtitle fits', () => {
+    expect(planNewSubtitleTimes(10, 10 + MIN_SUBTITLE_DURATION / 2, 10)).toBeNull();
+    expect(planNewSubtitleTimes(10, 30, 30 - MIN_SUBTITLE_DURATION / 2)).toBeNull();
+  });
+
+  it('accepts a gap that has exactly the minimum space', () => {
+    expect(planNewSubtitleTimes(10, 10 + MIN_SUBTITLE_DURATION + 2 * MIN_GAP_DURATION, 10)).not.toBeNull();
+  });
+});
 
 describe('ClipsStateService', () => {
   const currentTimeSignal = signal(0);

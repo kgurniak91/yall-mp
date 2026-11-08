@@ -38,6 +38,22 @@ export const MIN_GAP_DURATION = 0;
 export const MIN_SUBTITLE_DURATION = 0.1;
 export const MIN_REQUIRED_SPACE_FOR_NEW_CLIP = MIN_SUBTITLE_DURATION + (2 * MIN_GAP_DURATION);
 export const MIN_REQUIRED_CLIP_DURATION_FOR_SPLIT = (MIN_SUBTITLE_DURATION * 2) + MIN_GAP_DURATION;
+/** Length of a subtitle added on the timeline, when the gap has room; it must be long enough to grab and resize. */
+export const DEFAULT_NEW_SUBTITLE_DURATION = 1;
+
+/**
+ * Where a subtitle added at the cursor inside the gap [gapStart, gapEnd] goes: it starts at the cursor (or at the start
+ * of the gap, if the cursor is before it), lasts DEFAULT_NEW_SUBTITLE_DURATION and takes whatever space is left when the
+ * gap ends sooner. Null when even the minimum subtitle does not fit.
+ */
+export function planNewSubtitleTimes(gapStart: number, gapEnd: number, cursor: number): { startTime: number; endTime: number } | null {
+  const earliestStart = gapStart + MIN_GAP_DURATION;
+  const latestEnd = gapEnd - MIN_GAP_DURATION;
+  const startTime = Math.max(cursor, earliestStart);
+  const endTime = Math.min(startTime + DEFAULT_NEW_SUBTITLE_DURATION, latestEnd);
+  // A tolerance keeps float noise (0.1 is not exact) from rejecting a gap that has exactly the minimum
+  return endTime - startTime < MIN_SUBTITLE_DURATION - 1e-9 ? null : {startTime, endTime};
+}
 
 @Injectable()
 export class ClipsStateService implements OnDestroy {
@@ -811,25 +827,12 @@ export class ClipsStateService implements OnDestroy {
       return;
     }
 
-    // Define boundaries for the new subtitle
-    let newStartTime = this.videoStateService.currentTime();
-    let newEndTime = newStartTime + MIN_SUBTITLE_DURATION;
-
-    // Ensure the new subtitle respects the required gaps within the current gap.
-    const earliestPossibleStart = currentClip.startTime + MIN_GAP_DURATION;
-    const latestPossibleEnd = currentClip.endTime - MIN_GAP_DURATION;
-
-    // Adjust start time if the user's cursor is too close to the beginning
-    if (newStartTime < earliestPossibleStart) {
-      newStartTime = earliestPossibleStart;
-      newEndTime = newStartTime + MIN_SUBTITLE_DURATION;
-    }
-
-    // Final check: Does the new clip, after potential adjustments, still fit?
-    if (newEndTime > latestPossibleEnd) {
+    const planned = planNewSubtitleTimes(currentClip.startTime, currentClip.endTime, this.videoStateService.currentTime());
+    if (!planned) {
       this.toastService.warn('Not enough space to add a new subtitle at this exact time');
       return;
     }
+    const {startTime: newStartTime, endTime: newEndTime} = planned;
 
     let newSubtitle: SubtitleData;
     if (project.rawAssContent) {
