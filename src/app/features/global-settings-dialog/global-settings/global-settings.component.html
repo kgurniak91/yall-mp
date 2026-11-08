@@ -61,18 +61,32 @@
                      (ngModelChange)="globalSettingsStateService.setGpuVideoPath($event)"/>
     </div>
     <small class="block mt-2 text-sm">
-      Decides how the finished picture gets from the video player to the window.
-      <br>
-      <b>ON (recommended):</b> the graphics card hands the picture straight to the window, like passing a plate over a counter.
-      This uses very little CPU, so even high-resolution or 60 fps videos stay smooth. If it does not work on your computer,
-      the app notices and switches to the safe way by itself.
-      <br>
-      <b>OFF (safe mode):</b> every picture is copied through the CPU first, like carrying it in buckets. It works almost
-      everywhere but uses a lot more CPU and can stutter on big videos or slow computers.
-      <br>
-      <b>When to change it:</b> try <b>OFF</b> if the app crashes or freezes while a video plays, the picture is black,
-      flickers or has odd colours. If that fixes it, please report the problem together with your graphics card.
-      The change applies the next time you open a project.
+      Decides how the finished picture gets from the graphics card to the media player window:
+      <ul class="m-0 mt-2 pl-3">
+        <li>
+          <b>ON (recommended)</b> - the graphics card hands the picture straight to the media player:
+          <ul class="m-0 pl-3">
+            <li>Uses very little CPU, so even high-resolution or 60 fps videos stay smooth.</li>
+            <li>If it does not work on your computer, the app notices and switches to the safe way by itself.</li>
+          </ul>
+        </li>
+        <li class="mt-2">
+          <b>OFF (safe mode)</b> - every picture is copied through the CPU first:
+          <ul class="m-0 pl-3">
+            <li>Works almost everywhere.</li>
+            <li>Uses a lot more CPU and can stutter on big videos or slow computers.</li>
+          </ul>
+        </li>
+        <li class="mt-2">
+          <b>When to change it</b> - try <b>OFF</b> if:
+          <ul class="m-0 pl-3">
+            <li>the app crashes or freezes while a video plays,</li>
+            <li>the picture is black or flickers,</li>
+            <li>the colours look odd.</li>
+          </ul>
+        </li>
+      </ul>
+      <p class="m-0 mt-2">If <b>OFF</b> fixes it, please report the problem together with your graphics card. The change applies the next time you open a project.</p>
     </small>
   </p-fieldset>
 
