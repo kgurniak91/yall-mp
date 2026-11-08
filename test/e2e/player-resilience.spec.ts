@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {expect, test} from './support/app';
 import {inClip} from './support/clips';
-import {expectVideoShowsClip, launchClips, pixelProbesAvailable, seekTo, startPlaying} from './support/player';
+import {expectVideoShowsClip, launchClips, pixelProbesAvailable, seekTo, startPlaying, waitForState} from './support/player';
 
 type App = Parameters<typeof expectVideoShowsClip>[0];
 
@@ -24,6 +24,9 @@ test('an engine that stops by itself is restarted at the same position, a second
   await expect.poll(() => videoLog(userDataDir), {timeout: 15_000}).toContain('Playback engine stopped unexpectedly; restarting at');
   await expect(ui.getByText('Playback engine stopped, restarting')).toBeVisible();
   if (pixelProbesAvailable) {
+    // The toast shows when the restart begins; the new engine seeks back to the saved position and pauses when it is
+    // up (a second or so with the Linux host process). A seek sent before that is overridden by this resume seek.
+    await waitForState(ui, 'PausedByUser');
     await seekTo(ui, inClip(2, 0.5));
     await expectVideoShowsClip(app, ui, 2, 15_000);
   }

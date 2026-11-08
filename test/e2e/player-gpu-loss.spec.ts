@@ -81,7 +81,11 @@ test('a lost libmpv device is replaced by a new one and the picture comes back',
   const before = await videoStats(app);
 
   expect(await app.evaluate(() => (globalThis as any).__yallE2E.simulateDeviceLost())).toBe(true);
-  await expect.poll(async () => (await videoStats(app))?.attachId, {timeout: 15_000}).not.toBe(before.attachId);
+  // The sender has no attach (attachId null) while it switches: wait for the new one.
+  await expect.poll(async () => {
+    const id = (await videoStats(app))?.attachId;
+    return id != null && id !== before.attachId;
+  }, {timeout: 15_000}).toBe(true);
 
   const after = await videoStats(app);
   expect(after.backend).toBe(before.backend);
@@ -150,7 +154,11 @@ test('a lost device of the readback attach (after a GPU process loss) is replace
 
   const before = await videoStats(app);
   expect(await app.evaluate(() => (globalThis as any).__yallE2E.simulateDeviceLost())).toBe(true);
-  await expect.poll(async () => (await videoStats(app))?.attachId, {timeout: 15_000}).not.toBe(before.attachId);
+  // The sender has no attach (attachId null) while it switches: wait for the new one.
+  await expect.poll(async () => {
+    const id = (await videoStats(app))?.attachId;
+    return id != null && id !== before.attachId;
+  }, {timeout: 15_000}).toBe(true);
   expect((await videoStats(app)).backend).toBe('readback');
   expect(videoLog(userDataDir)).toContain('the GPU device was lost');
   await expectVideoShowsClip(app, ui, 2, 15_000);

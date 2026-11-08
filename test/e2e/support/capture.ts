@@ -11,6 +11,10 @@ export interface Rgb {
  * Composited screen capture of the main window area (the real screen, so it also shows what the OS puts above
  * the page). For the page content alone `capturePage` is enough now that the video is a canvas in the page.
  * `probes` are points in DIP screen coordinates whose colours are read from the capture.
+ *
+ * On a Wayland session the screen cannot be captured without the portal's permission dialog, which nobody answers in an
+ * unattended run (getSources never returns), so there the window's own composited output (what Chromium hands to the
+ * compositor) stands in for it.
  */
 export async function captureComposited(
   app: ElectronApplication,
@@ -21,22 +25,29 @@ export async function captureComposited(
     const bounds = win.getBounds();
     const display = screen.getDisplayMatching(bounds);
     const scale = display.scaleFactor;
-    const sources = await desktopCapturer.getSources({
-      types: ['screen'],
-      thumbnailSize: {width: Math.round(display.size.width * scale), height: Math.round(display.size.height * scale)}
-    });
-    const source = sources.find(s => s.display_id === String(display.id)) ?? sources[0];
-    if (!source) {
-      throw new Error('No screen source available for capture');
+    const wayland = process.platform === 'linux' && process.env['XDG_SESSION_TYPE'] === 'wayland';
+    let full;
+    let crop;
+    if (wayland) {
+      full = await win.webContents.capturePage();
+      crop = {x: 0, y: 0, width: full.getSize().width, height: full.getSize().height};
+    } else {
+      const sources = await desktopCapturer.getSources({
+        types: ['screen'],
+        thumbnailSize: {width: Math.round(display.size.width * scale), height: Math.round(display.size.height * scale)}
+      });
+      const source = sources.find(s => s.display_id === String(display.id)) ?? sources[0];
+      if (!source) {
+        throw new Error('No screen source available for capture');
+      }
+      crop = {
+        x: Math.max(0, Math.round((bounds.x - display.bounds.x) * scale)),
+        y: Math.max(0, Math.round((bounds.y - display.bounds.y) * scale)),
+        width: Math.round(bounds.width * scale),
+        height: Math.round(bounds.height * scale)
+      };
+      full = source.thumbnail;
     }
-
-    const crop = {
-      x: Math.max(0, Math.round((bounds.x - display.bounds.x) * scale)),
-      y: Math.max(0, Math.round((bounds.y - display.bounds.y) * scale)),
-      width: Math.round(bounds.width * scale),
-      height: Math.round(bounds.height * scale)
-    };
-    const full = source.thumbnail;
     const size = full.getSize();
     crop.width = Math.min(crop.width, size.width - crop.x);
     crop.height = Math.min(crop.height, size.height - crop.y);

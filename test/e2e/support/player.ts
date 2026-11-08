@@ -19,7 +19,16 @@ export const VIDEO_AREA = '#video-container, #mpv-placeholder';
  * Pixel probes need a real GPU and a real screen: the hosted runners render the composited capture white. On a real
  * Mac the screen capture needs the Screen Recording permission for the process that runs the tests.
  */
-export const pixelProbesAvailable = (process.platform === 'win32' || process.platform === 'darwin') && !process.env['CI'];
+/**
+ * On Linux a real session (X11 or Wayland, not software GL) has a GPU and a screen. Hosted runners (xvfb, software GL) are
+ * CI. Wayland cannot be captured without the portal's dialog, `captureComposited` reads the window's own output there.
+ * YALL_E2E_PIXEL_PROBES=1 or 0 overrides the guess.
+ */
+const linuxScreenReadable = process.platform === 'linux' && (process.env['XDG_SESSION_TYPE'] === 'x11' || process.env['XDG_SESSION_TYPE'] === 'wayland') &&
+  !!(process.env['DISPLAY'] || process.env['WAYLAND_DISPLAY']) && !process.env['LIBGL_ALWAYS_SOFTWARE'];
+export const pixelProbesAvailable = process.env['YALL_E2E_PIXEL_PROBES']
+  ? process.env['YALL_E2E_PIXEL_PROBES'] === '1'
+  : (process.platform === 'win32' || process.platform === 'darwin' || linuxScreenReadable) && !process.env['CI'];
 
 type LaunchFn = (opts?: LaunchOptions) => Promise<LaunchedApp>;
 

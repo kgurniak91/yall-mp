@@ -22,8 +22,7 @@ test('frames that import as black end on readback with a picture', async ({launc
   const {app, ui} = await launchClips(launch, {lastPlaybackTime: inClip(0, 0.5)}, {
     env: {YALL_MP_E2E_SIMULATE_BLACK_FRAMES: '1'}
   });
-  const forced = process.env['YALL_MP_VIDEO_BACKEND'] === 'readback';
-  test.skip(forced, 'needs the GPU path');
+  test.skip((await videoStats(app))?.backend === 'readback', 'needs the GPU path');
 
   await startPlaying(ui);
   await expect.poll(async () => (await videoStats(app))?.backend, {timeout: 15_000}).toBe('readback');
