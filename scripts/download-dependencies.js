@@ -4,6 +4,7 @@ const https = require('https');
 const crypto = require('crypto');
 const {execFileSync, fork} = require('child_process');
 const pathTo7za = require('7zip-bin').path7za;
+const {resolveLatestLibmpv, matchesVendoredHeaders} = require('./libmpv-source');
 
 if (process.platform !== 'win32') {
   try {
@@ -23,9 +24,13 @@ const URLS = {
   }
 };
 
-// libmpv for the native addon (Windows), from the shinchiro build. Shinchiro prunes old releases, so the first
-// source is a mirror in this project's own releases.
-// Bumping: change archive + sha256 + mirror tag together and re-run `node scripts/vendor-mpv-headers.js <commit>`
+// libmpv for the native addon (Windows), from the shinchiro build. Shinchiro prunes old releases, so a hard-coded URL goes 404:
+// the newest release is looked up through the GitHub API on every install (scripts/libmpv-source.js) and downloaded when it differs
+// from the installed one (verified against the sha256 digest GitHub shows for the asset). The pinned build below is only the
+// fallback for when the lookup or its download fails and no libmpv is installed yet. `YALL_MP_LIBMPV_PINNED=1` forces it.
+// The native addon is compiled against vendored headers (native/yall-libmpv/include/mpv), a newer DLL is warned about when its
+// commit differs: re-run `node scripts/vendor-mpv-headers.js <commit>` to move the headers along.
+// Bumping the pin: change archive + sha256 + mirror tag together and re-run `node scripts/vendor-mpv-headers.js <commit>`
 // (the commit of the archive) so that the vendored headers match, all in one commit.
 const LIBMPV = {
   archive: 'mpv-dev-x86_64-20261017-git-dde0671072.7z',
@@ -34,6 +39,17 @@ const LIBMPV = {
     'https://github.com/kgurniak91/yall-mp/releases/download/deps-mpv-dev-20261017/mpv-dev-x86_64-20261017-git-dde0671072.7z',
     'https://github.com/shinchiro/mpv-winbuild-cmake/releases/download/20261017/mpv-dev-x86_64-20261017-git-dde0671072.7z'
   ]
+};
+
+/** The full mpv commit the vendored headers were taken from (native/yall-libmpv/include/mpv/VENDORED.md), or '' when unreadable. */
+const vendoredMpvCommit = () => {
+  try {
+    const text = fs.readFileSync(path.join(__dirname, '..', 'native', 'yall-libmpv', 'include', 'mpv', 'VENDORED.md'), 'utf8');
+    const match = /Commit: `([0-9a-f]{40})`/.exec(text);
+    return match ? match[1] : '';
+  } catch {
+    return '';
+  }
 };
 
 const preserveLicense = (sourceDir, destDir, binaryName) => {
@@ -85,13 +101,17 @@ const sha256File = (filePath) => new Promise((resolve, reject) => {
     .on('end', () => resolve(hash.digest('hex')));
 });
 
-/** Tries each source in turn; a download error or a sha256 mismatch moves on to the next. */
-const downloadVerified = async (sources, destPath, sha256) => {
+/** Tries each source ({url, sha256}) in turn; a download error or a sha256 mismatch moves on to the next. A source without a sha256 is not verified. */
+const downloadVerified = async (sources, destPath) => {
   const errors = [];
-  for (const url of sources) {
+  for (const {url, sha256} of sources) {
     try {
       console.log(`   Downloading ${url}`);
       await downloadFile(url, destPath);
+      if (!sha256) {
+        console.warn('   ⚠️  GitHub shows no sha256 digest for this archive, it is not verified.');
+        return url;
+      }
       const actual = await sha256File(destPath);
       if (actual === sha256) {
         return url;
@@ -189,27 +209,73 @@ async function main() {
   // --- LIBMPV (native addon) ---
   const libmpvDll = path.join(winTargetDir, 'libmpv-2.dll');
   const libmpvStamp = `${libmpvDll}.version`;
-  const libmpvVersion = `${LIBMPV.archive} ${LIBMPV.sha256}`;
+  const installed = fs.existsSync(libmpvDll);
   const stamped = fs.existsSync(libmpvStamp) ? fs.readFileSync(libmpvStamp, 'utf8').trim() : '';
-  if (!fs.existsSync(libmpvDll) || stamped !== libmpvVersion) {
-    console.log(`   Setting up libmpv (${LIBMPV.archive})...`);
+  const pinnedCandidates = LIBMPV.sources.map(url => ({url, sha256: LIBMPV.sha256}));
+
+  // What to install: the newest shinchiro archive, else (no lookup possible) what is installed, else the pinned build.
+  let wanted = {archive: LIBMPV.archive, sha256: LIBMPV.sha256, candidates: pinnedCandidates, commit: null};
+  let lookedUp = false;
+  if (process.env.YALL_MP_LIBMPV_PINNED === '1') {
+    console.log(`   YALL_MP_LIBMPV_PINNED=1: using the pinned libmpv ${LIBMPV.archive}.`);
+  } else {
+    try {
+      const latest = await resolveLatestLibmpv();
+      lookedUp = true;
+      wanted = {
+        archive: latest.archive,
+        sha256: latest.sha256,
+        candidates: [{url: latest.url, sha256: latest.sha256}, ...pinnedCandidates],
+        commit: latest.commit
+      };
+      console.log(`   Newest shinchiro build: ${latest.archive} (release ${latest.tag}).`);
+      if (!matchesVendoredHeaders(latest, vendoredMpvCommit())) {
+        console.warn(`   ⚠️  The vendored mpv headers are from another mpv commit (${vendoredMpvCommit().slice(0, 10)}) than this build (${latest.commit}).`);
+        console.warn(`      If the native addon fails to build or run, move the headers along: node scripts/vendor-mpv-headers.js <full commit of ${latest.commit}>,`);
+        console.warn(`      or keep the older libmpv with YALL_MP_LIBMPV_PINNED=1.`);
+      }
+    } catch (err) {
+      console.warn(`   ⚠️  Could not look up the newest libmpv: ${err.message}`);
+      if (installed) {
+        console.log(`   Keeping the installed libmpv (${stamped || 'unknown version'}).`);
+        wanted = null;
+      } else {
+        console.log(`   No libmpv installed yet: falling back to the pinned build ${LIBMPV.archive}.`);
+      }
+    }
+  }
+
+  const wantedVersion = wanted ? `${wanted.archive} ${wanted.sha256 || 'no-digest'}` : stamped;
+  if (process.argv.includes('--check-libmpv')) {
+    console.log(`   --check-libmpv: installed "${stamped || (installed ? 'unknown' : 'none')}", wanted "${wantedVersion}": ${wanted && (!installed || stamped !== wantedVersion) ? 'would download' : 'nothing to do'}.`);
+    return;
+  }
+
+  if (wanted && (!installed || stamped !== wantedVersion)) {
+    console.log(`   Setting up libmpv (${wanted.archive})...`);
     const libmpvArchive = path.join(winTargetDir, 'mpv-dev.7z');
     const tmpDir = path.join(winTargetDir, 'mpv-dev-tmp');
     try {
-      const source = await downloadVerified(LIBMPV.sources, libmpvArchive, LIBMPV.sha256);
-      console.log(`   Verified sha256 from ${source}`);
+      const source = await downloadVerified(wanted.candidates, libmpvArchive);
+      console.log(`   Downloaded from ${source}`);
       fs.rmSync(tmpDir, {recursive: true, force: true});
       // only the dll is needed at runtime; the headers are vendored in native/yall-libmpv/include
       execFileSync(pathTo7za, ['e', libmpvArchive, 'libmpv-2.dll', `-o${tmpDir}`, '-y'], {stdio: 'inherit'});
       fs.copyFileSync(path.join(tmpDir, 'libmpv-2.dll'), libmpvDll);
-      fs.writeFileSync(libmpvStamp, `${libmpvVersion}
-`);
+      // a pinned fallback download is stamped with the pinned name, not the name that was looked up
+      const usedPinned = pinnedCandidates.some(candidate => candidate.url === source);
+      fs.writeFileSync(libmpvStamp, `${usedPinned ? `${LIBMPV.archive} ${LIBMPV.sha256}` : wantedVersion}\n`);
+    } catch (err) {
+      if (!installed) {
+        throw err;
+      }
+      console.warn(`   ⚠️  Could not update libmpv, keeping the installed one: ${err.message}`);
     } finally {
       fs.rmSync(tmpDir, {recursive: true, force: true});
       fs.rmSync(libmpvArchive, {force: true});
     }
   } else {
-    console.log(`   libmpv found, skipping.`);
+    console.log(`   libmpv ${lookedUp ? 'is up to date' : 'found'}, skipping.`);
   }
 
   // --- AUDIOWAVEFORM ---

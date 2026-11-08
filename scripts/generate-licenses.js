@@ -14,6 +14,21 @@ const PATHS = {
   txt: path.join(PUBLIC_DIR, 'THIRD-PARTY-NOTICES.txt')
 };
 
+/** The licence notice of the bundled libmpv: the build that postinstall installed (its version stamp), else a general text. */
+const libmpvNotice = () => {
+  const system = 'macOS and Linux use the system libmpv.';
+  try {
+    const stamp = fs.readFileSync(path.join(__dirname, '..', 'electron-resources', 'windows', 'libmpv-2.dll.version'), 'utf8');
+    const match = /mpv-dev-x86_64-(\d{8})-git-([0-9a-f]+)\.7z/.exec(stamp);
+    if (match) {
+      return `Windows builds bundle libmpv-2.dll (shinchiro mpv-winbuild-cmake ${match[1]}, mpv commit ${match[2]}); ${system}`;
+    }
+  } catch {
+    // no Windows binaries installed (Linux/macOS or before the first postinstall)
+  }
+  return `Windows builds bundle libmpv-2.dll (shinchiro mpv-winbuild-cmake); ${system}`;
+};
+
 // Skip purely build-time tools licenses:
 const EXCLUDED_PACKAGES = [
   '@angular/cli',
@@ -71,7 +86,7 @@ SOFTWARE.`
     licenses: "GPLv2+",
     repository: "https://github.com/mpv-player/mpv",
     publisher: "The mpv developers",
-    notice: "Windows builds bundle libmpv-2.dll (shinchiro mpv-winbuild-cmake 20261017, mpv commit dde0671072); macOS and Linux use the system libmpv.",
+    notice: libmpvNotice(),
     licenseText: "Distributed under the GPLv2 or later.\nSource code available at: https://github.com/mpv-player/mpv"
   },
   {
