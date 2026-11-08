@@ -29,6 +29,7 @@ export class GlobalSettingsStateService {
   public readonly generateAudioPeaks = computed(() => this.appStateService.globalSettings().generateAudioPeaks);
   public readonly swapNavigationShortcuts = computed(() => this.appStateService.globalSettings().swapNavigationShortcuts);
   public readonly hardwareAcceleration = computed(() => this.appStateService.globalSettings().hardwareAcceleration);
+  public readonly gpuVideoPath = computed(() => this.appStateService.globalSettings().gpuVideoPath !== false);
   public readonly preferredAudioLanguages = computed(() => this.appStateService.globalSettings().preferredAudioLanguages);
   public readonly preferredSubtitleLanguages = computed(() => this.appStateService.globalSettings().preferredSubtitleLanguages);
   public readonly cinemaModeEnabled = computed(() => this.appStateService.globalSettings().cinemaModeEnabled);
@@ -124,6 +125,10 @@ export class GlobalSettingsStateService {
 
   public setHardwareAcceleration(value: boolean): void {
     this.appStateService.updateGlobalSettings({hardwareAcceleration: value});
+  }
+
+  public setGpuVideoPath(value: boolean): void {
+    this.appStateService.updateGlobalSettings({gpuVideoPath: value});
   }
 
   public setPreferredAudioLanguages(languages: string[]): void {

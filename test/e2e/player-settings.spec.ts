@@ -4,6 +4,7 @@ import {
   describeSteps, launchClips, markHistory, mpvPaused, mpvString, mpvTime, press, snapshot, startPlaying, stepsSince, waitForState, waitForTime
 } from './support/player';
 import type {Page} from '@playwright/test';
+import type {LaunchedApp} from './support/app';
 
 // Settings and edits that change while the player is running: hardware decoding, and moving the end of a clip.
 
@@ -87,4 +88,23 @@ test('shortening the clip while auto-paused at its end keeps it auto-paused at t
   expect(await mpvPaused(ui)).toBe(true);
   expect(await mpvTime(ui)).toBeLessThan(CLIPS[3].end - 0.02);
   expect((await snapshot(ui))?.currentClipIndex).toBe(3);
+});
+
+const videoBackend = (app: LaunchedApp['app']) =>
+  app.evaluate(() => (globalThis as any).__yallE2E.getVideoStats()?.backend as string | undefined);
+
+test('with the "Fast video path" setting off the picture stays on readback', async ({launch}) => {
+  // The environment variable of the CI matrix would win over the setting: clear it for this test.
+  const off = await launchClips(launch, {globalSettings: {gpuVideoPath: false}}, {env: {YALL_MP_VIDEO_BACKEND: ''}});
+  await expect.poll(() => videoBackend(off.app), {message: 'readback with the setting off'}).toBe('readback');
+  await press(off.ui, 'o');
+  await expect(off.ui.locator('#gpu-video-path')).not.toBeChecked();
+  await press(off.ui, 'Escape');
+});
+
+test('the "Fast video path" setting is on by default', async ({launch}) => {
+  const {ui} = await launchClips(launch, {}, {env: {YALL_MP_VIDEO_BACKEND: ''}});
+  await press(ui, 'o');
+  await expect(ui.locator('#gpu-video-path')).toBeChecked();
+  await press(ui, 'Escape');
 });

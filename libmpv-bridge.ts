@@ -440,15 +440,19 @@ export class Libmpv extends EventEmitter {
   }
 
   /**
-   * The GPU-surface backend that `auto` picks, or null where readback is the default. Linux has `dmabuf-shared`, but
-   * only on request (`preferred: 'dmabuf-shared'`) until a working real GPU has been reported.
+   * The GPU-surface backend that `auto` picks, or null where readback is the default. On Linux it is a dma-buf from
+   * the host's render node; the frame sender falls back to readback when that cannot be attached, imports black, or
+   * runs on a software GL renderer.
    */
   sharedBackendName(): SharedBackendName | null {
     if (this.supportsD3D11()) {
       return 'd3d11-shared';
     }
     // The OpenGL render API the macOS backend uses exists in every client API we accept.
-    return this.platform === 'darwin' ? 'iosurface-shared' : null;
+    if (this.platform === 'darwin') {
+      return 'iosurface-shared';
+    }
+    return this.platform === 'linux' ? 'dmabuf-shared' : null;
   }
 
   command(args: string[]): Promise<unknown> {

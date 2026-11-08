@@ -80,7 +80,8 @@ export interface IElectronAPI {
     subtitlesVisible: boolean,
     hardwareAcceleration: boolean,
     volume: number,
-    isMuted: boolean
+    isMuted: boolean,
+    gpuVideoPath?: boolean
   ) => Promise<void>;
   mpvCommand: (commandArray: any[]) => Promise<void>;
   mpvGetProperty: (property: string) => Promise<any>;

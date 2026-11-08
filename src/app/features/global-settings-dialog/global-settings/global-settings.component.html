@@ -53,6 +53,27 @@
       <br>
       <b>Recommended:</b> Leave <b>OFF</b> unless you experience high CPU usage or lag on high-resolution videos. Enable only if your GPU supports at least native HEVC decoding.
     </small>
+
+    <div class="setting-item mt-4">
+      <label for="gpu-video-path" class="font-semibold">Fast video path (GPU)</label>
+      <p-inputSwitch inputId="gpu-video-path"
+                     [ngModel]="globalSettingsStateService.gpuVideoPath()"
+                     (ngModelChange)="globalSettingsStateService.setGpuVideoPath($event)"/>
+    </div>
+    <small class="block mt-2 text-sm">
+      Decides how the finished picture gets from the video player to the window.
+      <br>
+      <b>ON (recommended):</b> the graphics card hands the picture straight to the window, like passing a plate over a counter.
+      This uses very little CPU, so even high-resolution or 60 fps videos stay smooth. If it does not work on your computer,
+      the app notices and switches to the safe way by itself.
+      <br>
+      <b>OFF (safe mode):</b> every picture is copied through the CPU first, like carrying it in buckets. It works almost
+      everywhere but uses a lot more CPU and can stutter on big videos or slow computers.
+      <br>
+      <b>When to change it:</b> try <b>OFF</b> if the app crashes or freezes while a video plays, the picture is black,
+      flickers or has odd colours. If that fixes it, please report the problem together with your graphics card.
+      The change applies the next time you open a project.
+    </small>
   </p-fieldset>
 
   <p-fieldset legend="Cinema Mode" [toggleable]="false">

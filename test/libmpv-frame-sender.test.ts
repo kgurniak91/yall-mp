@@ -132,6 +132,19 @@ describe('LibmpvFrameSender', () => {
     expect((await create(libmpv).start({width: 800, height: 450, preferred: 'iosurface-shared'})).backend).toBe('readback');
   });
 
+  it('lets auto land on readback when the Linux dma-buf path runs on a software renderer', async () => {
+    const libmpv = fakeLibmpv({shared: 'dmabuf-shared', software: true});
+    const sender = create(libmpv);
+    expect((await sender.start({width: 800, height: 450, preferred: 'auto'})).backend).toBe('readback');
+    expect(libmpv.attaches.map(a => a.options.backend)).toEqual(['dmabuf-shared', 'readback']);
+    expect(sender.stats().fallbackReason).toBe('software GL renderer');
+  });
+
+  it('keeps a dma-buf path that was asked for by name even on a software renderer', async () => {
+    const libmpv = fakeLibmpv({shared: 'dmabuf-shared', software: true});
+    expect((await create(libmpv).start({width: 800, height: 450, preferred: 'dmabuf-shared'})).backend).toBe('dmabuf-shared');
+  });
+
   it('does not hide attach errors that are not about the backend', async () => {
     const libmpv = fakeLibmpv({attachError: {code: 'DESTROYED', message: 'destroyed'}});
     await expect(create(libmpv).start({width: 800, height: 450, preferred: 'auto'})).rejects.toThrow('destroyed');

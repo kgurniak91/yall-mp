@@ -509,7 +509,13 @@ function logVideo(message: string): void {
   }
 }
 
-/** `YALL_MP_VIDEO_BACKEND` (auto, readback, d3d11-shared, iosurface-shared, dmabuf-shared) for diagnostics and CI. */
+/** The "Fast video path" setting (global settings); on until a project says otherwise. */
+let gpuVideoPathEnabled = true;
+
+/**
+ * `YALL_MP_VIDEO_BACKEND` (auto, readback, d3d11-shared, iosurface-shared, dmabuf-shared) for diagnostics and CI; it
+ * wins over the setting.
+ */
 function preferredVideoBackend(): PreferredBackend {
   return backendAfterGpuLoss({
     configured: configuredVideoBackend(),
@@ -525,10 +531,12 @@ function configuredVideoBackend(): PreferredBackend {
   if (value && VIDEO_BACKENDS.includes(value)) {
     return value;
   }
-  // auto: the shared GPU texture where the platform has one and it works (D3D11 on Windows, IOSurface on macOS, checked
-  // on an Apple M2), readback otherwise; an attach or import failure, black frames or a GPU loss fall back to readback.
-  // A software GL renderer (a hosted macOS runner) refuses the IOSurface path, so auto lands on readback there.
-  // Linux `dmabuf-shared` is opt-in (`YALL_MP_VIDEO_BACKEND=dmabuf-shared`): auto resolves to readback there.
+  if (!gpuVideoPathEnabled) {
+    return 'readback';
+  }
+  // auto: the shared GPU texture where the platform has one and it works (D3D11 on Windows, IOSurface on macOS, a
+  // dma-buf on Linux), readback otherwise; an attach or import failure, black frames or a GPU loss fall back to
+  // readback. A software GL renderer (a hosted macOS runner, a Linux VM) lands on readback as well.
   return 'auto';
 }
 
@@ -1308,12 +1316,14 @@ if (!gotTheLock) {
       subtitlesVisible: boolean,
       hardwareAcceleration: boolean,
       volume: number,
-      isMuted: boolean
+      isMuted: boolean,
+      gpuVideoPath?: boolean
     ) => {
       if (!mainWindow) {
         return;
       }
 
+      gpuVideoPathEnabled = gpuVideoPath !== false;
       hasRequestedInitialSeek = false;
       gpuLossSinceOpen = 0;
       engineRestartPolicy.reset();

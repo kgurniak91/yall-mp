@@ -123,8 +123,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // --- FFmpeg
   checkFFmpegAvailability: () => ipcRenderer.invoke('ffmpeg:check'),
   // --- MPV
-  mpvCreateViewport: (mediaPath, audioTrackIndex, subtitleSelection, subtitleTracks, useMpvSubtitles, subtitlesVisible, hardwareAcceleration, volume, isMuted) => ipcRenderer.invoke(
-    'mpv:createViewport', mediaPath, audioTrackIndex, subtitleSelection, subtitleTracks, useMpvSubtitles, subtitlesVisible, hardwareAcceleration, volume, isMuted
+  mpvCreateViewport: (mediaPath, audioTrackIndex, subtitleSelection, subtitleTracks, useMpvSubtitles, subtitlesVisible, hardwareAcceleration, volume, isMuted, gpuVideoPath) => ipcRenderer.invoke(
+    'mpv:createViewport', mediaPath, audioTrackIndex, subtitleSelection, subtitleTracks, useMpvSubtitles, subtitlesVisible, hardwareAcceleration, volume, isMuted, gpuVideoPath
   ),
   mpvCommand: (commandArray) => ipcRenderer.invoke('mpv:command', commandArray),
   mpvGetProperty: (property) => ipcRenderer.invoke('mpv:getProperty', property),

@@ -217,7 +217,8 @@ describe('libmpv-bridge', () => {
       expect(await make('win32', [2, 6])).toBe('d3d11-shared');
       expect(await make('win32', [2, 5])).toBeNull();
       expect(await make('darwin', [2, 0])).toBe('iosurface-shared');
-      expect(await make('linux', [2, 9])).toBeNull();
+      expect(await make('linux', [2, 9])).toBe('dmabuf-shared');
+      expect(await make('freebsd' as NodeJS.Platform, [2, 9])).toBeNull();
     });
 
     it('describes where libmpv runs', async () => {

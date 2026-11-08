@@ -239,7 +239,14 @@ export class LibmpvFrameSender {
       return this.attachBackend('readback');
     }
     try {
-      return await this.attachBackend(shared);
+      const result = await this.attachBackend(shared);
+      if (options.preferred === 'auto' && shared === 'dmabuf-shared' && result.adapter.software) {
+        // A software GL renderer (no GPU, a VM) gains nothing from a shared buffer; readback is the safe path there.
+        this.fallbackReason = 'software GL renderer';
+        this.log(`[libmpv] ${shared} runs on a software renderer (${result.adapter.name}), using readback; platform=${process.platform}`);
+        return this.attachBackend('readback');
+      }
+      return result;
     } catch (error) {
       if (!FALLBACK_ATTACH_CODES.includes((error as { code?: string }).code ?? '')) {
         throw error;

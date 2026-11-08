@@ -63,6 +63,8 @@ export interface GlobalSettings {
   swapNavigationShortcuts: boolean;
   migratedDefaultAiServices?: boolean; // Flag set only once when migrating from older versions to v0.9.3-beta
   hardwareAcceleration: boolean;
+  /** true: the picture reaches the screen over the GPU where that works and falls back to readback; false: always readback. Missing in older settings files means true. */
+  gpuVideoPath?: boolean;
   warnUnexportedNotes: boolean;
   preferredAudioLanguages: string[]; // Array of ISO codes (e.g., ['ja', 'en'])
   preferredSubtitleLanguages: string[]; // Array of ISO codes (e.g., ['ja', 'en'])
@@ -169,6 +171,7 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   swapNavigationShortcuts: false,
   migratedDefaultAiServices: true, // Set initially to true so new installations don't trigger migration
   hardwareAcceleration: false,
+  gpuVideoPath: true,
   warnUnexportedNotes: true,
   preferredAudioLanguages: [],
   preferredSubtitleLanguages: [],

@@ -631,6 +631,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     // Map absolute stream index to MPV relative audio track ID
     const audioTrackId = this.getMpvAudioTrackId(foundProject.audioTracks, foundProject.settings.selectedAudioTrackIndex);
     const hardwareAcceleration = this.globalSettingsStateService.hardwareAcceleration();
+    const gpuVideoPath = this.globalSettingsStateService.gpuVideoPath();
     const volume = this.appStateService.globalSettings().volume ?? 100;
     const isMuted = this.appStateService.globalSettings().isMuted ?? false;
 
@@ -644,7 +645,8 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
         foundProject.settings.subtitlesVisible,
         hardwareAcceleration,
         volume,
-        isMuted
+        isMuted,
+        gpuVideoPath
       );
     } catch (e: any) {
       console.error('MPV failed to initialize unexpectedly', e);
