@@ -10,7 +10,7 @@ import {KeyboardAction} from '../../../model/video.types';
 import {GlobalSettingsStateService} from '../../../state/global-settings/global-settings-state.service';
 import {ActionPayload} from '../../../features/project-details/services/project-action/project-action.service';
 import {shortcutKeyName} from './shortcut-key';
-import {localizeModifier, primaryModifierPressed} from './primary-modifier';
+import {isMacPlatform, localizeModifier, primaryModifierPressed} from './primary-modifier';
 
 @Injectable({
   providedIn: 'root'
@@ -113,6 +113,12 @@ export class KeyboardShortcutsHelperService {
           shortcut.ctrlKey = false;
           shortcut.displayKeys = ['→'];
         }
+      }
+
+      // Cmd+M minimises the window on macOS, so merging needs another key there
+      if (shortcut.action === KeyboardAction.MergeSubtitles && isMacPlatform()) {
+        shortcut.shiftKey = true;
+        shortcut.displayKeys = ['Ctrl', 'Shift', 'M'];
       }
 
       shortcut.displayKeys = shortcut.displayKeys.map(displayKey => localizeModifier(displayKey));

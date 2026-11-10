@@ -669,8 +669,8 @@ function blockDefaultBrowserShortcuts(event: Electron.Event, input: Electron.Inp
     event.preventDefault();
   }
 
-  // Block window/tab closing (Ctrl+W)
-  if (isModifier && key === 'w') {
+  // Block window/tab closing (Ctrl+W); Cmd+W is the system's close on macOS
+  if (isModifier && key === 'w' && !(process.platform === 'darwin' && input.meta)) {
     event.preventDefault();
   }
 
@@ -688,6 +688,23 @@ function blockDefaultBrowserShortcuts(event: Electron.Event, input: Electron.Inp
   if (isModifier && key === 's') {
     event.preventDefault();
   }
+}
+
+/**
+ * macOS needs an application menu for the system keys (Cmd+Q, Cmd+H, Cmd+M, Cmd+W, copy and paste in text fields); without
+ * one they do nothing and the system beeps. No Undo/Redo here: Cmd+Z belongs to the timeline history. No Reload, Zoom or
+ * DevTools either, those shortcuts stay blocked.
+ */
+function buildMacApplicationMenu(): Menu {
+  return Menu.buildFromTemplate([
+    {role: 'appMenu'},
+    {role: 'fileMenu'},
+    {
+      label: 'Edit',
+      submenu: [{role: 'cut'}, {role: 'copy'}, {role: 'paste'}, {role: 'selectAll'}]
+    },
+    {role: 'windowMenu'}
+  ]);
 }
 
 /** Linux AppImage: gives the shell a .desktop entry and icon in the user's folder, or the dock shows a cogwheel. */
@@ -1706,8 +1723,8 @@ if (!gotTheLock) {
       console.log('[Main] Lookup session data cleared.');
     });
 
-    // Disable the default menu bar and its associated shortcuts
-    Menu.setApplicationMenu(null);
+    // Disable the default menu bar and its associated shortcuts (macOS keeps a minimal menu, see below)
+    Menu.setApplicationMenu(process.platform === 'darwin' ? buildMacApplicationMenu() : null);
 
     createWindow();
 

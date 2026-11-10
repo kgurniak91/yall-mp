@@ -202,6 +202,13 @@ describe('KeyboardShortcutsHelperService', () => {
       expect(service.getShortcutForEvent(withCtrl, KeyboardShortcutScope.Global)).toBeUndefined();
     });
 
+    it('leaves Command+M to the system and merges with Command+Shift+M', () => {
+      const plain = new KeyboardEvent('keydown', {key: 'm', metaKey: true});
+      const shifted = new KeyboardEvent('keydown', {key: 'M', metaKey: true, shiftKey: true});
+      expect(service.getShortcutForEvent(plain, KeyboardShortcutScope.Project)).toBeUndefined();
+      expect(service.getShortcutForEvent(shifted, KeyboardShortcutScope.Project)?.action).toBe(KeyboardAction.MergeSubtitles);
+    });
+
     it('shows the Command symbol in the shortcut list', () => {
       const addNote = service.getGroupedShortcuts().flatMap(g => g.shortcuts).find(s => s.action === KeyboardAction.AddNote);
       expect(addNote?.displayKeys).toEqual(['⌘', 'S']);
