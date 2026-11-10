@@ -700,6 +700,15 @@ function buildMacApplicationMenu(): Menu {
     {role: 'appMenu'},
     {role: 'fileMenu'},
     {
+      // F11 is Show Desktop on macOS and never reaches the app; Ctrl+Cmd+F is the system's own fullscreen shortcut
+      label: 'View',
+      submenu: [{
+        label: 'Toggle Full Screen',
+        accelerator: 'Ctrl+Command+F',
+        click: () => setFullScreenGuarded(!(mainWindow?.isFullScreen() ?? false))
+      }]
+    },
+    {
       label: 'Edit',
       submenu: [{role: 'cut'}, {role: 'copy'}, {role: 'paste'}, {role: 'selectAll'}]
     },
@@ -762,6 +771,8 @@ async function createWindow() {
     // Without it the taskbar/dock shows Electron's default icon when running unpackaged and on Linux window managers
     icon: getWindowIcon(),
     frame: false,
+    // macOS draws a default light title strip over a frameless window while it leaves fullscreen; a hidden title bar does not
+    ...(process.platform === 'darwin' ? {titleBarStyle: 'hidden' as const} : {}),
     show: false,
     webPreferences: {
       nodeIntegration: false,
@@ -770,6 +781,10 @@ async function createWindow() {
       webviewTag: true
     },
   });
+  if (process.platform === 'darwin') {
+    // The app has its own window buttons in the header
+    mainWindow.setWindowButtonVisibility(false);
+  }
 
   const isDev = !app.isPackaged;
 

@@ -115,6 +115,11 @@ export class KeyboardShortcutsHelperService {
         }
       }
 
+      // F11 is Show Desktop on macOS: the menu offers Ctrl+Cmd+F (F11 still works where the system leaves it to the app)
+      if (shortcut.action === KeyboardAction.ToggleFullScreen && isMacPlatform()) {
+        shortcut.displayKeys = ['⌃', '⌘', 'F'];
+      }
+
       // Cmd+M minimises the window on macOS, so merging needs another key there
       if (shortcut.action === KeyboardAction.MergeSubtitles && isMacPlatform()) {
         shortcut.shiftKey = true;

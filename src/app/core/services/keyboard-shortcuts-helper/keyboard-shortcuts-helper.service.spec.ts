@@ -209,6 +209,11 @@ describe('KeyboardShortcutsHelperService', () => {
       expect(service.getShortcutForEvent(shifted, KeyboardShortcutScope.Project)?.action).toBe(KeyboardAction.MergeSubtitles);
     });
 
+    it('lists Ctrl+Cmd+F for fullscreen, because F11 is Show Desktop on a Mac', () => {
+      const fullscreen = service.getGroupedShortcuts().flatMap(g => g.shortcuts).find(s => s.action === KeyboardAction.ToggleFullScreen);
+      expect(fullscreen?.displayKeys).toEqual(['⌃', '⌘', 'F']);
+    });
+
     it('shows the Command symbol in the shortcut list', () => {
       const addNote = service.getGroupedShortcuts().flatMap(g => g.shortcuts).find(s => s.action === KeyboardAction.AddNote);
       expect(addNote?.displayKeys).toEqual(['⌘', 'S']);
