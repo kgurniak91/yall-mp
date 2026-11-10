@@ -86,6 +86,23 @@ describe('LibmpvManager', () => {
     expect(optionsSeen).toMatchObject({ao: 'null', hwdec: 'no'});
   });
 
+  it('uses coreaudio on macOS only: the default avfoundation output stalls every seek while playing', async () => {
+    create({platform: 'darwin'});
+    await start();
+    expect(optionsSeen['ao']).toBe('coreaudio');
+
+    create({platform: 'darwin', options: {ao: 'null'}});
+    await start();
+    expect(optionsSeen['ao']).toBe('null');
+
+    create({platform: 'win32'});
+    await start();
+    expect(optionsSeen).not.toHaveProperty('ao');
+    create({platform: 'linux'});
+    await start();
+    expect(optionsSeen).not.toHaveProperty('ao');
+  });
+
   it('adds external subtitles and applies the visibility', async () => {
     await start({sub: {type: 'external', filePath: '/s.srt'}, mpvSubs: true, visible: true});
     expect(fake.command).toHaveBeenCalledWith(['sub-add', '/s.srt', 'select']);
