@@ -149,12 +149,6 @@ export class LibmpvManager extends EventEmitter {
       mute: isMuted ? 'yes' : 'no'
     };
 
-    if (platform === 'darwin') {
-      // mpv's default output on macOS (avfoundation) drains its audio buffer when a seek pauses the stream, so a seek while
-      // playing took about 0.75 s to start; coreaudio does not wait.
-      options['ao'] = 'coreaudio';
-    }
-
     if (audioTrackIndex !== null) {
       options['aid'] = String(audioTrackIndex);
     }
