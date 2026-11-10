@@ -221,7 +221,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
         command: () => this.dialogOrchestrationService.openGlobalSettingsDialog()
       },
       {
-        label: isMacPlatform() ? 'Help & About (⌘/)' : 'Help & About (F1)',
+        label: isMacPlatform() ? 'Help & About (⌘+/)' : 'Help & About (F1)',
         icon: 'fa-solid fa-circle-question',
         command: () => this.dialogOrchestrationService.openHelpDialog()
       },
