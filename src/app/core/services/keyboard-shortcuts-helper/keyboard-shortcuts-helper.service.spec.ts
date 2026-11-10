@@ -214,6 +214,18 @@ describe('KeyboardShortcutsHelperService', () => {
       expect(fullscreen?.displayKeys).toEqual(['⌃', '⌘', 'F']);
     });
 
+    it('lists Cmd+/ for help, because F1 is the brightness key on a Mac', () => {
+      const help = service.getGroupedShortcuts().flatMap(g => g.shortcuts).find(s => s.action === KeyboardAction.OpenHelpDialog);
+      expect(help?.displayKeys).toEqual(['⌘', '/']);
+    });
+
+    it('opens help with Command+/ and still with F1', () => {
+      const cmdSlash = new KeyboardEvent('keydown', {key: '/', metaKey: true});
+      const f1 = new KeyboardEvent('keydown', {key: 'F1'});
+      expect(service.getShortcutForEvent(cmdSlash, KeyboardShortcutScope.Global)?.action).toBe(KeyboardAction.OpenHelpDialog);
+      expect(service.getShortcutForEvent(f1, KeyboardShortcutScope.Global)?.action).toBe(KeyboardAction.OpenHelpDialog);
+    });
+
     it('shows the Command symbol in the shortcut list', () => {
       const addNote = service.getGroupedShortcuts().flatMap(g => g.shortcuts).find(s => s.action === KeyboardAction.AddNote);
       expect(addNote?.displayKeys).toEqual(['⌘', 'S']);

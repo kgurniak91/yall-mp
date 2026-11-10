@@ -120,6 +120,12 @@ export class KeyboardShortcutsHelperService {
         shortcut.displayKeys = ['⌃', '⌘', 'F'];
       }
 
+      // F1 is the brightness key on a Mac (it only reaches the app with fn held): Cmd+/ opens help there, F1 keeps working too
+      if (shortcut.action === KeyboardAction.OpenHelpDialog && isMacPlatform()) {
+        this.globalShortcuts.set('ctrl-/', {...shortcut, key: '/', ctrlKey: true});
+        shortcut.displayKeys = ['⌘', '/'];
+      }
+
       // Cmd+M minimises the window on macOS, so merging needs another key there
       if (shortcut.action === KeyboardAction.MergeSubtitles && isMacPlatform()) {
         shortcut.shiftKey = true;

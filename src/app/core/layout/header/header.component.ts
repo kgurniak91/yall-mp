@@ -21,7 +21,7 @@ import {
 } from '../../services/header-current-project-action-bridge/header-current-project-action-bridge.service';
 import {LogoComponent} from '../../../shared/components/logo/logo.component';
 import {DEFAULT_CONFIRMATION} from '../../../shared/types/confirmation.types';
-import {localizeModifier} from '../../services/keyboard-shortcuts-helper/primary-modifier';
+import {isMacPlatform, localizeModifier} from '../../services/keyboard-shortcuts-helper/primary-modifier';
 
 @Component({
   selector: 'app-header',
@@ -221,7 +221,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
         command: () => this.dialogOrchestrationService.openGlobalSettingsDialog()
       },
       {
-        label: 'Help & About (F1)',
+        label: isMacPlatform() ? 'Help & About (⌘/)' : 'Help & About (F1)',
         icon: 'fa-solid fa-circle-question',
         command: () => this.dialogOrchestrationService.openHelpDialog()
       },
