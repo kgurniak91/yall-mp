@@ -101,6 +101,9 @@ let yomitanManager: YomitanManager | null = null;
 let mainWindow: BrowserWindow | null = null;
 let subtitlesLookupWindow: LookupHost | null = null;
 let subtitlesLookupView: WebContentsView | null = null;
+// The close of the current panel was handled already. macOS delivers the window's own 'hide' event late, after the
+// handler of the close request ran and sometimes after the panel was opened again.
+let subtitlesLookupCloseHandled = true;
 let currentSubtitlesLookupContext: { clipSubtitleId: string; originalSelection: string; } | null = null;
 let isFFmpegAvailable = false;
 let ffmpegPath = '';
@@ -1195,6 +1198,10 @@ if (!gotTheLock) {
         subtitlesLookupWindow.webContents.on('before-input-event', blockDefaultBrowserShortcuts);
 
         const handleClose = () => {
+          if (subtitlesLookupCloseHandled || subtitlesLookupWindow?.isVisible()) {
+            return;
+          }
+          subtitlesLookupCloseHandled = true;
           if (subtitlesLookupView) {
             if (subtitlesLookupWindow && !subtitlesLookupWindow.isDestroyed()) {
               if (subtitlesLookupWindow.contentView.children.includes(subtitlesLookupView)) {
@@ -1219,6 +1226,7 @@ if (!gotTheLock) {
       subtitlesLookupWindow.webContents.send('lookup:nav-state-change', {canGoBack: false, canGoForward: false});
       subtitlesLookupWindow.webContents.send('lookup:loading-message', `Searching "${originalSelection}"...`);
       subtitlesLookupWindow.webContents.send('view:loading-state-change', true);
+      subtitlesLookupCloseHandled = false;
       subtitlesLookupWindow.show();
       subtitlesLookupWindow.focus();
       notifyLookupWindowState(true);
