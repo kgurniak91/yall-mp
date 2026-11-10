@@ -149,6 +149,14 @@ export class LibmpvManager extends EventEmitter {
       mute: isMuted ? 'yes' : 'no'
     };
 
+    if (platform === 'darwin') {
+      // mpv decodes the audio of a short file to its end long before it is played (a 2x gap speed doubles the lead), and with the
+      // default gapless mode it then waits for the macOS audio output to play out its buffer on the same thread that drives the
+      // picture and the time position: the picture froze 0.3-1.9 s at clip boundaries while the sound went on and the auto-pause
+      // fired late. One file is played at a time, so there is nothing to be gapless with.
+      options['gapless-audio'] = 'no';
+    }
+
     if (audioTrackIndex !== null) {
       options['aid'] = String(audioTrackIndex);
     }

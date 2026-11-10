@@ -74,6 +74,15 @@ describe('LibmpvManager', () => {
     expect(optionsSeen).not.toHaveProperty('sid');
   });
 
+  it('turns gapless audio off on macOS only, where the audio output drain froze the picture', async () => {
+    create({platform: 'darwin'});
+    await start();
+    expect(optionsSeen['gapless-audio']).toBe('no');
+    create({platform: 'win32'});
+    await start();
+    expect(optionsSeen).not.toHaveProperty('gapless-audio');
+  });
+
   it('maps the ffprobe subtitle index to the 1-based relative sid', async () => {
     await start({sub: {type: 'embedded', trackIndex: 5}});
     expect(optionsSeen['sid']).toBe('2');
