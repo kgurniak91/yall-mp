@@ -13,8 +13,6 @@ concurrency:
 jobs:
   e2e:
     runs-on: ${{ matrix.os }}
-    # Linux/macOS record the known-broken baseline of the stacked-window design; only Windows gates
-    continue-on-error: ${{ matrix.os != 'windows-latest' }}
     strategy:
       fail-fast: false
       matrix:
