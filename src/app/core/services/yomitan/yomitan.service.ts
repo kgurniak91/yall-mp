@@ -8,6 +8,15 @@ export interface YomitanLanguageSummary {
   exampleText: string;
 }
 
+/**
+ * Lookups are worth offering when at least one installed dictionary is switched on. Which ones are on for a subtitle
+ * language is the user's choice (remembered per language by the main process), whatever language they declare.
+ */
+export function hasEnabledDictionary(installed: { title: string }[], profileDictionaries: { name: string; enabled: boolean }[]): boolean {
+  const titles = new Set(installed.map(info => info.title));
+  return profileDictionaries.some(d => d.enabled && titles.has(d.name));
+}
+
 @Injectable({
   providedIn: 'root'
 })

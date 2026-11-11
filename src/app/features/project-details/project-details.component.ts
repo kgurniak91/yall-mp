@@ -62,7 +62,7 @@ import {AssSubtitlesUtils} from '../../../../shared/utils/ass-subtitles.utils';
 import {Project} from '../../model/project.types';
 import {OverlayBadgeModule} from 'primeng/overlaybadge';
 import {MediaTrack} from '../../../../shared/types/media.type';
-import {YomitanService} from '../../core/services/yomitan/yomitan.service';
+import {hasEnabledDictionary, YomitanService} from '../../core/services/yomitan/yomitan.service';
 import {NoteRequest} from './subtitles-overlay/subtitles-overlay.types';
 import {
   disableFocusInParentDialog,
@@ -1625,17 +1625,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       const optionsResponse = await this.yomitanService.getOptions();
       const profileDictionaries = optionsResponse?.result?.dictionaries || [];
 
-      const hasValidDictionary = installedDicts.some((info: any) => {
-        const config = profileDictionaries.find((d: any) => d.name === info.title);
-        if (!config || !config.enabled) return false;
-
-        let dictLang = info.sourceLanguage;
-        if (!dictLang || dictLang === '') {
-          dictLang = 'ja'; // Legacy JMdict fix
-        }
-
-        return dictLang === language;
-      });
+      const hasValidDictionary = hasEnabledDictionary(installedDicts, profileDictionaries);
 
       this.isYomitanEnabled.set(hasValidDictionary);
       console.log(`[ProjectDetails] Yomitan Sync: Language=${language}, Dictionaries=${hasValidDictionary}`);
