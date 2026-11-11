@@ -97,5 +97,7 @@ public/THIRD-PARTY-NOTICES.txt
 /bench-config.js.map
 /libmpv-host.js
 /libmpv-host.js.map
+/dictionary-switches.js
+/dictionary-switches.js.map
 scripts/bench/results/
 scripts/bench/bench-results.zip

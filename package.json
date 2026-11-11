@@ -66,6 +66,7 @@
       "native/yall-libmpv/build/Release/yall_fdpass.node",
       "playback-manager.js",
       "yomitan-manager.js",
+    "dictionary-switches.js",
       "shared/**/*.js",
       "src/app/model/**/*.js",
       "preload.js",

@@ -26,6 +26,7 @@
     "src/custom-typings.d.ts",
     "playback-manager.ts",
     "yomitan-manager.ts",
+    "dictionary-switches.ts",
     "src/app/model/anki.types.ts",
     "src/app/model/project.types.ts",
     "src/app/model/settings.types.ts",
