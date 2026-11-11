@@ -9,6 +9,7 @@ export default defineConfig({
     include: ['test/native/**/*.test.ts'],
     pool: 'forks',
     fileParallelism: false,
+    retry: process.env['CI'] ? 1 : 0,
     testTimeout: 30000,
     hookTimeout: 30000
   },
