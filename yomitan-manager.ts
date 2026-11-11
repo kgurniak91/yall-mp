@@ -1,6 +1,7 @@
 import {app, BrowserWindow, ipcMain, Menu, MenuItemConstructorOptions, session} from 'electron';
 import path from 'path';
 import * as fs from 'fs';
+import {loadDictionarySwitchMemory, planDictionarySwitches, type ProfileDictionary, saveDictionarySwitchMemory} from './dictionary-switches';
 
 export class YomitanManager {
   private extensionId: string | null = null;
@@ -11,6 +12,8 @@ export class YomitanManager {
   private heartbeatInterval: NodeJS.Timeout | null = null;
   private requestQueue: Array<() => void> = [];
   private isProxyReady = false;
+  private languageSync: Promise<unknown> = Promise.resolve();
+  private recommendedSettings: Record<string, { modification: object }[]> | null = null;
 
   constructor() {
     const basePath = app.isPackaged ? process.resourcesPath : app.getAppPath();
@@ -256,104 +259,85 @@ export class YomitanManager {
     this.createProxyWindow();
   }
 
-  public setLanguageFull(languageIso: string): Promise<any> {
+  /**
+   * Points Yomitan at the subtitle language: its language setting (text handling, deinflection), the recommended
+   * settings for that language, and the dictionary switches remembered for it (see dictionary-switches.ts).
+   */
+  public setLanguageFull(languageIso: string): Promise<{ success: true; lang: string }> {
     if (!this.proxyWindow || !this.extensionId) {
       return Promise.reject('Yomitan extension not ready');
     }
+    // One sync at a time: each one saves the switches the previous one left
+    const run = this.languageSync.then(() => this.syncLanguage(languageIso));
+    this.languageSync = run.catch(() => undefined);
+    return run;
+  }
 
-    const requestId = this.requestIdCounter++;
+  private async syncLanguage(lang: string): Promise<{ success: true; lang: string }> {
+    const inProfile = {scope: 'profile', optionsContext: {current: true}};
+    try {
+      const before = await this.callExtension('optionsGet', {optionsContext: {current: true}});
+      const previousLanguage: string | null = before?.general?.language ?? null;
+      const dictionaries: ProfileDictionary[] = (before?.dictionaries ?? []).map((d: any) => ({name: d.name, enabled: !!d.enabled}));
 
-    return new Promise((resolve, reject) => {
-      this.pendingRequests.set(requestId, {resolve, reject});
+      const targets: object[] = [{action: 'set', path: 'general.language', value: lang, ...inProfile}];
+      for (const recommendation of this.getRecommendedSettings()[lang] ?? []) {
+        targets.push({...recommendation.modification, ...inProfile});
+      }
+      await this.callExtension('modifySettings', {source: 'yall-mp-sync', targets});
 
-      const script = `
-        (async () => {
-            const requestId = ${requestId};
-            const lang = "${languageIso}";
-            const { ipcRenderer } = require('electron');
-
-            try {
-                // Helper to send settings updates
-                const modifySettings = async (targets) => {
-                    if (targets.length === 0) return;
-                    await new Promise((res, rej) => {
-                        chrome.runtime.sendMessage({
-                            action: 'modifySettings',
-                            params: { source: 'yall-mp-sync', targets: targets }
-                        }, (resp) => chrome.runtime.lastError ? rej(chrome.runtime.lastError) : res(resp));
-                    });
-                };
-
-                // Fetch Recommended Settings
-                const url = chrome.runtime.getURL('/data/recommended-settings.json');
-                const response = await fetch(url);
-                const allRecommendations = await response.json();
-                const recs = allRecommendations[lang];
-
-                const targets = [{
-                    action: 'set', path: 'general.language', value: lang,
-                    scope: 'profile', optionsContext: {current: true}
-                }];
-
-                if (recs && Array.isArray(recs)) {
-                    for (const r of recs) {
-                        targets.push({ ...r.modification, scope: 'profile', optionsContext: {current: true} });
-                    }
-                }
-
-                await modifySettings(targets);
-
-                // Auto-Toggle Dictionaries
-                const infoMsg = await new Promise(r => chrome.runtime.sendMessage({ action: 'getDictionaryInfo', params: {} }, r));
-                const dictInfos = infoMsg.result;
-
-                const dictLangMap = {};
-                for(const info of dictInfos) {
-                    dictLangMap[info.title] = info.sourceLanguage || 'ja';
-                }
-
-                const optionsMsg = await new Promise(r => chrome.runtime.sendMessage({ action: 'optionsGetFull', params: {} }, r));
-                const currentProfile = optionsMsg.result.profiles[optionsMsg.result.profileCurrent];
-                const currentDicts = currentProfile.options.dictionaries;
-
-                const dictTargets = [];
-                for (let i = 0; i < currentDicts.length; i++) {
-                    const dict = currentDicts[i];
-                    const dictLang = dictLangMap[dict.name];
-                    const shouldEnable = (dictLang === lang);
-
-                    if (dict.enabled !== shouldEnable) {
-                        dictTargets.push({
-                            action: 'set',
-                            path: \`dictionaries[\${i}].enabled\`,
-                            value: shouldEnable,
-                            scope: 'profile',
-                            optionsContext: {current: true}
-                        });
-                    }
-                }
-
-                await modifySettings(dictTargets);
-
-                if (dictTargets.length > 0) {
-                    chrome.runtime.sendMessage({ action: 'triggerDatabaseUpdated', params: { type: 'dictionary', cause: 'options' } });
-                }
-
-                ipcRenderer.send('yomitan:proxy-response', { requestId, error: null, result: { success: true, lang } });
-
-            } catch (e) {
-                console.error("Yomitan setLanguageFull failed:", e);
-                ipcRenderer.send('yomitan:proxy-response', { requestId, error: e.message || e.toString() });
-            }
-        })();
-        0; // Primitive return
-        `;
-
-      this.proxyWindow?.webContents.executeJavaScript(script).catch(err => {
-        this.pendingRequests.delete(requestId);
-        reject(err);
+      const infos: { title: string; sourceLanguage?: string }[] = (await this.callExtension('getDictionaryInfo')) ?? [];
+      const plan = planDictionarySwitches({
+        previousLanguage,
+        language: lang,
+        dictionaries,
+        sourceLanguages: Object.fromEntries(infos.map(info => [info.title, info.sourceLanguage])),
+        memory: loadDictionarySwitchMemory(this.getSwitchMemoryPath())
       });
-    });
+      try {
+        saveDictionarySwitchMemory(this.getSwitchMemoryPath(), plan.memory);
+      } catch (e) {
+        console.error('[YomitanManager] Could not save the dictionary switches:', e);
+      }
+
+      const switchTargets = dictionaries.flatMap((dictionary, i) => dictionary.enabled === plan.enabled[i] ? [] : [{
+        action: 'set', path: `dictionaries[${i}].enabled`, value: plan.enabled[i], ...inProfile
+      }]);
+      if (switchTargets.length > 0) {
+        await this.callExtension('modifySettings', {source: 'yall-mp-sync', targets: switchTargets});
+        await this.callExtension('triggerDatabaseUpdated', {type: 'dictionary', cause: 'options'});
+      }
+      return {success: true, lang};
+    } catch (e) {
+      console.error('[YomitanManager] Language sync failed:', e);
+      throw e;
+    }
+  }
+
+  /** Sends one action to Yomitan's backend and returns its result, or throws the error it answered with. */
+  private async callExtension(action: string, params: object = {}): Promise<any> {
+    const response = await this.invokeExtension({action, params});
+    if (response?.error) {
+      throw new Error(`Yomitan ${action} failed: ${response.error.message ?? JSON.stringify(response.error)}`);
+    }
+    return response?.result;
+  }
+
+  private getRecommendedSettings(): Record<string, { modification: object }[]> {
+    if (!this.recommendedSettings) {
+      try {
+        const file = path.join(this.extensionPath, 'data', 'recommended-settings.json');
+        this.recommendedSettings = JSON.parse(fs.readFileSync(file, 'utf-8'));
+      } catch (e) {
+        console.warn('[YomitanManager] Could not read the recommended settings:', e);
+        return {};
+      }
+    }
+    return this.recommendedSettings!;
+  }
+
+  private getSwitchMemoryPath(): string {
+    return path.join(app.getPath('userData'), 'yomitan-dictionary-switches.json');
   }
 
   public getExtensionId(): string | null {
