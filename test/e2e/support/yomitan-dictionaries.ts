@@ -169,6 +169,12 @@ export async function lookupDictionaries(ui: Page, text: string): Promise<string
   return [...names].sort();
 }
 
-export async function setLanguageFull(ui: Page, iso: string): Promise<void> {
-  await ui.evaluate(lang => (window as any).electronAPI.setYomitanLanguageFull(lang), iso);
+/** Runs the main process language sync; returns the dictionaries whose language is still unknown. */
+export async function setLanguageFull(ui: Page, iso: string): Promise<string[]> {
+  const result = await ui.evaluate(lang => (window as any).electronAPI.setYomitanLanguageFull(lang), iso);
+  return result.unknownDictionaries;
+}
+
+export async function setDictionaryLanguages(ui: Page, languages: Record<string, string>): Promise<void> {
+  await ui.evaluate(l => (window as any).electronAPI.setYomitanDictionaryLanguages(l), languages);
 }

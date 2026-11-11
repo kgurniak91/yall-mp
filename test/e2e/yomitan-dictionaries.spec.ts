@@ -1,4 +1,6 @@
-import type {Page} from '@playwright/test';
+import type {Locator, Page} from '@playwright/test';
+import * as fs from 'fs';
+import * as path from 'path';
 import {expect, test} from './support/app';
 import {waitForPlayer} from './support/playback';
 import {seedProject} from './support/seed';
@@ -7,6 +9,7 @@ import {
   importDictionaries,
   lookupDictionaries,
   setDictionariesEnabled,
+  setDictionaryLanguages,
   setLanguageFull,
   waitForYomitan,
   writeTestDictionary,
@@ -39,6 +42,24 @@ function countSyncs(ui: Page): () => number {
   return () => count;
 }
 
+/** Opens Global Settings, closes it and waits for the language sync that closing it starts. */
+async function closeGlobalSettings(ui: Page, syncs: () => number): Promise<void> {
+  const before = syncs();
+  await ui.keyboard.press('o');
+  const dialog = ui.locator('.p-dialog', {hasText: 'Global Settings'});
+  await expect(dialog).toBeVisible();
+  await ui.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect.poll(syncs, {timeout: 15_000}).toBeGreaterThan(before);
+}
+
+async function pickLanguage(ui: Page, dialog: Locator, name: string): Promise<void> {
+  await dialog.locator('p-select').first().click();
+  const overlay = ui.locator('.p-select-overlay');
+  await overlay.locator('input').fill(name.split(' ')[0]);
+  await overlay.getByRole('option', {name}).click();
+}
+
 test.describe('Yomitan dictionaries and the subtitle language', () => {
   test('each language keeps its own dictionary switches; a new language starts with its own dictionaries on', async ({launch}, testInfo) => {
     const {app, ui} = await launch();
@@ -49,11 +70,15 @@ test.describe('Yomitan dictionaries and the subtitle language', () => {
     // Yomitan switches every imported dictionary on; they were imported while English was set up
     expect(await enabledDictionaries(ui)).toEqual(ALL);
 
-    // First use of a language: the dictionaries of that language, an old-format one counts as Japanese
-    await setLanguageFull(ui, 'ru');
+    // The old-format one has no language: nothing guesses it, the sync reports it until the user gives one
+    expect(await setLanguageFull(ui, 'en')).toEqual(['test-legacy-en-zh']);
+    await setDictionaryLanguages(ui, {'test-legacy-en-zh': 'en'});
+
+    // First use of a language: the dictionaries of that language
+    expect(await setLanguageFull(ui, 'ru')).toEqual([]);
     expect(await enabledDictionaries(ui)).toEqual(['test-ru-en']);
     await setLanguageFull(ui, 'ja');
-    expect(await enabledDictionaries(ui)).toEqual(['test-ja-en', 'test-legacy-en-zh']);
+    expect(await enabledDictionaries(ui)).toEqual(['test-ja-en']);
 
     // Back to English: the switches it was left with
     await setLanguageFull(ui, 'en');
@@ -62,7 +87,7 @@ test.describe('Yomitan dictionaries and the subtitle language', () => {
     // The user narrows English down; Japanese is left alone and English comes back narrowed
     await setDictionariesEnabled(ui, {'test-ja-en': false, 'test-ru-en': false, 'test-zh-en': false});
     await setLanguageFull(ui, 'ja');
-    expect(await enabledDictionaries(ui)).toEqual(['test-ja-en', 'test-legacy-en-zh']);
+    expect(await enabledDictionaries(ui)).toEqual(['test-ja-en']);
     await setLanguageFull(ui, 'en');
     expect(await enabledDictionaries(ui)).toEqual(['test-en-en', 'test-en-zh', 'test-legacy-en-zh']);
   });
@@ -109,11 +134,11 @@ test.describe('Yomitan dictionaries and the subtitle language', () => {
     await waitForYomitan(first.ui);
     await expect.poll(syncs, {timeout: 15_000}).toBeGreaterThan(0);
 
-    const picked = DICTS.filter(d => ['test-en-en', 'test-ru-en', 'test-legacy-en-zh', 'test-en-zh'].includes(d.title));
+    const picked = DICTS.filter(d => ['test-en-en', 'test-ru-en', 'test-ja-en', 'test-en-zh'].includes(d.title));
     await importDictionaries(first.app, first.ui, picked.map(d => writeTestDictionary(testInfo.outputPath('dicts'), d)));
     // As in the #19 recording: the user switches all of them on, here with the English set narrowed by one
-    await setDictionariesEnabled(first.ui, {'test-en-en': true, 'test-ru-en': true, 'test-legacy-en-zh': true, 'test-en-zh': false});
-    const chosen = ['test-en-en', 'test-legacy-en-zh', 'test-ru-en'];
+    await setDictionariesEnabled(first.ui, {'test-en-en': true, 'test-ru-en': true, 'test-ja-en': true, 'test-en-zh': false});
+    const chosen = ['test-en-en', 'test-ja-en', 'test-ru-en'];
     expect(await enabledDictionaries(first.ui)).toEqual(chosen);
 
     const before = syncs();
@@ -135,5 +160,44 @@ test.describe('Yomitan dictionaries and the subtitle language', () => {
     await waitForPlayer(second.ui);
     await expect.poll(syncsAfter, {timeout: 15_000}).toBeGreaterThan(0);
     expect(await enabledDictionaries(second.ui)).toEqual(chosen);
+  });
+
+  test('a dictionary without a language is asked about once, and the answer drives its switches', async ({launch}, testInfo) => {
+    const {app, ui, userDataDir} = await launch({seed: dir => seedProject(dir, {settings: {subtitlesLanguage: 'en'}})});
+    const syncs = countSyncs(ui);
+    await waitForPlayer(ui);
+    await waitForYomitan(ui);
+    await expect.poll(syncs, {timeout: 15_000}).toBeGreaterThan(0);
+    const picked = DICTS.filter(d => ['test-en-en', 'test-legacy-en-zh'].includes(d.title));
+    await importDictionaries(app, ui, picked.map(d => writeTestDictionary(testInfo.outputPath('dicts'), d)));
+
+    const languageDialog = ui.locator('.p-dialog', {hasText: 'Which language are these dictionaries for?'});
+    // The next sync (here: closing Global Settings) finds it and asks; "Ask me later" postpones to the next sync
+    await closeGlobalSettings(ui, syncs);
+    await expect(languageDialog).toBeVisible();
+    await expect(languageDialog).toContainText('test-legacy-en-zh');
+    await expect(languageDialog).not.toContainText('test-en-en');
+    await expect(languageDialog).toContainText('cannot be changed later');
+    await languageDialog.getByRole('button', {name: 'Ask me later'}).click();
+    await expect(languageDialog).toBeHidden();
+
+    await closeGlobalSettings(ui, syncs);
+    await expect(languageDialog).toBeVisible();
+    await pickLanguage(ui, languageDialog, 'English (en)');
+    await languageDialog.getByRole('button', {name: 'Save'}).click();
+    await expect(languageDialog).toBeHidden();
+    await expect.poll(() => {
+      const stored = JSON.parse(fs.readFileSync(path.join(userDataDir, 'yomitan-dictionary-switches.json'), 'utf-8'));
+      return stored.dictionaryLanguages;
+    }).toEqual({'test-legacy-en-zh': 'en'});
+
+    // Not asked again, and now it follows the language like a dictionary that declares English
+    await closeGlobalSettings(ui, syncs);
+    await new Promise(r => setTimeout(r, 500));
+    await expect(languageDialog).toBeHidden();
+    expect(await setLanguageFull(ui, 'ja')).toEqual([]);
+    expect(await enabledDictionaries(ui)).toEqual([]);
+    await setLanguageFull(ui, 'en');
+    expect(await enabledDictionaries(ui)).toEqual(['test-en-en', 'test-legacy-en-zh']);
   });
 });

@@ -100,7 +100,8 @@ export class YomitanService {
     return window.electronAPI.invokeExtension(message);
   }
 
-  async setLanguage(appLanguage: SupportedLanguage): Promise<void> {
+  /** Points Yomitan at the language; returns the installed dictionaries whose language is still unknown. */
+  async setLanguage(appLanguage: SupportedLanguage): Promise<string[]> {
     await this.ensureLanguagesLoaded();
 
     let targetIso = 'en';
@@ -124,7 +125,13 @@ export class YomitanService {
     }
 
     console.log(`[YomitanService] Syncing FULL language. App: ${appLanguage} -> Yomitan: ${targetIso}`);
-    await window.electronAPI.setYomitanLanguageFull(targetIso);
+    const result = await window.electronAPI.setYomitanLanguageFull(targetIso);
+    return result?.unknownDictionaries ?? [];
+  }
+
+  /** Saves the languages the user gave to dictionaries that declare none (final: changing one needs a reinstall). */
+  setDictionaryLanguages(languages: Record<string, string>): Promise<void> {
+    return window.electronAPI.setYomitanDictionaryLanguages(languages);
   }
 
   getExtensionId(): Promise<string | null> {

@@ -63,6 +63,8 @@ import {Project} from '../../model/project.types';
 import {OverlayBadgeModule} from 'primeng/overlaybadge';
 import {MediaTrack} from '../../../../shared/types/media.type';
 import {hasEnabledDictionary, YomitanService} from '../../core/services/yomitan/yomitan.service';
+import {DictionaryLanguageDialogComponent} from './dictionary-language-dialog/dictionary-language-dialog.component';
+import {DictionaryLanguageDialogData, DictionaryLanguageDialogResult} from './dictionary-language-dialog/dictionary-language-dialog.types';
 import {NoteRequest} from './subtitles-overlay/subtitles-overlay.types';
 import {
   disableFocusInParentDialog,
@@ -126,6 +128,8 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   protected readonly ctrl = primaryModifierLabel();
   protected readonly isCursorHidden = signal(false);
   protected readonly isYomitanEnabled = signal(false);
+  private isDictionaryLanguageDialogOpen = false;
+  private isDestroyed = false;
   protected readonly subtitlesAtCurrentTime = computed(() => this.clipsStateService.subtitlesAtCurrentTime());
   protected readonly modeOptions = [
     {label: 'Study', value: false, icon: 'fa-solid fa-graduation-cap'},
@@ -657,6 +661,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.isDestroyed = true;
     clearTimeout(this.hideCursorTimeout);
     this.activeDialogRef?.close();
     if (this.cleanupMpvReadyListener) {
@@ -1612,7 +1617,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
   private async initializeYomitan(language: string) {
     try {
-      await this.yomitanService.setLanguage(language);
+      const unknownDictionaries = await this.yomitanService.setLanguage(language);
 
       if (language === 'other') {
         this.isYomitanEnabled.set(false);
@@ -1629,10 +1634,54 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
       this.isYomitanEnabled.set(hasValidDictionary);
       console.log(`[ProjectDetails] Yomitan Sync: Language=${language}, Dictionaries=${hasValidDictionary}`);
+      this.askForDictionaryLanguages(unknownDictionaries);
     } catch (e) {
       console.warn('[ProjectDetails] Failed to sync with Yomitan:', e);
       this.isYomitanEnabled.set(false);
     }
+  }
+
+  /** Old-format dictionaries declare no language: ask once which one they are for (asked again at the next sync if postponed). */
+  private askForDictionaryLanguages(dictionaries: string[], attempt = 0): void {
+    if (dictionaries.length === 0 || this.isDictionaryLanguageDialogOpen || this.isDestroyed) {
+      return;
+    }
+    if (this.dialogService.dialogComponentRefMap.size > 0) {
+      // Another dialog is open, or still closing (the sync after Global Settings runs during its close animation)
+      if (attempt < 20) {
+        setTimeout(() => this.askForDictionaryLanguages(dictionaries, attempt + 1), 250);
+      }
+      return;
+    }
+    this.isDictionaryLanguageDialogOpen = true;
+
+    const data: DictionaryLanguageDialogData = {
+      dictionaries,
+      languages: this.yomitanService.supportedLanguages().map(l => ({name: `${l.name} (${l.iso})`, iso: l.iso}))
+    };
+    const dialogRef = this.dialogService.open(DictionaryLanguageDialogComponent, {
+      header: 'Which language are these dictionaries for?',
+      width: 'clamp(20rem, 95vw, 40rem)',
+      modal: true,
+      closable: false,
+      closeOnEscape: false,
+      data
+    });
+    this.watchDialogPlaybackState(dialogRef);
+
+    dialogRef.onClose.pipe(take(1)).subscribe(async (result: DictionaryLanguageDialogResult | undefined) => {
+      this.isDictionaryLanguageDialogOpen = false;
+      if (!result || Object.keys(result).length === 0) {
+        return;
+      }
+      try {
+        await this.yomitanService.setDictionaryLanguages(result);
+        this.toastService.success('Dictionary languages saved');
+      } catch (e) {
+        console.error('[ProjectDetails] Failed to save the dictionary languages:', e);
+        this.toastService.error('Could not save the dictionary languages');
+      }
+    });
   }
 
   private openNoteDialog(term: string, noteText: string = '', isTermEditable: boolean = true): void {
