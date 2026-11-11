@@ -142,7 +142,9 @@ export interface IElectronAPI {
   getYomitanExtensionId: () => Promise<string | null>;
   getYomitanSettingsUrl: () => Promise<string | null>;
   invokeExtension: (message: any) => Promise<any>;
-  setYomitanLanguageFull: (languageIso: string) => Promise<any>;
+  setYomitanLanguageFull: (languageIso: string) => Promise<{ success: true; lang: string; unknownDictionaries: string[] }>;
+  /** Dictionary title -> language ISO code, for dictionaries that declare no language; final once saved */
+  setYomitanDictionaryLanguages: (languages: Record<string, string>) => Promise<void>;
   showContextMenu: (options: { text: string, allowNotes: boolean }) => Promise<string | null>;
   invokeExtensionReadyCheck: () => Promise<boolean>;
 }

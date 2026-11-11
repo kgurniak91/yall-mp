@@ -1,7 +1,21 @@
 import {app, BrowserWindow, ipcMain, Menu, MenuItemConstructorOptions, session} from 'electron';
 import path from 'path';
 import * as fs from 'fs';
-import {loadDictionarySwitchMemory, planDictionarySwitches, type ProfileDictionary, saveDictionarySwitchMemory} from './dictionary-switches';
+import {
+  type DictionaryLanguages,
+  loadDictionaryStore,
+  planDictionarySwitches,
+  type ProfileDictionary,
+  resolveDictionaryLanguages,
+  saveDictionaryStore
+} from './dictionary-switches';
+
+export interface LanguageSyncResult {
+  success: true;
+  lang: string;
+  /** Installed dictionaries that declare no language and that the user has not given one yet */
+  unknownDictionaries: string[];
+}
 
 export class YomitanManager {
   private extensionId: string | null = null;
@@ -53,6 +67,7 @@ export class YomitanManager {
     ipcMain.handle('yomitan:get-settings-url', () => this.getSettingsUrl());
     ipcMain.handle('yomitan:get-extension-id', () => this.getExtensionId());
     ipcMain.handle('yomitan:set-language-full', (_, iso) => this.setLanguageFull(iso));
+    ipcMain.handle('yomitan:set-dictionary-languages', (_, languages) => this.setDictionaryLanguages(languages));
     ipcMain.handle('yomitan:invoke', (_, msg) => this.invokeExtension(msg));
     ipcMain.handle('yomitan:show-context-menu', (event, options) => this.showContextMenu(event, options));
     ipcMain.handle('yomitan:is-ready', () => this.isProxyReady);
@@ -263,17 +278,38 @@ export class YomitanManager {
    * Points Yomitan at the subtitle language: its language setting (text handling, deinflection), the recommended
    * settings for that language, and the dictionary switches remembered for it (see dictionary-switches.ts).
    */
-  public setLanguageFull(languageIso: string): Promise<{ success: true; lang: string }> {
+  public setLanguageFull(languageIso: string): Promise<LanguageSyncResult> {
     if (!this.proxyWindow || !this.extensionId) {
       return Promise.reject('Yomitan extension not ready');
     }
     // One sync at a time: each one saves the switches the previous one left
-    const run = this.languageSync.then(() => this.syncLanguage(languageIso));
+    return this.serialised(() => this.syncLanguage(languageIso));
+  }
+
+  /**
+   * Stores the languages the user gave to dictionaries that declare none. They are final: the only way to change one
+   * is to delete the dictionary and import it again, which drops the answer (see resolveDictionaryLanguages).
+   */
+  public setDictionaryLanguages(languages: DictionaryLanguages): Promise<void> {
+    return this.serialised(async () => {
+      const store = loadDictionaryStore(this.getSwitchMemoryPath());
+      for (const [title, language] of Object.entries(languages ?? {})) {
+        if (typeof title === 'string' && typeof language === 'string' && language.length > 0) {
+          store.dictionaryLanguages[title] = language;
+        }
+      }
+      saveDictionaryStore(this.getSwitchMemoryPath(), store);
+    });
+  }
+
+  /** One sync or store change at a time: each sync saves the switches the previous one left */
+  private serialised<T>(work: () => Promise<T>): Promise<T> {
+    const run = this.languageSync.then(work);
     this.languageSync = run.catch(() => undefined);
     return run;
   }
 
-  private async syncLanguage(lang: string): Promise<{ success: true; lang: string }> {
+  private async syncLanguage(lang: string): Promise<LanguageSyncResult> {
     const inProfile = {scope: 'profile', optionsContext: {current: true}};
     try {
       const before = await this.callExtension('optionsGet', {optionsContext: {current: true}});
@@ -287,15 +323,17 @@ export class YomitanManager {
       await this.callExtension('modifySettings', {source: 'yall-mp-sync', targets});
 
       const infos: { title: string; sourceLanguage?: string }[] = (await this.callExtension('getDictionaryInfo')) ?? [];
+      const store = loadDictionaryStore(this.getSwitchMemoryPath());
+      const languages = resolveDictionaryLanguages(infos, store.dictionaryLanguages);
       const plan = planDictionarySwitches({
         previousLanguage,
         language: lang,
         dictionaries,
-        sourceLanguages: Object.fromEntries(infos.map(info => [info.title, info.sourceLanguage])),
-        memory: loadDictionarySwitchMemory(this.getSwitchMemoryPath())
+        sourceLanguages: languages.sourceLanguages,
+        memory: store.switches
       });
       try {
-        saveDictionarySwitchMemory(this.getSwitchMemoryPath(), plan.memory);
+        saveDictionaryStore(this.getSwitchMemoryPath(), {switches: plan.memory, dictionaryLanguages: languages.dictionaryLanguages});
       } catch (e) {
         console.error('[YomitanManager] Could not save the dictionary switches:', e);
       }
@@ -307,7 +345,7 @@ export class YomitanManager {
         await this.callExtension('modifySettings', {source: 'yall-mp-sync', targets: switchTargets});
         await this.callExtension('triggerDatabaseUpdated', {type: 'dictionary', cause: 'options'});
       }
-      return {success: true, lang};
+      return {success: true, lang, unknownDictionaries: languages.unknown};
     } catch (e) {
       console.error('[YomitanManager] Language sync failed:', e);
       throw e;

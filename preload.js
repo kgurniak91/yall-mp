@@ -220,6 +220,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getYomitanSettingsUrl: () => ipcRenderer.invoke('yomitan:get-settings-url'),
   invokeExtension: (message) => ipcRenderer.invoke('yomitan:invoke', message),
   setYomitanLanguageFull: (iso) => ipcRenderer.invoke('yomitan:set-language-full', iso),
+  setYomitanDictionaryLanguages: (languages) => ipcRenderer.invoke('yomitan:set-dictionary-languages', languages),
   showContextMenu: (options) => ipcRenderer.invoke('yomitan:show-context-menu', options),
   invokeExtensionReadyCheck: () => ipcRenderer.invoke('yomitan:is-ready'),
 });

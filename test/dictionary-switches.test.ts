@@ -3,10 +3,10 @@ import * as os from 'os';
 import * as path from 'path';
 import {afterEach, describe, expect, it} from 'vitest';
 import {
-  isOnByDefault,
-  loadDictionarySwitchMemory,
+  loadDictionaryStore,
   planDictionarySwitches,
-  saveDictionarySwitchMemory,
+  resolveDictionaryLanguages,
+  saveDictionaryStore,
   type DictionarySwitchInput
 } from '../dictionary-switches';
 
@@ -32,21 +32,26 @@ function input(over: Partial<DictionarySwitchInput>): DictionarySwitchInput {
 const on = (dictionaries: DictionarySwitchInput['dictionaries'], enabled: boolean[]) =>
   dictionaries.filter((_, i) => enabled[i]).map(d => d.name);
 
-describe('isOnByDefault', () => {
-  it('matches the source language, and counts a dictionary without one as Japanese', () => {
-    expect(isOnByDefault('en', 'en')).toBe(true);
-    expect(isOnByDefault('ru', 'en')).toBe(false);
-    expect(isOnByDefault(undefined, 'ja')).toBe(true);
-    expect(isOnByDefault('', 'en')).toBe(false);
-  });
-});
-
 describe('planDictionarySwitches', () => {
   it('a language used for the first time starts with its own dictionaries on', () => {
     const i = input({language: 'en'});
     expect(on(i.dictionaries, planDictionarySwitches(i).enabled)).toEqual(['kty-en-en', 'en-zh']);
     const ja = input({language: 'ja'});
-    expect(on(ja.dictionaries, planDictionarySwitches(ja).enabled)).toEqual(['jitendex', 'old-format']);
+    expect(on(ja.dictionaries, planDictionarySwitches(ja).enabled)).toEqual(['jitendex']);
+  });
+
+  it('does not guess the language of a dictionary that declares none: its switch stays as it is', () => {
+    const offPlan = planDictionarySwitches(input({language: 'ja'}));
+    expect(offPlan.enabled[4]).toBe(false);
+    const dictionaries = Object.keys(SOURCES).map(name => ({name, enabled: name === 'old-format'}));
+    for (const language of ['ja', 'en', 'ru']) {
+      expect(planDictionarySwitches(input({language, dictionaries})).enabled[4]).toBe(true);
+    }
+  });
+
+  it('uses the language the user gave to an old-format dictionary like a declared one', () => {
+    const plan = planDictionarySwitches(input({language: 'en', sourceLanguages: {...SOURCES, 'old-format': 'en'}}));
+    expect(plan.enabled[4]).toBe(true);
   });
 
   it('remembers the switches left for the previous language and brings them back later', () => {
@@ -59,7 +64,7 @@ describe('planDictionarySwitches', () => {
       {name: 'old-format', enabled: false}
     ];
     const toJa = planDictionarySwitches(input({previousLanguage: 'en', language: 'ja', dictionaries}));
-    expect(on(dictionaries, toJa.enabled)).toEqual(['jitendex', 'old-format']);
+    expect(on(dictionaries, toJa.enabled)).toEqual(['jitendex']);
     expect(toJa.memory['en']).toEqual({'kty-en-en': true, 'en-zh': false, 'kty-ru-en': true, 'jitendex': false, 'old-format': false});
 
     const jaSwitches = dictionaries.map((d, i) => ({name: d.name, enabled: toJa.enabled[i]}));
@@ -68,13 +73,7 @@ describe('planDictionarySwitches', () => {
   });
 
   it('a sync to the same language keeps the switches as they are (closing the settings dialog)', () => {
-    const dictionaries = [
-      {name: 'kty-en-en', enabled: true},
-      {name: 'en-zh', enabled: true},
-      {name: 'kty-ru-en', enabled: true},
-      {name: 'jitendex', enabled: true},
-      {name: 'old-format', enabled: true}
-    ];
+    const dictionaries = Object.keys(SOURCES).map(name => ({name, enabled: true}));
     const plan = planDictionarySwitches(input({previousLanguage: 'en', language: 'en', dictionaries, memory: {en: {'kty-ru-en': false}}}));
     expect(plan.enabled).toEqual([true, true, true, true, true]);
   });
@@ -93,7 +92,25 @@ describe('planDictionarySwitches', () => {
   });
 });
 
-describe('dictionary switch memory file', () => {
+describe('resolveDictionaryLanguages', () => {
+  it('takes the declared language first, then the one the user gave, and lists the rest as unknown', () => {
+    const resolved = resolveDictionaryLanguages(
+      [{title: 'kty-en-en', sourceLanguage: 'en'}, {title: 'old-en-zh'}, {title: 'old-jmdict', sourceLanguage: ''}],
+      {'old-en-zh': 'en'}
+    );
+    expect(resolved.sourceLanguages).toEqual({'kty-en-en': 'en', 'old-en-zh': 'en'});
+    expect(resolved.unknown).toEqual(['old-jmdict']);
+    expect(resolved.dictionaryLanguages).toEqual({'old-en-zh': 'en'});
+  });
+
+  it('forgets answers for dictionaries that are gone (a reinstall asks again) or now declare a language', () => {
+    const resolved = resolveDictionaryLanguages([{title: 'updated', sourceLanguage: 'de'}], {'deleted': 'en', 'updated': 'fr'});
+    expect(resolved.dictionaryLanguages).toEqual({});
+    expect(resolved.sourceLanguages).toEqual({'updated': 'de'});
+  });
+});
+
+describe('dictionary store file', () => {
   const dirs: string[] = [];
   const tempFile = () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dict-switches-'));
@@ -104,24 +121,28 @@ describe('dictionary switch memory file', () => {
 
   it('round-trips', () => {
     const file = tempFile();
-    saveDictionarySwitchMemory(file, {en: {'kty-en-en': true, 'kty-ru-en': false}});
-    expect(loadDictionarySwitchMemory(file)).toEqual({en: {'kty-en-en': true, 'kty-ru-en': false}});
+    const store = {switches: {en: {'kty-en-en': true, 'kty-ru-en': false}}, dictionaryLanguages: {'old-en-zh': 'en'}};
+    saveDictionaryStore(file, store);
+    expect(loadDictionaryStore(file)).toEqual(store);
   });
 
   it('starts empty when the file is missing, broken or from an unknown version', () => {
+    const empty = {switches: {}, dictionaryLanguages: {}};
     const file = tempFile();
-    expect(loadDictionarySwitchMemory(file)).toEqual({});
+    expect(loadDictionaryStore(file)).toEqual(empty);
     fs.mkdirSync(path.dirname(file), {recursive: true});
     fs.writeFileSync(file, '{not json');
-    expect(loadDictionarySwitchMemory(file)).toEqual({});
+    expect(loadDictionaryStore(file)).toEqual(empty);
     fs.writeFileSync(file, JSON.stringify({version: 2, languages: {en: {a: true}}}));
-    expect(loadDictionarySwitchMemory(file)).toEqual({});
+    expect(loadDictionaryStore(file)).toEqual(empty);
   });
 
-  it('drops entries that are not on/off maps', () => {
+  it('reads a file without dictionary languages, and drops entries of the wrong shape', () => {
     const file = tempFile();
     fs.mkdirSync(path.dirname(file), {recursive: true});
     fs.writeFileSync(file, JSON.stringify({version: 1, languages: {en: {a: true}, ja: {b: 'yes'}, ru: [true]}}));
-    expect(loadDictionarySwitchMemory(file)).toEqual({en: {a: true}});
+    expect(loadDictionaryStore(file)).toEqual({switches: {en: {a: true}}, dictionaryLanguages: {}});
+    fs.writeFileSync(file, JSON.stringify({version: 1, languages: {}, dictionaryLanguages: {a: 'en', b: '', c: 3}}));
+    expect(loadDictionaryStore(file)).toEqual({switches: {}, dictionaryLanguages: {a: 'en'}});
   });
 });
