@@ -28,12 +28,13 @@ jobs:
         with:
           node-version: 22
 
-      # Required for 'font-scanner' to compile during npm install
+      # libfontconfig1-dev: 'font-scanner' compiles during npm install; libegl-dev + libgbm-dev: without their headers
+      # the libmpv host is built without the dma-buf (GPU) video path
       - name: Install Linux Build Dependencies
         if: matrix.os == 'ubuntu-24.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libfontconfig1-dev libarchive-tools
+          sudo apt-get install -y libfontconfig1-dev libarchive-tools libegl-dev libgbm-dev
 
       - name: Install CMake (macOS)
         if: matrix.os == 'macos-latest'
