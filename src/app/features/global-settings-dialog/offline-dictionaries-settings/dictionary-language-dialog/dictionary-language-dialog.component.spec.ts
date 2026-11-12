@@ -6,7 +6,7 @@ import {DictionaryLanguageDialogData} from './dictionary-language-dialog.types';
 
 describe('DictionaryLanguageDialogComponent', () => {
   const data: DictionaryLanguageDialogData = {
-    dictionaries: ['old-en-zh', 'old-jmdict'],
+    dictionaries: [{title: 'old-en-zh', language: null}, {title: 'old-jmdict', language: 'ja'}],
     languages: [{name: 'English (en)', iso: 'en'}, {name: 'Japanese (ja)', iso: 'ja'}]
   };
   let close: jasmine.Spy;
@@ -32,30 +32,35 @@ describe('DictionaryLanguageDialogComponent', () => {
     spectator = createComponent();
   });
 
-  it('lists every dictionary without a language and warns that the choice is final', () => {
+  it('lists the dictionaries without a language, with earlier answers filled in, and says they can be changed', () => {
     const titles = spectator.queryAll('.dictionary-title').map(el => el.textContent?.trim());
     expect(titles).toEqual(['old-en-zh', 'old-jmdict']);
-    expect(spectator.query('.dictionary-language-warning')?.textContent).toContain('cannot be changed later');
-    expect(spectator.query('.dictionary-language-warning')?.textContent).toContain('import it again');
+    expect((spectator.component as any).choices()).toEqual({'old-en-zh': null, 'old-jmdict': 'ja'});
+    expect(spectator.query('.dictionary-language-note')?.textContent).toContain('change this later');
   });
 
-  it('enables Save only once a language is chosen', () => {
+  it('enables Save only when an answer is given or changed', () => {
     expect(saveButton().disabled).toBeTrue();
     choose('old-en-zh', 'en');
     expect(saveButton().disabled).toBeFalse();
     choose('old-en-zh', null);
     expect(saveButton().disabled).toBeTrue();
+    choose('old-jmdict', 'en');
+    expect(saveButton().disabled).toBeFalse();
+    choose('old-jmdict', 'ja');
+    expect(saveButton().disabled).toBeTrue();
   });
 
-  it('saves only the dictionaries that got a language', () => {
+  it('saves only the answers that are new or changed', () => {
     choose('old-en-zh', 'en');
+    choose('old-jmdict', 'ja');
     spectator.click(saveButton());
     expect(close).toHaveBeenCalledOnceWith({'old-en-zh': 'en'});
   });
 
-  it('"Ask me later" closes without an answer', () => {
-    choose('old-jmdict', 'ja');
-    const later = spectator.queryAll('p-button button').find(b => b.textContent?.includes('Ask me later')) as HTMLButtonElement;
+  it('"Not now" closes without an answer', () => {
+    choose('old-en-zh', 'ja');
+    const later = spectator.queryAll('p-button button').find(b => b.textContent?.includes('Not now')) as HTMLButtonElement;
     spectator.click(later);
     expect(close).toHaveBeenCalledOnceWith();
   });

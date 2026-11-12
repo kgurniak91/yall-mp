@@ -143,8 +143,10 @@ export interface IElectronAPI {
   getYomitanSettingsUrl: () => Promise<string | null>;
   invokeExtension: (message: any) => Promise<any>;
   setYomitanLanguageFull: (languageIso: string) => Promise<{ success: true; lang: string; unknownDictionaries: string[] }>;
-  /** Dictionary title -> language ISO code, for dictionaries that declare no language; final once saved */
+  /** Dictionary title -> language ISO code, for dictionaries that declare no language; a new or changed one starts its switches over */
   setYomitanDictionaryLanguages: (languages: Record<string, string>) => Promise<void>;
+  /** Installed dictionaries that declare no language, with the language the user gave each (null: not given yet) */
+  getYomitanDictionaryLanguages: () => Promise<{ title: string; language: string | null }[]>;
   showContextMenu: (options: { text: string, allowNotes: boolean }) => Promise<string | null>;
   invokeExtensionReadyCheck: () => Promise<boolean>;
 }

@@ -5,7 +5,8 @@ import * as path from 'path';
 // of the project, and with it which dictionaries are on: the switches the user left for a language are remembered and
 // come back when that language is used again. A language (or a dictionary) without a remembered switch starts with the
 // dictionaries of that language on and the others off. A dictionary that does not declare its language (old format) is
-// left as it is until the user has said which language it is for.
+// left as it is until the user has said which language it is for; giving it a language (or another one later) forgets
+// its remembered switches, so every language starts it over with that rule.
 
 /** Remembered switches: language ISO code -> dictionary title -> on/off. */
 export type DictionarySwitchMemory = Record<string, Record<string, boolean>>;
@@ -66,6 +67,15 @@ export function planDictionarySwitches(input: DictionarySwitchInput): Dictionary
     return sourceLanguage ? sourceLanguage === input.language : dictionary.enabled;
   });
   return {memory, enabled};
+}
+
+/** The memory without the switches of these dictionaries, in every language. */
+export function forgetDictionarySwitches(memory: DictionarySwitchMemory, titles: string[]): DictionarySwitchMemory {
+  const forgotten: DictionarySwitchMemory = {};
+  for (const [language, switches] of Object.entries(memory)) {
+    forgotten[language] = Object.fromEntries(Object.entries(switches).filter(([title]) => !titles.includes(title)));
+  }
+  return forgotten;
 }
 
 export interface ResolvedLanguages {

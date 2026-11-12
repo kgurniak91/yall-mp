@@ -32,6 +32,30 @@
     English-Chinese (en-zh) dictionary, not a Chinese-English (zh-en) one.
   </p>
 
+  @if (unansweredCount() > 0) {
+    <p-message severity="warn" styleClass="w-full dictionary-languages-banner">
+      <div class="flex align-items-center justify-content-between gap-3 w-full">
+        <span>
+          {{ unansweredCount() === 1 ? '1 dictionary does' : unansweredCount() + ' dictionaries do' }} not say which
+          language {{ unansweredCount() === 1 ? 'it is' : 'they are' }} for, so the player cannot tell for which
+          subtitles to switch {{ unansweredCount() === 1 ? 'it' : 'them' }} on.
+        </span>
+        <p-button label="Set languages" size="small" (click)="onEditDictionaryLanguages()"/>
+      </div>
+    </p-message>
+  } @else if (answeredCount() > 0) {
+    <p-message severity="secondary" styleClass="w-full dictionary-languages-banner">
+      <div class="flex align-items-center justify-content-between gap-3 w-full">
+        <span>
+          {{ answeredCount() === 1 ? '1 dictionary uses a language' : answeredCount() + ' dictionaries use languages' }}
+          you picked, because {{ answeredCount() === 1 ? 'it does' : 'they do' }} not say which language
+          {{ answeredCount() === 1 ? 'it is' : 'they are' }} for.
+        </span>
+        <p-button label="Edit languages" size="small" (click)="onEditDictionaryLanguages()"/>
+      </div>
+    </p-message>
+  }
+
   <div class="webview-container border-1 surface-border border-round overflow-hidden relative flex-grow-1">
 
     @if (isLoading()) {

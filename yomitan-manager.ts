@@ -3,6 +3,7 @@ import path from 'path';
 import * as fs from 'fs';
 import {
   type DictionaryLanguages,
+  forgetDictionarySwitches,
   loadDictionaryStore,
   planDictionarySwitches,
   type ProfileDictionary,
@@ -15,6 +16,12 @@ export interface LanguageSyncResult {
   lang: string;
   /** Installed dictionaries that declare no language and that the user has not given one yet */
   unknownDictionaries: string[];
+}
+
+/** An installed dictionary that declares no language, with the language the user gave it (null: not given yet). */
+export interface DictionaryLanguageEntry {
+  title: string;
+  language: string | null;
 }
 
 export class YomitanManager {
@@ -68,6 +75,7 @@ export class YomitanManager {
     ipcMain.handle('yomitan:get-extension-id', () => this.getExtensionId());
     ipcMain.handle('yomitan:set-language-full', (_, iso) => this.setLanguageFull(iso));
     ipcMain.handle('yomitan:set-dictionary-languages', (_, languages) => this.setDictionaryLanguages(languages));
+    ipcMain.handle('yomitan:get-dictionary-languages', () => this.getDictionaryLanguages());
     ipcMain.handle('yomitan:invoke', (_, msg) => this.invokeExtension(msg));
     ipcMain.handle('yomitan:show-context-menu', (event, options) => this.showContextMenu(event, options));
     ipcMain.handle('yomitan:is-ready', () => this.isProxyReady);
@@ -286,19 +294,59 @@ export class YomitanManager {
     return this.serialised(() => this.syncLanguage(languageIso));
   }
 
+  /** The installed dictionaries that declare no language, with the language the user gave each (null if none yet). */
+  public getDictionaryLanguages(): Promise<DictionaryLanguageEntry[]> {
+    return this.serialised(async () => {
+      const infos: { title: string; sourceLanguage?: string }[] = (await this.callExtension('getDictionaryInfo')) ?? [];
+      const store = loadDictionaryStore(this.getSwitchMemoryPath());
+      const resolved = resolveDictionaryLanguages(infos, store.dictionaryLanguages);
+      if (Object.keys(resolved.dictionaryLanguages).length !== Object.keys(store.dictionaryLanguages).length) {
+        // Answers for deleted dictionaries are dropped, so a dictionary imported again is asked about again
+        saveDictionaryStore(this.getSwitchMemoryPath(), {...store, dictionaryLanguages: resolved.dictionaryLanguages});
+      }
+      return infos
+        .filter(info => !info.sourceLanguage)
+        .map(info => ({title: info.title, language: resolved.dictionaryLanguages[info.title] ?? null}));
+    });
+  }
+
   /**
-   * Stores the languages the user gave to dictionaries that declare none. They are final: the only way to change one
-   * is to delete the dictionary and import it again, which drops the answer (see resolveDictionaryLanguages).
+   * Stores the languages the user gave to dictionaries that declare none. A dictionary whose language is new or changed
+   * forgets its remembered switches and starts over: on in that language, off in the others, right away for the
+   * language Yomitan is set to now.
    */
   public setDictionaryLanguages(languages: DictionaryLanguages): Promise<void> {
     return this.serialised(async () => {
       const store = loadDictionaryStore(this.getSwitchMemoryPath());
+      const changed: Record<string, string> = {};
       for (const [title, language] of Object.entries(languages ?? {})) {
-        if (typeof title === 'string' && typeof language === 'string' && language.length > 0) {
+        if (typeof title === 'string' && typeof language === 'string' && language.length > 0 && store.dictionaryLanguages[title] !== language) {
           store.dictionaryLanguages[title] = language;
+          changed[title] = language;
         }
       }
+      const titles = Object.keys(changed);
+      if (titles.length === 0) {
+        return;
+      }
+      store.switches = forgetDictionarySwitches(store.switches, titles);
       saveDictionaryStore(this.getSwitchMemoryPath(), store);
+
+      const options = await this.callExtension('optionsGet', {optionsContext: {current: true}});
+      const current: string | null = options?.general?.language ?? null;
+      const targets = (options?.dictionaries ?? []).flatMap((d: any, i: number) => {
+        if (!(d.name in changed) || current === null) {
+          return [];
+        }
+        const enabled = changed[d.name] === current;
+        return d.enabled === enabled ? [] : [{
+          action: 'set', path: `dictionaries[${i}].enabled`, value: enabled, scope: 'profile', optionsContext: {current: true}
+        }];
+      });
+      if (targets.length > 0) {
+        await this.callExtension('modifySettings', {source: 'yall-mp-sync', targets});
+        await this.callExtension('triggerDatabaseUpdated', {type: 'dictionary', cause: 'options'});
+      }
     });
   }
 

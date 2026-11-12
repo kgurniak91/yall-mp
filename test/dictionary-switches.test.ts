@@ -3,6 +3,7 @@ import * as os from 'os';
 import * as path from 'path';
 import {afterEach, describe, expect, it} from 'vitest';
 import {
+  forgetDictionarySwitches,
   loadDictionaryStore,
   planDictionarySwitches,
   resolveDictionaryLanguages,
@@ -89,6 +90,24 @@ describe('planDictionarySwitches', () => {
     const memory = {en: {'kty-en-en': false}};
     planDictionarySwitches(input({previousLanguage: 'en', language: 'ja', memory}));
     expect(memory).toEqual({en: {'kty-en-en': false}});
+  });
+});
+
+describe('forgetDictionarySwitches', () => {
+  it('drops the switches of the given dictionaries in every language, so a new answer starts them over', () => {
+    const memory = {en: {'old-en-zh': true, 'kty-en-en': true}, ja: {'old-en-zh': true}};
+    const forgotten = forgetDictionarySwitches(memory, ['old-en-zh']);
+    expect(forgotten).toEqual({en: {'kty-en-en': true}, ja: {}});
+    expect(memory.en['old-en-zh']).toBe(true);
+
+    // The next sync to Japanese applies the rule for a dictionary it has not seen: off, it is an English one now
+    const plan = planDictionarySwitches(input({
+      language: 'ja',
+      dictionaries: [{name: 'old-en-zh', enabled: true}],
+      sourceLanguages: {'old-en-zh': 'en'},
+      memory: forgotten
+    }));
+    expect(plan.enabled).toEqual([false]);
   });
 });
 

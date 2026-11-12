@@ -13,3 +13,7 @@
   border: none;
   display: flex;
 }
+
+:host p-message ::ng-deep .p-message-text {
+  width: 100%;
+}
