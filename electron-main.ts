@@ -90,8 +90,10 @@ const APP_DATA_PATH = path.join(app.getPath('userData'), `${APP_DATA_KEY}.json`)
 const DIALOG_STATE_PATH = path.join(app.getPath('userData'), 'dialog-state.json');
 const PROJECTS_DIR = path.join(app.getPath('userData'), 'projects');
 const FONT_CACHE_DIR = path.join(app.getPath('userData'), 'font-cache');
+// A plain Chrome user agent (without the Electron and app tokens) for the lookup sites, with the bundled
+// Chromium's major version, so it never falls behind after an Electron upgrade.
 const USER_AGENT_OPTIONS = {
-  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+  userAgent: `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${process.versions.chrome.split('.')[0]}.0.0.0 Safari/537.36`
 };
 const LOOKUP_PARTITION = 'persist:yall_mp_lookup_session';
 
