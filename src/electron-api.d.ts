@@ -45,7 +45,6 @@ export interface IElectronAPI {
     selection: string;
   }) => void) => (() => void);
   closeLookupWindow: () => void;
-  onLookupShowToast: (callback: (message: string) => void) => (() => void);
   onLookupWindowStateChange: (callback: (isVisible: boolean) => void) => (() => void);
   clearLookupData: () => Promise<void>;
   // --- Files

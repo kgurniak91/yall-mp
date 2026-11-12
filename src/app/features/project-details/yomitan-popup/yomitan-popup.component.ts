@@ -165,7 +165,6 @@ export class YomitanPopupComponent implements OnInit, OnDestroy {
 
     wv.addEventListener('console-message', this.handleConsoleMessage);
     wv.addEventListener('context-menu', this.handleContextMenu);
-    wv.addEventListener('new-window', this.handleNewWindow);
     wv.addEventListener('will-navigate', this.handleWillNavigate);
     wv.addEventListener('did-navigate', this.updateNavState);
     wv.addEventListener('did-navigate-in-page', this.updateNavState);
@@ -248,11 +247,6 @@ export class YomitanPopupComponent implements OnInit, OnDestroy {
     }
   }
 
-  private handleNewWindow = (e: any) => {
-    e.preventDefault();
-    if (e.url) window.electronAPI.openInSystemBrowser(e.url);
-  };
-
   private handleWillNavigate = (e: any) => {
     if (e.url && !e.url.startsWith('chrome-extension://')) {
       e.preventDefault();
@@ -265,7 +259,6 @@ export class YomitanPopupComponent implements OnInit, OnDestroy {
     if (wv) {
       wv.removeEventListener('console-message', this.handleConsoleMessage);
       wv.removeEventListener('context-menu', this.handleContextMenu);
-      wv.removeEventListener('new-window', this.handleNewWindow);
       wv.removeEventListener('will-navigate', this.handleWillNavigate);
       wv.removeEventListener('did-navigate', this.updateNavState);
       wv.removeEventListener('did-navigate-in-page', this.updateNavState);
