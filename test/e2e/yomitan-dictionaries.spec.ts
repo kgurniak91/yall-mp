@@ -3,6 +3,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {expect, test} from './support/app';
 import {waitForPlayer} from './support/playback';
+import {launchClips} from './support/player';
+import {SUBTITLED} from './support/clips';
 import {seedProject} from './support/seed';
 import {
   enabledDictionaries,
@@ -243,5 +245,23 @@ test.describe('Yomitan dictionaries and the subtitle language', () => {
     await expect(again).toBeHidden();
     await setLanguageFull(ui, 'ja');
     expect(await enabledDictionaries(ui)).toEqual(['test-legacy-en-zh']);
+  });
+
+  test('a word no switched-on dictionary knows still gets the hover outline, without a popup', async ({launch}, testInfo) => {
+    const {app, ui} = await launchClips(launch, {settings: {subtitlesLanguage: 'en'}, lastPlaybackTime: SUBTITLED[0].start + 0.5});
+    const syncs = countSyncs(ui);
+    await waitForYomitan(ui);
+    // Only a zh->en dictionary: Yomitan is on, but it has no English headwords
+    const zhEn = DICTS.filter(d => d.title === 'test-zh-en');
+    await importDictionaries(app, ui, zhEn.map(d => writeTestDictionary(testInfo.outputPath('dicts'), d)));
+    await closeGlobalSettings(ui, syncs);
+    expect(await enabledDictionaries(ui)).toEqual(['test-zh-en']);
+
+    const subtitle = ui.locator('.srt-container');
+    await expect(subtitle).toBeVisible();
+    const box = (await subtitle.boundingBox())!;
+    await ui.mouse.move(box.x + 8, box.y + box.height / 2, {steps: 4});
+    await expect(ui.locator('.highlight-rect').first()).toBeVisible();
+    await expect(ui.locator('app-yomitan-popup')).toHaveCount(0);
   });
 });

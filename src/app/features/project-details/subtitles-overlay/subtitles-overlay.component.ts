@@ -653,13 +653,7 @@ export class SubtitlesOverlayComponent implements OnDestroy {
 
       this.popupShown.emit();
     } else {
-      // If Yomitan is enabled but found nothing, do NOT show a fallback highlight (prevents confusing highlights with no popups)...
-      // ...but if CTRL is held, allow the fallback highlighting (visual feedback for "Click to Lookup")
-      if (this.isYomitanEnabled() && !primaryModifierPressed(event)) {
-        return;
-      }
-
-      // Fallback: when Yomitan is not configured for the current project, check tokenizer for a generic word
+      // Fallback: no dictionary entry (or no dictionary at all), the tokenizer still outlines the word, without a popup
       const boundaries = this.getWordInfoFromEvent(event);
 
       if (boundaries) {
