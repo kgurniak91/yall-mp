@@ -51,10 +51,4 @@ build (they pile up in the `results` folder), so send only the final zip.
 
 For `episode-auto`: dropped frames at most 0.5 % over the minute, the backend is `d3d11-shared` (no fallback), and the
 CPU is at most twice the legacy build or at most legacy + 25 points of one core, whichever is looser. The other scenarios
-are recorded, not gating. The 10-bit episode may be slow without hardware decoding on an old GPU; that is the same in the old build.`benchench-results.zip` after the last run. It contains the results of both the new and the old build (they pile up in the `results` folder), so send only the final zip.
-
-## Gate (for the maintainer)
-
-For `episode-auto`: dropped frames at most 0.5 % over the minute, the backend is `d3d11-shared` (no fallback), and the
-CPU is at most twice the legacy build or at most legacy + 25 points of one core, whichever is looser. The other scenarios
 are recorded, not gating. The 10-bit episode may be slow without hardware decoding on an old GPU; that is the same in the old build.

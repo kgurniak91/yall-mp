@@ -37,21 +37,32 @@ Alternatively, view the [GitHub release list](https://github.com/kgurniak91/yall
 
 **Y'ALL MP is primarily developed and optimized for Windows.**
 
-The video is rendered by libmpv into a canvas inside the single application window, so subtitles, the timeline and dialogs stack the same way on every platform. What differs is how the picture reaches the screen: Windows hands GPU textures straight to the window, Linux copies frames from a separate libmpv process (a GPU dma-buf path exists but is opt-in until it has been seen working on a real desktop), and macOS copies frames too (a GPU path exists but is opt-in until it has been seen working on a real Mac).
+The video is rendered by libmpv into a canvas inside the single application window, so subtitles, the timeline and dialogs stack the same way on every platform. By default the picture reaches the window straight from the graphics card on every platform (Direct3D 11 on Windows, IOSurface on macOS, dma-buf on Linux). If that does not work on a machine, the player switches to copying the frames through the CPU by itself (see [Video output](#video-output) below).
 
-| Platform    | Status                   | Notes                                                                                                                                                                   |
-|:------------|:-------------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Windows** | ✅&nbsp;**Stable**        | Fully supported. Recommended experience.                                                                                                                                |
-| **Linux**   | 🧪&nbsp;**Experimental** | Needs libmpv (see below). Tested on Ubuntu 24.04 (GNOME, X11 and Wayland), Lubuntu (LXQt) and Fedora 44 (KDE Wayland), all in virtual machines without a GPU. |
-| **macOS**   | 🧪&nbsp;**Experimental** | **Not tested on a real Mac:** only on a CI virtual machine. Requires manual terminal commands to run (see installation instructions).                                   |
+| Platform    | Status                   | Notes                                                                                                                                                                                                                              |
+|:------------|:-------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Windows** | ✅&nbsp;**Stable**        | Fully supported. Recommended experience.                                                                                                                                                                                           |
+| **Linux**   | 🧪&nbsp;**Experimental** | Needs libmpv 0.40+ and audiowaveform (see below). Tested on real hardware: Ubuntu 24.04 (GNOME, X11 and Wayland) with AMD Radeon graphics (Mesa). Earlier also in virtual machines: Lubuntu (LXQt) and Fedora 44 (KDE). NVIDIA and Intel graphics are not tested yet. |
+| **macOS**   | 🧪&nbsp;**Experimental** | Needs Homebrew `mpv` and `audiowaveform` (see below). Tested on a Mac mini M2 (Apple Silicon, macOS 27). The app is not notarized by Apple, so macOS asks once before the first start (see installation instructions).            |
 
 ### 🤝 Call for Contributors
 
 **Y'ALL MP** is developed and tested primarily on Windows.
-As I do not have access to **macOS** hardware, the app is only verified on GitHub's virtual Macs, which have no GPU. The GPU video path can be tried with `YALL_MP_VIDEO_BACKEND=iosurface-shared` (reports welcome, the log is `video.log` in the app data folder).
-**Linux** support is also experimental; it was tested in virtual machines only, not on real desktops with a GPU.
-The Linux GPU video path (OpenGL into a dma-buf, imported by Chromium) can be tried with `YALL_MP_VIDEO_BACKEND=dmabuf-shared`. It needs a DRM render node (`/dev/dri/renderD*`) and a working Chromium GPU process; if either is missing, or the first frames come out black, the player switches to the normal copy path and says why in `video.log` in the app data folder. Reports are welcome, please attach `video.log` and name your GPU, driver and session (X11 or Wayland). NVIDIA's proprietary driver needs `nvidia-drm.modeset=1`; Electron currently has an open bug with dma-buf frames on some NVIDIA setups (electron/electron#53271), so expect that to be the hardest case.
+macOS and Linux are now tested on real hardware as well, but only on one Mac (Apple M2) and one Linux PC (AMD graphics). Reports from other setups are very welcome, especially Linux with NVIDIA or Intel graphics, other distributions and desktops, and other Macs.
+Please attach `video.log` from the app data folder and name your GPU, driver and, on Linux, the session (X11 or Wayland). NVIDIA's proprietary driver needs `nvidia-drm.modeset=1` for the GPU video path; Electron currently has an open bug with dma-buf frames on some NVIDIA setups (electron/electron#53271), so expect that to be the hardest case.
 **Contributions to improve cross-platform support are greatly appreciated!**
+
+<a id="video-output"></a>
+#### Video output
+
+**Global Settings > General > Playback Settings > Fast video path (GPU)** decides how the finished picture gets from the graphics card to the player window:
+
+*   **ON (default, recommended):** the graphics card hands the picture straight to the window. It uses very little CPU, so even high-resolution or 60 fps videos stay smooth. If it does not work on your computer (no usable GPU, a black picture, a GPU reset), the player notices and switches to the safe way by itself; `video.log` says why.
+*   **OFF (safe mode):** every picture is copied through the CPU first. Works almost everywhere, but uses a lot more CPU and can stutter on big videos or slow computers.
+
+Try **OFF** if the app crashes or freezes while a video plays, or if the picture is black, flickers or has odd colours. The change applies the next time you open a project. If OFF fixes it, please report the problem together with your graphics card.
+
+**Hardware Acceleration** (the switch above it) is a separate setting: it decides whether the graphics card *decodes* the video, not how the picture reaches the window.
 
 #### Reporting problems
 
@@ -67,7 +78,7 @@ If the app crashes, please attach what it left in the app data folder: `video.lo
 *   **Clip Management:** Split long sentences, merge broken lines or even add own subtitles.
 
 ### 📺 Professional Playback
-*   **Powered by [mpv](https://mpv.io/):** Plays virtually any media format (MKV, MP4, WEBM, etc.) with hardware acceleration.
+*   **Powered by [mpv](https://mpv.io/) (libmpv):** Plays virtually any media format (MKV, MP4, WEBM, etc.) with hardware acceleration.
 *   **Audio Waveform:** Visualize dialogue rhythm and silence with a high-precision timeline generated by [audiowaveform](https://github.com/bbc/audiowaveform).
 *   **Context-aware Speed Control:** Automatically speed up silence or slow down difficult dialogue segments independently.
 *   **Study Presets:** Switch instantly between **Listening Mode** and **Speaking Mode** to target specific skills, depending of your study goals.
@@ -92,26 +103,24 @@ If the app crashes, please attach what it left in the app data folder: `video.lo
 Depending on your operating system, you may need to install external dependencies for the **Y'ALL MP** to work.
 
 ### 🗔 Windows
-**No additional actions required.** The installer comes pre-packaged with all necessary binaries (`mpv`, `audiowaveform`, `ffmpeg` etc.), enjoy!
+**No additional actions required.** The installer comes pre-packaged with all necessary binaries (`libmpv`, `audiowaveform`, `ffmpeg` etc.), enjoy!
 
 ### 🐧 Linux
 
-1. **Install libmpv** (the player library that ships with the mpv packages, `libmpv2` on Debian/Ubuntu, `mpv-libs` on Fedora):
+The Linux release comes as an `.AppImage` (any distribution) and as a `.deb` package (Debian, Ubuntu and derivatives). Both use libmpv and audiowaveform from your system.
+
+1. **Install libmpv 0.40 or newer** (the playback library behind mpv: `libmpv2` on Debian/Ubuntu, `mpv-libs` on Fedora):
     See official instructions: [https://mpv.io/installation/](https://mpv.io/installation/)
 
-> **⚠️ Important:** Default package managers (like `apt` on Ubuntu) often ship outdated versions of mpv (e.g., 0.32.x or 0.37.x) that lack required JSON IPC features or may crash the application.
+> **⚠️ Important:** Ubuntu 24.04 and older ship an outdated libmpv (0.37 on 24.04; Ubuntu 22.04 has no `libmpv2` package at all). The app is tested with libmpv 0.42 from the PPA below, so on those versions add it **before** installing:
 >
-> Please ensure you install a recent version (0.40+ recommended).
-
-If the default installed version crashes or is too old, use this PPA to get the latest stable version (0.40+):
-
-```bash
-sudo add-apt-repository ppa:ubuntuhandbook1/mpv
-sudo apt update
-sudo apt install mpv
-```
-
-Validate that everything was installed correctly by running `mpv --version`, make sure the version is 0.40 or higher.
+> ```bash
+> sudo add-apt-repository ppa:ubuntuhandbook1/mpv
+> sudo apt update
+> sudo apt install mpv libmpv2
+> ```
+>
+> Check with `mpv --version` that the version is 0.40 or higher.
 
 2. **Install audiowaveform:**
     [https://github.com/bbc/audiowaveform/releases](https://github.com/bbc/audiowaveform/releases)
@@ -122,30 +131,37 @@ sudo apt-get update
 sudo apt-get install audiowaveform
 ```
 
-3. **Ensure you have `libfuse2` installed on your system.**
+3. **Install the app**, either way:
 
-```bash
-sudo apt-get update
-sudo apt-get install -y libfontconfig1-dev libarchive-tools
-```
+    **`.deb` package** (recommended on Debian/Ubuntu): apt installs the other dependencies and adds the app to your applications menu.
 
-4. **Manage the app permissions**
+    ```bash
+    sudo apt install ./yall-mp_*.deb
+    ```
 
-Run the following command on the downloaded AppImage file:
+    **AppImage:** make the file executable and start it once from a terminal:
 
-```bash
-sudo chmod +x ./<filename>.AppImage
-```
+    ```bash
+    chmod +x ./<filename>.AppImage
+    ./<filename>.AppImage --no-sandbox
+    ```
 
-5. **Finally run the app in console**
+    Starting an AppImage directly needs FUSE 2: `sudo apt install libfuse2t64` on Ubuntu 24.04 (`libfuse2` on 22.04 and older). Without it, `./<filename>.AppImage --appimage-extract-and-run --no-sandbox` works too.
+    On its first start the AppImage adds itself to your applications menu (`~/.local/share/applications/yall-mp.desktop` and an icon in `~/.local/share/icons/hicolor/512x512/apps/yall-mp.png`); from then on you can start it from there. To remove the entry, delete those two files.
 
-```bash
-./<filename>.AppImage --no-sandbox
-```
+> **🖥️ X11 and Wayland:** the app runs through X11, which on a Wayland desktop means XWayland (every mainstream distribution ships it). The packaged `yall-mp` is a small launcher script that starts the real program with `--ozone-platform=x11`. The reason: a native Wayland window cannot find out where it is or on which monitor, which broke fitting the window to a smaller second monitor and made fullscreen show a stretched picture for a moment. Native Wayland is therefore **not supported**, but you can still force it for testing, at your own risk:
+>
+> ```bash
+> yall-mp --ozone-platform=wayland
+> ```
+>
+> (or `Exec=yall-mp --ozone-platform=wayland %U` in a copy of the menu entry; for the AppImage, put the same switch after the file name). A Wayland-only system without XWayland starts natively and has those problems.
 
 ### 🍎 macOS
 
-1. **Install mpv** (this provides libmpv, which the app loads at runtime):
+The macOS release is built for Apple Silicon (M1 and newer).
+
+1. **Install mpv** with [Homebrew](https://brew.sh/) (this provides libmpv, which the app loads at runtime; the app finds Homebrew's libmpv also when started from Finder):
    See official instructions: [https://mpv.io/installation/](https://mpv.io/installation/)
 
 ```bash
@@ -169,15 +185,16 @@ brew install audiowaveform
 Visit the [main page](https://yallmp.com) or [release list](https://github.com/kgurniak91/yall-mp/releases) to get the **Y'ALL MP** installer for your platform (`.exe`, `.AppImage`, or `.dmg`).
 
 ### macOS Users (Important)
-This application is not code-signed (which requires a paid Apple Developer account). To run it, you must remove the quarantine attribute after dragging the app to your Applications folder:
+The app is signed only ad hoc and not notarized by Apple (that needs a paid Apple Developer account), so macOS asks once before the first start:
 
-1.  Drag `<filename>.dmg` to your **Applications** folder.
-2.  Open **Terminal**.
-3.  Run:
-    ```bash
-    xattr -cr "/Applications/<filename>.dmg"
-    ```
-4.  Launch the app.
+1.  Open the `.dmg` and drag **Y'ALL Media Player** into your **Applications** folder.
+2.  Start the app. macOS says it cannot verify the developer: click **Done** (not Move to Trash).
+3.  Open **System Settings > Privacy & Security**, scroll down to the message about Y'ALL Media Player, click **Open Anyway** and confirm.
+
+After that it opens normally.
+Alternatively, remove the quarantine attribute in **Terminal** before the first start: `xattr -cr "/Applications/Y'ALL Media Player.app"`
+
+On a Mac, the shortcuts that use **Ctrl** on Windows use **Command** (⌘) instead; the list of shortcuts in the app (⌘/, or F1 with fn held) shows the right keys.
 
 ---
 
@@ -187,10 +204,10 @@ This application is not code-signed (which requires a paid Apple Developer accou
 *   **Node.js** (v22+ recommended)
 *   **npm**
 *   **System Dependencies:** Ensure you have installed the requirements listed in the [System Requirements](#system-requirements) section above.
-*   **Native addon** (needed from the libmpv migration on, see [`native/yall-libmpv`](native/yall-libmpv/README.md)):
+*   **Native addon** (the libmpv binding, see [`native/yall-libmpv`](native/yall-libmpv/README.md)):
     *   **Windows:** Visual Studio 2019 (16.11+) or 2022 Build Tools with "Desktop development with C++" (MSVC v142 or newer), the Windows 10 SDK and CMake 3.20+ (the CMake bundled with Visual Studio is found automatically).
     *   **macOS:** Xcode Command Line Tools, `brew install mpv cmake`.
-    *   **Linux:** `build-essential`, `cmake`, and libmpv with Lua (`libmpv2` / `libmpv-dev`, from the mpv PPA on Ubuntu).
+    *   **Linux:** `build-essential`, `cmake`, `gdb`, `rsync`, `xz-utils`, libmpv with Lua (`libmpv2` / `libmpv-dev`, from the mpv PPA on Ubuntu), `libegl-dev` and `libgbm-dev` (without them the host is built without the GPU (dma-buf) video path), and `libfuse2t64` to start a built AppImage directly.
     *   **Fedora:** `sudo dnf install gcc-c++ cmake libstdc++-static mpv-libs-devel`, and for H.264 playback the full ffmpeg from RPM Fusion (`sudo dnf swap ffmpeg-free ffmpeg --allowerasing`, `sudo dnf install libavcodec-freeworld`). `audiowaveform` is not packaged for Fedora and has to be built from https://github.com/bbc/audiowaveform.
     *   Build with `npm run native:build`, run the integration tests with `npm run test:native` and the Electron smoke harness with `npm run test:native:smoke`.
 
@@ -203,9 +220,14 @@ This application is not code-signed (which requires a paid Apple Developer accou
     ```
 
 2.  **Install dependencies:**
-    This will also download Windows-specific binaries via the `postinstall` script.
+    This will also download Windows-specific binaries (libmpv, audiowaveform) and the Yomitan extension via the `postinstall` script.
     ```bash
     npm install
+    ```
+
+3.  **Build the native addon** (once after cloning, and after changes in `native/`):
+    ```bash
+    npm run native:build
     ```
 
 ### Running the App
@@ -226,10 +248,10 @@ To run in development mode with hot-reloading (Angular + Electron):
     npm run electron:watch:run
     ```
 
-    On Linux:
+    On Linux (a development run is not started through the X11 launcher script, so add the switch by hand):
 
     ```bash
-    npm run electron:watch:run -- --no-sandbox
+    npm run electron:watch:run -- --no-sandbox --ozone-platform=x11
     ```
 
 ### Testing
@@ -237,15 +259,16 @@ To run in development mode with hot-reloading (Angular + Electron):
 *   **Angular Tests (Karma):** `npm run test:angular`
 *   **Electron Tests (Vitest):** `npm run test:electron`
 *   **Run All:** `npm run test:all`
+*   **Native addon (Vitest, real libmpv):** `npm run test:native`; `npm run test:native:smoke` plays a file on one video backend and prints a summary.
 
 #### End-to-end tests (Playwright)
 
 *   `npm run test:e2e` builds the app and runs the suite. `npm run test:e2e:run` runs it without rebuilding, so build first (`npm run electron:build`) if the sources changed.
-*   The tests launch the real app, so close any running Y'ALL MP instance first. Test data goes to a throwaway userData directory and mpv uses its own socket, so your real projects are never touched.
-*   The `@os-input` spec moves the **real mouse** (window drag and Aero Snap, Windows only). Keep your hands off the machine while it runs, or skip it with `npx playwright test --grep-invert @os-input`.
+*   The tests launch the real app, so close any running Y'ALL MP instance first. Test data goes to a throwaway userData directory, so your real projects are never touched.
+*   The `@os-input` spec moves the **real mouse** (window drag, snapping and edge resize; Windows, and Linux X11 with `xdotool`). Keep your hands off the machine while it runs, or skip it with `npx playwright test --grep-invert @os-input`.
 *   Test media is generated by `npm run e2e:fixtures` and committed in `test/e2e/fixtures/`.
-*   Environment variables: `YALL_MP_E2E=1` (disables DevTools, exposes a window probe, isolates the mpv socket), `YALL_MP_USER_DATA_DIR` (overrides the userData directory), `E2E_RECORD_DESKTOP=1` (records the desktop with ffmpeg to `e2e-artifacts/`).
-*   Video path (diagnostics, CI): `YALL_MP_VIDEO_BACKEND=auto|readback|d3d11-shared|iosurface-shared|dmabuf-shared` picks how frames reach the page (the default tries the GPU shared-texture path first and falls back to readback), `YALL_MP_VIDEO_ADAPTER=warp|default` forces the software or the default D3D11 adapter (`warp` is what a GPU-less CI runner uses). The chosen backend and adapter are logged when a project opens.
+*   Environment variables: `YALL_MP_E2E=1` (disables DevTools, exposes a window probe and test hooks), `YALL_MP_USER_DATA_DIR` (overrides the userData directory), `E2E_RECORD_DESKTOP=1` (records the desktop with ffmpeg to `e2e-artifacts/`).
+*   Video path (diagnostics, CI): `YALL_MP_VIDEO_BACKEND=auto|readback|d3d11-shared|iosurface-shared|dmabuf-shared` picks how frames reach the page (the default `auto` tries the platform's GPU shared-texture path first and falls back to readback), `YALL_MP_VIDEO_ADAPTER=warp|default` forces the software or the default D3D11 adapter (`warp` is what a GPU-less CI runner uses). The chosen backend and adapter are logged when a project opens.
 *   Hosted CI runners have no GPU, so the pixel probes, real mouse input and Windows screen capture are only reliable on a local machine with a GPU.
 
 ## 📦 Building the Application
@@ -268,7 +291,7 @@ The output files will be located in the `dist_electron` folder.
 *   **[PrimeNG 19](https://primeng.org/):** UI Component library.
 
 **Media & Processing**
-*   **[Node-MPV](https://github.com/j-holub/Node-MPV):** Node.js wrapper for controlling the MPV player instance via IPC.
+*   **[libmpv](https://mpv.io/):** The mpv player as a library, driven through a native Node addon (`native/yall-libmpv`); its frames are drawn into the app window.
 *   **[Audiowaveform](https://github.com/bbc/audiowaveform):** C++ program used to generate waveform JSON data from audio streams.
 *   **[FFmpeg Static](https://www.npmjs.com/package/ffmpeg-static):** Bundled FFmpeg binary for extracting audio/video clips for Anki export.
 
