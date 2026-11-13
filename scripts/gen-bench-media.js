@@ -1,10 +1,11 @@
-// Generates the benchmark media into media/ (gitignored): 90 s of testsrc2 + noise + a tone.
+// Generates the benchmark and soak media into bench-media/ (gitignored): 90 s of testsrc2 + noise + a tone.
+// Used by scripts/bench-video.js, scripts/soak-video.js and scripts/make-bench-kit.js. Run: node scripts/gen-bench-media.js
 const fs = require('fs');
 const path = require('path');
 const {spawnSync} = require('child_process');
-const ffmpeg = require(path.join(__dirname, '..', '..', '..', 'node_modules', 'ffmpeg-static'));
+const ffmpeg = require('ffmpeg-static');
 
-const OUT = path.join(__dirname, '..', 'media');
+const OUT = path.join(__dirname, '..', 'bench-media');
 const DURATION = 90;
 fs.mkdirSync(OUT, {recursive: true});
 

@@ -2,7 +2,7 @@
 // override every 30 s and closing + reopening the project every 10 min, and samples memory and the leak counters
 // every minute. Writes a CSV of the samples and a JSON summary with the pass/fail verdict.
 //
-//   node scripts/soak-video.js [--minutes=60] [--file=spikes/libmpv-poc/media/1080p30-h264.mp4] [--out=soak-result]
+//   node scripts/soak-video.js [--minutes=60] [--file=bench-media/1080p30-h264.mp4] [--out=soak-result]
 //                              [--warmup-min=10] [--actions=seek,pause-resume,resize,speed,sleep-wake|none] [--reopen-min=N] [--reopen-min=10] [--sample-sec=60] [--action-sec=30]
 //   node scripts/soak-video.js --recheck=<result.json>   (the verdict of a saved run with the current criteria)
 //   YALL_MP_VIDEO_BACKEND / YALL_MP_VIDEO_ADAPTER are passed through to the app (e.g. readback + warp for the software path).
@@ -31,7 +31,7 @@ const REOPEN_MS = parseFloat(args['reopen-min'] || '10') * 60_000;
 const SAMPLE_MS = parseFloat(args['sample-sec'] || '60') * 1000;
 const ACTION_MS = parseFloat(args['action-sec'] || '30') * 1000;
 const ONLY_ACTIONS = args.actions ? String(args.actions).split(',') : null;
-const file = path.resolve(REPO, args.file || 'spikes/libmpv-poc/media/1080p30-h264.mp4');
+const file = path.resolve(REPO, args.file || 'bench-media/1080p30-h264.mp4');
 const outBase = path.resolve(args.out || 'soak-result');
 const ID = '00000000-0000-4000-8000-00000000e2e0';
 const srt = path.join(REPO, 'test', 'e2e', 'fixtures', 'sample.srt');

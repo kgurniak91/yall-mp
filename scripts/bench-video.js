@@ -5,7 +5,7 @@
 // utime+stime from /proc once a second (CPU only; the compositor, gnome-shell or Xorg, is reported in the dwm field,
 // GPU is null: run `machine-log` or radeontop alongside).
 //
-//   node scripts/bench-video.js [--file=spikes/libmpv-poc/media/1080p60-h264.mp4] [--hwdec=auto|no|both]
+//   node scripts/bench-video.js [--file=bench-media/1080p60-h264.mp4] [--hwdec=auto|no|both]
 //                               [--runs=3] [--warmup=10] [--measure=60] [--size=1600x900] [--out=bench-video.json]
 //   YALL_MP_VIDEO_BACKEND / YALL_MP_VIDEO_ADAPTER are passed through to the app.
 //
@@ -22,7 +22,7 @@ const args = Object.fromEntries(process.argv.slice(2).map(a => {
   const [k, v] = a.slice(2).split('=');
   return [k, v === undefined ? true : v];
 }));
-const file = path.resolve(REPO, args.file || 'spikes/libmpv-poc/media/1080p60-h264.mp4');
+const file = path.resolve(REPO, args.file || 'bench-media/1080p60-h264.mp4');
 const hwdecModes = args.hwdec === 'both' || !args.hwdec ? ['auto', 'no'] : [args.hwdec];
 const RUNS = parseInt(args.runs || '3', 10);
 const WARMUP = parseFloat(args.warmup || '10');

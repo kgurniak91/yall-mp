@@ -1,5 +1,5 @@
 // Builds dist_electron/bench-kit.zip for the old-laptop benchmark: the unpacked Windows build, the bench scripts and
-// a few short media clips cut from the local test media in spikes/libmpv-poc/media (not in the repo). Run
+// a few short media clips cut from the local test media in bench-media/ (not in the repo, made by scripts/gen-bench-media.js). Run
 // `npm run package:win` first.
 const fs = require('fs');
 const path = require('path');
@@ -9,7 +9,7 @@ const REPO = path.resolve(__dirname, '..');
 const unpacked = path.join(REPO, 'dist_electron', 'win-unpacked');
 const staging = path.join(REPO, 'dist_electron', 'bench-kit');
 const zip = path.join(REPO, 'dist_electron', 'bench-kit.zip');
-const sourceDir = path.join(REPO, 'spikes', 'libmpv-poc', 'media');
+const sourceDir = path.join(REPO, 'bench-media');
 const ffmpeg = require('ffmpeg-static');
 
 if (process.platform !== 'win32') {

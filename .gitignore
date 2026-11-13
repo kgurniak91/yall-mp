@@ -101,3 +101,6 @@ public/THIRD-PARTY-NOTICES.txt
 /dictionary-switches.js.map
 scripts/bench/results/
 scripts/bench/bench-results.zip
+
+# Local benchmark and soak media (scripts/gen-bench-media.js)
+/bench-media/
