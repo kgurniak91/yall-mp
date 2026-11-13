@@ -172,6 +172,15 @@ describeNative('libmpv render API', (env: NativeEnv) => {
     expect(rig.player.stats()).toBeNull();
   });
 
+  it('answers stats() with null while and after the core is destroyed, without touching its render threads', async () => {
+    const rig = await open({backend: 'readback', impl: 'sw'});
+    await waitFor(() => rig.frames.length > 3, 10000, 'frames');
+    const destroying = players.splice(players.indexOf(rig.player), 1)[0].destroy();
+    expect(rig.player.stats()).toBeNull();
+    await destroying;
+    expect(rig.player.stats()).toBeNull();
+  });
+
   it('frees the render backends of a destroyed core without waiting for the wrapper to be collected', async () => {
     // The pixel pool of a 1600x900 software backend holds ~23 MB; a core that is destroyed and dropped must not keep it.
     const rss = (): number => process.memoryUsage().rss / 1048576;

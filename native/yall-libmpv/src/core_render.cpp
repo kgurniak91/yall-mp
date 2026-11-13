@@ -375,6 +375,8 @@ Napi::Value MpvCore::DetachRenderer(const Napi::CallbackInfo& info) {
 // stats() -> stats of the current attach (plus the number of detached ones still draining), or null.
 Napi::Value MpvCore::Stats(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
+  // After destroy() the worker owns the teardown of the render threads: no reaping (joining) from here.
+  if (destroyed_) return env.Null();
   ReapRenderers();
   if (!currentRenderer_) return env.Null();
   return StatsToJs(env, currentRenderer_->Stats(), renderers_.size() - 1);

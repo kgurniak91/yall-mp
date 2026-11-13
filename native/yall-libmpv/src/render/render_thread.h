@@ -90,6 +90,8 @@ class RenderThread {
   std::atomic<bool> simulateLost_{false};
   bool lostPosted_ = false;  // render thread only
   std::thread thread_;
+  // Join() can be reached from the destroy worker and the main thread (reap, env cleanup hook) at the same time.
+  std::mutex joinMu_;
 
   std::mutex statsMu_;
   double threadCpuMs_ = 0;

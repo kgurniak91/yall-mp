@@ -117,6 +117,8 @@ bool RenderThread::WaitContextFreed(int timeoutMs) {
 }
 
 void RenderThread::Join() {
+  // Two threads joining one std::thread is undefined behaviour: the second one waits here and finds it joined.
+  std::lock_guard<std::mutex> lock(joinMu_);
   if (thread_.joinable()) thread_.join();
 }
 
