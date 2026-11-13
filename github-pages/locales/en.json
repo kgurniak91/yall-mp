@@ -131,7 +131,7 @@
     "linux_title": "Linux",
     "linux_btn_appimage": "Download AppImage",
     "linux_btn_deb": "Download .deb",
-    "linux_info": "AppImage: any distribution. .deb: Debian, Ubuntu and derivatives.<br>Tested on Ubuntu 24.04. Install libmpv and audiowaveform first.",
+    "linux_info": "AppImage: any distribution.<br>.deb: Debian, Ubuntu and derivatives.<br>Tested on Ubuntu 24.04. Install libmpv and audiowaveform first.",
     "mac_title": "macOS",
     "mac_btn": "Download for Mac (.dmg)",
     "mac_info": "Apple Silicon (M1 and newer), tested on a Mac mini M2. Install mpv and audiowaveform from Homebrew first.",

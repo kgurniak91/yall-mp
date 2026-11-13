@@ -131,7 +131,7 @@
     "linux_title": "Linux",
     "linux_btn_appimage": "Pobierz AppImage",
     "linux_btn_deb": "Pobierz .deb",
-    "linux_info": "AppImage: każda dystrybucja. .deb: Debian, Ubuntu i pochodne.<br>Testowane na Ubuntu 24.04. Najpierw zainstaluj libmpv i audiowaveform.",
+    "linux_info": "AppImage: każda dystrybucja.<br>.deb: Debian, Ubuntu i pochodne.<br>Testowane na Ubuntu 24.04. Najpierw zainstaluj libmpv i audiowaveform.",
     "mac_title": "macOS",
     "mac_btn": "Pobierz dla Maca (.dmg)",
     "mac_info": "Apple Silicon (M1 i nowsze), testowane na Macu mini M2. Najpierw zainstaluj mpv i audiowaveform z Homebrew.",
