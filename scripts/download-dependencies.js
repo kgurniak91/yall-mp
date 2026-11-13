@@ -310,7 +310,12 @@ async function main() {
   console.log(`\n🎉 All dependencies ready.\n`);
 }
 
-main().catch(err => {
-  console.error('❌ Error:', err);
-  process.exit(1);
-});
+// The release preflight (scripts/release-preflight.js) reads the URLs and the libmpv pin without installing anything.
+module.exports = {URLS, LIBMPV};
+
+if (require.main === module) {
+  main().catch(err => {
+    console.error('❌ Error:', err);
+    process.exit(1);
+  });
+}
