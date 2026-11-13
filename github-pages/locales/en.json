@@ -157,6 +157,11 @@
       "a": "<b>Y'ALL Media Player</b> comes with the <b>Yomitan</b> browser extension bundled in.<br>You can configure installed dictionaries, handle complex languages (like Japanese or Chinese), etc. in the global settings.<br><a href=\"dictionaries.html\" class=\"text-link\">Click here for detailed dictionary setup guide &rarr;</a>"
     },
     {
+      "id": "faq-dict-no-popup",
+      "q": "I configured an offline dictionary for a language, but nothing shows up when I hover over a word. Why?",
+      "a": "Offline dictionaries are configured <b>separately for each language</b>, and a project uses the dictionaries of its subtitle language. Check these things:<br><br>1. <b class=\"highlight\">Project language:</b> open the project, press <b class=\"highlight\">P</b> to open the project settings and make sure the correct language is selected in the <b>\"Subtitles Language Detection\"</b> section. The language is detected automatically and may be wrong (or set to \"Other\").<br>2. <b class=\"highlight\">Dictionary language:</b> in the global settings, on the <b>\"Offline Dictionaries\"</b> tab, select the same language at the top and check that your dictionary is installed and switched on there.<br>3. <b class=\"highlight\">Dictionaries imported from a file:</b> some dictionaries do not say which language they are for. The app asks for it right after the import; if you skipped the question, a banner on the \"Offline Dictionaries\" tab lets you set it (<b>\"Set languages\"</b>).<br>4. <b class=\"highlight\">Dictionary direction:</b> the dictionary must contain words in the subtitle language, e.g. for English subtitles with Chinese meanings use an English-Chinese (en-zh) dictionary, not a Chinese-English (zh-en) one.<br><br>If dictionaries that used to work are all gone after reinstalling the app <b>into a different folder</b>, install it back into the previous folder: the dictionaries are tied to the install location and come back from there."
+    },
+    {
       "q": "Is it really free?",
       "a": "<b>Yes</b> - the source code is available on GitHub under the GPLv3 license."
     },

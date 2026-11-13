@@ -157,6 +157,11 @@
       "a": "<b>Y'ALL Media Player</b> posiada wbudowaną wtyczkę <b>Yomitan</b>.<br>Możesz skonfigurować zainstalowane słowniki, obsługę zaawansowanych języków (takich jak japoński czy chiński) i wiele więcej w głównych ustawieniach aplikacji.<br><a href=\"dictionaries.html\" class=\"text-link\">Kliknij tutaj, aby zobaczyć instrukcję konfiguracji słowników offline &rarr;</a>"
     },
     {
+      "id": "faq-dict-no-popup",
+      "q": "Skonfigurowałem słownik offline dla danego języka, ale po najechaniu na słowo nic się nie pokazuje. Dlaczego?",
+      "a": "Słowniki offline konfigurowane są <b>dla każdego języka osobno</b>, a projekt korzysta ze słowników przypisanych do języka swoich napisów. Sprawdź po kolei:<br><br>1. <b class=\"highlight\">Język projektu:</b> otwórz projekt, naciśnij <b class=\"highlight\">P</b>, aby otworzyć ustawienia projektu, i upewnij się, że w sekcji <b>\"Subtitles Language Detection\"</b> wybrany jest właściwy język. Język wykrywany jest automatycznie i może być błędny (albo ustawiony na \"Other\").<br>2. <b class=\"highlight\">Język słownika:</b> w głównych ustawieniach, w zakładce <b>\"Offline Dictionaries\"</b>, wybierz u góry ten sam język i sprawdź, czy Twój słownik jest tam zainstalowany i włączony.<br>3. <b class=\"highlight\">Słowniki zaimportowane z pliku:</b> niektóre słowniki nie podają, dla jakiego są języka. Aplikacja pyta o to zaraz po imporcie; jeśli pominąłeś to pytanie, możesz ustawić język w komunikacie na zakładce \"Offline Dictionaries\" (<b>\"Set languages\"</b>).<br>4. <b class=\"highlight\">Kierunek słownika:</b> słownik musi zawierać słowa w języku napisów, np. dla angielskich napisów z chińskimi znaczeniami użyj słownika angielsko-chińskiego (en-zh), a nie chińsko-angielskiego (zh-en).<br><br>Jeśli po ponownej instalacji aplikacji <b>w innym folderze</b> zniknęły wszystkie słowniki, które wcześniej działały, zainstaluj ją z powrotem w poprzednim folderze: słowniki są powiązane z miejscem instalacji i wrócą."
+    },
+    {
       "q": "Czy to naprawdę jest darmowe?",
       "a": "<b>Tak</b> - kod źródłowy jest dostępny na GitHubie (licencja GPLv3)."
     },
