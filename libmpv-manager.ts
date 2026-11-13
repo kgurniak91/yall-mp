@@ -93,6 +93,8 @@ export class LibmpvManager extends EventEmitter {
   private stopping = false;
   /** Settles the `waitForLoad` waiter: `stop()` destroys the core without a `shutdown` event, so it must end the wait itself. */
   private cancelLoad: ((error: Error) => void) | null = null;
+  /** Counts `stop()` calls: a start sees from it that it was stopped while the core was still being created or attached. */
+  private stopCount = 0;
   private paused = true;
   private timePos: number | null = null;
   /** The last position `emitTimePos` sent. */
@@ -183,9 +185,20 @@ export class LibmpvManager extends EventEmitter {
       await this.stop();
       this.stopping = false;
       this.resetState();
+      const startedAt = this.stopCount;
       const libmpv = await this.createPlayer(options, platform);
+      // stop() during the creation found no core to destroy: this one is nobody's, so it must not load the file
+      if (this.stopCount !== startedAt) {
+        await libmpv.destroy().catch(() => undefined);
+        throw new Error(`Stopped while starting ${mediaPath}`);
+      }
       this.libmpv = libmpv;
       this.detachVideo = (await this.config.attachVideo?.(libmpv)) ?? null;
+      // stop() during the attach destroyed the core before the detach existed: run it now
+      if (this.stopCount !== startedAt) {
+        this.runDetachVideo();
+        throw new Error(`Stopped while starting ${mediaPath}`);
+      }
       libmpv.on('event', (event: LibmpvEvent) => this.handleEvent(event));
       libmpv.requestLogMessages('warn');
       for (const property of OBSERVED_PROPERTIES) {
@@ -457,6 +470,7 @@ export class LibmpvManager extends EventEmitter {
 
   /** Idempotent. */
   public async stop(): Promise<void> {
+    this.stopCount++;
     if (this.timeTimer) {
       clearInterval(this.timeTimer);
       this.timeTimer = null;

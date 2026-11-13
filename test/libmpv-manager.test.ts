@@ -208,6 +208,45 @@ describe('LibmpvManager', () => {
     expect(fake.destroy).toHaveBeenCalledTimes(1);
   });
 
+  it('destroys a core whose creation outlasted stop() and never loads the file', async () => {
+    let created!: () => void;
+    const creation = new Promise<void>(resolve => created = resolve);
+    create({
+      libmpvFactory: async () => {
+        await creation;
+        return fake as unknown as Libmpv;
+      }
+    });
+    const result = start();
+    result.catch(() => undefined);
+    await vi.advanceTimersByTimeAsync(0);
+    await manager.stop();
+    created();
+    await expect(result).rejects.toThrow(/Stopped while starting/);
+    expect(fake.destroy).toHaveBeenCalledTimes(1);
+    expect(fake.command).not.toHaveBeenCalled();
+  });
+
+  it('runs the video detach when stop() lands during the attach', async () => {
+    let attached!: () => void;
+    const detach = vi.fn();
+    create({
+      attachVideo: async () => {
+        await new Promise<void>(resolve => attached = resolve);
+        return detach;
+      }
+    });
+    const result = start();
+    result.catch(() => undefined);
+    await vi.advanceTimersByTimeAsync(0);
+    await manager.stop();
+    attached();
+    await expect(result).rejects.toThrow(/Stopped while starting/);
+    expect(detach).toHaveBeenCalledTimes(1);
+    expect(fake.destroy).toHaveBeenCalledTimes(1);
+    expect(fake.command).not.toHaveBeenCalled();
+  });
+
   describe('video output', () => {
     it('uses vo=libmpv and runs the hook after creation and before loadfile', async () => {
       const order: string[] = [];
