@@ -13,11 +13,13 @@ import type {
   SharedBackendName,
   Size
 } from './libmpv-bridge';
-import {computeReadbackSize} from './libmpv-bridge';
+import {ApiVersion, compareApiVersion, computeReadbackSize} from './libmpv-bridge';
 import {needsToneMapFilter, TONE_MAP_VARIANTS, toneMapCommand} from './hdr-tonemap';
 
 /** Channel of the readback frames: `{attachId, width, height, data: Uint8Array}` (BGRA, alpha 255). */
 export const READBACK_CHANNEL = 'libmpv:readback-frame';
+/** The client API of mpv 0.38, which added the `index` argument of `loadfile`. */
+const LOADFILE_INDEX_API: ApiVersion = [2, 3];
 /** Main -> page: `{attachId, frames}`; the page then reports, for that many drawn frames, whether its probe points were black. */
 export const PROBE_START_CHANNEL = 'libmpv:probe-start';
 /** Page -> main: `black: boolean`. */
@@ -59,6 +61,8 @@ export interface FrameSenderLibmpv extends Pick<Libmpv, 'sharedBackendName' | 'a
   | 'detachRenderer' | 'stats' | 'observeProperty' | 'unobserveProperty' | 'reinitVideo' | 'getProperty' | 'command'> {
   simulateDeviceLost?(attachId: number): boolean;
   redraw?(): boolean;
+  /** The client API of the loaded libmpv; absent means a current one. */
+  readonly apiVersion?: ApiVersion;
   on(event: 'property-change' | 'end-file', listener: (event: LibmpvEvent) => void): unknown;
   off(event: 'property-change' | 'end-file', listener: (event: LibmpvEvent) => void): unknown;
 }
@@ -812,6 +816,9 @@ export class LibmpvFrameSender {
     }
     const start = typeof position === 'number' && position > 0 ? position : 0;
     this.log(`[libmpv] video output failed during the switch to readback, reloading the file at ${start.toFixed(2)} s`);
-    await this.libmpv.command(['loadfile', path, 'replace', '-1', `start=${start},pause=${paused === false ? 'no' : 'yes'}`]);
+    const options = `start=${start},pause=${paused === false ? 'no' : 'yes'}`;
+    // mpv 0.38 (client API 2.3) put an `index` argument before the options; older ones (Ubuntu 24.04 has 0.37) reject it
+    const hasIndexArgument = !this.libmpv.apiVersion || compareApiVersion(this.libmpv.apiVersion, LOADFILE_INDEX_API) >= 0;
+    await this.libmpv.command(hasIndexArgument ? ['loadfile', path, 'replace', '-1', options] : ['loadfile', path, 'replace', options]);
   }
 }

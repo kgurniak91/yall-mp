@@ -314,6 +314,14 @@ describe('LibmpvFrameSender', () => {
       expect(libmpv.command).toHaveBeenCalledTimes(1);
     });
 
+    it('leaves out the index argument for mpv older than 0.38 (client API 2.2, Ubuntu 24.04), which rejects it', async () => {
+      const libmpv = Object.assign(fakeLibmpv(), {apiVersion: [2, 2] as [number, number]});
+      await failFirstImport(libmpv);
+      libmpv.emit(voFailed);
+      await flush();
+      expect(libmpv.command).toHaveBeenCalledWith(['loadfile', '/media/a.mp4', 'replace', 'start=1.5,pause=no']);
+    });
+
     it('ignores other end-file events', async () => {
       const libmpv = fakeLibmpv();
       await failFirstImport(libmpv);
