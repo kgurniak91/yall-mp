@@ -128,9 +128,15 @@
     "smart_screen_link": "Kliknij tutaj aby rozwiązać ten problem &rarr;",
     "bug_report_title": "Chcesz zgłosić błąd, napisać konstruktywną krytykę lub przesłać pomysł na ulepszenie aplikacji?",
     "bug_report_link": "Kliknij tutaj, aby skontaktować się z autorem &rarr;",
-    "other_title": "Linux i macOS",
-    "other_desc": "Wsparcie eksperymentalne 🧪 (BETA)<br>Linux: .AppImage i .deb, testowane na Ubuntu 24.04<br>macOS: Apple Silicon, testowane na Macu mini M2<br>Wymaga ręcznej instalacji zależności<br>(libmpv, audiowaveform)",
-    "other_link": "Instrukcja instalacji na GitHubie &rarr;"
+    "linux_title": "Linux",
+    "linux_btn_appimage": "Pobierz AppImage",
+    "linux_btn_deb": "Pobierz .deb",
+    "linux_info": "AppImage: każda dystrybucja. .deb: Debian, Ubuntu i pochodne.<br>Testowane na Ubuntu 24.04. Najpierw zainstaluj libmpv i audiowaveform.",
+    "mac_title": "macOS",
+    "mac_btn": "Pobierz dla Maca (.dmg)",
+    "mac_info": "Apple Silicon (M1 i nowsze), testowane na Macu mini M2. Najpierw zainstaluj mpv i audiowaveform z Homebrew.",
+    "experimental_badge": "Eksperymentalne 🧪 BETA",
+    "install_link": "Instrukcja instalacji na GitHubie &rarr;"
   },
   "faq_section_title": "Najczęściej Zadawane Pytania",
   "faq": [

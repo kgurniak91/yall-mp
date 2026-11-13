@@ -492,6 +492,60 @@ img, video {
   font-size: 1.25rem;
 }
 
+.release-info {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.release-info .version-number {
+  margin-top: 0;
+}
+
+.release-date {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.experimental-badge {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: normal;
+  vertical-align: middle;
+}
+
+.btn-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.btn-row .btn-large {
+  flex: 1;
+  font-size: 1.05rem;
+  white-space: nowrap;
+}
+
+.btn-large.btn-large-secondary {
+  background: transparent;
+  border: 2px solid var(--primary);
+  color: var(--primary);
+}
+
+.btn-large.btn-large-secondary:hover {
+  background: rgba(0, 212, 255, 0.1);
+}
+
+.install-link {
+  display: inline-block;
+  margin-top: 0.75rem;
+}
+
 .btn-large {
   background: var(--primary);
   color: #000;
@@ -765,6 +819,11 @@ footer a:hover {
 
   .download-box {
     padding: 1.5rem;
+  }
+
+  .btn-row {
+    flex-direction: column;
+    gap: 0.75rem;
   }
 
   .btn-large {

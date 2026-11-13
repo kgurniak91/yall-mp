@@ -215,6 +215,11 @@
     <p class="download-sub">{{{download.subtitle}}}</p>
 
     <div class="download-box">
+      <div class="release-info">
+        <span id="version-text" class="version-number highlight">{{download.loading_text}}</span>
+        <span id="release-date" class="release-date"></span>
+      </div>
+
       <div class="os-section">
         <h3>{{download.win_title}}</h3>
         <a id="win-download-btn" href="https://github.com/kgurniak91/yall-mp/releases/latest" class="btn btn-large">
@@ -225,7 +230,6 @@
           <span>{{download.win_btn}}</span>
         </a>
         <span class="version-info">{{download.win_info}}</span>
-        <span id="version-text" class="version-number highlight">{{download.loading_text}}</span>
       </div>
 
       <div class="security-note">
@@ -239,6 +243,35 @@
         </div>
       </div>
 
+      <hr class="divider">
+
+      <div class="os-section">
+        <h3>{{download.linux_title}} <span class="experimental-badge">{{download.experimental_badge}}</span></h3>
+        <div class="btn-row">
+          <a id="appimage-download-btn" href="https://github.com/kgurniak91/yall-mp/releases/latest" class="btn btn-large btn-large-secondary">
+            <span>{{download.linux_btn_appimage}}</span>
+          </a>
+          <a id="deb-download-btn" href="https://github.com/kgurniak91/yall-mp/releases/latest" class="btn btn-large btn-large-secondary">
+            <span>{{download.linux_btn_deb}}</span>
+          </a>
+        </div>
+        <span class="version-info">{{{download.linux_info}}}</span>
+        <a href="https://github.com/kgurniak91/yall-mp#-linux" class="text-link install-link" target="_blank">{{{download.install_link}}}</a>
+      </div>
+
+      <hr class="divider">
+
+      <div class="os-section">
+        <h3>{{download.mac_title}} <span class="experimental-badge">{{download.experimental_badge}}</span></h3>
+        <a id="dmg-download-btn" href="https://github.com/kgurniak91/yall-mp/releases/latest" class="btn btn-large btn-large-secondary">
+          <span>{{download.mac_btn}}</span>
+        </a>
+        <span class="version-info">{{{download.mac_info}}}</span>
+        <a href="https://github.com/kgurniak91/yall-mp#-macos" class="text-link install-link" target="_blank">{{{download.install_link}}}</a>
+      </div>
+
+      <hr class="divider">
+
       <div class="security-note">
         <div class="note-icon">🐞</div>
         <div class="note-text">
@@ -248,18 +281,6 @@
             {{{download.bug_report_link}}}
           </a>
         </div>
-      </div>
-
-      <hr class="divider">
-
-      <div class="os-section">
-        <h3>{{download.other_title}}</h3>
-        <p>
-          {{{download.other_desc}}}
-        </p>
-        <a href="https://github.com/kgurniak91/yall-mp#system-requirements" class="text-link">
-          {{{download.other_link}}}
-        </a>
       </div>
     </div>
   </div>
@@ -333,19 +354,23 @@
   fetch('https://api.github.com/repos/kgurniak91/yall-mp/releases/latest')
     .then(response => response.json())
     .then(data => {
-      //  Update Version Text
+      // Version and release date (YYYY-MM-DD)
       const versionSpan = document.getElementById('version-text');
       if (versionSpan) {
         versionSpan.innerText = data.tag_name;
       }
+      const dateSpan = document.getElementById('release-date');
+      if (dateSpan && data.published_at) {
+        dateSpan.innerText = '(' + data.published_at.slice(0, 10) + ')';
+      }
 
-      // Find the .exe asset
-      const winAsset = data.assets.find(asset => asset.name.endsWith('.exe'));
-
-      if (winAsset) {
-        const btn = document.getElementById('win-download-btn');
-        if (btn) {
-          btn.href = winAsset.browser_download_url;
+      // Point each button at its file of the latest release (the buttons fall back to the release page)
+      const links = {'.exe': 'win-download-btn', '.AppImage': 'appimage-download-btn', '.deb': 'deb-download-btn', '.dmg': 'dmg-download-btn'};
+      for (const [extension, id] of Object.entries(links)) {
+        const asset = data.assets.find(a => a.name.endsWith(extension));
+        const btn = document.getElementById(id);
+        if (asset && btn) {
+          btn.href = asset.browser_download_url;
         }
       }
     })
