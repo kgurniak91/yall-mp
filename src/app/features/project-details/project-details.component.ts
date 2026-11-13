@@ -637,6 +637,13 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
     const volume = this.appStateService.globalSettings().volume ?? 100;
     const isMuted = this.appStateService.globalSettings().isMuted ?? false;
 
+    // The subtitles can take seconds on a first open (extracting an embedded track): a page left meanwhile must not
+    // start a player, which would run hidden or replace the engine of the project opened since
+    if (this.isLeaving) {
+      console.log('[ProjectDetails] The project was left before its player started; not starting it.');
+      return;
+    }
+
     try {
       await window.electronAPI.mpvCreateViewport(
         foundProject.mediaPath,
