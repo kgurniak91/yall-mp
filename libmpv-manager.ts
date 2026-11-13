@@ -91,6 +91,8 @@ export class LibmpvManager extends EventEmitter {
   public mediaPath: string = '';
   private libmpv: Libmpv | null = null;
   private stopping = false;
+  /** Settles the `waitForLoad` waiter: `stop()` destroys the core without a `shutdown` event, so it must end the wait itself. */
+  private cancelLoad: ((error: Error) => void) | null = null;
   private paused = true;
   private timePos: number | null = null;
   /** The last position `emitTimePos` sent. */
@@ -252,8 +254,12 @@ export class LibmpvManager extends EventEmitter {
       const finish = (error?: Error) => {
         clearTimeout(timeout);
         libmpv.off('event', onEvent);
+        if (this.cancelLoad === finish) {
+          this.cancelLoad = null;
+        }
         error ? reject(error) : resolve();
       };
+      this.cancelLoad = finish;
       libmpv.on('event', onEvent);
     });
   }
@@ -461,6 +467,7 @@ export class LibmpvManager extends EventEmitter {
     }
     this.stopping = true;
     this.libmpv = null;
+    this.cancelLoad?.(new Error(`Stopped while loading ${this.mediaPath}`));
     this.runDetachVideo();
     try {
       await libmpv.destroy();

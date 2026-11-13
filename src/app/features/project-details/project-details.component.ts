@@ -416,6 +416,8 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   private isUiReady = signal(false);
   private hasFiredStartupSequence = false;
   private hasSetInitialClip = false;
+  /** Set once the user leaves the page: a start that fails because its engine was stopped is not an error then. */
+  private isLeaving = false;
   private cleanupInitialSeekListener: (() => void) | null = null;
   private cleanupMpvReadyListener: (() => void) | null = null;
   private cleanupEngineErrorListener: (() => void) | null = null;
@@ -649,6 +651,10 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
         gpuVideoPath
       );
     } catch (e: any) {
+      if (this.isLeaving) {
+        console.log('[ProjectDetails] The player start ended because the project was left:', e?.message);
+        return;
+      }
       console.error('MPV failed to initialize unexpectedly', e);
       this.toastService.error(`The media player failed to start: ${e.message || 'The file may be corrupt or unsupported'}`);
       this.videoStateService.setVideoLoading(false);
@@ -657,6 +663,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.isLeaving = true;
     clearTimeout(this.hideCursorTimeout);
     this.activeDialogRef?.close();
     if (this.cleanupMpvReadyListener) {
@@ -676,6 +683,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
 
   async canDeactivate(): Promise<boolean> {
     console.log('[ProjectDetails] Navigation detected. Starting cleanup sequence...');
+    this.isLeaving = true;
 
     try {
       // Force save the current state while the project ID is still valid
@@ -685,7 +693,7 @@ export class ProjectDetailsComponent implements OnInit, OnDestroy {
       await window.electronAPI.mpvHideSubtitles();
 
       // Tell Electron to destroy MPV and WAIT for it to finish.
-      // This ensures the old mpv.exe process is dead before the new component asks for a new one.
+      // This ensures the old libmpv core is gone before the new component asks for a new one.
       await window.electronAPI.onMpvDestroyViewport();
 
       console.log('[ProjectDetails] Cleanup complete. Allowing navigation.');

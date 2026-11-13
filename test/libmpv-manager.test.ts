@@ -195,6 +195,19 @@ describe('LibmpvManager', () => {
     await result;
   });
 
+  it('rejects at once when stop() lands while the file is still loading, not after the load timeout', async () => {
+    fake.loadResult = () => undefined;
+    let settled = false;
+    const result = start().finally(() => settled = true);
+    result.catch(() => undefined);
+    await vi.advanceTimersByTimeAsync(0);
+    await manager.stop();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(settled).toBe(true);
+    await expect(result).rejects.toThrow(/Stopped while loading/);
+    expect(fake.destroy).toHaveBeenCalledTimes(1);
+  });
+
   describe('video output', () => {
     it('uses vo=libmpv and runs the hook after creation and before loadfile', async () => {
       const order: string[] = [];

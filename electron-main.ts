@@ -110,7 +110,10 @@ let currentSubtitlesLookupContext: { clipSubtitleId: string; originalSelection: 
 let isFFmpegAvailable = false;
 let ffmpegPath = '';
 let ffprobePath = '';
+// True while the first seek of the open project waits for its picture.
 let hasRequestedInitialSeek = false;
+// The open project made its first seek already: later seeks are ordinary ones. Only `mpv:createViewport` resets it.
+let initialSeekStarted = false;
 // Frames sent when the first seek was requested: the picture at the resume position is the first one after it.
 let initialSeekFrameBaseline = 0;
 // Where the first seek goes, and how long the page may wait for its picture before the spinner is dropped anyway.
@@ -334,6 +337,10 @@ async function launchEngine(args: ViewportArgs, resumeAt?: number): Promise<void
     return;
   }
   const gpuInfo = await gpuInfoPromise;
+  // The project was left (or another one opened) during the await: do not start an engine nobody shows
+  if (viewportArgs !== args) {
+    return;
+  }
   const pageContents = window.webContents;
   const initialSize = initialVideoCanvasSize(window);
 
@@ -484,6 +491,10 @@ async function restartEngineAfterError(failed: LibmpvManager): Promise<void> {
   const args = viewportArgs;
   const position = playbackManager?.position ?? 0;
   await failed.stop();
+  // The project was left while the failed engine was stopping
+  if (failed !== mpvManager || viewportArgs !== args) {
+    return;
+  }
   if (!engineRestartPolicy.tryRestart()) {
     logVideo('[Main Process] Playback engine stopped again within a minute; not restarting.');
     sendEngineError('failed');
@@ -1477,6 +1488,7 @@ if (!gotTheLock) {
 
       gpuVideoPathEnabled = gpuVideoPath !== false;
       hasRequestedInitialSeek = false;
+      initialSeekStarted = false;
       gpuLossSinceOpen = 0;
       engineRestartPolicy.reset();
 
@@ -1591,7 +1603,8 @@ if (!gotTheLock) {
     ipcMain.on('playback:forceContinue', () => playbackManager?.forceContinue());
     ipcMain.on('playback:seek', (_, time, isNavigation) => {
       // The first seek is the resume position: the page waits for the frame it produces
-      if (!hasRequestedInitialSeek) {
+      if (!initialSeekStarted) {
+        initialSeekStarted = true;
         hasRequestedInitialSeek = true;
         initialSeekTarget = Number(time) || 0;
         initialSeekFrameBaseline = videoSender?.stats().sent ?? 0;
