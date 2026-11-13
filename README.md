@@ -160,7 +160,7 @@ sudo apt-get install audiowaveform
 > yall-mp --ozone-platform=wayland
 > ```
 >
-> (or `Exec=yall-mp --ozone-platform=wayland %U` in a copy of the menu entry; for the AppImage, put the same switch after the file name). A Wayland-only system without XWayland starts natively and has those problems.
+> (or `Exec=yall-mp --ozone-platform=wayland %U` in a copy of the menu entry; for the AppImage, put the same switch after the file name). A Wayland-only system without XWayland starts natively and has those problems. With fractional scaling (for example 125 % or 150 %) on a Wayland desktop, the window, the video and the subtitles look slightly soft, because the desktop scales XWayland windows up.
 
 ### 🍎 macOS
 
