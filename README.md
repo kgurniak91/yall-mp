@@ -42,7 +42,7 @@ The video is rendered by libmpv into a canvas inside the single application wind
 | Platform    | Status                   | Notes                                                                                                                                                                                                                              |
 |:------------|:-------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Windows** | ✅&nbsp;**Stable**        | Fully supported. Recommended experience.                                                                                                                                                                                           |
-| **Linux**   | 🧪&nbsp;**Experimental** | Needs libmpv 0.40+ and audiowaveform (see below). Tested on real hardware: Ubuntu 24.04 (GNOME, X11 and Wayland) with AMD Radeon graphics (Mesa). Earlier also in virtual machines: Lubuntu (LXQt) and Fedora 44 (KDE). NVIDIA and Intel graphics are not tested yet. |
+| **Linux**   | 🧪&nbsp;**Experimental** | Needs libmpv and audiowaveform (see below); Ubuntu 24.04's own libmpv works. Tested on real hardware: Ubuntu 24.04 (GNOME, X11 and Wayland) with AMD Radeon graphics (Mesa). Earlier also in virtual machines: Lubuntu (LXQt) and Fedora 44 (KDE). NVIDIA and Intel graphics are not tested yet. |
 | **macOS**   | 🧪&nbsp;**Experimental** | Needs Homebrew `mpv` and `audiowaveform` (see below). Tested on a Mac mini M2 (Apple Silicon, macOS 27). The app is not notarized by Apple, so macOS asks once before the first start (see installation instructions).            |
 
 ### 🤝 Call for Contributors
@@ -109,10 +109,15 @@ Depending on your operating system, you may need to install external dependencie
 
 The Linux release comes as an `.AppImage` (any distribution) and as a `.deb` package (Debian, Ubuntu and derivatives). Both use libmpv and audiowaveform from your system.
 
-1. **Install libmpv 0.40 or newer** (the playback library behind mpv: `libmpv2` on Debian/Ubuntu, `mpv-libs` on Fedora):
-    See official instructions: [https://mpv.io/installation/](https://mpv.io/installation/)
+1. **Install libmpv** (the playback library behind mpv: `libmpv2` on Debian/Ubuntu, `mpv-libs` on Fedora). On Ubuntu 24.04 the distribution's own package works (libmpv 0.37):
 
-> **⚠️ Important:** Ubuntu 24.04 and older ship an outdated libmpv (0.37 on 24.04; Ubuntu 22.04 has no `libmpv2` package at all). The app is tested with libmpv 0.42 from the PPA below, so on those versions add it **before** installing:
+    ```bash
+    sudo apt install libmpv2
+    ```
+
+    Other systems: see the official instructions at [https://mpv.io/installation/](https://mpv.io/installation/)
+
+> **💡 Recommended:** libmpv 0.40 or newer. The app is tested with Ubuntu 24.04's own libmpv 0.37 and with libmpv 0.42 from the PPA below. If playback misbehaves on an older libmpv, or your distribution has no `libmpv2` package at all (Ubuntu 22.04 and older), install a current one from the PPA:
 >
 > ```bash
 > sudo add-apt-repository ppa:ubuntuhandbook1/mpv

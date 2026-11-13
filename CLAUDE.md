@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Y'ALL MP: an Electron + Angular 19 (signals, PrimeNG 19) language-learning media player. libmpv does the playback (through a native addon, its picture drawn inside the app window), with an interactive subtitle timeline, a bundled Yomitan dictionary extension, and Anki export. Windows is the primary platform. Linux and macOS are experimental and depend on the system libmpv (Homebrew `mpv`, distro `libmpv2`, 0.40 or newer) and audiowaveform.
+Y'ALL MP: an Electron + Angular 19 (signals, PrimeNG 19) language-learning media player. libmpv does the playback (through a native addon, its picture drawn inside the app window), with an interactive subtitle timeline, a bundled Yomitan dictionary extension, and Anki export. Windows is the primary platform. Linux and macOS are experimental and depend on the system libmpv (Homebrew `mpv`, distro `libmpv2`: 0.37, Ubuntu 24.04's own, works; 0.40 or newer is recommended) and audiowaveform.
 
 ## Commands
 
