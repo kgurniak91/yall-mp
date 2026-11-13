@@ -139,14 +139,14 @@ sudo apt-get install audiowaveform
     sudo apt install ./yall-mp_*.deb
     ```
 
-    **AppImage:** make the file executable and start it once from a terminal:
+    **AppImage:** make the file executable (in its Properties, or with `chmod`), then double-click it or start it from a terminal:
 
     ```bash
     chmod +x ./<filename>.AppImage
-    ./<filename>.AppImage --no-sandbox
+    ./<filename>.AppImage
     ```
 
-    Starting an AppImage directly needs FUSE 2: `sudo apt install libfuse2t64` on Ubuntu 24.04 (`libfuse2` on 22.04 and older). Without it, `./<filename>.AppImage --appimage-extract-and-run --no-sandbox` works too.
+    Starting an AppImage directly needs FUSE 2: `sudo apt install libfuse2t64` on Ubuntu 24.04 (`libfuse2` on 22.04 and older). Without it, `./<filename>.AppImage --appimage-extract-and-run` works too. If the app does not start on your system, try it from a terminal with `--no-sandbox` added after the file name.
     On its first start the AppImage adds itself to your applications menu (`~/.local/share/applications/yall-mp.desktop` and an icon in `~/.local/share/icons/hicolor/512x512/apps/yall-mp.png`); from then on you can start it from there. To remove the entry, delete those two files.
 
 > **🖥️ X11 and Wayland:** the app runs through X11, which on a Wayland desktop means XWayland (every mainstream distribution ships it). The packaged `yall-mp` is a small launcher script that starts the real program with `--ozone-platform=x11`. The reason: a native Wayland window cannot find out where it is or on which monitor, which broke fitting the window to a smaller second monitor and made fullscreen show a stretched picture for a moment. Native Wayland is therefore **not supported**, but you can still force it for testing, at your own risk:
