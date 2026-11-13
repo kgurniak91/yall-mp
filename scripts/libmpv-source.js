@@ -1,5 +1,5 @@
-// Finds the newest shinchiro mpv-dev archive (libmpv for Windows) instead of hard-coding one URL that goes 404 when
-// shinchiro prunes old releases. Pure helpers plus one small GitHub API call, so the choice can be unit tested.
+// Finds the newest shinchiro mpv-dev archive (libmpv for Windows) for `YALL_MP_LIBMPV_LATEST=1` installs (the default is the
+// pinned build in download-dependencies.js). Pure helpers plus one small GitHub API call, so the choice can be unit tested.
 const https = require('https');
 
 const LATEST_RELEASE_API = 'https://api.github.com/repos/shinchiro/mpv-winbuild-cmake/releases/latest';

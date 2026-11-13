@@ -24,20 +24,21 @@ const URLS = {
   }
 };
 
-// libmpv for the native addon (Windows), from the shinchiro build. Shinchiro prunes old releases, so a hard-coded URL goes 404:
-// the newest release is looked up through the GitHub API on every install (scripts/libmpv-source.js) and downloaded when it differs
-// from the installed one (verified against the sha256 digest GitHub shows for the asset). The pinned build below is only the
-// fallback for when the lookup or its download fails and no libmpv is installed yet. `YALL_MP_LIBMPV_PINNED=1` forces it.
-// The native addon is compiled against vendored headers (native/yall-libmpv/include/mpv), a newer DLL is warned about when its
-// commit differs: re-run `node scripts/vendor-mpv-headers.js <commit>` to move the headers along.
-// Bumping the pin: change archive + sha256 + mirror tag together and re-run `node scripts/vendor-mpv-headers.js <commit>`
-// (the commit of the archive) so that the vendored headers match, all in one commit.
+// libmpv for the native addon (Windows): one tested shinchiro build, pinned, so every install and every release build ships the same
+// DLL. It is downloaded from the project's own mirror release first (shinchiro prunes releases after about 40 days, so their URL goes
+// 404) and from shinchiro second, and always checked against the sha256 below.
+// `YALL_MP_LIBMPV_LATEST=1` installs the newest shinchiro build instead (looked up through the GitHub API, scripts/libmpv-source.js,
+// verified against the digest GitHub shows): for trying a newer mpv on a dev machine, never for a release build.
+// The native addon is compiled against vendored headers (native/yall-libmpv/include/mpv) from the same mpv commit as the pin.
+// Bumping the pin: test the new build (YALL_MP_LIBMPV_LATEST=1), upload its archive as the mirror release
+// `deps-mpv-dev-<date>`, then change archive + sha256 + both URLs and re-run `node scripts/vendor-mpv-headers.js <commit>`
+// (the commit of the archive), all in one commit.
 const LIBMPV = {
-  archive: 'mpv-dev-x86_64-20261017-git-dde0671072.7z',
-  sha256: 'd6638b2b40561e6071627f39ad60a38e15721dc87a49f244b897911ea2edfd9f',
+  archive: 'mpv-dev-x86_64-20261108-git-55d3feb45c.7z',
+  sha256: '7c147cb7ceaba717414e782ef4398de728f679db6e86daaa8aeb175670cb7994',
   sources: [
-    'https://github.com/kgurniak91/yall-mp/releases/download/deps-mpv-dev-20261017/mpv-dev-x86_64-20261017-git-dde0671072.7z',
-    'https://github.com/shinchiro/mpv-winbuild-cmake/releases/download/20261017/mpv-dev-x86_64-20261017-git-dde0671072.7z'
+    'https://github.com/kgurniak91/yall-mp/releases/download/deps-mpv-dev-20261108/mpv-dev-x86_64-20261108-git-55d3feb45c.7z',
+    'https://github.com/shinchiro/mpv-winbuild-cmake/releases/download/20261108/mpv-dev-x86_64-20261108-git-55d3feb45c.7z'
   ]
 };
 
@@ -213,11 +214,12 @@ async function main() {
   const stamped = fs.existsSync(libmpvStamp) ? fs.readFileSync(libmpvStamp, 'utf8').trim() : '';
   const pinnedCandidates = LIBMPV.sources.map(url => ({url, sha256: LIBMPV.sha256}));
 
-  // What to install: the newest shinchiro archive, else (no lookup possible) what is installed, else the pinned build.
+  // What to install: the pinned build. With YALL_MP_LIBMPV_LATEST=1 the newest shinchiro archive, else (no lookup possible) what is
+  // installed, else the pinned build.
   let wanted = {archive: LIBMPV.archive, sha256: LIBMPV.sha256, candidates: pinnedCandidates, commit: null};
   let lookedUp = false;
-  if (process.env.YALL_MP_LIBMPV_PINNED === '1') {
-    console.log(`   YALL_MP_LIBMPV_PINNED=1: using the pinned libmpv ${LIBMPV.archive}.`);
+  if (process.env.YALL_MP_LIBMPV_LATEST !== '1') {
+    console.log(`   Pinned libmpv: ${LIBMPV.archive} (YALL_MP_LIBMPV_LATEST=1 tries the newest shinchiro build).`);
   } else {
     try {
       const latest = await resolveLatestLibmpv();
@@ -232,7 +234,7 @@ async function main() {
       if (!matchesVendoredHeaders(latest, vendoredMpvCommit())) {
         console.warn(`   ⚠️  The vendored mpv headers are from another mpv commit (${vendoredMpvCommit().slice(0, 10)}) than this build (${latest.commit}).`);
         console.warn(`      If the native addon fails to build or run, move the headers along: node scripts/vendor-mpv-headers.js <full commit of ${latest.commit}>,`);
-        console.warn(`      or keep the older libmpv with YALL_MP_LIBMPV_PINNED=1.`);
+        console.warn(`      or go back to the pinned libmpv: run npm install again without YALL_MP_LIBMPV_LATEST.`);
       }
     } catch (err) {
       console.warn(`   ⚠️  Could not look up the newest libmpv: ${err.message}`);
