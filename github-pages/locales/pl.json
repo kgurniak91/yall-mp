@@ -129,7 +129,7 @@
     "bug_report_title": "Chcesz zgłosić błąd, napisać konstruktywną krytykę lub przesłać pomysł na ulepszenie aplikacji?",
     "bug_report_link": "Kliknij tutaj, aby skontaktować się z autorem &rarr;",
     "other_title": "Linux i macOS",
-    "other_desc": "Wsparcie eksperymentalne 🧪 (BETA)<br>Linux: .AppImage i .deb, testowane na Ubuntu 24.04<br>macOS: Apple Silicon, testowane na Macu mini M2<br>Wymaga ręcznej instalacji zależności<br>(libmpv 0.40+ z pakietów mpv, audiowaveform)",
+    "other_desc": "Wsparcie eksperymentalne 🧪 (BETA)<br>Linux: .AppImage i .deb, testowane na Ubuntu 24.04<br>macOS: Apple Silicon, testowane na Macu mini M2<br>Wymaga ręcznej instalacji zależności<br>(libmpv, audiowaveform)",
     "other_link": "Instrukcja instalacji na GitHubie &rarr;"
   },
   "faq_section_title": "Najczęściej Zadawane Pytania",
