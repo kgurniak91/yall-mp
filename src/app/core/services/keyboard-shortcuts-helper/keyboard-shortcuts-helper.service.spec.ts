@@ -187,8 +187,9 @@ describe('KeyboardShortcutsHelperService', () => {
 
   it('toggles word colours with Ctrl+Shift+G (not with G alone or Ctrl+G)', () => {
     const shortcut = (init: KeyboardEventInit) => service.getShortcutForEvent(new KeyboardEvent('keydown', init), KeyboardShortcutScope.Project)?.action;
-    expect(shortcut({key: 'G', ctrlKey: true, shiftKey: true})).toBe(KeyboardAction.ToggleWordColours);
-    expect(shortcut({key: 'g', ctrlKey: true})).not.toBe(KeyboardAction.ToggleWordColours);
+    // Ctrl and Command both held: the primary modifier on the platform the suite runs on (Command on a Mac runner)
+    expect(shortcut({key: 'G', ctrlKey: true, metaKey: true, shiftKey: true})).toBe(KeyboardAction.ToggleWordColours);
+    expect(shortcut({key: 'g', ctrlKey: true, metaKey: true})).not.toBe(KeyboardAction.ToggleWordColours);
     expect(shortcut({key: 'g'})).not.toBe(KeyboardAction.ToggleWordColours);
   });
 
