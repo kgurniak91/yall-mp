@@ -1,0 +1,4166 @@
+{
+ "dictionary": "wty-ru-en",
+ "language": "ru",
+ "recorded": "2026-11-15",
+ "lookups": {
+  "дом": {
+   "originalTextLength": 3,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "accusative singular"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "дом",
+       "reading": "дом",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "дом",
+         "transformedText": "дом",
+         "deinflectedText": "дом",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "дома": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "дома",
+       "reading": "до́ма",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "дома",
+         "transformedText": "дома",
+         "deinflectedText": "дома",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "adv",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "genitive singular"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative/accusative plural"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative/accusative plural irregular"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "дом",
+       "reading": "дом",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "дома",
+         "transformedText": "дома",
+         "deinflectedText": "дом",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "книга": {
+   "originalTextLength": 5,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "книга",
+       "reading": "кни́га",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "книга",
+         "transformedText": "книга",
+         "deinflectedText": "книга",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "книги": {
+   "originalTextLength": 5,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "genitive singular"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative/accusative plural"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "книга",
+       "reading": "кни́га",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "книги",
+         "transformedText": "книги",
+         "deinflectedText": "книга",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "книгу": {
+   "originalTextLength": 5,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "accusative singular"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "книга",
+       "reading": "кни́га",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "книгу",
+         "transformedText": "книгу",
+         "deinflectedText": "книга",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "окно": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "accusative singular"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "окно",
+       "reading": "окно́",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "окно",
+         "transformedText": "окно",
+         "deinflectedText": "окно",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "neut",
+         "category": "gender-neuter"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "окна": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "genitive singular"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative/accusative plural"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "окно",
+       "reading": "окно́",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "окна",
+         "transformedText": "окна",
+         "deinflectedText": "окно",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "neut",
+         "category": "gender-neuter"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "кошкой": {
+   "originalTextLength": 6,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "instrumental singular"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "кошка",
+       "reading": "ко́шка",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "кошкой",
+         "transformedText": "кошкой",
+         "deinflectedText": "кошка",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "animate",
+         "category": "animacy"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "путь": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "accusative singular"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "путь",
+       "reading": "путь",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "путь",
+         "transformedText": "путь",
+         "deinflectedText": "путь",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "кофе": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "кофе",
+       "reading": "ко́фе",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "кофе",
+         "transformedText": "кофе",
+         "deinflectedText": "кофе",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "neut",
+         "category": "gender-neuter"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        },
+        {
+         "name": "indecl",
+         "category": "morphology"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "люди": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative plural"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "люди",
+       "reading": "лю́ди",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "люди",
+         "transformedText": "люди",
+         "deinflectedText": "люди",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "animate",
+         "category": "animacy"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        },
+        {
+         "name": "pl-only",
+         "category": "number"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative plural"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "человек",
+       "reading": "челове́к",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "люди",
+         "transformedText": "люди",
+         "deinflectedText": "челове́к",
+         "matchType": "exact",
+         "matchSource": "reading",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "animate",
+         "category": "animacy"
+        },
+        {
+         "name": "poet",
+         "category": "register"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "людей": {
+   "originalTextLength": 5,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "genitive/accusative plural irregular"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "человек",
+       "reading": "челове́к",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "людей",
+         "transformedText": "людей",
+         "deinflectedText": "человек",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "animate",
+         "category": "animacy"
+        },
+        {
+         "name": "poet",
+         "category": "register"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "genitive/accusative plural irregular"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "люди",
+       "reading": "лю́ди",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "людей",
+         "transformedText": "людей",
+         "deinflectedText": "люди",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "animate",
+         "category": "animacy"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        },
+        {
+         "name": "pl-only",
+         "category": "number"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "девочка": {
+   "originalTextLength": 7,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "девочка",
+       "reading": "де́вочка",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "девочка",
+         "transformedText": "девочка",
+         "deinflectedText": "девочка",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "animate",
+         "category": "animacy"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "мальчики": {
+   "originalTextLength": 8,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative plural"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "мальчик",
+       "reading": "ма́льчик",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "мальчики",
+         "transformedText": "мальчики",
+         "deinflectedText": "мальчик",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "animate",
+         "category": "animacy"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "время": {
+   "originalTextLength": 5,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "accusative singular"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "время",
+       "reading": "вре́мя",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "время",
+         "transformedText": "время",
+         "deinflectedText": "время",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "neut",
+         "category": "gender-neuter"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "времени": {
+   "originalTextLength": 7,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "genitive/dative singular"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "prepositional singular"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "время",
+       "reading": "вре́мя",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "времени",
+         "transformedText": "времени",
+         "deinflectedText": "время",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "neut",
+         "category": "gender-neuter"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "genitive/dative/prepositional singular"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "время, вперёд",
+       "reading": "вре́мя",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "времени",
+         "transformedText": "времени",
+         "deinflectedText": "вре́мя",
+         "matchType": "exact",
+         "matchSource": "reading",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "phrase",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "мать": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative/accusative singular irregular"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "мать",
+       "reading": "мать",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "мать",
+         "transformedText": "мать",
+         "deinflectedText": "мать",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "animate",
+         "category": "animacy"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "папа": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "папа",
+       "reading": "па́па",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "папа",
+         "transformedText": "папа",
+         "deinflectedText": "папа",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "animate",
+         "category": "animacy"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "animate",
+         "category": "animacy"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "child",
+         "category": "register"
+        },
+        {
+         "name": "dialect",
+         "category": "usage"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        },
+        {
+         "name": "uncount",
+         "category": "grammar"
+        },
+        {
+         "name": "arch",
+         "category": "archaism"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "собаку": {
+   "originalTextLength": 6,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "accusative singular"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "собака",
+       "reading": "соба́ка",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "собаку",
+         "transformedText": "собаку",
+         "deinflectedText": "собака",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "animate",
+         "category": "animacy"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "это": {
+   "originalTextLength": 3,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "accusative singular"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "это",
+       "reading": "э́то",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "это",
+         "transformedText": "это",
+         "deinflectedText": "это",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "neut",
+         "category": "gender-neuter"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "ptcl",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "intj",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative/accusative singular neuter"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "этот",
+       "reading": "э́тот",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "это",
+         "transformedText": "это",
+         "deinflectedText": "э́тот",
+         "matchType": "exact",
+         "matchSource": "reading",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "det",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "читает": {
+   "originalTextLength": 6,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person singular present"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "читать",
+       "reading": "чита́ть",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "читает",
+         "transformedText": "читает",
+         "deinflectedText": "читать",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "impf",
+         "category": "aspect"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "он": {
+   "originalTextLength": 2,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "он",
+       "reading": "он",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "он",
+         "transformedText": "он",
+         "deinflectedText": "он",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative third-person singular masculine personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "меня",
+       "reading": "меня́",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "он",
+         "transformedText": "он",
+         "deinflectedText": "меня",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative third-person singular masculine personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "себя",
+       "reading": "себя́",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "он",
+         "transformedText": "он",
+         "deinflectedText": "себя",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "vr",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative third-person singular masculine personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "его",
+       "reading": "его́",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "он",
+         "transformedText": "он",
+         "deinflectedText": "его",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "poss",
+         "category": "morphology"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative third-person singular masculine personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "она",
+       "reading": "она́",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "он",
+         "transformedText": "он",
+         "deinflectedText": "она",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative third-person singular masculine personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "они",
+       "reading": "они́",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "он",
+         "transformedText": "он",
+         "deinflectedText": "они",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative third-person singular masculine personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "оно",
+       "reading": "оно́",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "он",
+         "transformedText": "он",
+         "deinflectedText": "оно",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative third-person singular masculine personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "вы",
+       "reading": "вы",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "он",
+         "transformedText": "он",
+         "deinflectedText": "вы",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative third-person singular masculine personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "её",
+       "reading": "её",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "он",
+         "transformedText": "он",
+         "deinflectedText": "её",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "poss",
+         "category": "morphology"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative third-person singular masculine personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "мы",
+       "reading": "мы",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "он",
+         "transformedText": "он",
+         "deinflectedText": "мы",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative third-person singular masculine personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ты",
+       "reading": "ты",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "он",
+         "transformedText": "он",
+         "deinflectedText": "ты",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fam",
+         "category": "register"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative third-person singular masculine personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "я",
+       "reading": "я",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "он",
+         "transformedText": "он",
+         "deinflectedText": "я",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "char",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "neut",
+         "category": "gender-neuter"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        },
+        {
+         "name": "indecl",
+         "category": "morphology"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "она": {
+   "originalTextLength": 3,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative third-person singular feminine personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "она",
+       "reading": "она́",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "она",
+         "transformedText": "она",
+         "deinflectedText": "она",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative third-person singular feminine personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "меня",
+       "reading": "меня́",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "она",
+         "transformedText": "она",
+         "deinflectedText": "меня",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative third-person singular feminine personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "себя",
+       "reading": "себя́",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "она",
+         "transformedText": "она",
+         "deinflectedText": "себя",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "vr",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative third-person singular feminine personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "его",
+       "reading": "его́",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "она",
+         "transformedText": "она",
+         "deinflectedText": "его",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "poss",
+         "category": "morphology"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative third-person singular feminine personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ея̈",
+       "reading": "ея̈",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "она",
+         "transformedText": "она",
+         "deinflectedText": "ея̈",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "poss",
+         "category": "morphology"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative third-person singular feminine personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "они",
+       "reading": "они́",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "она",
+         "transformedText": "она",
+         "deinflectedText": "они",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative third-person singular feminine personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "оно",
+       "reading": "оно́",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "она",
+         "transformedText": "она",
+         "deinflectedText": "оно",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative third-person singular feminine personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "вы",
+       "reading": "вы",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "она",
+         "transformedText": "она",
+         "deinflectedText": "вы",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative third-person singular feminine personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "её",
+       "reading": "её",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "она",
+         "transformedText": "она",
+         "deinflectedText": "её",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "poss",
+         "category": "morphology"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative third-person singular feminine personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "мы",
+       "reading": "мы",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "она",
+         "transformedText": "она",
+         "deinflectedText": "мы",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative third-person singular feminine personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "он",
+       "reading": "он",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "она",
+         "transformedText": "она",
+         "deinflectedText": "он",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative third-person singular feminine personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ты",
+       "reading": "ты",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "она",
+         "transformedText": "она",
+         "deinflectedText": "ты",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fam",
+         "category": "register"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative third-person singular feminine personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "я",
+       "reading": "я",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "она",
+         "transformedText": "она",
+         "deinflectedText": "я",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "char",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "neut",
+         "category": "gender-neuter"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        },
+        {
+         "name": "indecl",
+         "category": "morphology"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "singular feminine short"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "оный",
+       "reading": "о́ный",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "она",
+         "transformedText": "она",
+         "deinflectedText": "о́ный",
+         "matchType": "exact",
+         "matchSource": "reading",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "det",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "Дом": {
+   "originalTextLength": 3,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "accusative singular"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "дом",
+       "reading": "дом",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Дом",
+         "transformedText": "дом",
+         "deinflectedText": "дом",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "Девочка": {
+   "originalTextLength": 7,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "девочка",
+       "reading": "де́вочка",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Девочка",
+         "transformedText": "девочка",
+         "deinflectedText": "девочка",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "animate",
+         "category": "animacy"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "Мальчики": {
+   "originalTextLength": 8,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative plural"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "мальчик",
+       "reading": "ма́льчик",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Мальчики",
+         "transformedText": "мальчики",
+         "deinflectedText": "мальчик",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "animate",
+         "category": "animacy"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "видят": {
+   "originalTextLength": 5,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person plural present"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "видеть",
+       "reading": "ви́деть",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "видят",
+         "transformedText": "видят",
+         "deinflectedText": "видеть",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "impf",
+         "category": "aspect"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "У": {
+   "originalTextLength": 1,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "uppercase"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "у",
+       "reading": "у",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "У",
+         "transformedText": "у",
+         "deinflectedText": "у",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "char",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "neut",
+         "category": "gender-neuter"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        },
+        {
+         "name": "indecl",
+         "category": "morphology"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        },
+        {
+         "name": "indecl",
+         "category": "morphology"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "prep",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "lowercase"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "У",
+       "reading": "У (U)",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "У",
+         "transformedText": "У",
+         "deinflectedText": "У",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "char",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "у": {
+   "originalTextLength": 1,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "uppercase"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "у",
+       "reading": "у",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "у",
+         "transformedText": "у",
+         "deinflectedText": "у",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "char",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "neut",
+         "category": "gender-neuter"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        },
+        {
+         "name": "indecl",
+         "category": "morphology"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        },
+        {
+         "name": "indecl",
+         "category": "morphology"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "prep",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "lowercase"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "У",
+       "reading": "У (U)",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "у",
+         "transformedText": "У",
+         "deinflectedText": "У",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "char",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "меня": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "genitive/accusative first-person personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "меня",
+       "reading": "меня́",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "меня",
+         "transformedText": "меня",
+         "deinflectedText": "меня",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "genitive/accusative first-person personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "себя",
+       "reading": "себя́",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "меня",
+         "transformedText": "меня",
+         "deinflectedText": "себя",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "vr",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "genitive/accusative first-person personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "его",
+       "reading": "его́",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "меня",
+         "transformedText": "меня",
+         "deinflectedText": "его",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "poss",
+         "category": "morphology"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "genitive/accusative first-person personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ея̈",
+       "reading": "ея̈",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "меня",
+         "transformedText": "меня",
+         "deinflectedText": "ея̈",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "poss",
+         "category": "morphology"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "genitive/accusative first-person personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "она",
+       "reading": "она́",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "меня",
+         "transformedText": "меня",
+         "deinflectedText": "она",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "genitive/accusative first-person personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "они",
+       "reading": "они́",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "меня",
+         "transformedText": "меня",
+         "deinflectedText": "они",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "genitive/accusative first-person personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "оно",
+       "reading": "оно́",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "меня",
+         "transformedText": "меня",
+         "deinflectedText": "оно",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "genitive/accusative first-person personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "вы",
+       "reading": "вы",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "меня",
+         "transformedText": "меня",
+         "deinflectedText": "вы",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "genitive/accusative first-person personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "её",
+       "reading": "её",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "меня",
+         "transformedText": "меня",
+         "deinflectedText": "её",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "poss",
+         "category": "morphology"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "genitive/accusative first-person personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "мы",
+       "reading": "мы",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "меня",
+         "transformedText": "меня",
+         "deinflectedText": "мы",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "genitive/accusative first-person personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "он",
+       "reading": "он",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "меня",
+         "transformedText": "меня",
+         "deinflectedText": "он",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "genitive/accusative first-person personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ты",
+       "reading": "ты",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "меня",
+         "transformedText": "меня",
+         "deinflectedText": "ты",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fam",
+         "category": "register"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "genitive/accusative first-person personal pronoun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "я",
+       "reading": "я",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "меня",
+         "transformedText": "меня",
+         "deinflectedText": "я",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "char",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "neut",
+         "category": "gender-neuter"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        },
+        {
+         "name": "indecl",
+         "category": "morphology"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "нет": {
+   "originalTextLength": 3,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "нет",
+       "reading": "нет",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "нет",
+         "transformedText": "нет",
+         "deinflectedText": "нет",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "intj",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "adv",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "ptcl",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "Это": {
+   "originalTextLength": 3,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "accusative singular"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "это",
+       "reading": "э́то",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Это",
+         "transformedText": "это",
+         "deinflectedText": "это",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "neut",
+         "category": "gender-neuter"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "ptcl",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "intj",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative/accusative singular neuter"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "этот",
+       "reading": "э́тот",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Это",
+         "transformedText": "это",
+         "deinflectedText": "э́тот",
+         "matchType": "exact",
+         "matchSource": "reading",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "det",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "мой": {
+   "originalTextLength": 3,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "мой",
+       "reading": "мой",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "мой",
+         "transformedText": "мой",
+         "deinflectedText": "мой",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "poss",
+         "category": "morphology"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "second-person singular imperative imperfective"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "second-person singular imperative"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "мыть",
+       "reading": "мыть",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "мой",
+         "transformedText": "мой",
+         "deinflectedText": "мыть",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-ru-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "vt",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "impf",
+         "category": "aspect"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ }
+}

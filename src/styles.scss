@@ -183,6 +183,12 @@ textarea {
   z-index: 9999 !important;
 }
 
+// PrimeNG 19.2's own rule is `gap: calc(dt('multiselect.padding.y') / 2)`: the token is never resolved, so the browser
+// drops it and the chips touch. Half of the multiselect's vertical padding (0.5rem), as the theme meant.
+.p-multiselect.p-multiselect-display-chip .p-multiselect-label {
+  gap: 0.25rem;
+}
+
 .p-tooltip.tooltip-one-line {
   width: fit-content;
   max-width: initial !important;

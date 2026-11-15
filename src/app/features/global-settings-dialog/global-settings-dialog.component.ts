@@ -17,6 +17,7 @@ import {
 } from './offline-dictionaries-settings/offline-dictionaries-settings.component';
 import {SettingsPresetComponent} from '../../shared/components/settings-preset/settings-preset.component';
 import {AdvancedSettingsComponent} from './advanced-settings/advanced-settings.component';
+import {WordColoursSettingsComponent} from './word-colours-settings/word-colours-settings.component';
 
 @Component({
   selector: 'app-global-settings-dialog',
@@ -33,7 +34,8 @@ import {AdvancedSettingsComponent} from './advanced-settings/advanced-settings.c
     SubtitlesLookupSettingsComponent,
     OfflineDictionariesSettingsComponent,
     SettingsPresetComponent,
-    AdvancedSettingsComponent
+    AdvancedSettingsComponent,
+    WordColoursSettingsComponent
   ],
   templateUrl: './global-settings-dialog.component.html',
   styleUrl: './global-settings-dialog.component.scss',

@@ -22,6 +22,8 @@ export function hasEnabledDictionary(installed: { title: string }[], profileDict
 })
 export class YomitanService {
   public readonly supportedLanguages = signal<YomitanLanguageSummary[]>([]);
+  /** The Yomitan language the profile was last synced to (and with it, its dictionary switches); null before the first sync. */
+  public readonly syncedLanguage = signal<{ iso: string; generation: number } | null>(null);
   private languagesLoadedPromise: Promise<void> | null = null;
   private lastResult: { scanText: string; data: any } | null = null;
   private isElectronReady = false;
@@ -125,6 +127,7 @@ export class YomitanService {
 
     console.log(`[YomitanService] Syncing FULL language. App: ${appLanguage} -> Yomitan: ${targetIso}`);
     await window.electronAPI.setYomitanLanguageFull(targetIso);
+    this.syncedLanguage.update(prev => ({iso: targetIso, generation: (prev?.generation ?? 0) + 1}));
   }
 
   /** Installed dictionaries that declare no language, with the language the user gave each (null: not given yet). */

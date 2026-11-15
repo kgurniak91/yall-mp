@@ -1,0 +1,143 @@
+<div class="settings-container">
+  <p class="mt-0">
+    Colours nouns in the subtitles by their grammatical gender, and articles like their noun.
+    The gender comes from your offline dictionaries, so it works for any language whose dictionary marks it (choose them below):
+    the <b>wty-</b> dictionaries (e.g. <b>wty-de-en</b>, <b>wty-fr-en</b>, <b>wty-ru-en</b>) do, and so do the older <b>kty-</b> ones, a little less precisely.
+    German, French, Spanish, Italian and Portuguese also get their articles coloured; other languages get the nouns.
+    <br>
+    Plain (SRT, VTT) subtitles only: not ASS subtitles, and not when mpv draws the subtitles.
+    Turn it on and off while watching with <b>{{ ctrl }}+Shift+G</b>.
+  </p>
+
+  <p-fieldset legend="Settings" [toggleable]="false">
+    <div class="setting-item">
+      <label for="word-colouring-enabled" class="font-semibold">Colour words by gender</label>
+      <p-inputSwitch inputId="word-colouring-enabled"
+                     [ngModel]="settings().enabled"
+                     (ngModelChange)="setEnabled($event)"/>
+    </div>
+
+    <label for="word-colouring-languages" class="block font-semibold mt-4 mb-2">Languages</label>
+    <small class="block mb-3 text-sm">
+      Only subtitles in these languages are coloured (the project's subtitle language); words in any other language are never looked up.
+      The defaults are the languages it was tested with. Add another one if your dictionary for it marks the gender of nouns
+      (Czech, Ukrainian...); languages without grammatical gender, like English or Japanese, have nothing to colour.
+    </small>
+    <p-multiselect inputId="word-colouring-languages"
+                   styleClass="w-full word-colouring-languages"
+                   data-testid="word-colouring-languages"
+                   [options]="languageOptions()"
+                   optionLabel="label"
+                   optionValue="value"
+                   [ngModel]="settings().languages"
+                   (ngModelChange)="setLanguages($event)"
+                   [filter]="true"
+                   [autofocusFilter]="true"
+                   filterPlaceHolder="Type a language"
+                   [showToggleAll]="false"
+                   display="chip"
+                   [maxSelectedLabels]="null"
+                   placeholder="No language: nothing is coloured"
+                   appendTo="body"/>
+    <div class="flex justify-content-end mt-3">
+      <p-button label="Reset languages to default" severity="secondary" size="small" [outlined]="true"
+                [disabled]="languagesAreDefault()" (onClick)="resetLanguages()"/>
+    </div>
+  </p-fieldset>
+
+  <div class="word-colours-preview-block">
+    <div class="preview-title font-semibold">Sentence preview</div>
+    <div class="word-colours-preview" data-testid="word-colours-preview">
+      @for (line of preview(); track $index) {
+        <div class="preview-line">
+          @for (piece of line; track $index) {
+            <span [style.color]="piece.color" [class.dotted]="piece.dotted">{{ piece.text }}</span>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <p-fieldset legend="Colours" [toggleable]="false">
+    @for (gender of genders; track gender.key; let first = $first) {
+      <div class="setting-item" [class.mt-3]="!first">
+        <label [for]="'word-colour-hex-' + gender.key">
+          {{ gender.label }} <small class="text-gray-500">({{ gender.examples }})</small>
+        </label>
+        <div class="colour-field">
+          <p-colorpicker [inputId]="'word-colour-' + gender.key"
+                         format="hex"
+                         appendTo="body"
+                         [ngModel]="settings().colors[gender.key]"
+                         (ngModelChange)="setColour(gender.key, $event)"/>
+          <input #hexInput
+                 pInputText
+                 class="hex-input"
+                 maxlength="7"
+                 spellcheck="false"
+                 [id]="'word-colour-hex-' + gender.key"
+                 [class.ng-invalid]="invalidHex()[gender.key]"
+                 [class.ng-dirty]="invalidHex()[gender.key]"
+                 [value]="settings().colors[gender.key]"
+                 (input)="hexTyped(gender.key, hexInput.value)"
+                 (keydown.enter)="hexCommitted(gender.key, hexInput)"
+                 (blur)="hexCommitted(gender.key, hexInput)"/>
+        </div>
+      </div>
+    }
+    <small class="block mt-2 text-sm">Pick a colour, or type it: <b>#FFAA00</b> or the short form <b>#FA0</b>.</small>
+
+    <div class="flex justify-content-end mt-3">
+      <p-button label="Reset colours to default" severity="secondary" size="small" [outlined]="true"
+                [disabled]="coloursAreDefault()" (onClick)="resetColours()"/>
+    </div>
+  </p-fieldset>
+
+
+  <p-fieldset legend="Rules" [toggleable]="false">
+    <div class="setting-item">
+      <label for="word-colouring-articles" class="font-semibold">Colour articles like their noun</label>
+      <p-inputSwitch inputId="word-colouring-articles"
+                     [ngModel]="settings().articles"
+                     (ngModelChange)="setArticles($event)"/>
+    </div>
+    <small class="block mt-2 text-sm">
+      "einen kalten Saft", "la grande maison": the article takes the colour of the noun it belongs to, whatever case it is in.
+    </small>
+
+    <div class="setting-item-column mt-4">
+      <label for="word-colouring-ambiguous" class="font-semibold mb-2">Nouns with two genders</label>
+      <p-selectButton id="word-colouring-ambiguous"
+                      [options]="ambiguousOptions"
+                      [ngModel]="settings().ambiguous"
+                      (ngModelChange)="setAmbiguous($event)"
+                      optionLabel="label"
+                      optionValue="value"/>
+      <small class="block mt-2 text-sm">
+        A noun whose dictionary entry gives both genders, such as French "artiste" or Russian "кофе" ("First gender" shows it as masculine).
+        A word with different meanings per gender (der See, die See) takes the gender of its first meaning.
+      </small>
+    </div>
+  </p-fieldset>
+
+  <p-fieldset legend="Dictionary tags" [toggleable]="false">
+    <small class="block mb-3 text-sm">
+      The tag names your dictionaries use for each gender and for nouns, separated by commas.
+      The defaults are those of the wty- and kty- dictionaries; change them only for a dictionary that names them differently.
+    </small>
+    @for (field of tagFields; track field.key) {
+      <div class="setting-item mt-2">
+        <label [for]="'word-tags-' + field.key">{{ field.label }}</label>
+        <input pInputText
+               class="tag-input"
+               [id]="'word-tags-' + field.key"
+               [value]="tagText(field.key)"
+               (change)="setTags(field.key, $any($event.target).value)"/>
+      </div>
+    }
+    <div class="flex justify-content-end mt-3">
+      <p-button label="Reset tags to default" severity="secondary" size="small" [outlined]="true"
+                [disabled]="tagsAreDefault()" (onClick)="resetTags()"/>
+    </div>
+  </p-fieldset>
+</div>

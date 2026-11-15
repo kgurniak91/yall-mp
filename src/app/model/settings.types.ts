@@ -79,6 +79,83 @@ export interface GlobalSettings {
   customFfprobePath?: string;
   customAudiowaveformPath?: string;
   theme?: AppTheme;
+  /** Missing in settings files from before 0.9.10: the defaults apply (see `normaliseWordColouring`). */
+  wordColouring?: WordColouringSettings;
+}
+
+/** What a noun with two genders in one meaning (French "artiste") looks like: dotted underline, the first gender, or plain. */
+export type WordColouringAmbiguous = 'mark' | 'first' | 'skip';
+
+/** Colouring of nouns (and their articles) by grammatical gender, read from Yomitan dictionary tags. */
+export interface WordColouringSettings {
+  enabled: boolean;
+  /** Yomitan language codes (subtitle languages) the colouring runs for; any other language is never looked up. */
+  languages: string[];
+  colors: { masculine: string; feminine: string; neuter: string };
+  articles: boolean;
+  ambiguous: WordColouringAmbiguous;
+  /** Tag names the dictionaries use; the defaults are those of the wty-* and kty-* dictionaries. */
+  tags: { masculine: string[]; feminine: string[]; neuter: string[]; noun: string[] };
+}
+
+/** The languages checked against real wty-/kty- dictionaries (test/word-gender.test.ts). */
+export const DEFAULT_WORD_COLOURING_LANGUAGES = ['de', 'fr', 'es', 'it', 'pt', 'ru', 'pl'];
+
+export const DEFAULT_WORD_COLOURING: WordColouringSettings = {
+  enabled: false,
+  languages: DEFAULT_WORD_COLOURING_LANGUAGES,
+  colors: {masculine: '#4da3ff', feminine: '#ff6b9d', neuter: '#5fd068'},
+  articles: true,
+  ambiguous: 'mark',
+  tags: {masculine: ['masc'], feminine: ['fem'], neuter: ['neut'], noun: ['n']}
+};
+
+/** True when words of this (Yomitan) language are coloured: colouring on and the language in the user's list. */
+export function wordColouringActiveFor(settings: WordColouringSettings, language: string | null | undefined): boolean {
+  return settings.enabled && !!language && settings.languages.includes(language.toLowerCase());
+}
+
+/** The toast after Ctrl+Shift+G; says so when the language being watched is not in the list. */
+export function wordColouringToggleMessage(settings: WordColouringSettings, language: string | null | undefined, languageName?: string): string {
+  if (!settings.enabled) {
+    return 'Word colours off';
+  }
+  if (language && !wordColouringActiveFor(settings, language)) {
+    return `Word colours on, but not for ${languageName || language}: add it in Global Settings, Word Colouring`;
+  }
+  return 'Word colours on';
+}
+
+/** Fills what an older or hand-edited settings file lacks; an empty tag list falls back to the default names. */
+export function normaliseWordColouring(value: Partial<WordColouringSettings> | null | undefined): WordColouringSettings {
+  const d = DEFAULT_WORD_COLOURING;
+  const v = value ?? {};
+  const list = (l: unknown, fallback: string[]): string[] => {
+    const clean = Array.isArray(l) ? l.map(x => String(x).trim()).filter(x => x.length > 0) : [];
+    return clean.length > 0 ? clean : [...fallback];
+  };
+  const color = (c: unknown, fallback: string): string => typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c) ? c : fallback;
+  // An empty list is kept: the user removed every language
+  const languages = Array.isArray(v.languages)
+    ? [...new Set(v.languages.map(x => String(x).trim().toLowerCase()).filter(x => x.length > 0))]
+    : [...d.languages];
+  return {
+    enabled: typeof v.enabled === 'boolean' ? v.enabled : d.enabled,
+    languages,
+    colors: {
+      masculine: color(v.colors?.masculine, d.colors.masculine),
+      feminine: color(v.colors?.feminine, d.colors.feminine),
+      neuter: color(v.colors?.neuter, d.colors.neuter)
+    },
+    articles: typeof v.articles === 'boolean' ? v.articles : d.articles,
+    ambiguous: v.ambiguous === 'first' || v.ambiguous === 'skip' || v.ambiguous === 'mark' ? v.ambiguous : d.ambiguous,
+    tags: {
+      masculine: list(v.tags?.masculine, d.tags.masculine),
+      feminine: list(v.tags?.feminine, d.tags.feminine),
+      neuter: list(v.tags?.neuter, d.tags.neuter),
+      noun: list(v.tags?.noun, d.tags.noun)
+    }
+  };
 }
 
 const DEFAULT_SEARCH_SUBTITLE_LOOKUP_SERVICES: SubtitleLookupService[] = [
@@ -185,7 +262,8 @@ export const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   customFfmpegPath: '',
   customFfprobePath: '',
   customAudiowaveformPath: '',
-  theme: 'system'
+  theme: 'system',
+  wordColouring: DEFAULT_WORD_COLOURING
 };
 
 export enum CustomPath {

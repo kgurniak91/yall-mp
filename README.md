@@ -86,6 +86,7 @@ If the app crashes, please attach what it left in the app data folder: `video.lo
 ### 💬 Advanced Subtitles
 *   **Interactive Rendering:** Full support for complex interactive **ASS/SSA** subtitles with proper font attachment loading.
 *   **Offline Dictionaries:** Zero-latency, hover-based dictionary lookups powered by the bundled **[Yomitan](https://github.com/yomidevs/yomitan)** extension.
+*   **Word Colours by Gender:** Off by default; once turned on (Global Settings, Word Colouring, or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>G</kbd>), nouns and their articles in plain subtitles are coloured by grammatical gender, read from your offline dictionaries, such as the `wty-` dictionaries Yomitan offers. It runs for the languages on its list: German, French, Spanish, Italian, Portuguese, Russian and Polish by default, and any other language whose dictionary marks gender can be added. Colours and tag names are configurable. Based on an idea and a script by [@stephdolgo](https://github.com/stephdolgo).
 *   **Online Lookup:** One-click search via built-in browser integration for deeper context (Google, Brave, Forvo, etc.).
 *   **Smart Tokenization:** Advanced word boundary detection (using standard `Intl.Segmenter` or dictionary-based scanning) allows precise selection of words or phrases.
 *   **Multi-Track Support:** Seamless switching between multiple parallel subtitle and audio tracks.

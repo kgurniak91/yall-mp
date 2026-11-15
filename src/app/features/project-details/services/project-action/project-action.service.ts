@@ -13,6 +13,8 @@ import {
 import {ActionType} from '../../../../model/keyboard-shortcuts.types';
 import {FileOpenIntentService} from '../../../../core/services/file-open-intent/file-open-intent.service';
 import {ToastService} from '../../../../shared/services/toast/toast.service';
+import {YomitanService} from '../../../../core/services/yomitan/yomitan.service';
+import {wordColouringToggleMessage} from '../../../../model/settings.types';
 
 export interface ActionPayload {
   action: KeyboardAction;
@@ -31,6 +33,7 @@ export class ProjectActionService {
   private readonly action$ = new Subject<ActionPayload>();
   private readonly destroyRef = inject(DestroyRef);
   private readonly toastService = inject(ToastService);
+  private readonly yomitanService = inject(YomitanService);
 
   constructor() {
     // Handle Single-Shot Actions (UI clicks or Keyboard presses) with no throttling
@@ -87,6 +90,13 @@ export class ProjectActionService {
       case KeyboardAction.ToggleTimeline:
         this.globalSettingsStateService.setHideTimeline(!this.globalSettingsStateService.hideTimeline());
         break;
+      case KeyboardAction.ToggleWordColours: {
+        this.globalSettingsStateService.setWordColouring({enabled: !this.globalSettingsStateService.wordColouring().enabled});
+        const language = this.yomitanService.syncedLanguage()?.iso;
+        const languageName = this.yomitanService.supportedLanguages().find(l => l.iso === language)?.name;
+        this.toastService.info(wordColouringToggleMessage(this.globalSettingsStateService.wordColouring(), language, languageName));
+        break;
+      }
       case KeyboardAction.SeekBackward:
         this.videoStateService.seekRelative(-this.globalSettingsStateService.seekAmountSeconds());
         break;

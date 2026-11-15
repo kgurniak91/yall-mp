@@ -8,5 +8,6 @@ export enum GlobalSettingsTab {
   Anki = 2,
   OnlineLookups = 3,
   OfflineDictionaries = 4,
-  Advanced = 5
+  WordColours = 5,
+  Advanced = 6
 }

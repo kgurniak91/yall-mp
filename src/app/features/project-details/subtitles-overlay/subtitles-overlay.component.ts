@@ -30,6 +30,9 @@ import {HoverPauseController, isPointNearRects} from './hover-pause.controller';
 import {DialogService} from 'primeng/dynamicdialog';
 import {ToastService} from '../../../shared/services/toast/toast.service';
 import {primaryModifierKey, primaryModifierPressed} from '../../../core/services/keyboard-shortcuts-helper/primary-modifier';
+import {WordGenderService} from '../services/word-gender/word-gender.service';
+import {applyWordColours, clearWordColours, paintWordColours, readLineText} from '../services/word-gender/word-colour-painter';
+import {wordColouringActiveFor} from '../../../model/settings.types';
 
 const FALLBACK_VIDEO_ASPECT_RATIO = 16 / 9;
 // How long the container size must stay unchanged before the ASS renderer is rebuilt one last time for it.
@@ -121,6 +124,9 @@ export class SubtitlesOverlayComponent implements OnDestroy {
   private readonly subtitlesHighlighterService = inject(SubtitlesHighlighterService);
   private readonly tokenizationService = inject(TokenizationService);
   private readonly yomitanService = inject(YomitanService);
+  private readonly wordGenderService = inject(WordGenderService);
+  /** Drops word colours that arrive after the line (or the settings) changed again. */
+  private wordColourGeneration = 0;
   private readonly destroyRef = inject(DestroyRef);
   private readonly dialogService = inject(DialogService);
   private readonly toastService = inject(ToastService);
@@ -499,9 +505,43 @@ export class SubtitlesOverlayComponent implements OnDestroy {
         });
       }
     });
+
+    // Word colours by grammatical gender (SRT/plain subtitles drawn by the app; not ASS, not mpv's own rendering)
+    effect(() => {
+      const clip = this.currentClip();
+      const ass = this.rawAssContent();
+      const mpvRenders = this.projectSettingsStateService.useMpvSubtitles();
+      const settings = this.globalSettingsStateService.wordColouring();
+      const language = this.yomitanService.syncedLanguage()?.iso;
+      const generation = ++this.wordColourGeneration;
+      applyWordColours(settings.colors);
+      // Before the first sync the language is unknown: wait for it (the effect runs again then)
+      if (!wordColouringActiveFor(settings, language) || mpvRenders || ass || !clip?.hasSubtitle) {
+        clearWordColours();
+        return;
+      }
+      // The line is in the DOM after this change detection pass
+      requestAnimationFrame(() => void this.paintWordColours(generation));
+    });
+  }
+
+  private async paintWordColours(generation: number): Promise<void> {
+    const root = this.subtitleContainer()?.nativeElement.querySelector('.srt-container');
+    if (!root || generation !== this.wordColourGeneration) {
+      return;
+    }
+    const line = readLineText(root);
+    const words = await this.wordGenderService.colour(line.text);
+    if (generation !== this.wordColourGeneration) {
+      return;
+    }
+    clearWordColours();
+    paintWordColours(line, words);
   }
 
   ngOnDestroy(): void {
+    this.wordColourGeneration++;
+    clearWordColours();
     this.hoverPause.dispose();
     this.destroyAssRenderer();
     this.mutationObserver?.disconnect();

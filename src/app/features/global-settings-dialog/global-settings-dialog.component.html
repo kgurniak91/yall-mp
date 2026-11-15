@@ -5,6 +5,7 @@
     <p-tab [value]="GlobalSettingsTab.Anki">Anki integration</p-tab>
     <p-tab [value]="GlobalSettingsTab.OnlineLookups">Online Lookups</p-tab>
     <p-tab [value]="GlobalSettingsTab.OfflineDictionaries">Offline Dictionaries</p-tab>
+    <p-tab [value]="GlobalSettingsTab.WordColours">Word Colouring</p-tab>
     <p-tab [value]="GlobalSettingsTab.Advanced">Advanced</p-tab>
   </p-tablist>
   <p-tabpanels>
@@ -47,6 +48,9 @@
     </p-tabpanel>
     <p-tabpanel [value]="GlobalSettingsTab.OfflineDictionaries">
       <app-offline-dictionaries-settings/>
+    </p-tabpanel>
+    <p-tabpanel [value]="GlobalSettingsTab.WordColours">
+      <app-word-colours-settings/>
     </p-tabpanel>
     <p-tabpanel [value]="GlobalSettingsTab.Advanced">
       <app-advanced-settings/>

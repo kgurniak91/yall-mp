@@ -1,0 +1,5698 @@
+{
+ "dictionary": "wty-it-en",
+ "language": "it",
+ "recorded": "2026-11-15",
+ "lookups": {
+  "casa": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "casa",
+       "reading": "casa",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "casa",
+         "transformedText": "casa",
+         "deinflectedText": "casa",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "case": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "casa",
+       "reading": "casa",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "case",
+         "transformedText": "case",
+         "deinflectedText": "casa",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "libro": {
+   "originalTextLength": 5,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "libro",
+       "reading": "libro",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "libro",
+         "transformedText": "libro",
+         "deinflectedText": "libro",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "uomo": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "uomo",
+       "reading": "uomo",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "uomo",
+         "transformedText": "uomo",
+         "deinflectedText": "uomo",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "arch",
+         "category": "archaism"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "uomini": {
+   "originalTextLength": 6,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "uomo",
+       "reading": "uomo",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "uomini",
+         "transformedText": "uomini",
+         "deinflectedText": "uomo",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "arch",
+         "category": "archaism"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "porta": {
+   "originalTextLength": 5,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "porta",
+       "reading": "porta",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "porta",
+         "transformedText": "porta",
+         "deinflectedText": "porta",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "second-person singular imperative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person singular present indicative"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "portare",
+       "reading": "portare",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "porta",
+         "transformedText": "porta",
+         "deinflectedText": "portare",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "vt",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "singular feminine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "porto",
+       "reading": "porto",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "porta",
+         "transformedText": "porta",
+         "deinflectedText": "porto",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "arch",
+         "category": "archaism"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "mano": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "mano",
+       "reading": "mano",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "mano",
+         "transformedText": "mano",
+         "deinflectedText": "mano",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "mani": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "mani",
+       "reading": "mani",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "mani",
+         "transformedText": "mani",
+         "deinflectedText": "mani",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "mano",
+       "reading": "mano",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "mani",
+         "transformedText": "mani",
+         "deinflectedText": "mano",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "problema": {
+   "originalTextLength": 8,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "problema",
+       "reading": "problema",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "problema",
+         "transformedText": "problema",
+         "deinflectedText": "problema",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "città": {
+   "originalTextLength": 5,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "città",
+       "reading": "città",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "città",
+         "transformedText": "città",
+         "deinflectedText": "città",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "citta",
+       "reading": "citta",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "città",
+         "transformedText": "citta",
+         "deinflectedText": "citta",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "feminine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "citto",
+       "reading": "citto",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "città",
+         "transformedText": "citta",
+         "deinflectedText": "citto",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "ragazzi": {
+   "originalTextLength": 7,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ragazzo",
+       "reading": "ragazzo",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "ragazzi",
+         "transformedText": "ragazzi",
+         "deinflectedText": "ragazzo",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "ragazza": {
+   "originalTextLength": 7,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ragazza",
+       "reading": "ragazza",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "ragazza",
+         "transformedText": "ragazza",
+         "deinflectedText": "ragazza",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "feminine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ragazzo",
+       "reading": "ragazzo",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "ragazza",
+         "transformedText": "ragazza",
+         "deinflectedText": "ragazzo",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "il": {
+   "originalTextLength": 2,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "il",
+       "reading": "il",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "il",
+         "transformedText": "il",
+         "deinflectedText": "il",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "singular masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "i/languages A to L",
+       "reading": "i/languages A to L",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "il",
+         "transformedText": "il",
+         "deinflectedText": "i/languages A to L",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "char",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "singular masculine"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "Tuscany"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "alt-of"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "masculine"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "obsolete"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "singular"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "gli",
+       "reading": "gli",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "il",
+         "transformedText": "il",
+         "deinflectedText": "gli",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "non-std",
+         "category": "usage"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "singular masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "l'",
+       "reading": "l'",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "il",
+         "transformedText": "il",
+         "deinflectedText": "l'",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "abbv",
+         "category": "morphology"
+        },
+        {
+         "name": "def",
+         "category": "definiteness"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "abbv",
+         "category": "morphology"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "singular masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "la",
+       "reading": "la",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "il",
+         "transformedText": "il",
+         "deinflectedText": "la",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "singular masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "le",
+       "reading": "le",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "il",
+         "transformedText": "il",
+         "deinflectedText": "le",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "singular masculine"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "Tuscany"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "alt-of"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "masculine"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "obsolete"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "singular"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "lo",
+       "reading": "lo",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "il",
+         "transformedText": "il",
+         "deinflectedText": "lo",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "la": {
+   "originalTextLength": 2,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "alt-of"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "feminine"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "formal"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "la",
+       "reading": "la",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "la",
+         "transformedText": "la",
+         "deinflectedText": "la",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "feminine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "il",
+       "reading": "il",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "la",
+         "transformedText": "la",
+         "deinflectedText": "il",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "feminine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "lo",
+       "reading": "lo",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "la",
+         "transformedText": "la",
+         "deinflectedText": "lo",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "è": {
+   "originalTextLength": 1,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "alt-of"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "misspelling"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "uppercase"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "è",
+       "reading": "è",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "è",
+         "transformedText": "è",
+         "deinflectedText": "è",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "char",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person singular present indicative"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "essere",
+       "reading": "essere",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "è",
+         "transformedText": "è",
+         "deinflectedText": "essere",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "uppercase"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "e",
+       "reading": "e",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "è",
+         "transformedText": "e",
+         "deinflectedText": "e",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "char",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "conj",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "lowercase"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "E",
+       "reading": "E",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "è",
+         "transformedText": "E",
+         "deinflectedText": "E",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "char",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "abbv",
+         "category": "morphology"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "mangia": {
+   "originalTextLength": 6,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "second-person singular imperative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person singular present indicative"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "mangiare",
+       "reading": "mangiare",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "mangia",
+         "transformedText": "mangia",
+         "deinflectedText": "mangiare",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "parla": {
+   "originalTextLength": 5,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "second-person singular imperative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person singular present indicative"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "parlare",
+       "reading": "parlare",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "parla",
+         "transformedText": "parla",
+         "deinflectedText": "parlare",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "La": {
+   "originalTextLength": 2,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "alt-of"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "feminine"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "formal"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "la",
+       "reading": "la",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "La",
+         "transformedText": "la",
+         "deinflectedText": "la",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "feminine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "il",
+       "reading": "il",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "La",
+         "transformedText": "la",
+         "deinflectedText": "il",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "feminine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "lo",
+       "reading": "lo",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "La",
+         "transformedText": "la",
+         "deinflectedText": "lo",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "dell'uomo": {
+   "originalTextLength": 0,
+   "dictionaryEntries": []
+  },
+  "dell'": {
+   "originalTextLength": 5,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "dell'",
+       "reading": "dell'",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "dell'",
+         "transformedText": "dell'",
+         "deinflectedText": "dell'",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "abbv",
+         "category": "morphology"
+        },
+        {
+         "name": "contr",
+         "category": "morphology"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "grande": {
+   "originalTextLength": 6,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "grande",
+       "reading": "grande",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "grande",
+         "transformedText": "grande",
+         "deinflectedText": "grande",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "adj",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "rare",
+         "category": "archaism"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "adv",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "intj",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "uncount",
+         "category": "grammar"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "Grande",
+       "reading": "Grande",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "grande",
+         "transformedText": "Grande",
+         "deinflectedText": "Grande",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "name",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "Il": {
+   "originalTextLength": 2,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "il",
+       "reading": "il",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Il",
+         "transformedText": "il",
+         "deinflectedText": "il",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "singular masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "i/languages A to L",
+       "reading": "i/languages A to L",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Il",
+         "transformedText": "il",
+         "deinflectedText": "i/languages A to L",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "char",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "singular masculine"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "Tuscany"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "alt-of"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "masculine"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "obsolete"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "singular"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "gli",
+       "reading": "gli",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Il",
+         "transformedText": "il",
+         "deinflectedText": "gli",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "non-std",
+         "category": "usage"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "singular masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "l'",
+       "reading": "l'",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Il",
+         "transformedText": "il",
+         "deinflectedText": "l'",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "abbv",
+         "category": "morphology"
+        },
+        {
+         "name": "def",
+         "category": "definiteness"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "abbv",
+         "category": "morphology"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "singular masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "la",
+       "reading": "la",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Il",
+         "transformedText": "il",
+         "deinflectedText": "la",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "singular masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "le",
+       "reading": "le",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Il",
+         "transformedText": "il",
+         "deinflectedText": "le",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "singular masculine"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "Tuscany"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "alt-of"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "masculine"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "obsolete"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "singular"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "lo",
+       "reading": "lo",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Il",
+         "transformedText": "il",
+         "deinflectedText": "lo",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "ragazzo": {
+   "originalTextLength": 7,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ragazzo",
+       "reading": "ragazzo",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "ragazzo",
+         "transformedText": "ragazzo",
+         "deinflectedText": "ragazzo",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ragazza",
+       "reading": "ragazza",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "ragazzo",
+         "transformedText": "ragazzo",
+         "deinflectedText": "ragazza",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "un": {
+   "originalTextLength": 2,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "un",
+       "reading": "un",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "un",
+         "transformedText": "un",
+         "deinflectedText": "un",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "abbv",
+         "category": "morphology"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "num",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "abbv",
+         "category": "morphology"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "abbv",
+         "category": "morphology"
+        },
+        {
+         "name": "lit",
+         "category": "register"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "Le": {
+   "originalTextLength": 2,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "alt-of"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "alternative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "feminine"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "formal"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "le",
+       "reading": "le",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Le",
+         "transformedText": "le",
+         "deinflectedText": "le",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural feminine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "i/languages A to L",
+       "reading": "i/languages A to L",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Le",
+         "transformedText": "le",
+         "deinflectedText": "i/languages A to L",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "char",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural feminine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "gli",
+       "reading": "gli",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Le",
+         "transformedText": "le",
+         "deinflectedText": "gli",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "non-std",
+         "category": "usage"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural feminine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "il",
+       "reading": "il",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Le",
+         "transformedText": "le",
+         "deinflectedText": "il",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural feminine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "l'",
+       "reading": "l'",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Le",
+         "transformedText": "le",
+         "deinflectedText": "l'",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "abbv",
+         "category": "morphology"
+        },
+        {
+         "name": "def",
+         "category": "definiteness"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "abbv",
+         "category": "morphology"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural feminine"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "la",
+       "reading": "la",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Le",
+         "transformedText": "le",
+         "deinflectedText": "la",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural feminine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "lo",
+       "reading": "lo",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Le",
+         "transformedText": "le",
+         "deinflectedText": "lo",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "le": {
+   "originalTextLength": 2,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "alt-of"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "alternative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "feminine"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "formal"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "le",
+       "reading": "le",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "le",
+         "transformedText": "le",
+         "deinflectedText": "le",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural feminine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "i/languages A to L",
+       "reading": "i/languages A to L",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "le",
+         "transformedText": "le",
+         "deinflectedText": "i/languages A to L",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "char",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural feminine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "gli",
+       "reading": "gli",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "le",
+         "transformedText": "le",
+         "deinflectedText": "gli",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "non-std",
+         "category": "usage"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural feminine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "il",
+       "reading": "il",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "le",
+         "transformedText": "le",
+         "deinflectedText": "il",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural feminine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "l'",
+       "reading": "l'",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "le",
+         "transformedText": "le",
+         "deinflectedText": "l'",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "abbv",
+         "category": "morphology"
+        },
+        {
+         "name": "def",
+         "category": "definiteness"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "abbv",
+         "category": "morphology"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural feminine"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "la",
+       "reading": "la",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "le",
+         "transformedText": "le",
+         "deinflectedText": "la",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural feminine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "lo",
+       "reading": "lo",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "le",
+         "transformedText": "le",
+         "deinflectedText": "lo",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "della": {
+   "originalTextLength": 5,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "della",
+       "reading": "della",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "della",
+         "transformedText": "della",
+         "deinflectedText": "della",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "abbv",
+         "category": "morphology"
+        },
+        {
+         "name": "contr",
+         "category": "morphology"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "Gli": {
+   "originalTextLength": 3,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "gli",
+       "reading": "gli",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Gli",
+         "transformedText": "gli",
+         "deinflectedText": "gli",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "non-std",
+         "category": "usage"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "i/languages A to L",
+       "reading": "i/languages A to L",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Gli",
+         "transformedText": "gli",
+         "deinflectedText": "i/languages A to L",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "char",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "il",
+       "reading": "il",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Gli",
+         "transformedText": "gli",
+         "deinflectedText": "il",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "l'",
+       "reading": "l'",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Gli",
+         "transformedText": "gli",
+         "deinflectedText": "l'",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "abbv",
+         "category": "morphology"
+        },
+        {
+         "name": "def",
+         "category": "definiteness"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "abbv",
+         "category": "morphology"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "la",
+       "reading": "la",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Gli",
+         "transformedText": "gli",
+         "deinflectedText": "la",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural masculine"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "le",
+       "reading": "le",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Gli",
+         "transformedText": "gli",
+         "deinflectedText": "le",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "lo",
+       "reading": "lo",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Gli",
+         "transformedText": "gli",
+         "deinflectedText": "lo",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "gli": {
+   "originalTextLength": 3,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "gli",
+       "reading": "gli",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "gli",
+         "transformedText": "gli",
+         "deinflectedText": "gli",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "non-std",
+         "category": "usage"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "i/languages A to L",
+       "reading": "i/languages A to L",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "gli",
+         "transformedText": "gli",
+         "deinflectedText": "i/languages A to L",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "char",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "il",
+       "reading": "il",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "gli",
+         "transformedText": "gli",
+         "deinflectedText": "il",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "l'",
+       "reading": "l'",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "gli",
+         "transformedText": "gli",
+         "deinflectedText": "l'",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "abbv",
+         "category": "morphology"
+        },
+        {
+         "name": "def",
+         "category": "definiteness"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "abbv",
+         "category": "morphology"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "la",
+       "reading": "la",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "gli",
+         "transformedText": "gli",
+         "deinflectedText": "la",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural masculine"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "le",
+       "reading": "le",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "gli",
+         "transformedText": "gli",
+         "deinflectedText": "le",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "lo",
+       "reading": "lo",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "gli",
+         "transformedText": "gli",
+         "deinflectedText": "lo",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "sg",
+         "category": "number"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "parlano": {
+   "originalTextLength": 7,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person plural present indicative"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "parlare",
+       "reading": "parlare",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "parlano",
+         "transformedText": "parlano",
+         "deinflectedText": "parlare",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "nella": {
+   "originalTextLength": 5,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "nella",
+       "reading": "nella",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "nella",
+         "transformedText": "nella",
+         "deinflectedText": "nella",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-it-en",
+       "tags": [
+        {
+         "name": "abbv",
+         "category": "morphology"
+        },
+        {
+         "name": "contr",
+         "category": "morphology"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ }
+}

@@ -1,7 +1,7 @@
 import {expect, test} from './support/app';
 import {CLIPS, CLIPS_ASS, CLIPS_SRT, inClip} from './support/clips';
 import {
-  domSubtitle, expectDomSubtitle, launchClips, markHistory, mpvPaused, mpvSubtitlesVisible, mpvTime, press, seekTo, setSubtitleRenderer,
+  domSubtitle, expectDomSubtitle, goToProjectList, launchClips, openProjectFromList, markHistory, mpvPaused, mpvSubtitlesVisible, mpvTime, press, seekTo, setSubtitleRenderer,
   snapshot, startPlaying, stepsSince, waitForState, waitForTime
 } from './support/player';
 import type {Page} from '@playwright/test';
@@ -80,6 +80,32 @@ for (const [name, subtitle] of [['SRT', CLIPS_SRT], ['ASS', CLIPS_ASS]] as const
       await expectDomSubtitle(ui, clip.text);
     }
   });
+}
+
+test('the project remembers whether its subtitles were shown, across leaving it and opening it again', async ({launch}) => {
+  const {ui} = await launchClips(launch, {subtitle: CLIPS_SRT, lastPlaybackTime: inClip(1, 0.5)});
+  await expect.poll(() => domVisible(ui), {message: 'shown on the first open'}).toBe(true);
+
+  await press(ui, 'c');
+  await expect.poll(() => domVisible(ui), {message: 'hidden with C'}).toBe(false);
+  await goToProjectList(ui);
+  await openProjectFromList(ui, 'clips.mp4');
+  await expectDomSubtitleText(ui);
+  await expect.poll(() => domVisible(ui), {message: 'still hidden after reopening'}).toBe(false);
+
+  await press(ui, 'c');
+  await expect.poll(() => domVisible(ui), {message: 'shown again with C'}).toBe(true);
+  await goToProjectList(ui);
+  await openProjectFromList(ui, 'clips.mp4');
+  await expectDomSubtitleText(ui);
+  // Long enough for the player's first state updates after the open to arrive
+  await ui.waitForTimeout(1500);
+  expect(await domVisible(ui), 'still shown after reopening').toBe(true);
+});
+
+/** The subtitle line is in the DOM (shown or hidden): the project has finished opening. */
+async function expectDomSubtitleText(ui: Page): Promise<void> {
+  await expect.poll(async () => (await domSubtitle(ui)).text, {message: 'the subtitle line is rendered'}).not.toBeNull();
 }
 
 test('Down reveals hidden subtitles first and continues playback on the second press', async ({launch}) => {

@@ -342,6 +342,17 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
     group: KeyboardShortcutGroup.Subtitles
   },
   {
+    action: KeyboardAction.ToggleWordColours,
+    key: 'g',
+    ctrlKey: true,
+    shiftKey: true,
+    description: 'Colour words by gender on or off',
+    displayKeys: ['Ctrl', 'Shift', 'G'],
+    scope: KeyboardShortcutScope.Project,
+    type: ActionType.SingleShot,
+    group: KeyboardShortcutGroup.Subtitles
+  },
+  {
     action: KeyboardAction.FindInSubtitles,
     key: 'f',
     ctrlKey: true,

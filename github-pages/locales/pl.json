@@ -91,6 +91,7 @@
       "desc": "Przestań przełączać się do przeglądarki systemowej (Alt+Tab) i wybijać się z rytmu nauki:",
       "list": [
         "<b class=\"highlight\">Słowniki offline</b>: Najedź kursorem na dowolne słowo, aby natychmiast zobaczyć jego definicję w słowniku offline, obsługiwanym przez wbudowane rozszerzenie <a class=\"highlight\" href=\"https://github.com/yomidevs/yomitan\" target=\"_blank\">Yomitan</a>.",
+        "<b class=\"highlight\">Kolory rodzajów</b>: Włącz w ustawieniach, aby rzeczowniki i ich rodzajniki były kolorowane według rodzaju gramatycznego, odczytanego ze słowników offline (niemiecki, francuski, hiszpański, włoski, portugalski, rosyjski, polski i każdy inny język, którego słownik podaje rodzaj). Skrót Ctrl+Shift+G.",
         "<b class=\"highlight\">Wyszukiwanie online</b>: Kliknij na dowolne słowo, aby otworzyć wbudowaną przeglądarkę z dowolną stroną www skonfigurowaną w ustawieniach.",
         "<b class=\"highlight\">Integracja z AI</b>: Wysyłaj zaznaczony tekst bezpośrednio do chatbotów AI (np. ChatGPT, Gemini, DeepL) z własnymi prefiksami (np. \"Wyjaśnij gramatykę w tym zdaniu:\").",
         "<b class=\"highlight\">Wykrywanie słów</b>: Zaawansowane wykrywanie granic słów pozwala na precyzyjne zaznaczanie fraz, nawet w językach bez spacji, takich jak japoński.",

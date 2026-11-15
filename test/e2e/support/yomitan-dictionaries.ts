@@ -9,6 +9,8 @@ export interface TestTerm {
   glosses: string[];
   /** Yomitan deinflection rules of the headword, e.g. 'v' for an English verb */
   rules?: string;
+  /** Definition tags, space separated, e.g. 'n fem' (word colouring) */
+  tags?: string;
 }
 
 export interface TestDictionary {
@@ -17,6 +19,8 @@ export interface TestDictionary {
   sourceLanguage?: string;
   targetLanguage?: string;
   terms: TestTerm[];
+  /** Tag bank rows: [name, category], e.g. ['fem', 'gender-feminine'] */
+  tagBank?: Array<[string, string]>;
 }
 
 /** A zip that stores its entries uncompressed; Yomitan's importer reads it like any other dictionary archive. */
@@ -72,11 +76,17 @@ export function writeTestDictionary(dir: string, dict: TestDictionary): string {
     index['targetLanguage'] = dict.targetLanguage;
   }
   // [term, reading, definitionTags, rules, score, glossary, sequence, termTags]
-  const bank = dict.terms.map((t, i) => [t.term, '', '', t.rules ?? '', 0, t.glosses, i + 1, '']);
-  const zip = storedZip([
+  const bank = dict.terms.map((t, i) => [t.term, '', t.tags ?? '', t.rules ?? '', 0, t.glosses, i + 1, '']);
+  const files = [
     {name: 'index.json', data: Buffer.from(JSON.stringify(index), 'utf8')},
     {name: 'term_bank_1.json', data: Buffer.from(JSON.stringify(bank), 'utf8')}
-  ]);
+  ];
+  if (dict.tagBank) {
+    // [name, category, order, notes, score]
+    const tags = dict.tagBank.map(([name, category]) => [name, category, 0, name, 0]);
+    files.push({name: 'tag_bank_1.json', data: Buffer.from(JSON.stringify(tags), 'utf8')});
+  }
+  const zip = storedZip(files);
   fs.mkdirSync(dir, {recursive: true});
   const file = path.join(dir, `${dict.title}.zip`);
   fs.writeFileSync(file, zip);
@@ -112,7 +122,7 @@ export async function enabledDictionaries(ui: Page): Promise<string[]> {
  * Imports the archives the way a user does: through the file input of Yomitan's own settings page, opened in a
  * hidden window of its own. Every imported dictionary is switched on in the current profile, as Yomitan does.
  */
-export async function importDictionaries(app: ElectronApplication, ui: Page, files: string[]): Promise<void> {
+export async function importDictionaries(app: ElectronApplication, ui: Page, files: string[], timeoutMs = 30_000): Promise<void> {
   const before = (await profileDictionaries(ui)).length;
   const extensionId: string = await ui.evaluate(() => (window as any).electronAPI.getYomitanExtensionId());
   const settingsUrl = `chrome-extension://${extensionId}/settings.html`;
@@ -131,7 +141,7 @@ export async function importDictionaries(app: ElectronApplication, ui: Page, fil
   await settings.waitForTimeout(1000);
   await settings.locator('#dictionary-import-file-input').setInputFiles(files);
 
-  const deadline = Date.now() + 30_000;
+  const deadline = Date.now() + timeoutMs;
   while ((await profileDictionaries(ui)).length < before + files.length) {
     if (Date.now() > deadline) {
       throw new Error(`Import did not finish: ${JSON.stringify(await profileDictionaries(ui))}`);

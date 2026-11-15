@@ -1,0 +1,51 @@
+// The title and the preview stay in view together while the settings below are changed; the background hides what
+// scrolls under the title
+.word-colours-preview-block {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--p-content-background);
+  padding-bottom: 1rem;
+}
+
+.preview-title {
+  margin-bottom: 0.5rem;
+}
+
+.word-colours-preview {
+  font-family: var(--app-font-subtitles), sans-serif;
+  font-size: 1.25rem;
+  color: white;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
+  background: #1e1e1e;
+  border-radius: var(--app-border-radius);
+  padding: 0.75rem 1rem;
+  text-align: center;
+  white-space: pre-wrap;
+
+  .dotted {
+    text-decoration: underline dotted;
+    text-decoration-thickness: 2px;
+  }
+}
+
+.colour-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.hex-input {
+  width: 6.5rem;
+  font-family: monospace;
+}
+
+.tag-input {
+  width: 14rem;
+}
+
+// Every chosen language as a chip, wrapping onto more rows instead of being cut off
+:host ::ng-deep .word-colouring-languages .p-multiselect-label {
+  flex-wrap: wrap;
+  white-space: normal;
+}

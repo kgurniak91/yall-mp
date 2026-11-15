@@ -3,9 +3,11 @@ import {AppStateService} from '../app/app-state.service';
 import {
   AppTheme,
   CustomPathKey,
+  normaliseWordColouring,
   ProjectSettings,
   SubtitleLookupBrowserType,
-  SubtitleLookupService
+  SubtitleLookupService,
+  WordColouringSettings
 } from '../../model/settings.types';
 import {ToastService} from '../../shared/services/toast/toast.service';
 
@@ -40,6 +42,9 @@ export class GlobalSettingsStateService {
   public readonly customFfmpegPath = computed(() => this.appStateService.globalSettings().customFfmpegPath || '');
   public readonly customFfprobePath = computed(() => this.appStateService.globalSettings().customFfprobePath || '');
   public readonly customAudiowaveformPath = computed(() => this.appStateService.globalSettings().customAudiowaveformPath || '');
+  public readonly wordColouring = computed(() => normaliseWordColouring(this.appStateService.globalSettings().wordColouring), {
+    equal: (a, b) => JSON.stringify(a) === JSON.stringify(b)
+  });
   public readonly theme = computed(() => this.appStateService.globalSettings().theme ?? 'system');
   public readonly srtBackgroundColor = computed(() => `rgba(0, 0, 0, ${this.srtBackgroundOpacity()})`);
   public readonly settingsReloadTrigger = this._settingsReloadTrigger.asReadonly();
@@ -150,6 +155,10 @@ export class GlobalSettingsStateService {
 
   public setHideTimeline(hideTimeline: boolean): void {
     this.appStateService.updateGlobalSettings({hideTimeline});
+  }
+
+  public setWordColouring(changes: Partial<WordColouringSettings>): void {
+    this.appStateService.updateGlobalSettings({wordColouring: normaliseWordColouring({...this.wordColouring(), ...changes})});
   }
 
   public setPauseOnSubtitleHover(pauseOnSubtitleHover: boolean): void {

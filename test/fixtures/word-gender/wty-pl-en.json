@@ -1,0 +1,2820 @@
+{
+ "dictionary": "wty-pl-en",
+ "language": "pl",
+ "recorded": "2026-11-15",
+ "lookups": {
+  "dom": {
+   "originalTextLength": 3,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "dom",
+       "reading": "dom",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "dom",
+         "transformedText": "dom",
+         "deinflectedText": "dom",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "domu": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "genitive/locative/vocative singular"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "genitive/vocative/locative singular"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "dom",
+       "reading": "dom",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "domu",
+         "transformedText": "domu",
+         "deinflectedText": "dom",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "książka": {
+   "originalTextLength": 7,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "książka",
+       "reading": "książka",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "książka",
+         "transformedText": "książka",
+         "deinflectedText": "książka",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "diminutive"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "księga",
+       "reading": "księga",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "książka",
+         "transformedText": "książka",
+         "deinflectedText": "księga",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "książki": {
+   "originalTextLength": 7,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "genitive singular"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative/accusative/vocative plural"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "książka",
+       "reading": "książka",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "książki",
+         "transformedText": "książki",
+         "deinflectedText": "książka",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "książkę": {
+   "originalTextLength": 7,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "accusative singular"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "książka",
+       "reading": "książka",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "książkę",
+         "transformedText": "książkę",
+         "deinflectedText": "książka",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "okno": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "okno",
+       "reading": "okno",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "okno",
+         "transformedText": "okno",
+         "deinflectedText": "okno",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "neut",
+         "category": "gender-neuter"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "kot": {
+   "originalTextLength": 3,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "kot",
+       "reading": "kot",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "kot",
+         "transformedText": "kot",
+         "deinflectedText": "kot",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "kotka",
+       "reading": "kotka",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "kot",
+         "transformedText": "kot",
+         "deinflectedText": "kotka",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "Kot",
+       "reading": "Kot",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "kot",
+         "transformedText": "Kot",
+         "deinflectedText": "Kot",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "name",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "name",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "name",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "indecl",
+         "category": "morphology"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "kota": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "accusative/genitive singular"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "genitive/accusative singular"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "kot",
+       "reading": "kot",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "kota",
+         "transformedText": "kota",
+         "deinflectedText": "kot",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "genitive/accusative singular"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "Kot",
+       "reading": "Kot",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "kota",
+         "transformedText": "Kota",
+         "deinflectedText": "Kot",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "name",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "name",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "name",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "indecl",
+         "category": "morphology"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "mężczyzna": {
+   "originalTextLength": 9,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "mężczyzna",
+       "reading": "mężczyzna",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "mężczyzna",
+         "transformedText": "mężczyzna",
+         "deinflectedText": "mężczyzna",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "ludzie": {
+   "originalTextLength": 6,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ludzie",
+       "reading": "ludzie",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "ludzie",
+         "transformedText": "ludzie",
+         "deinflectedText": "ludzie",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "pl",
+         "category": "number"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative/vocative plural"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "człowiek",
+       "reading": "człowiek",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "ludzie",
+         "transformedText": "ludzie",
+         "deinflectedText": "człowiek",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "alternative"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ludu",
+       "reading": "ludu",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "ludzie",
+         "transformedText": "ludzie",
+         "deinflectedText": "ludu",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative/vocative plural"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ludź",
+       "reading": "ludź",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "ludzie",
+         "transformedText": "ludzie",
+         "deinflectedText": "ludź",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "inf",
+         "category": "register"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "locative/vocative singular"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "vocative/locative singular"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "lud",
+       "reading": "lud",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "ludzie",
+         "transformedText": "ludzie",
+         "deinflectedText": "lud",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "kobieta": {
+   "originalTextLength": 7,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "kobieta",
+       "reading": "kobieta",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "kobieta",
+         "transformedText": "kobieta",
+         "deinflectedText": "kobieta",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "kobiety": {
+   "originalTextLength": 7,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "genitive singular"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative/accusative/vocative plural"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "kobieta",
+       "reading": "kobieta",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "kobiety",
+         "transformedText": "kobiety",
+         "deinflectedText": "kobieta",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "dziecko": {
+   "originalTextLength": 7,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "dziecko",
+       "reading": "dziecko",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "dziecko",
+         "transformedText": "dziecko",
+         "deinflectedText": "dziecko",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "neut",
+         "category": "gender-neuter"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "dzieci": {
+   "originalTextLength": 6,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "dzieci",
+       "reading": "dzieci",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "dzieci",
+         "transformedText": "dzieci",
+         "deinflectedText": "dzieci",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "intj",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative/genitive/accusative/vocative plural"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "dziecko",
+       "reading": "dziecko",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "dzieci",
+         "transformedText": "dzieci",
+         "deinflectedText": "dziecko",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "neut",
+         "category": "gender-neuter"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "oczy": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative/accusative/vocative plural"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "oko",
+       "reading": "oko",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "oczy",
+         "transformedText": "oczy",
+         "deinflectedText": "oko",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "neut",
+         "category": "gender-neuter"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "neut",
+         "category": "gender-neuter"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "rękę": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "accusative singular"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ręka",
+       "reading": "ręka",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "rękę",
+         "transformedText": "rękę",
+         "deinflectedText": "ręka",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "mieszkanie": {
+   "originalTextLength": 10,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "mieszkanie",
+       "reading": "mieszkanie",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "mieszkanie",
+         "transformedText": "mieszkanie",
+         "deinflectedText": "mieszkanie",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "neut",
+         "category": "gender-neuter"
+        },
+        {
+         "name": "count",
+         "category": "grammar"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "noun-from-verb"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "verbal noun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "mieszkać",
+       "reading": "mieszkać",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "mieszkanie",
+         "transformedText": "mieszkanie",
+         "deinflectedText": "mieszkać",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "vi",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "impf",
+         "category": "aspect"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "vi",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "pf",
+         "category": "aspect"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "psa": {
+   "originalTextLength": 3,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "accusative/genitive singular"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "genitive/accusative singular"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "pies",
+       "reading": "pies",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "psa",
+         "transformedText": "psa",
+         "deinflectedText": "pies",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "derog",
+         "category": "register"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "jest": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "jest",
+       "reading": "jest",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "jest",
+         "transformedText": "jest",
+         "deinflectedText": "jest",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person singular present"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "być",
+       "reading": "być",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "jest",
+         "transformedText": "jest",
+         "deinflectedText": "być",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "impf",
+         "category": "aspect"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "czyta": {
+   "originalTextLength": 5,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person singular present"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "czytać",
+       "reading": "czytać",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "czyta",
+         "transformedText": "czyta",
+         "deinflectedText": "czytać",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "vt",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "impf",
+         "category": "aspect"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "on": {
+   "originalTextLength": 2,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "on",
+       "reading": "on",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "on",
+         "transformedText": "on",
+         "deinflectedText": "on",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "dated",
+         "category": "archaism"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ona",
+       "reading": "ona",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "on",
+         "transformedText": "on",
+         "deinflectedText": "ona",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ono",
+       "reading": "ono",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "on",
+         "transformedText": "on",
+         "deinflectedText": "ono",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "neut",
+         "category": "gender-neuter"
+        },
+        {
+         "name": "animate",
+         "category": "animacy"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "ona": {
+   "originalTextLength": 3,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ona",
+       "reading": "ona",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "ona",
+         "transformedText": "ona",
+         "deinflectedText": "ona",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "feminine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ono",
+       "reading": "ono",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "ona",
+         "transformedText": "ona",
+         "deinflectedText": "ono",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "neut",
+         "category": "gender-neuter"
+        },
+        {
+         "name": "animate",
+         "category": "animacy"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "feminine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "on",
+       "reading": "on",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "ona",
+         "transformedText": "ona",
+         "deinflectedText": "on",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "dated",
+         "category": "archaism"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "Dom": {
+   "originalTextLength": 3,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "dom",
+       "reading": "dom",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Dom",
+         "transformedText": "dom",
+         "deinflectedText": "dom",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        },
+        {
+         "name": "inanim",
+         "category": "animacy"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "Kobieta": {
+   "originalTextLength": 7,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "kobieta",
+       "reading": "kobieta",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Kobieta",
+         "transformedText": "kobieta",
+         "deinflectedText": "kobieta",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "w": {
+   "originalTextLength": 1,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "uppercase"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "w",
+       "reading": "w",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "w",
+         "transformedText": "w",
+         "deinflectedText": "w",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "char",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "prep",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "lowercase"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "W",
+       "reading": "W",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "w",
+         "transformedText": "W",
+         "deinflectedText": "W",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "char",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "Dzieci": {
+   "originalTextLength": 6,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "dzieci",
+       "reading": "dzieci",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Dzieci",
+         "transformedText": "dzieci",
+         "deinflectedText": "dzieci",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "intj",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative/genitive/accusative/vocative plural"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "dziecko",
+       "reading": "dziecko",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Dzieci",
+         "transformedText": "dzieci",
+         "deinflectedText": "dziecko",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "neut",
+         "category": "gender-neuter"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "mają": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person plural present"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "maić",
+       "reading": "maić",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "mają",
+         "transformedText": "mają",
+         "deinflectedText": "maić",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "impf",
+         "category": "aspect"
+        },
+        {
+         "name": "lit",
+         "category": "register"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person plural present"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "mieć",
+       "reading": "mieć",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "mają",
+         "transformedText": "mają",
+         "deinflectedText": "mieć",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "impf",
+         "category": "aspect"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "instrumental singular"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "Maja",
+       "reading": "Maja",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "mają",
+         "transformedText": "Mają",
+         "deinflectedText": "Maja",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        },
+        {
+         "name": "name",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "To": {
+   "originalTextLength": 2,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "to",
+       "reading": "to",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "To",
+         "transformedText": "to",
+         "deinflectedText": "to",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "conj",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "ptcl",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative/accusative/vocative singular neuter/neuter"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ten",
+       "reading": "ten",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "To",
+         "transformedText": "to",
+         "deinflectedText": "ten",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "ptcl",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "to": {
+   "originalTextLength": 2,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "to",
+       "reading": "to",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "to",
+         "transformedText": "to",
+         "deinflectedText": "to",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "conj",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "ptcl",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative/accusative/vocative singular neuter/neuter"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ten",
+       "reading": "ten",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "to",
+         "transformedText": "to",
+         "deinflectedText": "ten",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "ptcl",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "moje": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "accusative singular neuter"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative/accusative/vocative plural nonvirile"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "nominative/accusative/vocative singular neuter"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "mój",
+       "reading": "mój",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "moje",
+         "transformedText": "moje",
+         "deinflectedText": "mój",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "Mężczyzna": {
+   "originalTextLength": 9,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "mężczyzna",
+       "reading": "mężczyzna",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Mężczyzna",
+         "transformedText": "mężczyzna",
+         "deinflectedText": "mężczyzna",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "gender-masculine"
+        }
+       ]
+      },
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "gender-feminine"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "widzi": {
+   "originalTextLength": 5,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person singular present"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "widzieć",
+       "reading": "widzieć",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "widzi",
+         "transformedText": "widzi",
+         "deinflectedText": "widzieć",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "wty-pl-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "impf",
+         "category": "aspect"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ }
+}

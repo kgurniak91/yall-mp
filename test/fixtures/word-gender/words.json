@@ -1,0 +1,92 @@
+{
+  "_comment": "Looked up by test/e2e/record-word-gender.spec.ts in real dictionaries: every word below, every word of the sentences (elisions split, sentence-initial capitals also lowercased). Lemmas of each gender, plurals and case forms (form-of entries without their own gender tag), noun/verb homographs, nouns with two genders, and non-nouns that must stay uncoloured. Expected results live in test/word-gender.test.ts.",
+  "words": {
+    "de": [
+      "Pferd", "Weisheit", "Segen", "Fluch", "Mann", "Frau", "Kind", "Mädchen", "Haus",
+      "Häuser", "Kindern", "Männer", "Frauen", "Hauses", "Lüfte", "Umhang", "Mittag", "Mannschaft",
+      "Welt", "Menschen", "Lorbeer", "Zeit", "Tür", "Teil", "See", "Essen", "Leben",
+      "Hast", "hast", "Wir", "wir", "Sag", "Die", "die", "der", "das", "einen", "Saft", "Meine", "Grobi"
+    ],
+    "fr": [
+      "maison", "maisons", "livre", "porte", "artiste", "élève", "cheval", "chevaux", "eau", "homme",
+      "femmes", "yeux", "problème", "mer", "travail", "travaux", "voiture", "chiens",
+      "la", "le", "les", "est", "mange", "parle", "Maison"
+    ],
+    "es": [
+      "casa", "casas", "libro", "vino", "agua", "mano", "manos", "problema", "perro", "perros",
+      "mar", "día", "ciudades", "leche", "niña", "niños",
+      "el", "la", "es", "como", "habla", "Casa"
+    ],
+    "it": [
+      "casa", "case", "libro", "uomo", "uomini", "porta", "mano", "mani", "problema", "città",
+      "ragazzi", "ragazza", "il", "la", "è", "mangia", "parla"
+    ],
+    "pt": [
+      "casa", "casas", "livro", "homem", "mulher", "mulheres", "porta", "água", "mão", "mãos",
+      "problema", "menino", "pão", "cidade", "o", "a", "é", "come", "fala"
+    ],
+    "ru": [
+      "дом", "дома", "книга", "книги", "книгу", "окно", "окна", "кошкой", "путь", "кофе",
+      "люди", "людей", "девочка", "мальчики", "время", "времени", "мать", "папа", "собаку",
+      "это", "читает", "он", "она", "Дом"
+    ],
+    "pl": [
+      "dom", "domu", "książka", "książki", "książkę", "okno", "kot", "kota", "mężczyzna", "ludzie",
+      "kobieta", "kobiety", "dziecko", "dzieci", "oczy", "rękę", "mieszkanie", "psa",
+      "jest", "czyta", "on", "ona", "Dom"
+    ]
+  },
+  "sentences": {
+    "de": [
+      "Meine Weisheit ist sowohl ein Segen als auch ein Fluch.",
+      "Die Welt, in der die Menschen leben.",
+      "Sag mal, ist das der Lorbeer?",
+      "Hast du Zeit?",
+      "Ich trinke einen kalten Saft.",
+      "Er fliegt mit einem Umhang durch die Lüfte.",
+      "Grobi, Elin, Ebby, Wolle, Samson, Pferd",
+      "Die Tür des Hauses, die offen war.",
+      "Das Kind spielt mit den Kindern.",
+      "Ich habe eine. Das Kind lacht."
+    ],
+    "fr": [
+      "La porte de la maison est ouverte.",
+      "Il porte un livre.",
+      "L'eau et l'homme.",
+      "Les chevaux mangent dans la grande prairie.",
+      "Je parle avec l'artiste.",
+      "C'est une belle voiture."
+    ],
+    "es": [
+      "Las casas son grandes.",
+      "El agua está fría.",
+      "Él habla con la niña.",
+      "Los perros comen en el jardín.",
+      "Tengo un problema con mi mano."
+    ],
+    "it": [
+      "La casa dell'uomo è grande.",
+      "Il ragazzo porta un libro.",
+      "Le mani della ragazza.",
+      "Gli uomini parlano nella città."
+    ],
+    "pt": [
+      "A casa é grande.",
+      "O menino come o pão.",
+      "As mulheres falam com os homens.",
+      "Ele abre a porta da cidade."
+    ],
+    "ru": [
+      "Девочка читает книгу дома.",
+      "Мальчики видят собаку.",
+      "У меня нет времени.",
+      "Это мой дом."
+    ],
+    "pl": [
+      "Kobieta czyta książkę w domu.",
+      "Dzieci mają psa.",
+      "To jest moje mieszkanie.",
+      "Mężczyzna widzi kota."
+    ]
+  }
+}

@@ -185,6 +185,13 @@ describe('KeyboardShortcutsHelperService', () => {
     });
   });
 
+  it('toggles word colours with Ctrl+Shift+G (not with G alone or Ctrl+G)', () => {
+    const shortcut = (init: KeyboardEventInit) => service.getShortcutForEvent(new KeyboardEvent('keydown', init), KeyboardShortcutScope.Project)?.action;
+    expect(shortcut({key: 'G', ctrlKey: true, shiftKey: true})).toBe(KeyboardAction.ToggleWordColours);
+    expect(shortcut({key: 'g', ctrlKey: true})).not.toBe(KeyboardAction.ToggleWordColours);
+    expect(shortcut({key: 'g'})).not.toBe(KeyboardAction.ToggleWordColours);
+  });
+
   describe('on macOS', () => {
     beforeEach(() => {
       spyOnProperty(navigator, 'platform', 'get').and.returnValue('MacIntel');
@@ -224,6 +231,15 @@ describe('KeyboardShortcutsHelperService', () => {
       const f1 = new KeyboardEvent('keydown', {key: 'F1'});
       expect(service.getShortcutForEvent(cmdSlash, KeyboardShortcutScope.Global)?.action).toBe(KeyboardAction.OpenHelpDialog);
       expect(service.getShortcutForEvent(f1, KeyboardShortcutScope.Global)?.action).toBe(KeyboardAction.OpenHelpDialog);
+    });
+
+    it('toggles word colours with Command+Shift+G, not Ctrl+Shift+G, and lists it with the Command symbol', () => {
+      const withCommand = new KeyboardEvent('keydown', {key: 'G', metaKey: true, shiftKey: true});
+      const withCtrl = new KeyboardEvent('keydown', {key: 'G', ctrlKey: true, shiftKey: true});
+      expect(service.getShortcutForEvent(withCommand, KeyboardShortcutScope.Project)?.action).toBe(KeyboardAction.ToggleWordColours);
+      expect(service.getShortcutForEvent(withCtrl, KeyboardShortcutScope.Project)).toBeUndefined();
+      const toggle = service.getGroupedShortcuts().flatMap(g => g.shortcuts).find(s => s.action === KeyboardAction.ToggleWordColours);
+      expect(toggle?.displayKeys[0]).toBe('⌘');
     });
 
     it('shows the Command symbol in the shortcut list', () => {

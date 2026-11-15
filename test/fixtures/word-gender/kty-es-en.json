@@ -1,0 +1,5453 @@
+{
+ "dictionary": "kty-es-en",
+ "language": "es",
+ "recorded": "2026-11-15",
+ "lookups": {
+  "casa": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "casa",
+       "reading": "casa",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "casa",
+         "transformedText": "casa",
+         "deinflectedText": "casa",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": [
+        {
+         "name": "present indicative",
+         "description": "Present indicative form of a verb"
+        }
+       ]
+      },
+      {
+       "source": "algorithm",
+       "inflectionRules": [
+        {
+         "name": "imperative",
+         "description": "Imperative form of a verb"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person singular present indicative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "second-person singular imperative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "informal second-person singular imperative"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "casar",
+       "reading": "casar",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "casa",
+         "transformedText": "casa",
+         "deinflectedText": "casar",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "casas": {
+   "originalTextLength": 5,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": [
+        {
+         "name": "present indicative",
+         "description": "Present indicative form of a verb"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "second-person singular present indicative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "informal second-person singular present indicative"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "casar",
+       "reading": "casar",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "casas",
+         "transformedText": "casas",
+         "deinflectedText": "casar",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "both",
+       "inflectionRules": [
+        {
+         "name": "plural",
+         "description": "Plural form of a noun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "casa",
+       "reading": "casa",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "casas",
+         "transformedText": "casas",
+         "deinflectedText": "casa",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "Casas",
+       "reading": "Casas",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "casas",
+         "transformedText": "Casas",
+         "deinflectedText": "Casas",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "name",
+         "category": "name"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "alternative"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "Cases",
+       "reading": "Cases",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "casas",
+         "transformedText": "Casas",
+         "deinflectedText": "Cases",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "name",
+         "category": "name"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "libro": {
+   "originalTextLength": 5,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "libro",
+       "reading": "libro",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "libro",
+         "transformedText": "libro",
+         "deinflectedText": "libro",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": [
+        {
+         "name": "present indicative",
+         "description": "Present indicative form of a verb"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "first-person singular present indicative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "first-person singular present"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "librar",
+       "reading": "librar",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "libro",
+         "transformedText": "libro",
+         "deinflectedText": "librar",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "vino": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "vino",
+       "reading": "vino",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "vino",
+         "transformedText": "vino",
+         "deinflectedText": "vino",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "past participle"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "first-person singular present"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "first-person singular preterite"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "llamar al pan, pan, y al vino, vino",
+       "reading": "llamar al pan, pan, y al vino, vino",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "vino",
+         "transformedText": "vino",
+         "deinflectedText": "llamar al pan, pan, y al vino, vino",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "idio",
+         "category": "default"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": [
+        {
+         "name": "present indicative",
+         "description": "Present indicative form of a verb"
+        }
+       ]
+      },
+      {
+       "source": "algorithm",
+       "inflectionRules": [
+        {
+         "name": "preterite",
+         "description": "Preterite (past) form of a verb"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person singular preterite indicative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person singular indicative preterite"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "venir",
+       "reading": "venir",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "vino",
+         "transformedText": "vino",
+         "deinflectedText": "venir",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "agua": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "agua",
+       "reading": "agua",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "agua",
+         "transformedText": "agua",
+         "deinflectedText": "agua",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": [
+        {
+         "name": "present indicative",
+         "description": "Present indicative form of a verb"
+        }
+       ]
+      },
+      {
+       "source": "algorithm",
+       "inflectionRules": [
+        {
+         "name": "imperative",
+         "description": "Imperative form of a verb"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person singular present indicative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "second-person singular imperative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "informal second-person singular imperative"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "aguar",
+       "reading": "aguar",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "agua",
+         "transformedText": "agua",
+         "deinflectedText": "aguar",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "mano": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "mano",
+       "reading": "mano",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "mano",
+         "transformedText": "mano",
+         "deinflectedText": "mano",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "🇨🇴",
+         "category": "dialect"
+        },
+        {
+         "name": "🇲🇽",
+         "category": "dialect"
+        },
+        {
+         "name": "🇵🇪",
+         "category": "dialect"
+        },
+        {
+         "name": "🇻🇪",
+         "category": "dialect"
+        },
+        {
+         "name": "sl",
+         "category": "default"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": [
+        {
+         "name": "present indicative",
+         "description": "Present indicative form of a verb"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "first-person singular present indicative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "first-person singular present"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "manar",
+       "reading": "manar",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "mano",
+         "transformedText": "mano",
+         "deinflectedText": "manar",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": [
+        {
+         "name": "present indicative",
+         "description": "Present indicative form of a verb"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "manir",
+       "reading": "manir",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "mano",
+         "transformedText": "mano",
+         "deinflectedText": "manir",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "manos": {
+   "originalTextLength": 5,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "both",
+       "inflectionRules": [
+        {
+         "name": "plural",
+         "description": "Plural form of a noun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "mano",
+       "reading": "mano",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "manos",
+         "transformedText": "manos",
+         "deinflectedText": "mano",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "🇨🇴",
+         "category": "dialect"
+        },
+        {
+         "name": "🇲🇽",
+         "category": "dialect"
+        },
+        {
+         "name": "🇵🇪",
+         "category": "dialect"
+        },
+        {
+         "name": "🇻🇪",
+         "category": "dialect"
+        },
+        {
+         "name": "sl",
+         "category": "default"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "problema": {
+   "originalTextLength": 8,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "problema",
+       "reading": "problema",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "problema",
+         "transformedText": "problema",
+         "deinflectedText": "problema",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "perro": {
+   "originalTextLength": 5,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "perro",
+       "reading": "perro",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "perro",
+         "transformedText": "perro",
+         "deinflectedText": "perro",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "adj",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "perros": {
+   "originalTextLength": 6,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "both",
+       "inflectionRules": [
+        {
+         "name": "plural",
+         "description": "Plural form of a noun"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "masculine plural"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "perro",
+       "reading": "perro",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "perros",
+         "transformedText": "perros",
+         "deinflectedText": "perro",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "masculine plural"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural masculine"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural",
+         "description": "Plural form of a noun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "perro",
+       "reading": "perro",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "perros",
+         "transformedText": "perros",
+         "deinflectedText": "perro",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "adj",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "mar": {
+   "originalTextLength": 3,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "mar",
+       "reading": "mar",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "mar",
+         "transformedText": "mar",
+         "deinflectedText": "mar",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "alternative abbreviation"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "marzo",
+       "reading": "marzo",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "mar",
+         "transformedText": "mar",
+         "deinflectedText": "marzo",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "día": {
+   "originalTextLength": 3,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "día",
+       "reading": "día",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "día",
+         "transformedText": "día",
+         "deinflectedText": "día",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "ciudades": {
+   "originalTextLength": 8,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "both",
+       "inflectionRules": [
+        {
+         "name": "plural",
+         "description": "Plural form of a noun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ciudad",
+       "reading": "ciudad",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "ciudades",
+         "transformedText": "ciudades",
+         "deinflectedText": "ciudad",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "leche": {
+   "originalTextLength": 5,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "leche",
+       "reading": "leche",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "leche",
+         "transformedText": "leche",
+         "deinflectedText": "leche",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "intj",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "🇪🇸",
+         "category": "dialect"
+        },
+        {
+         "name": "🇵🇭",
+         "category": "dialect"
+        },
+        {
+         "name": "vulg",
+         "category": "default"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": [
+        {
+         "name": "present subjunctive",
+         "description": "Present subjunctive form of a verb"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "first/third-person singular present subjunctive"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person singular imperative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person singular imperative negative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "formal third-person second-person-semantically singular imperative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "formal third-person second-person-semantically singular imperative negative"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "lechar",
+       "reading": "lechar",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "leche",
+         "transformedText": "leche",
+         "deinflectedText": "lechar",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "first/third-person singular present subjunctive"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person singular imperative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person singular imperative negative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "formal third-person second-person-semantically singular imperative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "formal third-person second-person-semantically singular imperative negative"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "lechar",
+       "reading": "lechar",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "leche",
+         "transformedText": "leche",
+         "deinflectedText": "lechar",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "adj",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "masc",
+         "category": "default"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "niña": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "niña",
+       "reading": "niña",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "niña",
+         "transformedText": "niña",
+         "deinflectedText": "niña",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "feminine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "niñe gender-neutral",
+       "reading": "niñe gender-neutral",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "niña",
+         "transformedText": "niña",
+         "deinflectedText": "niñe gender-neutral",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "neol",
+         "category": "default"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "feminine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "niño",
+       "reading": "niño",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "niña",
+         "transformedText": "niña",
+         "deinflectedText": "niño",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "niños": {
+   "originalTextLength": 5,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "niños",
+       "reading": "niños",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "niños",
+         "transformedText": "niños",
+         "deinflectedText": "niños",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "pl",
+         "category": "default"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "niñe gender-neutral",
+       "reading": "niñe gender-neutral",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "niños",
+         "transformedText": "niños",
+         "deinflectedText": "niñe gender-neutral",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "neol",
+         "category": "default"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "niña",
+       "reading": "niña",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "niños",
+         "transformedText": "niños",
+         "deinflectedText": "niña",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "both",
+       "inflectionRules": [
+        {
+         "name": "plural",
+         "description": "Plural form of a noun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "niño",
+       "reading": "niño",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "niños",
+         "transformedText": "niños",
+         "deinflectedText": "niño",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "el": {
+   "originalTextLength": 2,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "el",
+       "reading": "el",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "el",
+         "transformedText": "el",
+         "deinflectedText": "el",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "la",
+       "reading": "la",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "el",
+         "transformedText": "el",
+         "deinflectedText": "la",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "sg",
+         "category": "default"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "la": {
+   "originalTextLength": 2,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "la",
+       "reading": "la",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "la",
+         "transformedText": "la",
+         "deinflectedText": "la",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "sg",
+         "category": "default"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "feminine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "el",
+       "reading": "el",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "la",
+         "transformedText": "la",
+         "deinflectedText": "el",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "es": {
+   "originalTextLength": 2,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": [
+        {
+         "name": "present indicative",
+         "description": "Present indicative form of a verb"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person singular present indicative"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ser",
+       "reading": "ser",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "es",
+         "transformedText": "es",
+         "deinflectedText": "ser",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person singular present indicative"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ser",
+       "reading": "ser",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "es",
+         "transformedText": "es",
+         "deinflectedText": "ser",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": [
+        {
+         "name": "present indicative",
+         "description": "Present indicative form of a verb"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ir",
+       "reading": "ir",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "es",
+         "transformedText": "es",
+         "deinflectedText": "ir",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural",
+         "description": "Plural form of a noun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "e",
+       "reading": "e",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "es",
+         "transformedText": "es",
+         "deinflectedText": "e",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "char",
+         "category": "default"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "conj",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "both",
+       "inflectionRules": [
+        {
+         "name": "plural",
+         "description": "Plural form of a noun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "e",
+       "reading": "e",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "es",
+         "transformedText": "es",
+         "deinflectedText": "e",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": [
+        {
+         "name": "plural",
+         "description": "Plural form of a noun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "E",
+       "reading": "E",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "es",
+         "transformedText": "Es",
+         "deinflectedText": "E",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "abbv",
+         "category": "default"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "como": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "como",
+       "reading": "como",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "como",
+         "transformedText": "como",
+         "deinflectedText": "como",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "adv",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "conj",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "prep",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": [
+        {
+         "name": "present indicative",
+         "description": "Present indicative form of a verb"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "first-person singular present indicative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "first-person singular present"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "comer",
+       "reading": "comer",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "como",
+         "transformedText": "como",
+         "deinflectedText": "comer",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "first-person singular present indicative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "first-person singular present"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "comer",
+       "reading": "comer",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "como",
+         "transformedText": "como",
+         "deinflectedText": "comer",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "Como",
+       "reading": "Como",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "como",
+         "transformedText": "Como",
+         "deinflectedText": "Como",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "name",
+         "category": "name"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "habla": {
+   "originalTextLength": 5,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "habla",
+       "reading": "habla",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "habla",
+         "transformedText": "habla",
+         "deinflectedText": "habla",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": [
+        {
+         "name": "present indicative",
+         "description": "Present indicative form of a verb"
+        }
+       ]
+      },
+      {
+       "source": "algorithm",
+       "inflectionRules": [
+        {
+         "name": "imperative",
+         "description": "Imperative form of a verb"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person singular present indicative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "second-person singular imperative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "informal second-person singular imperative"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "hablar",
+       "reading": "hablar",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "habla",
+         "transformedText": "habla",
+         "deinflectedText": "hablar",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "Casa": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "casa",
+       "reading": "casa",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Casa",
+         "transformedText": "casa",
+         "deinflectedText": "casa",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": [
+        {
+         "name": "present indicative",
+         "description": "Present indicative form of a verb"
+        }
+       ]
+      },
+      {
+       "source": "algorithm",
+       "inflectionRules": [
+        {
+         "name": "imperative",
+         "description": "Imperative form of a verb"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person singular present indicative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "second-person singular imperative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "informal second-person singular imperative"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "casar",
+       "reading": "casar",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Casa",
+         "transformedText": "casa",
+         "deinflectedText": "casar",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "Las": {
+   "originalTextLength": 3,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "las",
+       "reading": "las",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Las",
+         "transformedText": "las",
+         "deinflectedText": "las",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "pl",
+         "category": "default"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "pl",
+         "category": "default"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "accusative"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ustedes",
+       "reading": "ustedes",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Las",
+         "transformedText": "las",
+         "deinflectedText": "ustedes",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "pl",
+         "category": "default"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "feminine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "los",
+       "reading": "los",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Las",
+         "transformedText": "las",
+         "deinflectedText": "los",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural feminine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "el",
+       "reading": "el",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Las",
+         "transformedText": "las",
+         "deinflectedText": "el",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural",
+         "description": "Plural form of a noun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "la",
+       "reading": "la",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Las",
+         "transformedText": "las",
+         "deinflectedText": "la",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "sg",
+         "category": "default"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "both",
+       "inflectionRules": [
+        {
+         "name": "plural",
+         "description": "Plural form of a noun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "la",
+       "reading": "la",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Las",
+         "transformedText": "las",
+         "deinflectedText": "la",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "las": {
+   "originalTextLength": 3,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "las",
+       "reading": "las",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "las",
+         "transformedText": "las",
+         "deinflectedText": "las",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "pl",
+         "category": "default"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "pl",
+         "category": "default"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "accusative"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ustedes",
+       "reading": "ustedes",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "las",
+         "transformedText": "las",
+         "deinflectedText": "ustedes",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "pl",
+         "category": "default"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "feminine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "los",
+       "reading": "los",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "las",
+         "transformedText": "las",
+         "deinflectedText": "los",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural feminine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "el",
+       "reading": "el",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "las",
+         "transformedText": "las",
+         "deinflectedText": "el",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural",
+         "description": "Plural form of a noun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "la",
+       "reading": "la",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "las",
+         "transformedText": "las",
+         "deinflectedText": "la",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "sg",
+         "category": "default"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "both",
+       "inflectionRules": [
+        {
+         "name": "plural",
+         "description": "Plural form of a noun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "la",
+       "reading": "la",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "las",
+         "transformedText": "las",
+         "deinflectedText": "la",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "son": {
+   "originalTextLength": 3,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "son",
+       "reading": "son",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "son",
+         "transformedText": "son",
+         "deinflectedText": "son",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": [
+        {
+         "name": "present indicative",
+         "description": "Present indicative form of a verb"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person plural present indicative"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ser",
+       "reading": "ser",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "son",
+         "transformedText": "son",
+         "deinflectedText": "ser",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person plural present indicative"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ser",
+       "reading": "ser",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "son",
+         "transformedText": "son",
+         "deinflectedText": "ser",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "grandes": {
+   "originalTextLength": 7,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "both",
+       "inflectionRules": [
+        {
+         "name": "plural",
+         "description": "Plural form of a noun"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural masculine feminine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "grande",
+       "reading": "grande",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "grandes",
+         "transformedText": "grandes",
+         "deinflectedText": "grande",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural",
+         "description": "Plural form of a noun"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural masculine feminine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "grande",
+       "reading": "grande",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "grandes",
+         "transformedText": "grandes",
+         "deinflectedText": "grande",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "adj",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "masc",
+         "category": "default"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "El": {
+   "originalTextLength": 2,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "el",
+       "reading": "el",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "El",
+         "transformedText": "el",
+         "deinflectedText": "el",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "la",
+       "reading": "la",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "El",
+         "transformedText": "el",
+         "deinflectedText": "la",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "sg",
+         "category": "default"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "está": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": [
+        {
+         "name": "present indicative",
+         "description": "Present indicative form of a verb"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person singular present indicative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "second-person singular imperative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "second-person singular voseo imperative"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "estar",
+       "reading": "estar",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "está",
+         "transformedText": "está",
+         "deinflectedText": "estar",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "fría": {
+   "originalTextLength": 4,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "fría",
+       "reading": "fría",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "fría",
+         "transformedText": "fría",
+         "deinflectedText": "fría",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "first/third-person singular present subjunctive"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person singular imperative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person singular imperative negative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "formal third-person second-person-semantically singular imperative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "formal third-person second-person-semantically singular imperative negative"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "freír",
+       "reading": "freír",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "fría",
+         "transformedText": "fría",
+         "deinflectedText": "freír",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": [
+        {
+         "name": "feminine adjective",
+         "description": "feminine form of an adjective"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "feminine singular"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "feminine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "frío",
+       "reading": "frío",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "fría",
+         "transformedText": "fría",
+         "deinflectedText": "frío",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "adj",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "feminine singular"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "feminine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "frío",
+       "reading": "frío",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "fría",
+         "transformedText": "fría",
+         "deinflectedText": "frío",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "Él": {
+   "originalTextLength": 2,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "él",
+       "reading": "él",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Él",
+         "transformedText": "él",
+         "deinflectedText": "él",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "sg",
+         "category": "default"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ella",
+       "reading": "ella",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Él",
+         "transformedText": "él",
+         "deinflectedText": "ella",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "él": {
+   "originalTextLength": 2,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "él",
+       "reading": "él",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "él",
+         "transformedText": "él",
+         "deinflectedText": "él",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "sg",
+         "category": "default"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ella",
+       "reading": "ella",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "él",
+         "transformedText": "él",
+         "deinflectedText": "ella",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "con": {
+   "originalTextLength": 3,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "con",
+       "reading": "con",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "con",
+         "transformedText": "con",
+         "deinflectedText": "con",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "prep",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "Los": {
+   "originalTextLength": 3,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "los",
+       "reading": "los",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Los",
+         "transformedText": "los",
+         "deinflectedText": "los",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "accusative"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ustedes",
+       "reading": "ustedes",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Los",
+         "transformedText": "los",
+         "deinflectedText": "ustedes",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "pl",
+         "category": "default"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "masculine plural"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural",
+         "description": "Plural form of a noun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "el",
+       "reading": "el",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Los",
+         "transformedText": "los",
+         "deinflectedText": "el",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "la",
+       "reading": "la",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Los",
+         "transformedText": "los",
+         "deinflectedText": "la",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "sg",
+         "category": "default"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "los": {
+   "originalTextLength": 3,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "los",
+       "reading": "los",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "los",
+         "transformedText": "los",
+         "deinflectedText": "los",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "accusative"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ustedes",
+       "reading": "ustedes",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "los",
+         "transformedText": "los",
+         "deinflectedText": "ustedes",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "pl",
+         "category": "default"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "masculine plural"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural",
+         "description": "Plural form of a noun"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "el",
+       "reading": "el",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "los",
+         "transformedText": "los",
+         "deinflectedText": "el",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "plural masculine"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "la",
+       "reading": "la",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "los",
+         "transformedText": "los",
+         "deinflectedText": "la",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "sg",
+         "category": "default"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "pron",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "comen": {
+   "originalTextLength": 5,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": [
+        {
+         "name": "present indicative",
+         "description": "Present indicative form of a verb"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person plural present indicative"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "comer",
+       "reading": "comer",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "comen",
+         "transformedText": "comen",
+         "deinflectedText": "comer",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "third-person plural present indicative"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "comer",
+       "reading": "comer",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "comen",
+         "transformedText": "comen",
+         "deinflectedText": "comer",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "en": {
+   "originalTextLength": 2,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "en",
+       "reading": "en",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "en",
+         "transformedText": "en",
+         "deinflectedText": "en",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "prep",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": [
+        {
+         "name": "present indicative",
+         "description": "Present indicative form of a verb"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "ir",
+       "reading": "ir",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "en",
+         "transformedText": "en",
+         "deinflectedText": "ir",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "jardín": {
+   "originalTextLength": 6,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "jardín",
+       "reading": "jardín",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "jardín",
+         "transformedText": "jardín",
+         "deinflectedText": "jardín",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "Tengo": {
+   "originalTextLength": 5,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": [
+        {
+         "name": "present indicative",
+         "description": "Present indicative form of a verb"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "first-person singular present indicative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "first-person singular present"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "tener",
+       "reading": "tener",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "Tengo",
+         "transformedText": "tengo",
+         "deinflectedText": "tener",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "tengo": {
+   "originalTextLength": 5,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": [
+        {
+         "name": "present indicative",
+         "description": "Present indicative form of a verb"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "first-person singular present indicative"
+        }
+       ]
+      },
+      {
+       "source": "dictionary",
+       "inflectionRules": [
+        {
+         "name": "first-person singular present"
+        }
+       ]
+      }
+     ],
+     "headwords": [
+      {
+       "term": "tener",
+       "reading": "tener",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "tengo",
+         "transformedText": "tengo",
+         "deinflectedText": "tener",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "v",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "un": {
+   "originalTextLength": 2,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "un",
+       "reading": "un",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "un",
+         "transformedText": "un",
+         "deinflectedText": "un",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "artic",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "indef",
+         "category": "default"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "num",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "abbv",
+         "category": "default"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "mi": {
+   "originalTextLength": 2,
+   "dictionaryEntries": [
+    {
+     "score": 0,
+     "inflectionRuleChainCandidates": [
+      {
+       "source": "algorithm",
+       "inflectionRules": []
+      }
+     ],
+     "headwords": [
+      {
+       "term": "mi",
+       "reading": "mi",
+       "tags": [],
+       "sources": [
+        {
+         "originalText": "mi",
+         "transformedText": "mi",
+         "deinflectedText": "mi",
+         "matchType": "exact",
+         "matchSource": "term",
+         "isPrimary": true
+        }
+       ]
+      }
+     ],
+     "definitions": [
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "det",
+         "category": "partOfSpeech"
+        },
+        {
+         "name": "abbv",
+         "category": "default"
+        },
+        {
+         "name": "poss",
+         "category": "default"
+        },
+        {
+         "name": "sg",
+         "category": "default"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "fem",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      },
+      {
+       "dictionary": "kty-es-en",
+       "tags": [
+        {
+         "name": "masc",
+         "category": "default"
+        },
+        {
+         "name": "n",
+         "category": "partOfSpeech"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ }
+}
